@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.so
+
+# Virtual environment
+.env/
+venv/
+ENV/
+env.bak/
+*.env
+*.venv
+
+# Django stuff:
+*.log
+*.pot
+*.pyc
+db.sqlite3
+media/
+staticfiles/
+static/
+local_settings.py
+
+# Django migrations
+**/migrations/*.py
+**/migrations/*.pyc
+!*/migrations/__init__.py
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Coverage and testing
+.coverage
+.tox/
+htmlcov/
+*.mo
+
+# Node (if using Tailwind/PostCSS/etc)
+node_modules/
+*.lock
+dist/
+
+# Build
+build/
+develop-eggs/
+.eggs/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
