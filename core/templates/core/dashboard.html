@@ -1,0 +1,251 @@
+{% extends 'core/base.html' %} {% load humanize %} {% block content %}
+<div class="max-w-4xl mx-auto">
+  <h1 class="text-3xl font-bold mb-6">Your Dashboard</h1>
+
+  {% if dna %} {{ dna|json_script:"dna-data" }}
+
+  <!-- Key Stats -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <div class="bg-white p-6 rounded-lg shadow text-center">
+      <div class="text-4xl font-bold text-indigo-600">
+        {{ dna.total_books_read }}
+      </div>
+      <div class="text-gray-500">Total Books Read</div>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow text-center">
+      <div class="text-4xl font-bold text-indigo-600">
+        {{ dna.total_pages_read|intcomma }}
+      </div>
+      <div class="text-gray-500">Total Pages Read</div>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow text-center">
+      <div class="text-4xl font-bold text-indigo-600">
+        {{ dna.average_rating }}
+      </div>
+      <div class="text-gray-500">Average Rating</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-xl font-bold mb-4">Books Read Per Year</h2>
+      <canvas id="booksByYearChart"></canvas>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-xl font-bold mb-4">Your Ratings Distribution</h2>
+      <canvas id="ratingsDistChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Highlights -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-xl font-bold mb-2">Highlights ✨</h2>
+      <p><strong>Most Read Author:</strong> {{ dna.most_read_author }}</p>
+      <p class="mt-2">
+        <strong>Highest Rated ({{ dna.highest_rated_book.rating }}★):</strong>
+        <em>{{ dna.highest_rated_book.title }}</em>
+      </p>
+      <p>
+        <strong>Lowest Rated ({{ dna.lowest_rated_book.rating }}★):</strong>
+        <em>{{ dna.lowest_rated_book.title }}</em>
+      </p>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow">
+      <h2 class="text-xl font-bold mb-2">Most "Controversial" Book 🤯</h2>
+      <p>
+        <strong><em>{{ dna.most_controversial_book.title }}</em></strong>
+      </p>
+      <p>
+        Your Rating:
+        <span class="font-bold"
+          >{{ dna.most_controversial_book.my_rating }}★</span
+        >
+      </p>
+      <p>
+        Goodreads Avg:
+        <span class="font-bold"
+          >{{ dna.most_controversial_book.avg_rating }}★</span
+        >
+      </p>
+      <p class="mt-1 text-sm text-indigo-600">
+        (A difference of {{ dna.most_controversial_book.diff }} points)
+      </p>
+    </div>
+  </div>
+
+  <!-- Sharing & Privacy Controls -->
+  <div class="bg-white p-6 rounded-lg shadow mb-8">
+    <h2 class="text-xl font-bold mb-4">Sharing & Privacy</h2>
+    {% if user_profile.is_public %}
+    <p class="text-gray-700">
+      Your profile is currently
+      <span class="font-semibold text-green-600">Public</span>.
+    </p>
+    <p class="text-sm text-gray-500 mt-1">
+      Anyone can view your Readprint at:
+      <a
+        href="{% url 'core:public_profile' username=user.username %}"
+        class="text-indigo-600 underline"
+        target="_blank"
+        >/u/{{ user.username }}</a
+      >
+    </p>
+    <form action="{% url 'core:update_privacy' %}" method="post" class="mt-4">
+      {% csrf_token %}
+      <input type="hidden" name="is_public" value="false" />
+      <button
+        type="submit"
+        class="bg-gray-500 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-600 transition-colors"
+      >
+        Make Private
+      </button>
+    </form>
+    {% else %}
+    <p class="text-gray-700">
+      Your profile is currently
+      <span class="font-semibold text-red-600">Private</span>.
+    </p>
+    <p class="text-sm text-gray-500 mt-1">Only you can see your dashboard.</p>
+    <form action="{% url 'core:update_privacy' %}" method="post" class="mt-4">
+      {% csrf_token %}
+      <input type="hidden" name="is_public" value="true" />
+      <button
+        type="submit"
+        class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
+      >
+        Make Public
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  <!-- Update DNA Section -->
+  <div class="bg-white p-6 rounded-lg shadow">
+    <h2 class="text-xl font-bold mb-4">Update Your Readprint</h2>
+    <p class="text-gray-600 mb-4">
+      Upload a new `goodreads_library_export.csv` file to overwrite your current
+      data.
+    </p>
+    <form
+      action="{% url 'core:upload' %}"
+      method="post"
+      enctype="multipart/form-data"
+    >
+      {% csrf_token %}
+      <input
+        type="file"
+        name="csv_file"
+        id="csv_file"
+        required
+        accept=".csv"
+        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+      />
+      <button
+        type="submit"
+        class="mt-4 bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+      >
+        Update
+      </button>
+    </form>
+  </div>
+
+  {% else %}
+
+  <div class="text-center max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+    <h2 class="text-2xl font-bold tracking-tight text-gray-900">
+      Welcome, {{ user.username }}!
+    </h2>
+    <p class="mt-3 text-lg text-gray-600">
+      You haven't generated your Readprint yet. Let's get started!
+    </p>
+
+    <form
+      action="{% url 'core:upload' %}"
+      method="post"
+      enctype="multipart/form-data"
+      class="mt-8"
+    >
+      {% csrf_token %}
+      <label for="csv_file" class="block text-sm font-medium text-gray-700"
+        >Select your `goodreads_library_export.csv` file:</label
+      >
+      <input
+        type="file"
+        name="csv_file"
+        id="csv_file"
+        required
+        accept=".csv"
+        class="mt-2 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+      />
+
+      <button
+        type="submit"
+        class="mt-6 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-md hover:bg-indigo-700 transition-colors"
+      >
+        Generate My Readprint
+      </button>
+    </form>
+  </div>
+
+  {% endif %}
+</div>
+
+{% if dna %}
+<script>
+  // This script is identical to the one in dna_results.html
+  document.addEventListener("DOMContentLoaded", function () {
+    const dnaData = JSON.parse(document.getElementById("dna-data").textContent);
+
+    // Books per Year Chart
+    const booksByYearCtx = document
+      .getElementById("booksByYearChart")
+      .getContext("2d");
+    new Chart(booksByYearCtx, {
+      type: "bar",
+      data: {
+        labels: Object.keys(dnaData.books_by_year),
+        datasets: [
+          {
+            label: "# of Books",
+            data: Object.values(dnaData.books_by_year),
+            backgroundColor: "rgba(79, 70, 229, 0.8)",
+            borderColor: "rgba(79, 70, 229, 1)",
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: { scales: { y: { beginAtZero: true } } },
+    });
+
+    // Ratings Distribution Chart
+    const ratingsDistCtx = document
+      .getElementById("ratingsDistChart")
+      .getContext("2d");
+    const ratingsData = dnaData.ratings_distribution;
+    const sortedLabels = Object.keys(ratingsData).sort((a, b) => a - b);
+    const sortedValues = sortedLabels.map((label) => ratingsData[label]);
+
+    new Chart(ratingsDistCtx, {
+      type: "doughnut",
+      data: {
+        labels: sortedLabels.map((l) => `${l}-Star`),
+        datasets: [
+          {
+            label: "Ratings",
+            data: sortedValues,
+            backgroundColor: [
+              "#ef4444",
+              "#f97316",
+              "#eab308",
+              "#84cc16",
+              "#22c55e",
+            ],
+          },
+        ],
+      },
+    });
+  });
+</script>
+{% endif %} {% endblock %}
