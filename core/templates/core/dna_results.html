@@ -1,152 +1,198 @@
-{% extends 'core/base.html' %} {% load humanize %}
-<!-- Don't forget to load humanize -->
+{% extends 'core/base.html' %}
+{% load humanize %}
 
-{% block content %} {{ dna|json_script:"dna-data" }}
+{% block content %}
+{{ dna|json_script:"dna-data" }}
 
-<div class="max-w-4xl mx-auto">
-  <h1 class="text-3xl font-bold mb-6">Your Reading DNA</h1>
+<div class="max-w-4xl mx-auto space-y-8 p-4">
+    <h1 class="text-5xl font-bold mb-8 text-center uppercase tracking-widest">Your Reading DNA</h1>
 
-  <!-- Key Stats -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-    <div class="bg-white p-6 rounded-lg shadow text-center">
-      <div class="text-4xl font-bold text-indigo-600">
-        {{ dna.total_books_read }}
-      </div>
-      <div class="text-gray-500">Total Books Read</div>
+    <!-- Key Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-brand-yellow p-6 border-2 border-brand-text shadow-neo text-center">
+            <div class="text-5xl font-bold">{{ dna.total_books_read }}</div>
+            <div class="text-lg uppercase mt-2">Total Books Read</div>
+        </div>
+        <div class="bg-brand-pink p-6 border-2 border-brand-text shadow-neo text-center">
+            <div class="text-5xl font-bold">{{ dna.total_pages_read|intcomma }}</div>
+            <div class="text-lg uppercase mt-2">Total Pages Read</div>
+        </div>
+        <div class="bg-brand-cyan p-6 border-2 border-brand-text shadow-neo text-center">
+            <div class="text-5xl font-bold">{{ dna.average_rating_overall }}</div>
+            <div class="text-lg uppercase mt-2">Overall Rating</div>
+        </div>
     </div>
-    <div class="bg-white p-6 rounded-lg shadow text-center">
-      <div class="text-4xl font-bold text-indigo-600">
-        {{ dna.total_pages_read|intcomma }}
-      </div>
-      <div class="text-gray-500">Total Pages Read</div>
-    </div>
-    <div class="bg-white p-6 rounded-lg shadow text-center">
-      <div class="text-4xl font-bold text-indigo-600">
-        {{ dna.average_rating }}
-      </div>
-      <div class="text-gray-500">Average Rating</div>
-    </div>
-  </div>
 
-  <!-- Charts -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-xl font-bold mb-4">Books Read Per Year</h2>
-      <canvas id="booksByYearChart"></canvas>
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+            <h2 class="text-2xl font-bold mb-4 uppercase">Books Per Year</h2>
+            <canvas id="booksByYearChart"></canvas>
+        </div>
+        <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+            <h2 class="text-2xl font-bold mb-4 uppercase">Rating Per Year</h2>
+            <canvas id="avgRatingByYearChart"></canvas>
+        </div>
     </div>
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-xl font-bold mb-4">Your Ratings Distribution</h2>
-      <canvas id="ratingsDistChart"></canvas>
-    </div>
-  </div>
 
-  <!-- Highlights -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-xl font-bold mb-2">Highlights ✨</h2>
-      <p><strong>Most Read Author:</strong> {{ dna.most_read_author }}</p>
-      <p class="mt-2">
-        <strong>Highest Rated ({{ dna.highest_rated_book.rating }}★):</strong>
-        <em>{{ dna.highest_rated_book.title }}</em>
-      </p>
-      <p>
-        <strong>Lowest Rated ({{ dna.lowest_rated_book.rating }}★):</strong>
-        <em>{{ dna.lowest_rated_book.title }}</em>
-      </p>
+    <!-- Preferences: Genres & Authors -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+            <h2 class="text-2xl font-bold mb-4 uppercase">Top Genres</h2>
+            {% if dna.top_genres %}
+                <ol class="space-y-2 text-lg">
+                {% for genre, count in dna.top_genres.items %}
+                    <li class="capitalize"><span class="font-bold bg-brand-yellow px-2 py-1 border-2 border-brand-text">{{ genre }}</span> ({{ count }} books)</li>
+                {% endfor %}
+                </ol>
+            {% else %}
+                <p class="text-lg">Not enough genre data to display.</p>
+            {% endif %}
+        </div>
+        <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+            <h2 class="text-2xl font-bold mb-4 uppercase">Top Authors</h2>
+            {% if dna.top_authors %}
+                <ol class="space-y-2 text-lg">
+                {% for author, count in dna.top_authors.items %}
+                    <li><span class="font-bold bg-brand-cyan px-2 py-1 border-2 border-brand-text">{{ author }}</span> ({{ count }} books)</li>
+                {% endfor %}
+                </ol>
+            {% else %}
+                <p class="text-lg">Not enough author data to display.</p>
+            {% endif %}
+        </div>
     </div>
-    <div class="bg-white p-6 rounded-lg shadow">
-      <h2 class="text-xl font-bold mb-2">Most "Controversial" Book 🤯</h2>
-      <p>
-        <strong><em>{{ dna.most_controversial_book.title }}</em></strong>
-      </p>
-      <p>
-        Your Rating:
-        <span class="font-bold"
-          >{{ dna.most_controversial_book.my_rating }}★</span
-        >
-      </p>
-      <p>
-        Goodreads Avg:
-        <span class="font-bold"
-          >{{ dna.most_controversial_book.avg_rating }}★</span
-        >
-      </p>
-      <p class="mt-1 text-sm text-indigo-600">
-        (A difference of {{ dna.most_controversial_book.diff }} points)
-      </p>
-    </div>
-  </div>
 
-  <!-- CTA to Save -->
-  {% if not user.is_authenticated %}
-  <div
-    class="bg-indigo-100 border-l-4 border-indigo-500 text-indigo-700 p-4 rounded-md mt-10"
-    role="alert"
-  >
-    <p class="font-bold">Enjoying your Readprint?</p>
-    <p>
-      <a href="{% url 'core:signup' %}" class="underline font-semibold"
-        >Create a free account</a
-      >
-      to save your DNA, track your history, and share it with friends.
-    </p>
-  </div>
-  {% endif %}
+    <!-- Review Analysis -->
+    <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+        <h2 class="text-2xl font-bold mb-4 uppercase">Review Analysis</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-lg">
+            <div>
+                <h3 class="font-bold text-xl uppercase">Most Positive Review</h3>
+                {% if dna.most_positive_review %}
+                    <p class="font-bold mt-2">{{ dna.most_positive_review.Title }}</p>
+                    <blockquote class="mt-2 p-3 bg-gray-100 border-2 border-brand-text shadow-neo-sm">
+                        "{{ dna.most_positive_review.my_review }}"
+                    </blockquote>
+                {% else %}
+                    <p class="mt-2">No reviews found.</p>
+                {% endif %}
+            </div>
+            <div>
+                <h3 class="font-bold text-xl uppercase">Most Negative Review</h3>
+                {% if dna.most_negative_review %}
+                    <p class="font-bold mt-2">{{ dna.most_negative_review.Title }}</p>
+                    <blockquote class="mt-2 p-3 bg-gray-100 border-2 border-brand-text shadow-neo-sm">
+                        "{{ dna.most_negative_review.my_review }}"
+                    </blockquote>
+                {% else %}
+                    <p class="mt-2">No reviews found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- === ADD THIS SECTION BACK IN === -->
+    <!-- ============================================= -->
+    <!-- Controversial Ratings -->
+    <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+        <h2 class="text-2xl font-bold mb-4 uppercase">Most "Controversial" Ratings 🤯</h2>
+        <p class="text-lg mb-4">Books where your rating differs most from the Goodreads average.</p>
+        <div class="space-y-4 text-lg">
+            {% for book in dna.top_controversial_books %}
+                <div class="p-3 bg-gray-50 border-2 border-brand-text shadow-neo-sm">
+                    <p class="font-bold">{{ book.Title }}</p>
+                    <div class="flex justify-between items-center mt-1 text-base">
+                        <span>Your Rating: <span class="font-bold text-xl">{{ book.my_rating|floatformat:1 }}★</span></span>
+                        <span>Goodreads Avg: <span class="font-bold text-xl">{{ book.average_rating|floatformat:1 }}★</span></span>
+                        <span class="bg-brand-purple text-brand-text font-bold px-2 py-1 border-2 border-brand-text">Diff: {{ book.rating_difference|floatformat:1 }}</span>
+                    </div>
+                </div>
+            {% empty %}
+                <p>Not enough data to calculate controversial ratings.</p>
+            {% endfor %}
+        </div>
+    </div>
+    <!-- ============================================= -->
+    <!-- === END OF SECTION TO ADD === -->
+    <!-- ============================================= -->
+
+
+    <!-- ============================================= -->
+    <!-- === ADD THIS SECTION BACK IN === -->
+    <!-- ============================================= -->
+    <!-- CTA to Save -->
+    {% if not user.is_authenticated %}
+    <div class="bg-brand-purple p-6 border-2 border-brand-text shadow-neo text-center">
+        <h2 class="text-2xl font-bold uppercase">Enjoying Your Readprint?</h2>
+        <p class="text-lg mt-2">
+            <a href="{% url 'core:signup' %}" class="underline hover:bg-brand-yellow">Create a free account</a>
+            to save your DNA, track your history, and share it with friends.
+        </p>
+    </div>
+    {% endif %}
+    <!-- ============================================= -->
+    <!-- === END OF SECTION TO ADD === -->
+    <!-- ============================================= -->
+
 </div>
 
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const dnaData = JSON.parse(document.getElementById("dna-data").textContent);
-
-    // Books per Year Chart
-    const booksByYearCtx = document
-      .getElementById("booksByYearChart")
-      .getContext("2d");
+document.addEventListener('DOMContentLoaded', function () {
+    const dnaData = JSON.parse(document.getElementById('dna-data').textContent);
+    // ... (Your chart script is perfect and does not need to be changed) ...
+    Chart.defaults.font.family = 'VT323';
+    Chart.defaults.font.size = 16;
+    Chart.defaults.color = '#1f2937';
+    const booksByYearCtx = document.getElementById('booksByYearChart').getContext('2d');
     new Chart(booksByYearCtx, {
-      type: "bar",
-      data: {
-        labels: Object.keys(dnaData.books_by_year),
-        datasets: [
-          {
-            label: "# of Books",
-            data: Object.values(dnaData.books_by_year),
-            backgroundColor: "rgba(79, 70, 229, 0.8)",
-            borderColor: "rgba(79, 70, 229, 1)",
-            borderWidth: 1,
-          },
-        ],
-      },
-      options: { scales: { y: { beginAtZero: true } } },
+        type: 'bar',
+        data: {
+            labels: dnaData.stats_by_year.map(d => d.year),
+            datasets: [{
+                label: '# of Books',
+                data: dnaData.stats_by_year.map(d => d.count),
+                backgroundColor: '#fde047',
+                borderColor: '#1f2937',
+                borderWidth: 2
+            }]
+        },
+        options: { 
+            plugins: { legend: { display: false } },
+            scales: { 
+                y: { beginAtZero: true, grid: { color: '#e5e7eb' }, ticks: { stepSize: 1 } }, 
+                x: { grid: { display: false } } 
+            } 
+        }
     });
-
-    // Ratings Distribution Chart
-    const ratingsDistCtx = document
-      .getElementById("ratingsDistChart")
-      .getContext("2d");
-    const ratingsData = dnaData.ratings_distribution;
-    // Ensure data is sorted by key (rating)
-    const sortedLabels = Object.keys(ratingsData).sort((a, b) => a - b);
-    const sortedValues = sortedLabels.map((label) => ratingsData[label]);
-
-    new Chart(ratingsDistCtx, {
-      type: "doughnut",
-      data: {
-        labels: sortedLabels.map((l) => `${l}-Star`),
-        datasets: [
-          {
-            label: "Ratings",
-            data: sortedValues,
-            backgroundColor: [
-              "#ef4444",
-              "#f97316",
-              "#eab308",
-              "#84cc16",
-              "#22c55e",
-            ],
-          },
-        ],
-      },
+    const avgRatingByYearCtx = document.getElementById('avgRatingByYearChart').getContext('2d');
+    new Chart(avgRatingByYearCtx, {
+        type: 'line',
+        data: {
+            labels: dnaData.stats_by_year.map(d => d.year),
+            datasets: [{
+                label: 'Average Rating',
+                data: dnaData.stats_by_year.map(d => d.avg_rating),
+                borderColor: '#f9a8d4',
+                backgroundColor: 'rgba(249, 168, 212, 0.2)',
+                borderWidth: 3,
+                pointBackgroundColor: '#1f2937',
+                pointBorderColor: '#fde047',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: { 
+            plugins: { legend: { display: false } },
+            scales: { 
+                y: { beginAtZero: false, suggestedMin: 2, suggestedMax: 5, grid: { color: '#e5e7eb' } }, 
+                x: { grid: { display: false } } 
+            } 
+        }
     });
-  });
+});
 </script>
 {% endblock %}
