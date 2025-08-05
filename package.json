@@ -1,0 +1,11 @@
+{
+  "name": "bibliotype",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npx @tailwindcss/cli -i ./static/src/input.css -o ./static/dist/output.css --watch"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.11",
+    "tailwindcss": "^4.1.11"
+  }
+}
