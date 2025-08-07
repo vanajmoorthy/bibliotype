@@ -28,6 +28,7 @@ local_settings.py
 **/migrations/*.py
 **/migrations/*.pyc
 !*/migrations/__init__.py
+django_cache
 
 # OS files
 .DS_Store
