@@ -7,12 +7,28 @@
   <!-- NEW: Reader Type Card -->
   {% if dna.reader_type %}
   <div class="bg-brand-purple p-6 border-2 border-brand-text shadow-neo text-center">
-      <div class="text-lg uppercase">Your Reader Type is...</div>
-      <div class="text-5xl font-bold uppercase tracking-widest mt-1">{{ dna.reader_type }}</div>
+    <div class="text-lg uppercase">Your Reader Type is...</div>
+    <div class="text-5xl font-bold uppercase tracking-widest mt-1">{{ dna.reader_type }}</div>
   </div>
   {% endif %}
 
-  
+  <!-- NEW: TOP 3 READER TYPES SCOREBOARD -->
+  {% if dna.top_reader_types %}
+  <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+    <h2 class="text-2xl font-bold mb-4 uppercase">Your Top Reader Traits</h2>
+    <ol class="space-y-3 text-lg">
+      {% for item in dna.top_reader_types %}
+      <li class="flex justify-between items-center p-2 {% if forloop.first %}bg-yellow-100{% endif %}">
+        <span class="flex items-center">
+          <span class="font-bold text-xl mr-3">{{ forloop.counter }}.</span>
+          {{ item.type }}
+        </span>
+        <span class="bg-brand-yellow font-bold px-3 py-1 border-2 border-brand-text"> {{ item.score }} </span>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+  {% endif %}
 
   <!-- Key Stats -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
