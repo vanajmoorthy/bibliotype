@@ -1,0 +1,400 @@
+{% extends 'core/base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8 p-4">
+    {% if dna %}
+    {{ dna|json_script:"dna-data" }}
+
+    <h1 class="text-5xl font-bold mb-8 text-center uppercase tracking-widest">Your Reading DNA</h1>
+
+    <!-- Key Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-brand-yellow p-6 border-2 border-brand-text shadow-neo text-center">
+            <div class="text-5xl font-bold">{{ dna.total_books_read }}</div>
+            <div class="text-lg uppercase mt-2">Total Books Read</div>
+        </div>
+        <div class="bg-brand-pink p-6 border-2 border-brand-text shadow-neo text-center">
+            <div class="text-5xl font-bold">{{ dna.total_pages_read|intcomma }}</div>
+            <div class="text-lg uppercase mt-2">Total Pages Read</div>
+        </div>
+        <div class="bg-brand-cyan p-6 border-2 border-brand-text shadow-neo text-center">
+            <div class="text-5xl font-bold">{{ dna.average_rating_overall }}</div>
+            <div class="text-lg uppercase mt-2">Overall Rating</div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+            <h2 class="text-2xl font-bold mb-4 uppercase">Books Per Year</h2>
+            <canvas id="booksByYearChart"></canvas>
+        </div>
+        <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+            <h2 class="text-2xl font-bold mb-4 uppercase">Rating Per Year</h2>
+            <canvas id="avgRatingByYearChart"></canvas>
+        </div>
+        
+    </div>
+
+    <!-- Preferences: Genres & Authors -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="bg-white p-6 border-2 border-brand-text shadow-neo relative overflow-hidden">
+            <h2 class="text-2xl font-bold mb-4 uppercase">Top Genres</h2>
+            {% if dna.top_genres %}
+                <ol class="space-y-2 text-lg">
+                {% for genre, count in dna.top_genres.items %}
+                    <li class="capitalize"><span class="font-bold bg-brand-yellow px-2 py-1 border-2 border-brand-text">{{ genre }}</span> ({{ count }} books)</li>
+                {% endfor %}
+                </ol>
+                <div class="absolute top-2 right-2 w-32 h-32">
+                    <canvas id="topGenresChart"></canvas>
+                </div>
+            {% else %}
+                <p class="text-lg">Not enough genre data to display.</p>
+            {% endif %}
+        </div>
+        <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+            <h2 class="text-2xl font-bold mb-4 uppercase">Top Authors</h2>
+            {% if dna.top_authors %}
+                <ol class="space-y-2 text-lg">
+                {% for author, count in dna.top_authors.items %}
+                    <li><span class="font-bold bg-brand-cyan px-2 py-1 border-2 border-brand-text">{{ author }}</span> ({{ count }} books)</li>
+                {% endfor %}
+                </ol>
+            {% else %}
+                <p class="text-lg">Not enough author data to display.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Your Ratings Distribution -->
+    <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+        <h2 class="text-2xl font-bold mb-4 uppercase">Your Ratings Distribution</h2>
+        <canvas id="ratingsDistChart"></canvas>
+    </div>
+
+    <!-- Review Analysis -->
+    <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+        <h2 class="text-2xl font-bold mb-4 uppercase">Review Analysis</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-lg">
+            <div>
+                <h3 class="font-bold text-xl uppercase">Most Positive Review</h3>
+                {% if dna.most_positive_review %}
+                    <p class="font-bold mt-2">{{ dna.most_positive_review.Title }}</p>
+                    <blockquote class="mt-2 p-3 bg-gray-100 border-2 border-brand-text shadow-neo-sm">
+                        "{{ dna.most_positive_review.my_review }}"
+                    </blockquote>
+                {% else %}
+                    <p class="mt-2">No reviews found.</p>
+                {% endif %}
+            </div>
+            <div>
+                <h3 class="font-bold text-xl uppercase">Most Negative Review</h3>
+                {% if dna.most_negative_review %}
+                    <p class="font-bold mt-2">{{ dna.most_negative_review.Title }}</p>
+                    <blockquote class="mt-2 p-3 bg-gray-100 border-2 border-brand-text shadow-neo-sm">
+                        "{{ dna.most_negative_review.my_review }}"
+                    </blockquote>
+                {% else %}
+                    <p class="mt-2">No reviews found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Controversial Ratings -->
+    <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+        <h2 class="text-2xl font-bold mb-4 uppercase">Most "Controversial" Ratings 🤯</h2>
+        <p class="text-lg mb-4">Books where your rating differs most from the Goodreads average.</p>
+        <div class="space-y-4 text-lg">
+            {% for book in dna.top_controversial_books %}
+                <div class="p-3 bg-gray-50 border-2 border-brand-text shadow-neo-sm">
+                    <p class="font-bold">{{ book.Title }}</p>
+                    <div class="flex justify-between items-center mt-1 text-base">
+                        <span>Your Rating: <span class="font-bold text-xl">{{ book.my_rating|floatformat:1 }}★</span></span>
+                        <span>Goodreads Avg: <span class="font-bold text-xl">{{ book.average_rating|floatformat:1 }}★</span></span>
+                        <span class="bg-brand-purple text-brand-text font-bold px-2 py-1 border-2 border-brand-text">Diff: {{ book.rating_difference|floatformat:1 }}</span>
+                    </div>
+                </div>
+            {% empty %}
+                <p>Not enough data to calculate controversial ratings.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if user.is_authenticated %}
+    <!-- Sharing & Privacy Controls -->
+    <div class="bg-white p-6 rounded-lg shadow mb-8">
+        <h2 class="text-xl font-bold mb-4">Sharing & Privacy</h2>
+        {% if user_profile.is_public %}
+        <p class="text-gray-700">
+            Your profile is currently
+            <span class="font-semibold text-green-600">Public</span>.
+        </p>
+        <p class="text-sm text-gray-500 mt-1">
+            Anyone can view your Readprint at:
+            <a
+                href="{% url 'core:public_profile' username=user.username %}"
+                class="text-indigo-600 underline"
+                target="_blank"
+                >/u/{{ user.username }}</a
+            >
+        </p>
+        <form action="{% url 'core:update_privacy' %}" method="post" class="mt-4">
+            {% csrf_token %}
+            <input type="hidden" name="is_public" value="false" />
+            <button
+                type="submit"
+                class="bg-gray-500 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-600 transition-colors"
+            >
+                Make Private
+            </button>
+        </form>
+        {% else %}
+        <p class="text-gray-700">
+            Your profile is currently
+            <span class="font-semibold text-red-600">Private</span>.
+        </p>
+        <p class="text-sm text-gray-500 mt-1">Only you can see your dashboard.</p>
+        <form action="{% url 'core:update_privacy' %}" method="post" class="mt-4">
+            {% csrf_token %}
+            <input type="hidden" name="is_public" value="true" />
+            <button
+                type="submit"
+                class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
+            >
+                Make Public
+            </button>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- Update DNA Section -->
+    <div class="bg-white p-6 rounded-lg shadow">
+        <h2 class="text-xl font-bold mb-4">Update Your Readprint</h2>
+        <p class="text-gray-600 mb-4">
+            Upload a new `goodreads_library_export.csv` file to overwrite your current
+            data.
+        </p>
+        <form
+            action="{% url 'core:upload' %}"
+            method="post"
+            enctype="multipart/form-data"
+        >
+            {% csrf_token %}
+            <input
+                type="file"
+                name="csv_file"
+                id="csv_file"
+                required
+                accept=".csv"
+                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+            />
+            <button
+                type="submit"
+                class="mt-4 bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+            >
+                Update
+            </button>
+        </form>
+    </div>
+    {% else %}
+    <!-- CTA to Save -->
+    <div class="bg-brand-purple p-6 border-2 border-brand-text shadow-neo text-center">
+        <h2 class="text-2xl font-bold uppercase">Enjoying Your Readprint?</h2>
+        <p class="text-lg mt-2">
+            <a href="{% url 'core:signup' %}" class="underline hover:bg-brand-yellow">Create a free account</a>
+            to save your DNA, track your history, and share it with friends.
+        </p>
+    </div>
+    {% endif %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const dnaData = JSON.parse(document.getElementById('dna-data').textContent);
+
+            // Books per Year Chart (from dna_results.html)
+            Chart.defaults.font.family = 'VT323';
+            Chart.defaults.font.size = 16;
+            Chart.defaults.color = '#1f2937';
+            const booksByYearCtx = document.getElementById('booksByYearChart').getContext('2d');
+            new Chart(booksByYearCtx, {
+                type: 'bar',
+                data: {
+                    labels: dnaData.stats_by_year.map(d => d.year),
+                    datasets: [{
+                        label: '# of Books',
+                        data: dnaData.stats_by_year.map(d => d.count),
+                        backgroundColor: '#fde047',
+                        borderColor: '#1f2937',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#e5e7eb' }, ticks: { stepSize: 1 } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // Average Rating Per Year Chart (from dna_results.html)
+            const avgRatingByYearCtx = document.getElementById('avgRatingByYearChart').getContext('2d');
+            new Chart(avgRatingByYearCtx, {
+                type: 'line',
+                data: {
+                    labels: dnaData.stats_by_year.map(d => d.year),
+                    datasets: [{
+                        label: 'Average Rating',
+                        data: dnaData.stats_by_year.map(d => d.avg_rating),
+                        borderColor: '#f9a8d4',
+                        backgroundColor: 'rgba(249, 168, 212, 0.2)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#1f2937',
+                        pointBorderColor: '#fde047',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: false, suggestedMin: 2, suggestedMax: 5, grid: { color: '#e5e7eb' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // Ratings Distribution Chart (from dashboard.html)
+            const ratingsDistCtx = document.getElementById("ratingsDistChart").getContext("2d");
+            const ratingsData = dnaData.ratings_distribution;
+            const sortedLabels = Object.keys(ratingsData).sort((a, b) => a - b);
+            const sortedValues = sortedLabels.map((label) => ratingsData[label]);
+
+            new Chart(ratingsDistCtx, {
+                type: "doughnut",
+                data: {
+                    labels: sortedLabels.map((l) => `${l}-Star`),
+                    datasets: [
+                        {
+                            label: "Ratings",
+                            data: sortedValues,
+                            backgroundColor: [
+                                "#ef4444",
+                                "#f97316",
+                                "#eab308",
+                                "#84cc16",
+                                "#22c55e",
+                            ],
+                        },
+                    ],
+                },
+            });
+
+            // Top Genres Chart (new)
+            const topGenresCtx = document.getElementById("topGenresChart").getContext("2d");
+            const topGenresData = dnaData.top_genres;
+            const genreLabels = Object.keys(topGenresData);
+            const genreValues = Object.values(topGenresData);
+
+            new Chart(topGenresCtx, {
+                type: "doughnut",
+                data: {
+                    labels: genreLabels,
+                    datasets: [
+                        {
+                            label: "Genres",
+                            data: genreValues,
+                            backgroundColor: [
+                                '#fde047', // yellow
+                                '#f9a8d4', // pink
+                                '#a78bfa', // purple
+                                '#60a5fa', // blue
+                                '#34d399', // green
+                                '#fb923c', // orange
+                                '#e879f9', // fuchsia
+                                '#c084fc', // violet
+                                '#f472b6', // rose
+                                '#be185d', // dark pink
+                            ],
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false, // Hide legend for small chart
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+
+    {% else %}
+    <div class="text-center max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+        <h2 class="text-2xl font-bold tracking-tight text-gray-900">
+            {% if user.is_authenticated %}
+            Welcome, {{ user.username }}!
+            {% else %}
+            Generate Your Reading DNA!
+            {% endif %}
+        </h2>
+        <p class="mt-3 text-lg text-gray-600">
+            {% if user.is_authenticated %}
+            You haven't generated your Readprint yet. Let's get started!
+            {% else %}
+            Upload your Goodreads or StoryGraph export CSV to get started.
+            {% endif %}
+        </p>
+
+        <form
+            action="{% url 'core:upload' %}"
+            method="post"
+            enctype="multipart/form-data"
+            class="mt-8"
+        >
+            {% csrf_token %}
+            <label for="csv_file" class="block text-sm font-medium text-gray-700"
+                >Select your CSV file:</label
+            >
+            <input
+                type="file"
+                name="csv_file"
+                id="csv_file"
+                required
+                accept=".csv"
+                class="mt-2 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+            />
+
+            <button
+                type="submit"
+                class="mt-6 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-md hover:bg-indigo-700 transition-colors"
+            >
+                Generate My Readprint
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

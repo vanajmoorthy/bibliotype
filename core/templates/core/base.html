@@ -23,16 +23,12 @@
     <nav class="p-4">
       <div class="container mx-auto flex justify-between items-center">
         <a href="{% url 'core:home' %}" class="text-3xl font-bold text-brand-text uppercase tracking-widest">
-          <!-- 
-            Give the logo a background and a border for more character.
-            The `inline-block` is important for the background to fit the text.
-          -->
           🧬 <span class="px-1 border-brand-text border-b-2">Bibliotype</span>
         </a>
         <div class="flex items-center space-x-4 text-lg uppercase font-bold">
           {% if user.is_authenticated %}
           <a
-            href="{% url 'core:dashboard' %}"
+            href="{% url 'core:display_dna' %}"
             class="bg-white hover:bg-brand-pink px-2 border-2 border-brand-text shadow-neo-sm"
             >Dashboard</a
           >
