@@ -127,70 +127,77 @@
   </div>
 
   {% if user.is_authenticated %}
-  <!-- Sharing & Privacy Controls -->
-  <div class="bg-white p-6 rounded-lg shadow mb-8">
-    <h2 class="text-xl font-bold mb-4">Sharing & Privacy</h2>
-    {% if user_profile.is_public %}
-    <p class="text-gray-700">
-      Your profile is currently
-      <span class="font-semibold text-green-600">Public</span>.
-    </p>
-    <p class="text-sm text-gray-500 mt-1">
-      Anyone can view your Readprint at:
-      <a href="{% url 'core:public_profile' username=user.username %}" class="text-indigo-600 underline" target="_blank"
-        >/u/{{ user.username }}</a
-      >
-    </p>
-    <form action="{% url 'core:update_privacy' %}" method="post" class="mt-4">
-      {% csrf_token %}
-      <input type="hidden" name="is_public" value="false" />
-      <button
-        type="submit"
-        class="bg-gray-500 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-600 transition-colors"
-      >
-        Make Private
-      </button>
-    </form>
-    {% else %}
-    <p class="text-gray-700">
-      Your profile is currently
-      <span class="font-semibold text-red-600">Private</span>.
-    </p>
-    <p class="text-sm text-gray-500 mt-1">Only you can see your dashboard.</p>
-    <form action="{% url 'core:update_privacy' %}" method="post" class="mt-4">
-      {% csrf_token %}
-      <input type="hidden" name="is_public" value="true" />
-      <button
-        type="submit"
-        class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
-      >
-        Make Public
-      </button>
-    </form>
-    {% endif %}
-  </div>
+  <!-- Settings Section -->
+  <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+    <h2 class="text-2xl font-bold mb-4 uppercase">Settings</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <!-- Privacy Settings -->
+      <div>
+        <h3 class="text-xl font-bold mb-2 uppercase">Profile Privacy</h3>
+        {% if user_profile.is_public %}
+        <p class="text-lg">
+          Your profile is <span class="font-bold bg-brand-green px-2 py-1 border-2 border-brand-text">Public</span>.
+        </p>
+        <p class="text-base mt-2">
+          Share your Readprint:
+          <a
+            href="{% url 'core:public_profile' username=user.username %}"
+            class="underline hover:bg-brand-yellow"
+            target="_blank"
+            >/u/{{ user.username }}</a
+          >
+        </p>
+        <form action="{% url 'core:update_privacy' %}" method="post" class="mt-4">
+          {% csrf_token %}
+          <input type="hidden" name="is_public" value="false" />
+          <button
+            type="submit"
+            class="bg-brand-pink text-brand-text font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-brand-yellow"
+          >
+            Make Private
+          </button>
+        </form>
+        {% else %}
+        <p class="text-lg">
+          Your profile is <span class="font-bold bg-brand-pink px-2 py-1 border-2 border-brand-text">Private</span>.
+        </p>
+        <p class="text-base mt-2">Only you can see your dashboard.</p>
+        <form action="{% url 'core:update_privacy' %}" method="post" class="mt-4">
+          {% csrf_token %}
+          <input type="hidden" name="is_public" value="true" />
+          <button
+            type="submit"
+            class="bg-brand-green text-brand-text font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-brand-yellow"
+          >
+            Make Public
+          </button>
+        </form>
+        {% endif %}
+      </div>
 
-  <!-- Update DNA Section -->
-  <div class="bg-white p-6 rounded-lg shadow">
-    <h2 class="text-xl font-bold mb-4">Update Your Readprint</h2>
-    <p class="text-gray-600 mb-4">Upload a new `goodreads_library_export.csv` file to overwrite your current data.</p>
-    <form action="{% url 'core:upload' %}" method="post" enctype="multipart/form-data">
-      {% csrf_token %}
-      <input
-        type="file"
-        name="csv_file"
-        id="csv_file"
-        required
-        accept=".csv"
-        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-      />
-      <button
-        type="submit"
-        class="mt-4 bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
-      >
-        Update
-      </button>
-    </form>
+      <!-- Update DNA -->
+      <div>
+        <h3 class="text-xl font-bold mb-2 uppercase">Update Readprint</h3>
+        <p class="text-base mb-4">Upload a new CSV export to overwrite your current data.</p>
+        <form action="{% url 'core:upload' %}" method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input
+            type="file"
+            name="csv_file"
+            id="csv_file"
+            required
+            accept=".csv"
+            class="w-full text-lg text-brand-text bg-white border-2 border-brand-text p-2 focus:outline-none focus:ring-2 focus:ring-brand-purple file:mr-4 file:py-1 file:px-3 file:border-2 file:border-brand-text file:font-bold file:bg-brand-cyan file:text-brand-text"
+          />
+          <button
+            type="submit"
+            class="mt-4 w-full bg-brand-purple text-white font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-opacity-90"
+          >
+            Upload & Refresh
+          </button>
+        </form>
+      </div>
+    </div>
   </div>
   {% else %}
   <!-- CTA to Save -->
