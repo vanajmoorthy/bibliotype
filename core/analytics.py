@@ -10,141 +10,26 @@ import requests
 from django.core.cache import cache
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-MAJOR_PUBLISHERS = {
-    # Original List
-    "penguin",
-    "random house",
-    "harpercollins",
-    "simon & schuster",
-    "hachette",
-    "macmillan",
-    "knopf",
-    "doubleday",
-    "viking",
-    "vintage",
-    "scribner",
-    "atriabooks",
-    # Recommended Additions
-    "little, brown",  # For "Little, Brown and Company"
-    "bloomsbury",
-    "farrar, straus & giroux",
-    "bantam",
-    "scholastic",
-    "putnam",  # For "G. P. Putnam's Sons"
-    "dutton",
-    "hodder",
-    "collins",
-    "oxford university press",
-    "routledge",
-    "prentice hall",
-    "grove press",
-    "virago",
-    "gollancz",
-    "harper",  # Catches HarperPrism, Harper Paperbacks, etc.
-    "harcourt",  # Catches Harcourt, Brace and Company, etc.
-    "faber",  # Catches Faber & Faber
-    "dover",  # Catches Dover Publications
-    "tantor",
-    "signet",
-    "Atria Books",
-    "Ballantine Books",
-    "Orion Publishing Group",
-    "Berkley",
-    "Hogarth",
-}
-
-
-GENRE_ALIASES = {
-    # --- FICTION ---
-    "fantasy": {
-        "fantasy fiction",
-        "epic fantasy",
-        "high fantasy",
-        "wizards",
-        "magic",
-        "urban fantasy",
-        "magical realism",
-        "fables",
-    },
-    "science fiction": {
-        "sci-fi",
-        "speculative fiction",
-        "dystopian fiction",
-        "cyberpunk",
-        "space opera",
-        "science fiction, american",
-    },
-    "thriller": {
-        "thriller",
-        "mystery fiction",
-        "crime fiction",
-        "suspense fiction",
-        "detective and mystery stories",
-        "thrillers (fiction)",
-        "spy stories",
-        "crime",
-    },
-    "horror": {"horror fiction", "ghost stories", "supernatural fiction", "gothic fiction"},
-    "historical fiction": {"historical fiction", "roman historique"},
-    "romance": {"romance fiction", "love stories", "contemporary romance"},
-    "humorous fiction": {"humorous stories", "humor", "satire"},
-    "young adult": {"young adult fiction", "juvenile literature"},  # Open Library often uses 'juvenile' for YA
-    "children's literature": {"children's stories", "picture books"},
-    "classics": {"classic", "classical literature"},
-    # --- NON-FICTION ---
-    "non-fiction": {"nonfiction", "essays", "journalism", "creative nonfiction"},
-    "biography": {"biography", "autobiography", "memoir", "biographies", "memoirs", "diaries"},
-    "history": {"history", "world history", "ancient history", "military history"},
-    "psychology": {"mental health", "psychology", "psychological fiction"},  # Note: Can be fiction or non-fiction
-    "philosophy": {"philosophy", "ethics", "metaphysics", "stoicism"},
-    "social science": {
-        "sociology",
-        "politics",
-        "social history",
-        "anthropology",
-        "current events",
-        "political science",
-        "economics",
-    },
-    "nature": {"natural history", "environment", "animals", "outdoors", "nature writing", "biology"},
-    "self-help": {"self-help", "personal development", "self-improvement", "productivity", "business"},
-    "science": {"science", "popular science", "physics", "astronomy"},
-    "travel": {"travel writing", "travelogue", "voyages and travels"},
-}
-
-
-# Create a reverse mapping for fast lookups (alias -> canonical).
-CANONICAL_GENRE_MAP = {}
-for canonical, aliases in GENRE_ALIASES.items():
-    CANONICAL_GENRE_MAP[canonical] = canonical
-    for alias in aliases:
-        CANONICAL_GENRE_MAP[alias] = canonical
+from .dna_constants import CANONICAL_GENRE_MAP, EXCLUDED_GENRES, GENRE_ALIASES, MAJOR_PUBLISHERS
 
 
 def normalize_and_filter_genres(subjects):
-    excluded_genres = {
-        "fiction",
-        "literature",
-        "ficción",
-        "fiction, general",
-        "romans, nouvelles",
-        "fiction, fantasy, general",
-        "fiction, humorous, general",
-        "fiction, humorous",
-        "english literature",
-        "juvenile fiction",
-        "children's fiction",
-        "large type books",
-        "novela",
-    }
-    plausible_genres = [
-        s.lower()
-        for s in subjects
-        if len(s.split()) < 4
-        and "history" not in s.lower()
-        and "accessible" not in s.lower()
-        and s.lower().strip() not in excluded_genres
-    ]
+    """
+    Cleans the raw subject list from the API, using the master EXCLUDED_GENRES set.
+    """
+    plausible_genres = []
+    for s in subjects:
+        s_lower = s.lower().strip()
+        # Check against the imported exclusion set
+        if s_lower in EXCLUDED_GENRES:
+            continue
+        # Check for junk patterns (e.g., call numbers, NYT lists)
+        if "ps35" in s_lower or "nyt:" in s_lower or "b485" in s_lower:
+            continue
+        # Filter out overly long or non-genre-like subjects
+        if len(s.split()) < 4 and "history" not in s_lower and "accessible" not in s_lower:
+            plausible_genres.append(s_lower)
+
     return plausible_genres[:5]
 
 
@@ -154,7 +39,7 @@ def get_book_details_from_open_library(title, author, session):
     from both the Work (for rich genres) and Edition (for specific details)
     endpoints. Uses a cache to avoid repeated API calls.
     """
-    LOGIC_VERSION = "v5_hybrid"  # Bump the version for this new, improved logic
+    LOGIC_VERSION = "v6_hybrid"  # Bump the version for this new, improved logic
     cache_key = f"book_details:{LOGIC_VERSION}:{author}:{title}".lower().replace(" ", "_")
 
     cached_data = cache.get(cache_key)
@@ -230,8 +115,7 @@ def get_book_details_from_open_library(title, author, session):
 # REVISED AND MORE EQUITABLE FUNCTION
 def assign_reader_type(read_df, enriched_data, all_genres):
     """
-    Calculates scores for various reader traits and determines the primary type.
-    This version re-balances the "Versatile Valedictorian" score to be more equitable.
+    Calculates scores for reader traits using the final, equitable bonus-based logic.
     """
     scores = Counter()
     total_books = len(read_df)
@@ -250,7 +134,11 @@ def assign_reader_type(read_df, enriched_data, all_genres):
         scores["Tome Tussler"] += long_books * 2
         scores["Novella Navigator"] += short_books
 
-    genre_counts = Counter([CANONICAL_GENRE_MAP.get(g, g) for g in all_genres])
+    # Use the CANONICAL_GENRE_MAP to group aliases into their canonical form
+    mapped_genres = [CANONICAL_GENRE_MAP.get(g, g) for g in all_genres]
+    genre_counts = Counter(mapped_genres)
+
+    # These scores are now based on CLEAN, CANONICAL genre counts
     scores["Fantasy Fanatic"] += genre_counts.get("fantasy", 0) + genre_counts.get("science fiction", 0)
     scores["Non-Fiction Ninja"] += genre_counts.get("non-fiction", 0)
     scores["Philosophical Philomath"] += genre_counts.get("philosophy", 0)
@@ -273,17 +161,23 @@ def assign_reader_type(read_df, enriched_data, all_genres):
         if publisher:
             is_major = any(major.lower() in publisher.lower() for major in MAJOR_PUBLISHERS)
             if not is_major:
-                print(f"   Found non-major publisher: {publisher}")
                 scores["Small Press Supporter"] += 1
 
-    # --- THE CRUCIAL CHANGE FOR EQUITY ---
-    # Now, this score only starts counting AFTER 15 distinct genres.
-    # This prevents it from unfairly dominating the results.
-    scores["Versatile Valedictorian"] = max(0, len(genre_counts) - 15)
+    # --- THE DEFINITIVE FIX FOR EQUITY ---
+    # Give a flat bonus for high variety instead of a runaway score.
+    DIVERSITY_THRESHOLD = 10  # Number of UNIQUE CANONICAL genres to qualify
+    DIVERSITY_BONUS = 15  # Flat score bonus for meeting the threshold
 
-    if not scores:
+    # The number of unique keys in genre_counts is now much smaller and more accurate
+    unique_canonical_genres = len(genre_counts)
+    print(f"   ℹ️ Found {unique_canonical_genres} unique CANONICAL genres.")
+    if unique_canonical_genres >= DIVERSITY_THRESHOLD:
+        scores["Versatile Valedictorian"] += DIVERSITY_BONUS
+
+    # --- Determine Winner ---
+    if not scores or all(s == 0 for s in scores.values()):
         return "Eclectic Reader", scores
-    if scores["Rapacious Reader"] > 0:
+    if scores.get("Rapacious Reader", 0) > 0:
         return "Rapacious Reader", scores
 
     primary_type = scores.most_common(1)[0][0]
@@ -481,6 +375,7 @@ def generate_reading_dna(csv_file_content: str) -> dict:
         "top_controversial_books": top_controversial_list,
         "most_positive_review": most_positive_review,
         "most_negative_review": most_negative_review,
+        "top_reader_types": top_types_list,
     }
 
     def clean_dict(d):
