@@ -1,4 +1,5 @@
 import itertools
+import random
 import re
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -10,7 +11,12 @@ import requests
 from django.core.cache import cache
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-from .dna_constants import CANONICAL_GENRE_MAP, EXCLUDED_GENRES, GENRE_ALIASES, MAJOR_PUBLISHERS
+from .dna_constants import (
+    CANONICAL_GENRE_MAP,
+    EXCLUDED_GENRES,
+    MAJOR_PUBLISHERS,
+    READER_TYPE_DESCRIPTIONS,
+)
 
 
 def normalize_and_filter_genres(subjects):
@@ -129,7 +135,7 @@ def assign_reader_type(read_df, enriched_data, all_genres):
             scores["Rapacious Reader"] = 100
 
     if "Number of Pages" in read_df.columns:
-        long_books = read_df[read_df["Number of Pages"] > 600].shape[0]
+        long_books = read_df[read_df["Number of Pages"] > 490].shape[0]
         short_books = read_df[read_df["Number of Pages"] < 200].shape[0]
         scores["Tome Tussler"] += long_books * 2
         scores["Novella Navigator"] += short_books
@@ -263,12 +269,13 @@ def generate_reading_dna(csv_file_content: str) -> dict:
     print(f"   🏆 Determined Reader Type: {reader_type}")
     print(f"   📊 Reader Type Scores: {reader_type_scores}")
 
-    # --- NEW: Get Top 3 Reader Types for Display ---
+    explanation_list = READER_TYPE_DESCRIPTIONS.get(reader_type, ["You are a unique and eclectic reader!"])
+    reader_type_explanation = random.choice(explanation_list)
+
     top_types_list = [
         {"type": r_type, "score": score} for r_type, score in reader_type_scores.most_common(3) if score > 0
     ]
 
-    print("📊 Calculating reading statistics (from 'read' shelf)...")
     total_books_read = len(read_df)
     total_pages_read = int(read_df["Number of Pages"].dropna().sum())
     print(f"   📚 Total books: {total_books_read}")
@@ -367,6 +374,7 @@ def generate_reading_dna(csv_file_content: str) -> dict:
         "reader_type_scores": reader_type_scores,
         "total_books_read": total_books_read,
         "total_pages_read": total_pages_read,
+        "reader_type_explanation": reader_type_explanation,
         "average_rating_overall": average_rating_overall,
         "stats_by_year": stats_by_year_list,
         "ratings_distribution": ratings_dist,
@@ -389,4 +397,3 @@ def generate_reading_dna(csv_file_content: str) -> dict:
     if dna["most_negative_review"]:
         dna["most_negative_review"] = clean_dict(dna["most_negative_review"])
     return dna
-
