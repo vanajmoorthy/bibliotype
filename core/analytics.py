@@ -10,31 +10,58 @@ import requests
 from django.core.cache import cache
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-# --- NEW: PUBLISHER & TYPE DEFINITIONS ---
 MAJOR_PUBLISHERS = {
-    "penguin", "random house", "harpercollins", "simon & schuster", "hachette",
-    "macmillan", "knopf", "doubleday", "viking", "vintage", "scribner", "atriabooks"
+    # Original List
+    "penguin",
+    "random house",
+    "harpercollins",
+    "simon & schuster",
+    "hachette",
+    "macmillan",
+    "knopf",
+    "doubleday",
+    "viking",
+    "vintage",
+    "scribner",
+    "atriabooks",
+    # Recommended Additions
+    "little, brown",  # For "Little, Brown and Company"
+    "bloomsbury",
+    "farrar, straus & giroux",
+    "bantam",
+    "scholastic",
+    "putnam",  # For "G. P. Putnam's Sons"
+    "dutton",
+    "hodder",
+    "collins",
+    "oxford university press",
+    "routledge",
+    "prentice hall",
+    "grove press",
+    "virago",
+    "gollancz",
+    "harper",  # Catches HarperPrism, Harper Paperbacks, etc.
+    "harcourt",  # Catches Harcourt, Brace and Company, etc.
+    "faber",  # Catches Faber & Faber
+    "dover",  # Catches Dover Publications
+    "tantor",
+    "signet",
 }
 
 GENRE_ALIASES = {
-    "fantasy": {
-        "fantasy fiction",
-        "epic fantasy",
-        "high fantasy",
-        "discworld (imaginary place)",
-        "english fantasy fiction",
-        "disque-monde (lieu imaginaire)",
-        "wizards",
-        "magic",
-        "magic, fiction",
-        "wizards, fiction",
-    },
+    # Existing Genres
+    "fantasy": {"fantasy fiction", "epic fantasy", "high fantasy", "wizards", "magic"},
     "science fiction": {"sci-fi", "speculative fiction"},
     "non-fiction": {"nonfiction"},
     "psychology": {"mental health"},
     "classics": {"classic"},
     "humorous fiction": {"humorous stories", "humor"},
+    # --- NEW GENRES FOR NEW READER TYPES ---
+    "nature": {"natural history", "environment", "animals", "outdoors", "nature writing", "biology"},
+    "social science": {"sociology", "politics", "social history", "anthropology", "current events"},
+    "self-help": {"self-help", "personal development", "self-improvement", "productivity"},
 }
+
 
 # Create a reverse mapping for fast lookups (alias -> canonical).
 CANONICAL_GENRE_MAP = {}
@@ -42,6 +69,7 @@ for canonical, aliases in GENRE_ALIASES.items():
     CANONICAL_GENRE_MAP[canonical] = canonical
     for alias in aliases:
         CANONICAL_GENRE_MAP[alias] = canonical
+
 
 def normalize_and_filter_genres(subjects):
     excluded_genres = {
@@ -69,65 +97,85 @@ def normalize_and_filter_genres(subjects):
     ]
     return plausible_genres[:5]
 
+
 def get_book_details_from_open_library(title, author, session):
     """
-    Looks up a book's genres, publish year, and publisher. Uses a cache.
+    Looks up a book's genres, publish year, and publisher by fetching
+    from both the Work (for rich genres) and Edition (for specific details)
+    endpoints. Uses a cache to avoid repeated API calls.
     """
-    LOGIC_VERSION = "v4_details" # Bump the version for the new logic
+    LOGIC_VERSION = "v5_hybrid"  # Bump the version for this new, improved logic
     cache_key = f"book_details:{LOGIC_VERSION}:{author}:{title}".lower().replace(" ", "_")
-    
+
     cached_data = cache.get(cache_key)
     if cached_data is not None:
+        print(f"   ✅ Found details for '{title}' in cache.")
         return cached_data
 
+    print(f"   📚 Fetching details for: '{title}' by {author} (from API)")
     clean_title = re.split(r"[:(]", title)[0].strip()
     query_title = quote_plus(clean_title)
     query_author = quote_plus(author)
     search_url = f"https://openlibrary.org/search.json?title={query_title}&author={query_author}"
-    
+
+    # Default empty structure
+    book_details = {
+        "genres": [],
+        "publish_year": None,
+        "publisher": None,
+    }
+
     try:
+        # --- Step 1: Search for the book ---
         response = session.get(search_url, timeout=5)
-        if response.status_code != 200: return {}
+        if response.status_code != 200:
+            return book_details
+
         data = response.json()
-        if not data.get("docs"): return {}
+        if not data.get("docs"):
+            return book_details
 
-        # Get the key for the most relevant edition
-        edition_key = data["docs"][0].get("cover_edition_key")
-        if not edition_key: return {}
-        
-        # Fetch the edition details, which has the data we need
-        edition_url = f"https://openlibrary.org/books/{edition_key}.json"
-        edition_response = session.get(edition_url, timeout=5)
-        if edition_response.status_code != 200: return {}
-        
-        edition_data = edition_response.json()
-        subjects = edition_data.get("subjects", [])
-        
-        genres = normalize_and_filter_genres(subjects)
-        
-        # Extract the new data points
-        publish_year_str = edition_data.get("publish_date", "")
-        publish_year = None
-        if publish_year_str:
-            match = re.search(r'\d{4}', publish_year_str)
-            if match:
-                try:
-                    publish_year = int(match.group())
-                except ValueError:
-                    publish_year = None
+        search_result = data["docs"][0]
+        work_key = search_result.get("key")
+        edition_key = search_result.get("cover_edition_key")
 
-        publisher = edition_data.get("publishers", [None])[0]
+        # --- Step 2: Get rich genre data from the WORK endpoint (File 1's method) ---
+        if work_key:
+            work_url = f"https://openlibrary.org{work_key}.json"
+            work_response = session.get(work_url, timeout=5)
+            if work_response.status_code == 200:
+                work_data = work_response.json()
+                subjects = work_data.get("subjects", [])
+                book_details["genres"] = normalize_and_filter_genres(subjects)  # Using the helper from File 2
 
-        book_details = {
-            "genres": genres,
-            "publish_year": publish_year,
-            "publisher": publisher,
-        }
+        # --- Step 3: Get specific data from the EDITION endpoint (File 2's method) ---
+        if edition_key:
+            edition_url = f"https://openlibrary.org/books/{edition_key}.json"
+            edition_response = session.get(edition_url, timeout=5)
+            if edition_response.status_code == 200:
+                edition_data = edition_response.json()
+
+                # Extract publish year
+                publish_year_str = edition_data.get("publish_date", "")
+                if publish_year_str:
+                    match = re.search(r"\d{4}", publish_year_str)
+                    if match:
+                        try:
+                            book_details["publish_year"] = int(match.group())
+                        except ValueError:
+                            pass  # Keep it as None
+
+                # Extract publisher
+                book_details["publisher"] = edition_data.get("publishers", [None])[0]
+
+        # --- Step 4: Cache the combined result and return ---
         cache.set(cache_key, book_details, timeout=60 * 60 * 24 * 30)
         return book_details
 
-    except requests.RequestException:
-        return {}
+    except requests.RequestException as e:
+        print(f"    ❌ Request failed for '{title}': {str(e)}")
+        return book_details
+
 
 def assign_reader_type(read_df, enriched_data, all_genres):
     """
@@ -136,68 +184,71 @@ def assign_reader_type(read_df, enriched_data, all_genres):
     scores = Counter()
     total_books = len(read_df)
     if total_books == 0:
-        return "Not enough data"
+        return "Not enough data", {}
 
     # --- SCORE CALCULATION HEURISTICS ---
 
     # 1. Volume-based scores
-    if 'Date Read' in read_df.columns:
-        books_per_year = read_df.dropna(subset=['Date Read'])['Date Read'].dt.year.value_counts().mean()
+    if "Date Read" in read_df.columns:
+        books_per_year = read_df.dropna(subset=["Date Read"])["Date Read"].dt.year.value_counts().mean()
         if total_books > 75 and books_per_year > 40:
-            scores['Rapacious Reader'] = 100 # Strong signal
+            scores["Rapacious Reader"] = 100  # Strong signal
 
     # 2. Page length-based scores
-    if 'Number of Pages' in read_df.columns:
+    if "Number of Pages" in read_df.columns:
         long_books = read_df[read_df["Number of Pages"] > 600].shape[0]
         short_books = read_df[read_df["Number of Pages"] < 200].shape[0]
-        scores['Tome Tussler'] += long_books * 2
-        scores['Novella Navigator'] += short_books
-    
+        scores["Tome Tussler"] += long_books * 2
+        scores["Novella Navigator"] += short_books
+
     # 3. Genre-based scores
     genre_counts = Counter([CANONICAL_GENRE_MAP.get(g, g) for g in all_genres])
-    scores['Fantasy Fanatic'] += genre_counts.get('fantasy', 0) + genre_counts.get('science fiction', 0)
-    scores['Non-Fiction Ninja'] += genre_counts.get('non-fiction', 0)
-    scores['Philosophical Philomath'] += genre_counts.get('philosophy', 0)
-    
+    scores["Fantasy Fanatic"] += genre_counts.get("fantasy", 0) + genre_counts.get("science fiction", 0)
+    scores["Non-Fiction Ninja"] += genre_counts.get("non-fiction", 0)
+    scores["Philosophical Philomath"] += genre_counts.get("philosophy", 0)
+
     # 4. Publication Year & Publisher scores (using enriched data)
     for index, book in read_df.iterrows():
-        details = enriched_data.get(book['Title'])
-        if not details: continue
-        
-        if details.get('publish_year'):
-            if details['publish_year'] < 1970:
-                scores['Classic Collector'] += 1
-            elif details['publish_year'] > 2018:
-                scores['Modern Maverick'] += 1
-        
-        if details.get('publisher'):
-            if details['publisher'] is not None:
-                is_major = any(major in details['publisher'].lower() for major in MAJOR_PUBLISHERS)
+        details = enriched_data.get(book["Title"])
+        if not details:
+            continue
+
+        if details.get("publish_year"):
+            if details["publish_year"] < 1970:
+                scores["Classic Collector"] += 1
+            elif details["publish_year"] > 2018:
+                scores["Modern Maverick"] += 1
+
+        if details.get("publisher"):
+            if details["publisher"] is not None:
+                is_major = any(major in details["publisher"].lower() for major in MAJOR_PUBLISHERS)
                 if not is_major:
-                    scores['Small Press Supporter'] += 2 # Give extra weight
+                    print(f"   Found non-major publisher: {details['publisher']}")
+                    scores["Small Press Supporter"] += 1  # Give extra weight
 
     # 5. Diversity score
     if len(genre_counts) > 10:
-        scores['Versatile Valedictorian'] = len(genre_counts) # Reward variety
+        scores["Versatile Valedictorian"] = len(genre_counts)  # Reward variety
 
     # 6. StoryGraph-specific scores
-    if 'Moods' in read_df.columns:
-        mood_count = read_df['Moods'].dropna().count()
-        if (mood_count / total_books) > 0.5: # If over half of books have moods
-            scores['Mood Maven'] += 5
+    if "Moods" in read_df.columns:
+        mood_count = read_df["Moods"].dropna().count()
+        if (mood_count / total_books) > 0.5:  # If over half of books have moods
+            scores["Mood Maven"] += 5
 
     # Determine the winner
     if not scores:
-        return "Eclectic Reader" # A nice default
-    
+        return "Eclectic Reader", scores  # A nice default
+
     # Prioritize strong signals
-    if scores['Rapacious Reader'] > 0:
-        return 'Rapacious Reader'
-        
+    if scores["Rapacious Reader"] > 0:
+        return "Rapacious Reader", scores
+
     # Find the highest score among the rest
     primary_type = scores.most_common(1)[0][0]
-    
-    return primary_type
+
+    return primary_type, scores
+
 
 def generate_reading_dna(csv_file_content: str) -> dict:
     print("🚀 Starting Reading DNA generation...")
@@ -230,20 +281,19 @@ def generate_reading_dna(csv_file_content: str) -> dict:
         titles = read_df["Title"]
         authors = read_df["Author"]
         results = executor.map(get_book_details_from_open_library, titles, authors, itertools.repeat(session))
-        
+
         for title, details in zip(titles, results):
             if details:
                 enriched_data[title] = details
-    
-    all_genres = list(itertools.chain.from_iterable(
-        d.get('genres', []) for d in enriched_data.values()
-    ))
+
+    all_genres = list(itertools.chain.from_iterable(d.get("genres", []) for d in enriched_data.values()))
     top_genres = dict(Counter([CANONICAL_GENRE_MAP.get(g, g) for g in all_genres]).most_common(10))
 
     # --- NEW: ASSIGN READER TYPE ---
     print("🧠 Assigning Reader Type...")
-    reader_type = assign_reader_type(read_df, enriched_data, all_genres)
+    reader_type, reader_type_scores = assign_reader_type(read_df, enriched_data, all_genres)
     print(f"   🏆 Determined Reader Type: {reader_type}")
+    print(f"   📊 Reader Type Scores: {reader_type_scores}")
 
     print("📊 Calculating reading statistics (from 'read' shelf)...")
     total_books_read = len(read_df)
@@ -341,6 +391,7 @@ def generate_reading_dna(csv_file_content: str) -> dict:
 
     dna = {
         "reader_type": reader_type,
+        "reader_type_scores": reader_type_scores,
         "total_books_read": total_books_read,
         "total_pages_read": total_pages_read,
         "average_rating_overall": average_rating_overall,
@@ -364,3 +415,4 @@ def generate_reading_dna(csv_file_content: str) -> dict:
     if dna["most_negative_review"]:
         dna["most_negative_review"] = clean_dict(dna["most_negative_review"])
     return dna
+
