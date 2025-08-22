@@ -6,6 +6,60 @@ including publisher lists and genre mappings. This keeps the main logic
 file clean and makes these lists easier to maintain.
 """
 
+
+READER_TYPE_DESCRIPTIONS = {
+    "Fantasy Fanatic": [
+        "You have a deep love for worlds of magic, myth, and epic quests. Your reading history is filled with fantasy and science fiction.",
+        "Your library is a gateway to other realms. You consistently choose books in the fantasy and sci-fi genres.",
+        "From dragons to distant galaxies, your reading habits show a clear preference for the imaginative and the speculative.",
+    ],
+    "Novella Navigator": [
+        "You're a master of the short-form narrative, frequently choosing books under 200 pages. You appreciate a story that gets straight to the point.",
+        "Your reading data shows a strong preference for shorter books. You enjoy concise, impactful stories that can be read in a single sitting.",
+        "You've read a significant number of novellas and shorter works, making you an expert in the art of brevity.",
+    ],
+    "Small Press Supporter": [
+        "You champion the underdogs of the publishing world. A significant portion of your reading comes from independent and small presses.",
+        "Your library is filled with hidden gems from outside the major publishing houses. You have a keen eye for unique, independent voices.",
+        "By frequently reading books from small presses, you actively support a more diverse literary landscape.",
+    ],
+    "Tome Tussler": [
+        "You aren't afraid of commitment. Your reading history is filled with massive books over 500 pages long.",
+        "You love to get lost in sprawling epics and complex narratives, as shown by the number of lengthy tomes you've conquered.",
+        "Your results show a clear pattern of tackling the biggest books on the shelf. You're a true heavyweight reader.",
+    ],
+    "Classic Collector": [
+        "You have a great appreciation for the classics. A notable part of your reading list was published before 1970.",
+        "Your reading habits show a journey through literary history, with a strong focus on timeless, classic works.",
+        "You frequently read books that have stood the test of time, building a library of foundational literary classics.",
+    ],
+    "Versatile Valedictorian": [
+        "Your reading tastes are incredibly diverse. You've explored a wide array of genres, from fiction to non-fiction and everything in between.",
+        "You are a true literary explorer. Your results show you've read from more than ten distinct canonical genres.",
+        "Your library is a testament to your curiosity, spanning a broad and impressive range of different literary categories.",
+    ],
+    "Non-Fiction Ninja": [
+        "You read to learn and understand the world. Your library is heavily weighted towards non-fiction titles.",
+        "From history to science to biography, your reading habits show a strong desire for facts, insights, and real-world knowledge.",
+    ],
+    "Social Savant": [
+        "You are fascinated by the dynamics of society. Your reading list is rich with books on sociology, politics, and current events.",
+        "Your library reflects a deep engagement with social structures and human behavior, focusing on the social sciences.",
+    ],
+    "Modern Maverick": [
+        "You have your finger on the pulse of modern literature. You consistently read new releases and books published in the last few years.",
+        "Your bookshelf is a snapshot of the current literary moment, showing a strong preference for contemporary authors and recent publications.",
+    ],
+    "Philosophical Philomath": [
+        "You enjoy pondering the big questions. Your reading history shows a recurring interest in philosophical works.",
+        "Your library is a space for deep thought, filled with books that explore ethics, existence, and the nature of reality.",
+    ],
+    # Add other types as needed
+    "Eclectic Reader": [
+        "Your reading habits are balanced and wide-ranging, with no single trait dominating the others. You are a true eclectic reader!",
+    ],
+}
+
 MAJOR_PUBLISHERS = {
     # Original List
     "penguin",

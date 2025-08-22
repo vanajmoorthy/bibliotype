@@ -1,222 +1,215 @@
-{% extends 'core/base.html' %} {% load humanize %} {% block content %}
-<div class="max-w-4xl mx-auto space-y-8 p-4">
-  {% if dna %} {{ dna|json_script:"dna-data" }}
-
-  <h1 class="text-5xl font-bold mb-8 text-center uppercase tracking-widest">Your Reading DNA</h1>
-
-  <!-- NEW: Reader Type Card -->
-  {% if dna.reader_type %}
-  <div class="bg-brand-purple p-6 border-2 border-brand-text shadow-neo text-center">
-    <div class="text-lg uppercase">Your Reader Type is...</div>
-    <div class="text-5xl font-bold uppercase tracking-widest mt-1">{{ dna.reader_type }}</div>
-  </div>
-  {% endif %}
-
-  <!-- NEW: TOP 3 READER TYPES SCOREBOARD -->
-  {% if dna.top_reader_types %}
-  <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
-    <h2 class="text-2xl font-bold mb-4 uppercase">Your Top Reader Traits</h2>
-    <ol class="space-y-3 text-lg">
-      {% for item in dna.top_reader_types %}
-      <li class="flex justify-between items-center p-2 {% if forloop.first %}bg-yellow-100{% endif %}">
-        <span class="flex items-center">
-          <span class="font-bold text-xl mr-3">{{ forloop.counter }}.</span>
-          {{ item.type }}
-        </span>
-        <span class="bg-brand-yellow font-bold px-3 py-1 border-2 border-brand-text"> {{ item.score }} </span>
-      </li>
-      {% endfor %}
-    </ol>
-  </div>
-  {% endif %}
-
-  <!-- Key Stats -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="bg-brand-yellow p-6 border-2 border-brand-text shadow-neo text-center">
-      <div class="text-5xl font-bold">{{ dna.total_books_read }}</div>
-      <div class="text-lg uppercase mt-2">Total Books Read</div>
-    </div>
-    <div class="bg-brand-pink p-6 border-2 border-brand-text shadow-neo text-center">
-      <div class="text-5xl font-bold">{{ dna.total_pages_read|intcomma }}</div>
-      <div class="text-lg uppercase mt-2">Total Pages Read</div>
-    </div>
-    <div class="bg-brand-cyan p-6 border-2 border-brand-text shadow-neo text-center">
-      <div class="text-5xl font-bold">{{ dna.average_rating_overall }}</div>
-      <div class="text-lg uppercase mt-2">Overall Rating</div>
-    </div>
-  </div>
-
-  <!-- Charts -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-    <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
-      <h2 class="text-2xl font-bold mb-4 uppercase">Books Per Year</h2>
-      <canvas id="booksByYearChart"></canvas>
-    </div>
-    <div class="bg-white p-6 border-2 border-brand-text shadow-neo relative overflow-hidden">
-      <h2 class="text-2xl font-bold mb-4 uppercase">Rating Per Year</h2>
-      <canvas id="avgRatingByYearChart"></canvas>
-      <div class="absolute top-2 right-2 w-32 h-32 bg-white rounded-b-full">
-        <canvas id="ratingsDistChartSmall"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <!-- Preferences: Genres & Authors -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-    <div class="bg-white p-6 border-2 border-brand-text shadow-neo relative overflow-hidden">
-      <h2 class="text-2xl font-bold mb-4 uppercase">Top Genres</h2>
-      {% if dna.top_genres %}
-      <ol class="space-y-2 text-lg">
-        {% for genre, count in dna.top_genres.items %}
-        <li class="capitalize">
-          <span class="font-bold bg-brand-yellow px-2 py-1 border-2 border-brand-text">{{ genre }}</span> ({{ count }}
-          books)
-        </li>
-        {% endfor %}
-      </ol>
-      <div class="absolute top-2 right-2 w-32 h-32">
-        <canvas id="topGenresChart"></canvas>
-      </div>
-      {% else %}
-      <p class="text-lg">Not enough genre data to display.</p>
-      {% endif %}
-    </div>
-    <div class="bg-white p-6 border-2 border-brand-text shadow-neo relative overflow-hidden">
-      <h2 class="text-2xl font-bold mb-4 uppercase">Top Authors</h2>
-      {% if dna.top_authors %}
-      <ol class="space-y-2 text-lg">
-        {% for author, count in dna.top_authors.items %}
-        <li>
-          <span class="font-bold bg-brand-cyan px-2 py-1 border-2 border-brand-text">{{ author }}</span> ({{ count }}
-          books)
-        </li>
-        {% endfor %}
-      </ol>
-      <div class="absolute top-2 right-2 w-32 h-32">
-        <canvas id="topAuthorsChart"></canvas>
-      </div>
-      {% else %}
-      <p class="text-lg">Not enough author data to display.</p>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Review Analysis -->
-  <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
-    <h2 class="text-2xl font-bold mb-4 uppercase">Review Analysis</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-lg">
-      <div>
-        <h3 class="font-bold text-xl uppercase">Most Positive Review</h3>
-        {% if dna.most_positive_review %}
-        <p class="font-bold mt-2">{{ dna.most_positive_review.Title }}</p>
-        <blockquote class="mt-2 p-3 bg-gray-100 border-2 border-brand-text shadow-neo-sm">
-          "{{ dna.most_positive_review.my_review }}"
-        </blockquote>
-        {% else %}
-        <p class="mt-2">No reviews found.</p>
-        {% endif %}
-      </div>
-      <div>
-        <h3 class="font-bold text-xl uppercase">Most Negative Review</h3>
-        {% if dna.most_negative_review %}
-        <p class="font-bold mt-2">{{ dna.most_negative_review.Title }}</p>
-        <blockquote class="mt-2 p-3 bg-gray-100 border-2 border-brand-text shadow-neo-sm">
-          "{{ dna.most_negative_review.my_review }}"
-        </blockquote>
-        {% else %}
-        <p class="mt-2">No reviews found.</p>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-
-  <!-- Controversial Ratings -->
-  <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
-    <h2 class="text-2xl font-bold mb-4 uppercase">Most "Controversial" Ratings 🤯</h2>
-    <p class="text-lg mb-4">Books where your rating differs most from the Goodreads average.</p>
-    <div class="space-y-4 text-lg">
-      {% for book in dna.top_controversial_books %}
-      <div class="p-3 bg-gray-50 border-2 border-brand-text shadow-neo-sm">
-        <p class="font-bold">{{ book.Title }}</p>
-        <div class="flex justify-between items-center mt-1 text-base">
-          <span>Your Rating: <span class="font-bold text-xl">{{ book.my_rating|floatformat:1 }}★</span></span>
-          <span>Goodreads Avg: <span class="font-bold text-xl">{{ book.average_rating|floatformat:1 }}★</span></span>
-          <span class="bg-brand-purple text-brand-text font-bold px-2 py-1 border-2 border-brand-text"
-            >Diff: {{ book.rating_difference|floatformat:1 }}</span
-          >
-        </div>
-      </div>
-      {% empty %}
-      <p>Not enough data to calculate controversial ratings.</p>
-      {% endfor %}
-    </div>
-  </div>
-
-  {% if user.is_authenticated %}
-  <!-- Settings Section -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-    <!-- Privacy Settings -->
-    <div class="md:col-span-2 bg-white p-4 border-2 border-brand-text shadow-neo h-full flex items-center">
-      <div class="flex-grow">
-        {% if user_profile.is_public %}
-        <h3 class="text-xl font-bold uppercase">
-          Your profile is <span class="font-bold bg-brand-green px-2 py-1 border-2 border-brand-text">Public</span>.
-          <a
-            href="{% url 'core:public_profile' username=user.username %}"
-            class="underline hover:bg-brand-yellow ml-2"
-            target="_blank"
-            >/u/{{ user.username }}</a
-          >
-        </h3>
-        {% else %}
-        <h3 class="text-xl font-bold uppercase">
-          Your profile is <span class="font-bold bg-brand-pink px-2 py-1 border-2 border-brand-text">Private</span>.
-        </h3>
-        {% endif %}
-      </div>
-      <form action="{% url 'core:update_privacy' %}" method="post" class="ml-4">
-        {% csrf_token %} {% if user_profile.is_public %}
-        <input type="hidden" name="is_public" value="false" />
-        <button
-          type="submit"
-          class="bg-brand-pink text-brand-text font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-brand-yellow"
-        >
-          Make Private
-        </button>
-        {% else %}
-        <input type="hidden" name="is_public" value="true" />
-        <button
-          type="submit"
-          class="bg-brand-green text-brand-text font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-brand-yellow"
-        >
-          Make Public
-        </button>
-        {% endif %}
-      </form>
-    </div>
-
-    <!-- Update DNA -->
-    <div class="bg-white p-4 border-2 border-brand-text shadow-neo h-full flex items-center justify-center">
-      <a
-        href="{% url 'core:home' %}"
-        class="w-full block text-center bg-brand-purple font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-opacity-90"
-      >
-        Update Readprint
-      </a>
-    </div>
-  </div>
-  {% else %}
-  <!-- CTA to Save -->
-  <div class="bg-brand-purple p-6 border-2 border-brand-text shadow-neo text-center">
-    <h2 class="text-2xl font-bold uppercase">Enjoying Your Readprint?</h2>
-    <p class="text-lg mt-2">
-      <a href="{% url 'core:signup' %}" class="underline hover:bg-brand-yellow">Create a free account</a>
-      to save your DNA, track your history, and share it with friends.
-    </p>
-  </div>
-  {% endif %}
-
-  <script>
+{% extends 'core/base.html' %}
+{% load humanize %}
+{% block content %}
+    <div class="max-w-4xl mx-auto space-y-8 p-4">
+        {% if dna %}
+            {{ dna|json_script:"dna-data" }}
+            <h1 class="text-5xl font-bold mb-8 text-center uppercase tracking-widest">Your Reading DNA</h1>
+            <!-- NEW: Reader Type Card -->
+            {% if dna.reader_type %}
+                <div class="bg-brand-purple p-6 border-2 border-brand-text shadow-neo text-center">
+                    <div class="text-lg uppercase">Your Reader Type is...</div>
+                    <div class="text-5xl font-bold uppercase tracking-widest mt-1">{{ dna.reader_type }}</div>
+                    <!-- Add the explanation text here -->
+                    {% if dna.reader_type_explanation %}
+                        <p class="text-lg mt-4 max-w-2xl mx-auto">{{ dna.reader_type_explanation }}</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+            <!-- NEW: Improved "Top 3" Leaderboard -->
+            {% if dna.top_reader_types %}
+                <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+                    <h2 class="text-2xl font-bold mb-4 uppercase">Your Top Reader Traits</h2>
+                    <ol class="space-y-2 text-lg">
+                        {% for item in dna.top_reader_types %}
+                            {% if forloop.first %}
+                                {% with bgcolor='bg-yellow-300' bordercolor='border-yellow-500' %}
+                                    {% include 'core/partials/leaderboard_item.html' %}
+                                {% endwith %}
+                            {% elif forloop.counter == 2 %}
+                                {% with bgcolor='bg-gray-300' bordercolor='border-gray-500' %}
+                                    {% include 'core/partials/leaderboard_item.html' %}
+                                {% endwith %}
+                            {% elif forloop.counter == 3 %}
+                                {% with bgcolor='bg-amber-500' bordercolor='border-amber-700' %}
+                                    {% include 'core/partials/leaderboard_item.html' %}
+                                {% endwith %}
+                            {% endif %}
+                        {% endfor %}
+                    </ol>
+                </div>
+            {% endif %}
+            <!-- Key Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-brand-yellow p-6 border-2 border-brand-text shadow-neo text-center">
+                    <div class="text-5xl font-bold">{{ dna.total_books_read }}</div>
+                    <div class="text-lg uppercase mt-2">Total Books Read</div>
+                </div>
+                <div class="bg-brand-pink p-6 border-2 border-brand-text shadow-neo text-center">
+                    <div class="text-5xl font-bold">{{ dna.total_pages_read|intcomma }}</div>
+                    <div class="text-lg uppercase mt-2">Total Pages Read</div>
+                </div>
+                <div class="bg-brand-cyan p-6 border-2 border-brand-text shadow-neo text-center">
+                    <div class="text-5xl font-bold">{{ dna.average_rating_overall }}</div>
+                    <div class="text-lg uppercase mt-2">Overall Rating</div>
+                </div>
+            </div>
+            <!-- Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+                    <h2 class="text-2xl font-bold mb-4 uppercase">Books Per Year</h2>
+                    <canvas id="booksByYearChart"></canvas>
+                </div>
+                <div class="bg-white p-6 border-2 border-brand-text shadow-neo relative overflow-hidden">
+                    <h2 class="text-2xl font-bold mb-4 uppercase">Rating Per Year</h2>
+                    <canvas id="avgRatingByYearChart"></canvas>
+                    <div class="absolute top-2 right-2 w-32 h-32 bg-white rounded-b-full">
+                        <canvas id="ratingsDistChartSmall"></canvas>
+                    </div>
+                </div>
+            </div>
+            <!-- Preferences: Genres & Authors -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white p-6 border-2 border-brand-text shadow-neo relative overflow-hidden">
+                    <h2 class="text-2xl font-bold mb-4 uppercase">Top Genres</h2>
+                    {% if dna.top_genres %}
+                        <ol class="space-y-2 text-lg">
+                            {% for genre, count in dna.top_genres.items %}
+                                <li class="capitalize">
+                                    <span class="font-bold bg-brand-yellow px-2 py-1 border-2 border-brand-text">{{ genre }}</span> ({{ count }}
+                                    books)
+                                </li>
+                            {% endfor %}
+                        </ol>
+                        <div class="absolute top-2 right-2 w-32 h-32">
+                            <canvas id="topGenresChart"></canvas>
+                        </div>
+                    {% else %}
+                        <p class="text-lg">Not enough genre data to display.</p>
+                    {% endif %}
+                </div>
+                <div class="bg-white p-6 border-2 border-brand-text shadow-neo relative overflow-hidden">
+                    <h2 class="text-2xl font-bold mb-4 uppercase">Top Authors</h2>
+                    {% if dna.top_authors %}
+                        <ol class="space-y-2 text-lg">
+                            {% for author, count in dna.top_authors.items %}
+                                <li>
+                                    <span class="font-bold bg-brand-cyan px-2 py-1 border-2 border-brand-text">{{ author }}</span> ({{ count }}
+                                    books)
+                                </li>
+                            {% endfor %}
+                        </ol>
+                        <div class="absolute top-2 right-2 w-32 h-32">
+                            <canvas id="topAuthorsChart"></canvas>
+                        </div>
+                    {% else %}
+                        <p class="text-lg">Not enough author data to display.</p>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Review Analysis -->
+            <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+                <h2 class="text-2xl font-bold mb-4 uppercase">Review Analysis</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-lg">
+                    <div>
+                        <h3 class="font-bold text-xl uppercase">Most Positive Review</h3>
+                        {% if dna.most_positive_review %}
+                            <p class="font-bold mt-2">{{ dna.most_positive_review.Title }}</p>
+                            <blockquote class="mt-2 p-3 bg-gray-100 border-2 border-brand-text shadow-neo-sm">
+                                "{{ dna.most_positive_review.my_review }}"
+                            </blockquote>
+                        {% else %}
+                            <p class="mt-2">No reviews found.</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-xl uppercase">Most Negative Review</h3>
+                        {% if dna.most_negative_review %}
+                            <p class="font-bold mt-2">{{ dna.most_negative_review.Title }}</p>
+                            <blockquote class="mt-2 p-3 bg-gray-100 border-2 border-brand-text shadow-neo-sm">
+                                "{{ dna.most_negative_review.my_review }}"
+                            </blockquote>
+                        {% else %}
+                            <p class="mt-2">No reviews found.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <!-- Controversial Ratings -->
+            <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+                <h2 class="text-2xl font-bold mb-4 uppercase">Most "Controversial" Ratings 🤯</h2>
+                <p class="text-lg mb-4">Books where your rating differs most from the Goodreads average.</p>
+                <div class="space-y-4 text-lg">
+                    {% for book in dna.top_controversial_books %}
+                        <div class="p-3 bg-gray-50 border-2 border-brand-text shadow-neo-sm">
+                            <p class="font-bold">{{ book.Title }}</p>
+                            <div class="flex justify-between items-center mt-1 text-base">
+                                <span>Your Rating: <span class="font-bold text-xl">{{ book.my_rating|floatformat:1 }}★</span></span>
+                                <span>Goodreads Avg: <span class="font-bold text-xl">{{ book.average_rating|floatformat:1 }}★</span></span>
+                                <span class="bg-brand-purple text-brand-text font-bold px-2 py-1 border-2 border-brand-text">Diff: {{ book.rating_difference|floatformat:1 }}</span>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p>Not enough data to calculate controversial ratings.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% if user.is_authenticated %}
+                <!-- Settings Section -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                    <!-- Privacy Settings -->
+                    <div class="md:col-span-2 bg-white p-4 border-2 border-brand-text shadow-neo h-full flex items-center">
+                        <div class="flex-grow">
+                            {% if user_profile.is_public %}
+                                <h3 class="text-xl font-bold uppercase">
+                                    Your profile is <span class="font-bold bg-brand-green px-2 py-1 border-2 border-brand-text">Public</span>.
+                                    <a href="{% url 'core:public_profile' username=user.username %}"
+                                       class="underline hover:bg-brand-yellow ml-2"
+                                       target="_blank">/u/{{ user.username }}</a>
+                                </h3>
+                            {% else %}
+                                <h3 class="text-xl font-bold uppercase">
+                                    Your profile is <span class="font-bold bg-brand-pink px-2 py-1 border-2 border-brand-text">Private</span>.
+                                </h3>
+                            {% endif %}
+                        </div>
+                        <form action="{% url 'core:update_privacy' %}" method="post" class="ml-4">
+                            {% csrf_token %}
+                            {% if user_profile.is_public %}
+                                <input type="hidden" name="is_public" value="false" />
+                                <button type="submit"
+                                        class="bg-brand-pink text-brand-text font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-brand-yellow">
+                                    Make Private
+                                </button>
+                            {% else %}
+                                <input type="hidden" name="is_public" value="true" />
+                                <button type="submit"
+                                        class="bg-brand-green text-brand-text font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-brand-yellow">
+                                    Make Public
+                                </button>
+                            {% endif %}
+                        </form>
+                    </div>
+                    <!-- Update DNA -->
+                    <div class="bg-white p-4 border-2 border-brand-text shadow-neo h-full flex items-center justify-center">
+                        <a href="{% url 'core:home' %}"
+                           class="w-full block text-center bg-brand-purple font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-opacity-90">
+                            Update Readprint
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                <!-- CTA to Save -->
+                <div class="bg-brand-purple p-6 border-2 border-brand-text shadow-neo text-center">
+                    <h2 class="text-2xl font-bold uppercase">Enjoying Your Readprint?</h2>
+                    <p class="text-lg mt-2">
+                        <a href="{% url 'core:signup' %}"
+                           class="underline hover:bg-brand-yellow">Create a free account</a>
+                        to save your DNA, track your history, and share it with friends.
+                    </p>
+                </div>
+            {% endif %}
+            <script>
     document.addEventListener("DOMContentLoaded", function () {
       const dnaData = JSON.parse(document.getElementById("dna-data").textContent);
 
@@ -430,38 +423,42 @@
         },
       });
     });
-  </script>
-
-  {% else %}
-  <div class="text-center max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
-    <h2 class="text-2xl font-bold tracking-tight text-gray-900">
-      {% if user.is_authenticated %} Welcome, {{ user.username }}! {% else %} Generate Your Reading DNA! {% endif %}
-    </h2>
-    <p class="mt-3 text-lg text-gray-600">
-      {% if user.is_authenticated %} You haven't generated your Readprint yet. Let's get started! {% else %} Upload your
-      Goodreads or StoryGraph export CSV to get started. {% endif %}
-    </p>
-
-    <form action="{% url 'core:upload' %}" method="post" enctype="multipart/form-data" class="mt-8">
-      {% csrf_token %}
-      <label for="csv_file" class="block text-sm font-medium text-gray-700">Select your CSV file:</label>
-      <input
-        type="file"
-        name="csv_file"
-        id="csv_file"
-        required
-        accept=".csv"
-        class="mt-2 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-      />
-
-      <button
-        type="submit"
-        class="mt-6 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-md hover:bg-indigo-700 transition-colors"
-      >
-        Generate My Readprint
-      </button>
-    </form>
-  </div>
-  {% endif %}
-</div>
+            </script>
+        {% else %}
+            <div class="text-center max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-bold tracking-tight text-gray-900">
+                    {% if user.is_authenticated %}
+                        Welcome, {{ user.username }}!
+                    {% else %}
+                        Generate Your Reading DNA!
+                    {% endif %}
+                </h2>
+                <p class="mt-3 text-lg text-gray-600">
+                    {% if user.is_authenticated %}
+                        You haven't generated your Readprint yet. Let's get started!
+                    {% else %}
+                        Upload your
+                        Goodreads or StoryGraph export CSV to get started.
+                    {% endif %}
+                </p>
+                <form action="{% url 'core:upload' %}"
+                      method="post"
+                      enctype="multipart/form-data"
+                      class="mt-8">
+                    {% csrf_token %}
+                    <label for="csv_file" class="block text-sm font-medium text-gray-700">Select your CSV file:</label>
+                    <input type="file"
+                           name="csv_file"
+                           id="csv_file"
+                           required
+                           accept=".csv"
+                           class="mt-2 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                    <button type="submit"
+                            class="mt-6 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-md hover:bg-indigo-700 transition-colors">
+                        Generate My Readprint
+                    </button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
 {% endblock %}
