@@ -128,75 +128,55 @@
 
   {% if user.is_authenticated %}
   <!-- Settings Section -->
-  <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
-    <h2 class="text-2xl font-bold mb-4 uppercase">Settings</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <!-- Privacy Settings -->
-      <div>
-        <h3 class="text-xl font-bold mb-2 uppercase">Profile Privacy</h3>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+    <!-- Privacy Settings -->
+    <div class="md:col-span-2 bg-white p-4 border-2 border-brand-text shadow-neo h-full flex items-center">
+      <div class="flex-grow">
         {% if user_profile.is_public %}
-        <p class="text-lg">
+        <h3 class="text-xl font-bold uppercase">
           Your profile is <span class="font-bold bg-brand-green px-2 py-1 border-2 border-brand-text">Public</span>.
-        </p>
-        <p class="text-base mt-2">
-          Share your Readprint:
           <a
             href="{% url 'core:public_profile' username=user.username %}"
-            class="underline hover:bg-brand-yellow"
+            class="underline hover:bg-brand-yellow ml-2"
             target="_blank"
             >/u/{{ user.username }}</a
           >
-        </p>
-        <form action="{% url 'core:update_privacy' %}" method="post" class="mt-4">
-          {% csrf_token %}
-          <input type="hidden" name="is_public" value="false" />
-          <button
-            type="submit"
-            class="bg-brand-pink text-brand-text font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-brand-yellow"
-          >
-            Make Private
-          </button>
-        </form>
+        </h3>
         {% else %}
-        <p class="text-lg">
+        <h3 class="text-xl font-bold uppercase">
           Your profile is <span class="font-bold bg-brand-pink px-2 py-1 border-2 border-brand-text">Private</span>.
-        </p>
-        <p class="text-base mt-2">Only you can see your dashboard.</p>
-        <form action="{% url 'core:update_privacy' %}" method="post" class="mt-4">
-          {% csrf_token %}
-          <input type="hidden" name="is_public" value="true" />
-          <button
-            type="submit"
-            class="bg-brand-green text-brand-text font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-brand-yellow"
-          >
-            Make Public
-          </button>
-        </form>
+        </h3>
         {% endif %}
       </div>
+      <form action="{% url 'core:update_privacy' %}" method="post" class="ml-4">
+        {% csrf_token %} {% if user_profile.is_public %}
+        <input type="hidden" name="is_public" value="false" />
+        <button
+          type="submit"
+          class="bg-brand-pink text-brand-text font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-brand-yellow"
+        >
+          Make Private
+        </button>
+        {% else %}
+        <input type="hidden" name="is_public" value="true" />
+        <button
+          type="submit"
+          class="bg-brand-green text-brand-text font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-brand-yellow"
+        >
+          Make Public
+        </button>
+        {% endif %}
+      </form>
+    </div>
 
-      <!-- Update DNA -->
-      <div>
-        <h3 class="text-xl font-bold mb-2 uppercase">Update Readprint</h3>
-        <p class="text-base mb-4">Upload a new CSV export to overwrite your current data.</p>
-        <form action="{% url 'core:upload' %}" method="post" enctype="multipart/form-data">
-          {% csrf_token %}
-          <input
-            type="file"
-            name="csv_file"
-            id="csv_file"
-            required
-            accept=".csv"
-            class="w-full text-lg text-brand-text bg-white border-2 border-brand-text p-2 focus:outline-none focus:ring-2 focus:ring-brand-purple file:mr-4 file:py-1 file:px-3 file:border-2 file:border-brand-text file:font-bold file:bg-brand-cyan file:text-brand-text"
-          />
-          <button
-            type="submit"
-            class="mt-4 w-full bg-brand-purple text-white font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-opacity-90"
-          >
-            Upload & Refresh
-          </button>
-        </form>
-      </div>
+    <!-- Update DNA -->
+    <div class="bg-white p-4 border-2 border-brand-text shadow-neo h-full flex items-center justify-center">
+      <a
+        href="{% url 'core:home' %}"
+        class="w-full block text-center bg-brand-purple font-bold py-2 px-4 border-2 border-brand-text shadow-neo-sm hover:bg-opacity-90"
+      >
+        Update Readprint
+      </a>
     </div>
   </div>
   {% else %}
