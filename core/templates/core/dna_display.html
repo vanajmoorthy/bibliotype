@@ -4,6 +4,14 @@
 
   <h1 class="text-5xl font-bold mb-8 text-center uppercase tracking-widest">Your Reading DNA</h1>
 
+  <!-- NEW: Reader Type Card -->
+  {% if dna.reader_type %}
+  <div class="bg-brand-purple p-6 border-2 border-brand-text shadow-neo text-center">
+      <div class="text-lg uppercase">Your Reader Type is...</div>
+      <div class="text-5xl font-bold uppercase tracking-widest mt-1">{{ dna.reader_type }}</div>
+  </div>
+  {% endif %}
+
   <!-- Key Stats -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
     <div class="bg-brand-yellow p-6 border-2 border-brand-text shadow-neo text-center">
