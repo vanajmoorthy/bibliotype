@@ -48,7 +48,7 @@ def get_genres_from_open_library(title, author, session):
     # 1. Create a unique, clean key for this specific book.
     # We use a prefix to avoid clashes with other cached data.
 
-    LOGIC_VERSION = "v5"
+    LOGIC_VERSION = "v6"
 
     cache_key = f"genre:{LOGIC_VERSION}:{author}:{title}".lower().replace(" ", "_")
 
@@ -70,14 +70,18 @@ def get_genres_from_open_library(title, author, session):
 
     try:
         response = session.get(search_url, timeout=5)
+
         if response.status_code != 200:
             genres = []
         else:
             data = response.json()
+
+            print(data)
             if not data.get("docs"):
                 genres = []
             else:
                 work_key = data["docs"][0].get("key")
+
                 if not work_key:
                     genres = []
                 else:
@@ -192,7 +196,7 @@ def generate_reading_dna(csv_file_content: str) -> dict:
                 }
             )
 
-    top_authors = read_df["Author"].value_counts().head(5).to_dict()
+    top_authors = read_df["Author"].value_counts().head(10).to_dict()
 
     controversial_df = read_df.dropna(subset=["My Rating", "Average Rating"]).copy()
     controversial_df = controversial_df[controversial_df["My Rating"] > 0]
