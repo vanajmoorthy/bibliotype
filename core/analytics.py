@@ -45,7 +45,7 @@ def get_book_details_from_open_library(title, author, session):
     from both the Work (for rich genres) and Edition (for specific details)
     endpoints. Uses a cache to avoid repeated API calls.
     """
-    LOGIC_VERSION = "v6_hybrid"  # Bump the version for this new, improved logic
+    LOGIC_VERSION = "v7_hybrid"  # Bump the version for this new, improved logic
     cache_key = f"book_details:{LOGIC_VERSION}:{author}:{title}".lower().replace(" ", "_")
 
     cached_data = cache.get(cache_key)
@@ -118,7 +118,6 @@ def get_book_details_from_open_library(title, author, session):
         return book_details
 
 
-# REVISED AND MORE EQUITABLE FUNCTION
 def assign_reader_type(read_df, enriched_data, all_genres):
     """
     Calculates scores for reader traits using the final, equitable bonus-based logic.
@@ -167,6 +166,9 @@ def assign_reader_type(read_df, enriched_data, all_genres):
         if publisher:
             is_major = any(major.lower() in publisher.lower() for major in MAJOR_PUBLISHERS)
             if not is_major:
+                # --- THIS IS THE CORRECTED LINE ---
+                # It now correctly prints the publisher's name, which is available inside the loop.
+                print(f"   ℹ️ Found non-major publisher: {publisher}")
                 scores["Small Press Supporter"] += 1
 
     # --- THE DEFINITIVE FIX FOR EQUITY ---
