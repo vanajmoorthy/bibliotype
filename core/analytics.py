@@ -46,6 +46,11 @@ MAJOR_PUBLISHERS = {
     "dover",  # Catches Dover Publications
     "tantor",
     "signet",
+    "Atria Books",
+    "Ballantine Books",
+    "Orion Publishing Group",
+    "Berkley",
+    "Hogarth",
 }
 
 GENRE_ALIASES = {
@@ -177,37 +182,37 @@ def get_book_details_from_open_library(title, author, session):
         return book_details
 
 
+# REVISED AND MORE EQUITABLE FUNCTION
 def assign_reader_type(read_df, enriched_data, all_genres):
     """
     Calculates scores for various reader traits and determines the primary type.
+    This version re-balances the "Versatile Valedictorian" score to be more equitable.
     """
     scores = Counter()
     total_books = len(read_df)
     if total_books == 0:
-        return "Not enough data", {}
+        return "Not enough data", Counter()
 
-    # --- SCORE CALCULATION HEURISTICS ---
-
-    # 1. Volume-based scores
+    # --- HEURISTICS & SCORE CALCULATION ---
     if "Date Read" in read_df.columns:
         books_per_year = read_df.dropna(subset=["Date Read"])["Date Read"].dt.year.value_counts().mean()
         if total_books > 75 and books_per_year > 40:
-            scores["Rapacious Reader"] = 100  # Strong signal
+            scores["Rapacious Reader"] = 100
 
-    # 2. Page length-based scores
     if "Number of Pages" in read_df.columns:
         long_books = read_df[read_df["Number of Pages"] > 600].shape[0]
         short_books = read_df[read_df["Number of Pages"] < 200].shape[0]
         scores["Tome Tussler"] += long_books * 2
         scores["Novella Navigator"] += short_books
 
-    # 3. Genre-based scores
     genre_counts = Counter([CANONICAL_GENRE_MAP.get(g, g) for g in all_genres])
     scores["Fantasy Fanatic"] += genre_counts.get("fantasy", 0) + genre_counts.get("science fiction", 0)
     scores["Non-Fiction Ninja"] += genre_counts.get("non-fiction", 0)
     scores["Philosophical Philomath"] += genre_counts.get("philosophy", 0)
+    scores["Nature Nut Case"] += genre_counts.get("nature", 0)
+    scores["Social Savant"] += genre_counts.get("social science", 0)
+    scores["Self Help Scholar"] += genre_counts.get("self-help", 0)
 
-    # 4. Publication Year & Publisher scores (using enriched data)
     for index, book in read_df.iterrows():
         details = enriched_data.get(book["Title"])
         if not details:
@@ -219,34 +224,24 @@ def assign_reader_type(read_df, enriched_data, all_genres):
             elif details["publish_year"] > 2018:
                 scores["Modern Maverick"] += 1
 
-        if details.get("publisher"):
-            if details["publisher"] is not None:
-                is_major = any(major in details["publisher"].lower() for major in MAJOR_PUBLISHERS)
-                if not is_major:
-                    print(f"   Found non-major publisher: {details['publisher']}")
-                    scores["Small Press Supporter"] += 1  # Give extra weight
+        publisher = details.get("publisher")
+        if publisher:
+            is_major = any(major.lower() in publisher.lower() for major in MAJOR_PUBLISHERS)
+            if not is_major:
+                print(f"   Found non-major publisher: {publisher}")
+                scores["Small Press Supporter"] += 1
 
-    # 5. Diversity score
-    if len(genre_counts) > 10:
-        scores["Versatile Valedictorian"] = len(genre_counts)  # Reward variety
+    # --- THE CRUCIAL CHANGE FOR EQUITY ---
+    # Now, this score only starts counting AFTER 15 distinct genres.
+    # This prevents it from unfairly dominating the results.
+    scores["Versatile Valedictorian"] = max(0, len(genre_counts) - 15)
 
-    # 6. StoryGraph-specific scores
-    if "Moods" in read_df.columns:
-        mood_count = read_df["Moods"].dropna().count()
-        if (mood_count / total_books) > 0.5:  # If over half of books have moods
-            scores["Mood Maven"] += 5
-
-    # Determine the winner
     if not scores:
-        return "Eclectic Reader", scores  # A nice default
-
-    # Prioritize strong signals
+        return "Eclectic Reader", scores
     if scores["Rapacious Reader"] > 0:
         return "Rapacious Reader", scores
 
-    # Find the highest score among the rest
     primary_type = scores.most_common(1)[0][0]
-
     return primary_type, scores
 
 
@@ -260,7 +255,6 @@ def generate_reading_dna(csv_file_content: str) -> dict:
         raise ValueError(f"Could not parse CSV file. Error: {e}")
 
     read_df = df[df["Exclusive Shelf"] == "read"].copy()
-
     if read_df.empty:
         raise ValueError("No books found on the 'read' shelf in your CSV.")
 
@@ -274,14 +268,11 @@ def generate_reading_dna(csv_file_content: str) -> dict:
         temp_df["Date Read"] = pd.to_datetime(temp_df["Date Read"], errors="coerce")
         temp_df.loc[:, "My Review"] = temp_df["My Review"].fillna("")
 
-    # --- NEW: DATA ENRICHMENT STEP ---
     print("🎭 Enriching book data via Open Library API...")
     enriched_data = {}
     with ThreadPoolExecutor(max_workers=10) as executor, requests.Session() as session:
-        titles = read_df["Title"]
-        authors = read_df["Author"]
+        titles, authors = read_df["Title"], read_df["Author"]
         results = executor.map(get_book_details_from_open_library, titles, authors, itertools.repeat(session))
-
         for title, details in zip(titles, results):
             if details:
                 enriched_data[title] = details
@@ -289,11 +280,15 @@ def generate_reading_dna(csv_file_content: str) -> dict:
     all_genres = list(itertools.chain.from_iterable(d.get("genres", []) for d in enriched_data.values()))
     top_genres = dict(Counter([CANONICAL_GENRE_MAP.get(g, g) for g in all_genres]).most_common(10))
 
-    # --- NEW: ASSIGN READER TYPE ---
     print("🧠 Assigning Reader Type...")
     reader_type, reader_type_scores = assign_reader_type(read_df, enriched_data, all_genres)
     print(f"   🏆 Determined Reader Type: {reader_type}")
     print(f"   📊 Reader Type Scores: {reader_type_scores}")
+
+    # --- NEW: Get Top 3 Reader Types for Display ---
+    top_types_list = [
+        {"type": r_type, "score": score} for r_type, score in reader_type_scores.most_common(3) if score > 0
+    ]
 
     print("📊 Calculating reading statistics (from 'read' shelf)...")
     total_books_read = len(read_df)
