@@ -55,14 +55,22 @@
     </nav>
 
     <main class="container mx-auto p-6 h-full">
-      {% if messages %} {% for message in messages %}
-      <div
-        class="p-4 mb-6 border-2 border-brand-text shadow-neo text-lg font-bold {% if message.tags == 'error' %}bg-red-500 text-white{% elif message.tags == 'success' %}bg-brand-green text-brand-text{% else %}bg-brand-cyan text-brand-text{% endif %}"
-        role="alert"
-      >
-        {{ message }}
-      </div>
-      {% endfor %} {% endif %} {% block content %}{% endblock %}
+      {% if messages %}
+        {% for message in messages %}
+        <div
+          x-data="{ show: true }"
+          x-init="setTimeout(() => show = false, 8000)"
+          x-show="show"
+          class="relative p-4 mb-6 border-2 border-brand-text shadow-neo text-lg font-bold {% if message.tags == 'error' %}bg-red-500 text-white{% elif message.tags == 'success' %}bg-brand-green text-brand-text{% else %}bg-brand-cyan text-brand-text{% endif %}"
+          role="alert"
+        >
+          <span>{{ message }}</span>
+          <button @click="show = false" class="absolute top-2 right-3 text-2xl font-bold leading-none px-2 border-2 border-brand-text bg-white text-brand-text shadow-neo-sm hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 cursor-pointer">&times;</button>
+        </div>
+        {% endfor %}
+      {% endif %}
+
+      {% block content %}{% endblock %}
     </main>
   </body>
 </html>

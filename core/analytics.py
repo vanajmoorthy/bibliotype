@@ -53,18 +53,63 @@ MAJOR_PUBLISHERS = {
     "Hogarth",
 }
 
+
 GENRE_ALIASES = {
-    # Existing Genres
-    "fantasy": {"fantasy fiction", "epic fantasy", "high fantasy", "wizards", "magic"},
-    "science fiction": {"sci-fi", "speculative fiction"},
-    "non-fiction": {"nonfiction"},
-    "psychology": {"mental health"},
-    "classics": {"classic"},
-    "humorous fiction": {"humorous stories", "humor"},
-    # --- NEW GENRES FOR NEW READER TYPES ---
+    # --- FICTION ---
+    "fantasy": {
+        "fantasy fiction",
+        "epic fantasy",
+        "high fantasy",
+        "wizards",
+        "magic",
+        "urban fantasy",
+        "magical realism",
+        "fables",
+    },
+    "science fiction": {
+        "sci-fi",
+        "speculative fiction",
+        "dystopian fiction",
+        "cyberpunk",
+        "space opera",
+        "science fiction, american",
+    },
+    "thriller": {
+        "thriller",
+        "mystery fiction",
+        "crime fiction",
+        "suspense fiction",
+        "detective and mystery stories",
+        "thrillers (fiction)",
+        "spy stories",
+        "crime",
+    },
+    "horror": {"horror fiction", "ghost stories", "supernatural fiction", "gothic fiction"},
+    "historical fiction": {"historical fiction", "roman historique"},
+    "romance": {"romance fiction", "love stories", "contemporary romance"},
+    "humorous fiction": {"humorous stories", "humor", "satire"},
+    "young adult": {"young adult fiction", "juvenile literature"},  # Open Library often uses 'juvenile' for YA
+    "children's literature": {"children's stories", "picture books"},
+    "classics": {"classic", "classical literature"},
+    # --- NON-FICTION ---
+    "non-fiction": {"nonfiction", "essays", "journalism", "creative nonfiction"},
+    "biography": {"biography", "autobiography", "memoir", "biographies", "memoirs", "diaries"},
+    "history": {"history", "world history", "ancient history", "military history"},
+    "psychology": {"mental health", "psychology", "psychological fiction"},  # Note: Can be fiction or non-fiction
+    "philosophy": {"philosophy", "ethics", "metaphysics", "stoicism"},
+    "social science": {
+        "sociology",
+        "politics",
+        "social history",
+        "anthropology",
+        "current events",
+        "political science",
+        "economics",
+    },
     "nature": {"natural history", "environment", "animals", "outdoors", "nature writing", "biology"},
-    "social science": {"sociology", "politics", "social history", "anthropology", "current events"},
-    "self-help": {"self-help", "personal development", "self-improvement", "productivity"},
+    "self-help": {"self-help", "personal development", "self-improvement", "productivity", "business"},
+    "science": {"science", "popular science", "physics", "astronomy"},
+    "travel": {"travel writing", "travelogue", "voyages and travels"},
 }
 
 
@@ -245,6 +290,42 @@ def assign_reader_type(read_df, enriched_data, all_genres):
     return primary_type, scores
 
 
+def analyze_and_print_genres(all_raw_genres, canonical_map):
+    """
+    A helper function to analyze and print the frequency of raw genres,
+    separating them into unmapped and already-mapped categories.
+    """
+    print("\n" + "=" * 50)
+    print("🔬 RUNNING GENRE ANALYSIS 🔬")
+    print("=" * 50)
+
+    if not all_raw_genres:
+        print("No genres were found to analyze.")
+        return
+
+    raw_genre_counts = Counter(all_raw_genres)
+    unmapped_genres = {}
+
+    for genre, count in raw_genre_counts.items():
+        if genre not in canonical_map:
+            unmapped_genres[genre] = count
+
+    # Sort the unmapped genres by frequency (most common first)
+    sorted_unmapped = sorted(unmapped_genres.items(), key=lambda item: item[1], reverse=True)
+
+    print(f"\nFound {len(raw_genre_counts)} unique raw genre strings in total.")
+    print(f"Of those, {len(unmapped_genres)} are currently UNMAPPED.")
+
+    print("\n--- UNMAPPED GENRES (Most Common First) ---")
+    if not sorted_unmapped:
+        print("✅ Great news! All genres are already mapped!")
+    else:
+        for genre, count in sorted_unmapped:
+            print(f"  - '{genre}' (appears {count} times)")
+
+    print("\n" + "=" * 50 + "\n")
+
+
 def generate_reading_dna(csv_file_content: str) -> dict:
     print("🚀 Starting Reading DNA generation...")
 
@@ -278,6 +359,9 @@ def generate_reading_dna(csv_file_content: str) -> dict:
                 enriched_data[title] = details
 
     all_genres = list(itertools.chain.from_iterable(d.get("genres", []) for d in enriched_data.values()))
+
+    analyze_and_print_genres(all_genres, CANONICAL_GENRE_MAP)
+
     top_genres = dict(Counter([CANONICAL_GENRE_MAP.get(g, g) for g in all_genres]).most_common(10))
 
     print("🧠 Assigning Reader Type...")
