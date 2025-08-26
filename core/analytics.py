@@ -9,14 +9,18 @@ from urllib.parse import quote_plus
 import pandas as pd
 import requests
 from django.core.cache import cache
+from django.db.models import F
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from .dna_constants import (
     CANONICAL_GENRE_MAP,
     EXCLUDED_GENRES,
+    GLOBAL_AVERAGES,
     MAJOR_PUBLISHERS,
     READER_TYPE_DESCRIPTIONS,
 )
+from .models import Author, Book, Genre, UserProfile
+from .percentile_engine import calculate_percentiles_from_aggregates, update_analytics_from_stats
 
 
 def normalize_and_filter_genres(subjects):
@@ -45,7 +49,7 @@ def get_book_details_from_open_library(title, author, session):
     from both the Work (for rich genres) and Edition (for specific details)
     endpoints. Uses a cache to avoid repeated API calls.
     """
-    LOGIC_VERSION = "v7_hybrid"  # Bump the version for this new, improved logic
+    LOGIC_VERSION = "v10_hybrid"
     cache_key = f"book_details:{LOGIC_VERSION}:{author}:{title}".lower().replace(" ", "_")
 
     cached_data = cache.get(cache_key)
@@ -228,12 +232,10 @@ def analyze_and_print_genres(all_raw_genres, canonical_map):
     print("\n" + "=" * 50 + "\n")
 
 
-def generate_reading_dna(csv_file_content: str) -> dict:
+def generate_reading_dna(csv_file_content: str, user) -> dict:
     print("🚀 Starting Reading DNA generation...")
-
     try:
         df = pd.read_csv(StringIO(csv_file_content))
-        print(f"✅ Successfully loaded CSV with {len(df)} total entries")
     except Exception as e:
         raise ValueError(f"Could not parse CSV file. Error: {e}")
 
@@ -242,160 +244,207 @@ def generate_reading_dna(csv_file_content: str) -> dict:
         raise ValueError("No books found on the 'read' shelf in your CSV.")
 
     print(f"📖 Found {len(read_df)} books marked as 'read' for statistical analysis.")
-    print("🧹 Cleaning and processing data...")
-
+    # --- Data cleaning ---
     for temp_df in [df, read_df]:
         temp_df["My Rating"] = pd.to_numeric(temp_df["My Rating"], errors="coerce")
         temp_df["Number of Pages"] = pd.to_numeric(temp_df["Number of Pages"], errors="coerce")
         temp_df["Average Rating"] = pd.to_numeric(temp_df["Average Rating"], errors="coerce")
         temp_df["Date Read"] = pd.to_datetime(temp_df["Date Read"], errors="coerce")
+        if "Original Publication Year" in temp_df.columns:
+            temp_df["Original Publication Year"] = pd.to_numeric(temp_df["Original Publication Year"], errors="coerce")
+        else:
+            temp_df["Original Publication Year"] = None
         temp_df.loc[:, "My Review"] = temp_df["My Review"].fillna("")
 
-    print("🎭 Enriching book data via Open Library API...")
-    enriched_data = {}
+    # --- Phase 1 & 2: API and DB Sync ---
+    print("🎭 Fetching book data from Open Library API (in parallel)...")
     with ThreadPoolExecutor(max_workers=10) as executor, requests.Session() as session:
-        titles, authors = read_df["Title"], read_df["Author"]
-        results = executor.map(get_book_details_from_open_library, titles, authors, itertools.repeat(session))
-        for title, details in zip(titles, results):
-            if details:
-                enriched_data[title] = details
 
-    all_genres = list(itertools.chain.from_iterable(d.get("genres", []) for d in enriched_data.values()))
+        def fetch_book_details(book_row):
+            return (book_row, get_book_details_from_open_library(book_row["Title"], book_row["Author"], session))
 
-    analyze_and_print_genres(all_genres, CANONICAL_GENRE_MAP)
+        api_results = list(executor.map(fetch_book_details, [row for _, row in read_df.iterrows()]))
 
-    top_genres = dict(Counter([CANONICAL_GENRE_MAP.get(g, g) for g in all_genres]).most_common(10))
+    print("💾 Syncing book data with the database (serially)...")
 
-    print("🧠 Assigning Reader Type...")
-    reader_type, reader_type_scores = assign_reader_type(read_df, enriched_data, all_genres)
-    print(f"   🏆 Determined Reader Type: {reader_type}")
-    print(f"   📊 Reader Type Scores: {reader_type_scores}")
+    all_raw_genres, user_book_objects = [], []
 
-    explanation_list = READER_TYPE_DESCRIPTIONS.get(reader_type, ["You are a unique and eclectic reader!"])
-    reader_type_explanation = random.choice(explanation_list)
+    for original_row, api_details in api_results:
+        author, _ = Author.objects.get_or_create(name=original_row["Author"])
 
-    top_types_list = [
-        {"type": r_type, "score": score} for r_type, score in reader_type_scores.most_common(3) if score > 0
-    ]
+        # === FIX IS HERE =========================================================
+        # Get the raw values from the pandas row (which might be NaN)
+        raw_page_count = original_row.get("Number of Pages")
+        raw_avg_rating = original_row.get("Average Rating")
 
-    total_books_read = len(read_df)
-    total_pages_read = int(read_df["Number of Pages"].dropna().sum())
-    print(f"   📚 Total books: {total_books_read}")
-    print(f"   📄 Total pages: {total_pages_read:,}")
+        # Convert NaN to None, otherwise cast to the correct type (int/float).
+        # This ensures the data is clean before hitting the database.
+        clean_page_count = int(raw_page_count) if pd.notna(raw_page_count) else None
+        clean_avg_rating = float(raw_avg_rating) if pd.notna(raw_avg_rating) else None
+        # =========================================================================
+
+        book, _ = Book.objects.get_or_create(
+            title=original_row["Title"],
+            author=author,
+            defaults={
+                # Use the cleaned variables here
+                "page_count": clean_page_count,
+                "average_rating": clean_avg_rating,
+                "publish_year": api_details.get("publish_year"),
+                "publisher": api_details.get("publisher"),
+            },
+        )
+
+        Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
+        book.refresh_from_db()
+        raw_genres_for_book = api_details.get("genres", [])
+        if raw_genres_for_book:
+            book.genres.set([Genre.objects.get_or_create(name=g)[0].pk for g in raw_genres_for_book])
+        user_book_objects.append(book)
+        all_raw_genres.extend(raw_genres_for_book)
+
+    # --- Personal DNA Calculation ---
+    reader_type, reader_type_scores = assign_reader_type(read_df, {}, all_raw_genres)
+    explanation = random.choice(READER_TYPE_DESCRIPTIONS.get(reader_type, [""]))
+    top_types_list = [{"type": t, "score": s} for t, s in reader_type_scores.most_common(3) if s > 0]
+    mapped_genres = [CANONICAL_GENRE_MAP.get(g, g) for g in all_raw_genres]
+    top_genres = dict(Counter(mapped_genres).most_common(10))
+
+    # --- Community Analytics Calculation ---
+    print("📈 Calculating base user statistics...")
+    user_base_stats = {
+        "total_books_read": int(len(read_df)),
+        "total_pages_read": int(read_df["Number of Pages"].dropna().sum()),
+        "avg_book_length": (
+            int(round(read_df["Number of Pages"].dropna().mean()))
+            if not read_df["Number of Pages"].dropna().empty
+            else 0
+        ),
+        "avg_publish_year": (
+            int(round(read_df["Original Publication Year"].dropna().mean()))
+            if "Original Publication Year" in read_df.columns
+            and not read_df["Original Publication Year"].dropna().empty
+            else 0
+        ),
+    }
+
+    print("🌍 Calculating community stats...")
+    update_analytics_from_stats(user_base_stats)
+    percentiles = calculate_percentiles_from_aggregates(user_base_stats)
+
+    # --- Other Personal Stats Calculations ---
+    most_niche_book = None
+    if user_book_objects:
+        user_book_objects.sort(key=lambda b: b.global_read_count)
+        most_niche_book = {
+            "title": user_book_objects[0].title,
+            "author": user_book_objects[0].author.name,
+            "read_count": user_book_objects[0].global_read_count,
+        }
+
+    top_authors = {k: int(v) for k, v in read_df["Author"].value_counts().head(10).to_dict().items()}
 
     ratings_df = read_df[read_df["My Rating"] > 0].dropna(subset=["My Rating"])
-    if not ratings_df.empty:
-        average_rating_overall = round(ratings_df["My Rating"].mean(), 2)
-        ratings_dist = ratings_df["My Rating"].value_counts().sort_index().to_dict()
-        ratings_dist = {str(k): int(v) for k, v in ratings_dist.items()}
-        print(f"   ⭐ Average rating: {average_rating_overall}")
-    else:
-        average_rating_overall = "N/A"
-        ratings_dist = {}
-
-    yearly_df = read_df.dropna(subset=["Date Read", "My Rating"]).copy()
-    stats_by_year_list = []
-    if not yearly_df.empty:
-        yearly_df.loc[:, "Year Read"] = yearly_df["Date Read"].dt.year
-        books_by_year = yearly_df["Year Read"].value_counts().sort_index()
-        avg_rating_by_year = yearly_df.groupby("Year Read")["My Rating"].mean().round(2).sort_index()
-        stats_by_year = pd.concat([books_by_year, avg_rating_by_year], axis=1)
-        stats_by_year.columns = ["count", "avg_rating"]
-        for year, data in stats_by_year.iterrows():
-            stats_by_year_list.append(
-                {
-                    "year": int(year),
-                    "count": int(data["count"]),
-                    "avg_rating": data["avg_rating"],
-                }
-            )
-
-    top_authors = read_df["Author"].value_counts().head(10).to_dict()
+    average_rating_overall = float(round(ratings_df["My Rating"].mean(), 2)) if not ratings_df.empty else "N/A"
+    ratings_dist = {str(k): int(v) for k, v in ratings_df["My Rating"].value_counts().sort_index().to_dict().items()}
 
     controversial_df = read_df.dropna(subset=["My Rating", "Average Rating"]).copy()
     controversial_df = controversial_df[controversial_df["My Rating"] > 0]
     top_controversial_list = []
     if not controversial_df.empty:
         controversial_df["Rating Difference"] = abs(controversial_df["My Rating"] - controversial_df["Average Rating"])
-        top_controversial_books = controversial_df.sort_values(by="Rating Difference", ascending=False).head(3)
-        top_controversial_list = top_controversial_books.rename(
-            columns={
-                "My Rating": "my_rating",
-                "Average Rating": "average_rating",
-                "Rating Difference": "rating_difference",
-            }
-        )[["Title", "Author", "my_rating", "average_rating", "rating_difference"]].to_dict("records")
-
-    print("💭 Analyzing review sentiments (from ALL shelves)...")
+        top_books = controversial_df.sort_values(by="Rating Difference", ascending=False).head(3)
+        top_books["my_rating"] = top_books["My Rating"].astype(float)
+        top_books["average_rating"] = top_books["Average Rating"].astype(float)
+        top_books["rating_difference"] = top_books["Rating Difference"].astype(float)
+        top_controversial_list = top_books.rename(columns={"Title": "Title", "Author": "Author"})[
+            ["Title", "Author", "my_rating", "average_rating", "rating_difference"]
+        ].to_dict("records")
 
     reviews_df = df[
-        (df["My Review"].str.strip() != "")
-        & (df["My Review"].str.strip() != "nan")
-        & (df["My Review"].str.len() > 5)
+        (df["My Review"].str.strip().ne(""))
+        & (df["My Review"].str.len() > 15)
         & (df["My Rating"].notna())
         & (df["My Rating"] > 0)
     ].copy()
-
-    print(f"   📝 Found {len(reviews_df)} reviews across all shelves to analyze")
-
     most_positive_review, most_negative_review = None, None
     if not reviews_df.empty:
-        print("   🤖 Running sentiment analysis...")
         analyzer = SentimentIntensityAnalyzer()
-        reviews_df["sentiment"] = (
-            reviews_df["My Review"].str.strip().apply(lambda r: analyzer.polarity_scores(r)["compound"])
+        reviews_df["sentiment"] = reviews_df["My Review"].apply(lambda r: analyzer.polarity_scores(r)["compound"])
+        pos_candidate = (
+            reviews_df[reviews_df["My Rating"] == 5]
+            if not reviews_df[reviews_df["My Rating"] == 5].empty
+            else reviews_df
+        )
+        pos_review_row = pos_candidate.loc[pos_candidate["sentiment"].idxmax()]
+        neg_candidate = (
+            reviews_df[reviews_df["My Rating"] == 1]
+            if not reviews_df[reviews_df["My Rating"] == 1].empty
+            else reviews_df
+        )
+        neg_review_row = neg_candidate.loc[neg_candidate["sentiment"].idxmin()]
+        most_positive_review = pos_review_row.rename({"My Review": "my_review"})[
+            ["Title", "Author", "my_review", "sentiment"]
+        ].to_dict()
+        most_positive_review["sentiment"] = float(most_positive_review["sentiment"])
+        most_negative_review = neg_review_row.rename({"My Review": "my_review"})[
+            ["Title", "Author", "my_review", "sentiment"]
+        ].to_dict()
+        most_negative_review["sentiment"] = float(most_negative_review["sentiment"])
+
+    # =========================================================================
+    # === NEW CODE BLOCK TO FIX THE CHART =====================================
+    # =========================================================================
+    # This calculates the statistics needed for the yearly charts in the template.
+    stats_by_year_list = []
+    if "Date Read" in read_df.columns and not read_df["Date Read"].dropna().empty:
+        yearly_df = read_df.dropna(subset=["Date Read"]).copy()
+        yearly_df["year"] = yearly_df["Date Read"].dt.year
+
+        yearly_stats = (
+            yearly_df.groupby("year").agg(count=("Title", "size"), avg_rating=("My Rating", "mean")).reset_index()
         )
 
-        five_star_reviews_df = reviews_df[reviews_df["My Rating"] == 5]
-        if not five_star_reviews_df.empty:
-            print("   ⭐ Found 5-star reviews! Selecting the most positive from this elite group.")
-            pos_review_row = five_star_reviews_df.loc[five_star_reviews_df["sentiment"].idxmax()]
-        else:
-            print("   ⚠️ No 5-star reviews found. Finding the most positive review from all ratings.")
-            pos_review_row = reviews_df.loc[reviews_df["sentiment"].idxmax()]
+        yearly_stats["avg_rating"] = yearly_stats["avg_rating"].fillna(0).round(2)
+        stats_by_year_list = yearly_stats.to_dict("records")
 
-        one_star_reviews_df = reviews_df[reviews_df["My Rating"] == 1]
-        if not one_star_reviews_df.empty:
-            print("   ⭐ Found 1-star reviews! Selecting the most negative from this group.")
-            neg_review_row = one_star_reviews_df.loc[one_star_reviews_df["sentiment"].idxmin()]
-        else:
-            print("   ⚠️ No 1-star reviews found. Finding the most negative review from all ratings.")
-            neg_review_row = reviews_df.loc[reviews_df["sentiment"].idxmin()]
+        # Ensure all types are native Python types for JSON serialization
+        for item in stats_by_year_list:
+            item["year"] = int(item["year"])
+            item["count"] = int(item["count"])
+            item["avg_rating"] = float(item["avg_rating"])
+    # =========================================================================
+    # === END OF NEW CODE BLOCK ===============================================
+    # =========================================================================
 
-        reviews_df.rename(columns={"My Review": "my_review"}, inplace=True)
-        pos_review_row = reviews_df.loc[pos_review_row.name]
-        neg_review_row = reviews_df.loc[neg_review_row.name]
-
-        most_positive_review = pos_review_row[["Title", "Author", "my_review", "sentiment"]].to_dict()
-        most_negative_review = neg_review_row[["Title", "Author", "my_review", "sentiment"]].to_dict()
-        print(f"   😊 Most positive review is for '{most_positive_review['Title']}'")
-        print(f"   😞 Most negative review is for '{most_negative_review['Title']}'")
-
+    # --- Assemble final DNA dictionary ---
     dna = {
+        "user_stats": user_base_stats,
+        "bibliotype_percentiles": percentiles,
+        "global_averages": GLOBAL_AVERAGES,
+        "most_niche_book": most_niche_book,
         "reader_type": reader_type,
-        "reader_type_scores": reader_type_scores,
-        "total_books_read": total_books_read,
-        "total_pages_read": total_pages_read,
-        "reader_type_explanation": reader_type_explanation,
-        "average_rating_overall": average_rating_overall,
-        "stats_by_year": stats_by_year_list,
-        "ratings_distribution": ratings_dist,
-        "top_authors": top_authors,
+        "reader_type_explanation": explanation,
+        "top_reader_types": top_types_list,
+        "reader_type_scores": dict(reader_type_scores),
         "top_genres": top_genres,
+        "top_authors": top_authors,
+        "average_rating_overall": average_rating_overall,
+        "ratings_distribution": ratings_dist,
         "top_controversial_books": top_controversial_list,
         "most_positive_review": most_positive_review,
         "most_negative_review": most_negative_review,
-        "top_reader_types": top_types_list,
+        "stats_by_year": stats_by_year_list,  # <-- Add the new data here
     }
 
+    # Final cleanup of NaN values for JSON serialization
     def clean_dict(d):
         if not isinstance(d, dict):
             return d
         return {k: v for k, v in d.items() if pd.notna(v)}
 
-    dna["top_controversial_books"] = [clean_dict(b) for b in dna["top_controversial_books"]]
-    if dna["most_positive_review"]:
-        dna["most_positive_review"] = clean_dict(dna["most_positive_review"])
-    if dna["most_negative_review"]:
-        dna["most_negative_review"] = clean_dict(dna["most_negative_review"])
+    dna["top_controversial_books"] = [clean_dict(b) for b in dna.get("top_controversial_books", [])]
+    dna["most_positive_review"] = clean_dict(dna.get("most_positive_review"))
+    dna["most_negative_review"] = clean_dict(dna.get("most_negative_review"))
+
     return dna

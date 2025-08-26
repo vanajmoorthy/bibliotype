@@ -1,9 +1,8 @@
 # dna_constants.py
 
 """
-This file stores the constant data used by the Reading DNA generator,
-including publisher lists and genre mappings. This keeps the main logic
-file clean and makes these lists easier to maintain.
+This file stores the constant data used by the Reading DNA generator.
+This is the final, comprehensive version incorporating extensive user feedback.
 """
 
 
@@ -118,7 +117,6 @@ GENRE_ALIASES = {
         "magic",
         "urban fantasy",
         "magical realism",
-        "fables",
         "dragons",
         "discworld (imaginary place)",
         "shapeshifting",
@@ -136,6 +134,8 @@ GENRE_ALIASES = {
         "quests",
         "fiction, fantasy, general",
         "knights and knighthood",
+        "fantastique",
+        "quests (expeditions)",
     },
     "science fiction": {
         "sci-fi",
@@ -212,6 +212,9 @@ GENRE_ALIASES = {
         "spain, fiction",
         "greece, fiction",
         "france in fiction",
+        "world war, 1914-1918",
+        "world war, 1939-1945",
+        "princes, fiction",
     },
     "romance": {
         "romance fiction",
@@ -279,6 +282,7 @@ GENRE_ALIASES = {
         "family life, fiction",
         "american fiction",
         "american sea stories",
+        "artists, fiction",
     },
     "mythology & folklore": {
         "mythology",
@@ -290,10 +294,12 @@ GENRE_ALIASES = {
         "achilles (mythological character)",
         "achilles (greek mythology)",
         "iphigenia (greek mythology)",
+        "thetis",
     },
     "short stories": {"short stories", "english short stories", "short story"},
     "comics & graphic novels": {"cartoons and comics"},
     "holiday fiction": {"christmas stories"},
+    "fairy tales & fables": {"fairy tales", "fables"},
     # --- NON-FICTION ---
     "non-fiction": {"nonfiction", "essays", "journalism", "creative nonfiction", "doctrines"},
     "biography": {
@@ -308,6 +314,7 @@ GENRE_ALIASES = {
         "authors, biography",
         "cancer, patients, biography",
         "terminally ill, biography",
+        "fiction / biographical",
     },
     "history": {"history", "world history", "ancient history", "military history", "historia"},
     "psychology": {
@@ -326,6 +333,7 @@ GENRE_ALIASES = {
         "recollection (psychology)",
         "aversion therapy",
         "behavior",
+        "psychological aspects",
     },
     "philosophy": {
         "philosophy",
@@ -362,6 +370,8 @@ GENRE_ALIASES = {
         "ethnic studies",
         "pornography, social aspects",
         "racial segregation",
+        "women, social conditions",
+        "equality",
     },
     "nature": {
         "natural history",
@@ -377,6 +387,11 @@ GENRE_ALIASES = {
         "zoologists",
         "resource conservation",
         "human-animal relationships",
+        "human-animal communication",
+        "fishing stories",
+        "horses",
+        "cats, fiction",
+        "rabbits",
     },
     "self-help": {
         "self-help",
@@ -386,6 +401,7 @@ GENRE_ALIASES = {
         "business",
         "conduct of life",
         "self-actualization (psychology)",
+        "maturity",
     },
     "science": {
         "science",
@@ -397,6 +413,7 @@ GENRE_ALIASES = {
         "astrophysics",
         "brain",
         "neurology",
+        "hallucinogenic drugs",
     },
     "travel": {
         "travel writing",
@@ -428,6 +445,7 @@ GENRE_ALIASES = {
         "cooking methods",
         "food habits",
         "tea",
+        "japanese tea ceremony",
     },
     "plays & drama": {
         "drama",
@@ -493,6 +511,9 @@ EXCLUDED_GENRES = {
     "translations into russian",
     "gift books",
     "special collections",
+    "facsimiles",
+    "award:nebula_award=novel",
+    "hugo award winner",
     # Thematic Tags (Crucial to Exclude)
     "interpersonal relations",
     "man-woman relationships",
@@ -543,6 +564,9 @@ EXCLUDED_GENRES = {
     "gang rape",
     "mob mentality",
     "poverty",
+    "sex role",
+    "life change events",
+    "marital conflict",
     # Location Tags (Not a genre)
     "london (england), fiction",
     "england, fiction",
@@ -559,6 +583,11 @@ EXCLUDED_GENRES = {
     "jalisco (méxico)",
     "england in fiction",
     "france in fiction",
+    "mexico, fiction",
+    "vermont, fiction",
+    "united states, fiction",
+    "france",
+    "india",
     # Miscellaneous Unmappable Items (roles, objects, specific places, etc.)
     "readers",
     "boarding schools",
@@ -616,6 +645,18 @@ EXCLUDED_GENRES = {
     "transsexuals",
     "young men",
     "middle-aged women",
+    "greeks",
+    "mentally ill women",
+    "men",
+    "human beings",
+    "gond (indic people)",
+    "campesinos",
+}
+
+GLOBAL_AVERAGES = {
+    "avg_books_per_year": 7,
+    "avg_book_length_pages": 340,
+    "avg_publish_year": 2009,
 }
 
 # Create a reverse mapping for fast lookups (alias -> canonical).
