@@ -45,11 +45,11 @@ def normalize_and_filter_genres(subjects):
 
 def get_book_details_from_open_library(title, author, session):
     """
-    Looks up a book's genres, publish year, and publisher by fetching
-    from both the Work (for rich genres) and Edition (for specific details)
-    endpoints. Uses a cache to avoid repeated API calls.
+    Looks up a book's genres, publish year, publisher, AND page count by
+    fetching from both the Work and Edition endpoints.
+    Uses a cache to avoid repeated API calls.
     """
-    LOGIC_VERSION = "v10_hybrid"
+    LOGIC_VERSION = "v11_with_pages"  # <-- Updated version to ensure fresh cache
     cache_key = f"book_details:{LOGIC_VERSION}:{author}:{title}".lower().replace(" ", "_")
 
     cached_data = cache.get(cache_key)
@@ -63,15 +63,15 @@ def get_book_details_from_open_library(title, author, session):
     query_author = quote_plus(author)
     search_url = f"https://openlibrary.org/search.json?title={query_title}&author={query_author}"
 
-    # Default empty structure
+    # Default empty structure now includes page_count
     book_details = {
         "genres": [],
         "publish_year": None,
         "publisher": None,
+        "page_count": None,  # <-- NEW FIELD
     }
 
     try:
-        # --- Step 1: Search for the book ---
         response = session.get(search_url, timeout=5)
         if response.status_code != 200:
             return book_details
@@ -84,23 +84,20 @@ def get_book_details_from_open_library(title, author, session):
         work_key = search_result.get("key")
         edition_key = search_result.get("cover_edition_key")
 
-        # --- Step 2: Get rich genre data from the WORK endpoint (File 1's method) ---
         if work_key:
             work_url = f"https://openlibrary.org{work_key}.json"
             work_response = session.get(work_url, timeout=5)
             if work_response.status_code == 200:
                 work_data = work_response.json()
                 subjects = work_data.get("subjects", [])
-                book_details["genres"] = normalize_and_filter_genres(subjects)  # Using the helper from File 2
+                book_details["genres"] = normalize_and_filter_genres(subjects)
 
-        # --- Step 3: Get specific data from the EDITION endpoint (File 2's method) ---
         if edition_key:
             edition_url = f"https://openlibrary.org/books/{edition_key}.json"
             edition_response = session.get(edition_url, timeout=5)
             if edition_response.status_code == 200:
                 edition_data = edition_response.json()
 
-                # Extract publish year
                 publish_year_str = edition_data.get("publish_date", "")
                 if publish_year_str:
                     match = re.search(r"\d{4}", publish_year_str)
@@ -108,12 +105,22 @@ def get_book_details_from_open_library(title, author, session):
                         try:
                             book_details["publish_year"] = int(match.group())
                         except ValueError:
-                            pass  # Keep it as None
+                            pass
 
-                # Extract publisher
+                # === NEW: EXTRACT PAGE COUNT ====================================
+                # The API field is typically 'number_of_pages'.
+                # We add a check to ensure it's a valid integer before storing.
+                raw_page_count = edition_data.get("number_of_pages")
+                if raw_page_count:
+                    try:
+                        book_details["page_count"] = int(raw_page_count)
+                    except (ValueError, TypeError):
+                        # If the value is not a clean integer, ignore it.
+                        book_details["page_count"] = None
+                # ================================================================
+
                 book_details["publisher"] = edition_data.get("publishers", [None])[0]
 
-        # --- Step 4: Cache the combined result and return ---
         cache.set(cache_key, book_details, timeout=60 * 60 * 24 * 30)
         return book_details
 
@@ -297,9 +304,21 @@ def generate_reading_dna(csv_file_content: str, user) -> dict:
 
         Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
         book.refresh_from_db()
+
         raw_genres_for_book = api_details.get("genres", [])
-        if raw_genres_for_book:
-            book.genres.set([Genre.objects.get_or_create(name=g)[0].pk for g in raw_genres_for_book])
+
+        # 1. Map raw genres to their canonical form.
+        mapped_genres = [CANONICAL_GENRE_MAP.get(g) for g in raw_genres_for_book]
+
+        # 2. Filter out any that didn't have a mapping (are None) and get unique values.
+        final_canonical_genres = set(g for g in mapped_genres if g)
+
+        # 3. Only save the clean, canonical genres to the database.
+        if final_canonical_genres:
+            genre_pks = [Genre.objects.get_or_create(name=g)[0].pk for g in final_canonical_genres]
+            book.genres.set(genre_pks)
+        # =========================================================================
+
         user_book_objects.append(book)
         all_raw_genres.extend(raw_genres_for_book)
 
@@ -417,6 +436,15 @@ def generate_reading_dna(csv_file_content: str, user) -> dict:
     # === END OF NEW CODE BLOCK ===============================================
     # =========================================================================
 
+    mainstream_score = 0
+    if user_book_objects:
+        # A book is "mainstream" if its read count is over 50.
+        mainstream_books_count = sum(1 for book in user_book_objects if book.global_read_count > 50)
+        total_user_books = len(user_book_objects)
+
+        if total_user_books > 0:
+            mainstream_score = round((mainstream_books_count / total_user_books) * 100)
+
     # --- Assemble final DNA dictionary ---
     dna = {
         "user_stats": user_base_stats,
@@ -434,7 +462,8 @@ def generate_reading_dna(csv_file_content: str, user) -> dict:
         "top_controversial_books": top_controversial_list,
         "most_positive_review": most_positive_review,
         "most_negative_review": most_negative_review,
-        "stats_by_year": stats_by_year_list,  # <-- Add the new data here
+        "stats_by_year": stats_by_year_list,
+        "mainstream_score_percent": mainstream_score,
     }
 
     # Final cleanup of NaN values for JSON serialization
