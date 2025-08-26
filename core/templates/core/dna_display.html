@@ -42,11 +42,11 @@
             <!-- Key Stats -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="bg-brand-yellow p-6 border-2 border-brand-text shadow-neo text-center">
-                    <div class="text-5xl font-bold">{{ dna.total_books_read }}</div>
+                    <div class="text-5xl font-bold">{{ dna.user_stats.total_books_read }}</div>
                     <div class="text-lg uppercase mt-2">Total Books Read</div>
                 </div>
                 <div class="bg-brand-pink p-6 border-2 border-brand-text shadow-neo text-center">
-                    <div class="text-5xl font-bold">{{ dna.total_pages_read|intcomma }}</div>
+                    <div class="text-5xl font-bold">{{ dna.user_stats.total_pages_read|intcomma }}</div>
                     <div class="text-lg uppercase mt-2">Total Pages Read</div>
                 </div>
                 <div class="bg-brand-cyan p-6 border-2 border-brand-text shadow-neo text-center">
@@ -54,19 +54,72 @@
                     <div class="text-lg uppercase mt-2">Overall Rating</div>
                 </div>
             </div>
-            <!-- Charts -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
-                    <h2 class="text-2xl font-bold mb-4 uppercase">Books Per Year</h2>
-                    <canvas id="booksByYearChart"></canvas>
-                </div>
-                <div class="bg-white p-6 border-2 border-brand-text shadow-neo relative overflow-hidden">
-                    <h2 class="text-2xl font-bold mb-4 uppercase">Rating Per Year</h2>
-                    <canvas id="avgRatingByYearChart"></canvas>
-                    <div class="absolute top-2 right-2 w-32 h-32 bg-white rounded-b-full">
-                        <canvas id="ratingsDistChartSmall"></canvas>
+            <!-- NEW: Comparative Analytics Tile -->
+            <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+                <h2 class="text-2xl font-bold mb-4 uppercase">Comparative Analytics</h2>
+                {% if dna.bibliotype_percentiles %}
+                    <div class="space-y-4 text-lg">
+                        <!-- Average Book Length -->
+                        <div class="p-3 bg-gray-50 border-2 border-brand-text shadow-neo-sm">
+                            <p>
+                                Your average book length is <strong>{{ dna.user_stats.avg_book_length }} pages</strong>.
+                                <span class="text-gray-600">(Global avg: ~{{ dna.global_averages.avg_book_length_pages }})</span>
+                            </p>
+                            <p class="text-base mt-1">
+                                This is longer than <strong>{{ dna.bibliotype_percentiles.avg_book_length|floatformat:1 }}%</strong> of other Bibliotype readers.
+                            </p>
+                        </div>
+                        <!-- Average Publication Year ("Oldness") -->
+                        <div class="p-3 bg-gray-50 border-2 border-brand-text shadow-neo-sm">
+                            <p>
+                                The average age of books you read is from <strong>{{ dna.user_stats.avg_publish_year|floatformat:0 }}</strong>.
+                                <span class="text-gray-600">(Global avg: ~{{ dna.global_averages.avg_publish_year }})</span>
+                            </p>
+                            <p class="text-base mt-1">
+                                Your reading tastes are older than <strong>{{ dna.bibliotype_percentiles.avg_publish_year|floatformat:1 }}%</strong> of other Bibliotype readers.
+                            </p>
+                        </div>
+                        <!-- Total Books Read -->
+                        <div class="p-3 bg-gray-50 border-2 border-brand-text shadow-neo-sm">
+                            <p>
+                                You have read <strong>{{ dna.user_stats.total_books_read }} books</strong> in total.
+                            </p>
+                            <p class="text-base mt-1">
+                                You've read more books than <strong>{{ dna.bibliotype_percentiles.total_books_read|floatformat:1 }}%</strong> of other Bibliotype readers.
+                            </p>
+                        </div>
                     </div>
+                {% else %}
+                    <p class="text-lg text-gray-600">
+                        We're just getting started! Once a few more readers have submitted their DNA, you'll see your community rankings and percentiles here.
+                    </p>
+                {% endif %}
+            </div>
+            <!-- Niche Book & Mainstream Score -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+                    <h2 class="text-2xl font-bold mb-4 uppercase">Your Most Niche Read</h2>
+                    {% if dna.most_niche_book %}
+                        <p class="font-bold text-xl">{{ dna.most_niche_book.title }}</p>
+                        <p class="text-lg">by {{ dna.most_niche_book.author }}</p>
+                        <p class="text-base mt-2 bg-brand-cyan inline-block px-2 py-1 border-2 border-brand-text">
+                            Only {{ dna.most_niche_book.read_count }} Bibliotype user(s) have read this!
+                        </p>
+                    {% else %}
+                        <p class="text-lg">Not enough data to determine your niche reads yet.</p>
+                    {% endif %}
                 </div>
+                <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+                    <h2 class="text-2xl font-bold mb-4 uppercase">Mainstream Meter</h2>
+                    <p class="text-lg">
+                        <strong>{{ dna.mainstream_score_percent }}%</strong> of the books in your library are considered "mainstream" reads on Bibliotype (read by over 50 other users).
+                    </p>
+                </div>
+            </div>
+            <!-- Books Per Year Chart (now full-width) -->
+            <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
+                <h2 class="text-2xl font-bold mb-4 uppercase">Books Read Per Year</h2>
+                <canvas id="booksByYearChart"></canvas>
             </div>
             <!-- Preferences: Genres & Authors -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
