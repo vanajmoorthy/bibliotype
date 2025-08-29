@@ -1,76 +1,62 @@
 {% load static %}
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- CHANGE THIS -->
-    <title>Bibliotype - Your Literary Personality</title>
-
-    <!-- Google Fonts for VT323 -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
-
-    <link href="{% static 'dist/output.css' %}" rel="stylesheet" />
-
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  </head>
-
-  <body class="bg-brand-background text-brand-text font-sans antialiased grid-background">
-    <nav class="p-4">
-      <div class="container mx-auto flex justify-between items-center">
-        <a href="{% url 'core:home' %}" class="text-3xl font-bold text-brand-text uppercase tracking-widest">
-          🧬 <span class="px-1 border-brand-text border-b-2">Bibliotype</span>
-        </a>
-        <div class="flex items-center space-x-4 text-lg uppercase font-bold">
-          {% if user.is_authenticated %}
-          <a
-            href="{% url 'core:display_dna' %}"
-            class="bg-white hover:bg-brand-pink px-2 border-2 border-brand-text shadow-neo-sm"
-            >Dashboard</a
-          >
-          <a
-            href="{% url 'core:logout' %}"
-            class="bg-white hover:bg-brand-cyan px-2 border-2 border-brand-text shadow-neo-sm"
-            >Logout</a
-          >
-          {% else %}
-          <a
-            href="{% url 'core:login' %}"
-            class="bg-white hover:bg-brand-yellow px-2 border-2 border-brand-text shadow-neo-sm"
-            >Login</a
-          >
-          <a
-            href="{% url 'core:signup' %}"
-            class="bg-brand-green text-brand-text px-4 py-1 border-2 border-brand-text shadow-neo-sm transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-          >
-            Sign Up
-          </a>
-          {% endif %}
-        </div>
-      </div>
-    </nav>
-
-    <main class="container mx-auto p-6 h-full">
-      {% if messages %}
-        {% for message in messages %}
-        <div
-          x-data="{ show: true }"
-          x-init="setTimeout(() => show = false, 8000)"
-          x-show="show"
-          class="relative p-4 mb-6 border-2 border-brand-text shadow-neo text-lg font-bold {% if message.tags == 'error' %}bg-red-500 text-white{% elif message.tags == 'success' %}bg-brand-green text-brand-text{% else %}bg-brand-cyan text-brand-text{% endif %}"
-          role="alert"
-        >
-          <span>{{ message }}</span>
-          <button @click="show = false" class="absolute top-2 right-3 text-2xl font-bold leading-none px-2 border-2 border-brand-text bg-white text-brand-text shadow-neo-sm hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 cursor-pointer">&times;</button>
-        </div>
-        {% endfor %}
-      {% endif %}
-
-      {% block content %}{% endblock %}
-    </main>
-  </body>
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+    <head>
+        <meta charset="UTF--8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Bibliotype - Your Literary Personality</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap"
+              rel="stylesheet" />
+        <link href="{% static 'dist/output.css' %}" rel="stylesheet" />
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script defer
+                src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    </head>
+    <body class="bg-brand-background text-brand-text font-sans antialiased grid-background h-full flex flex-col">
+        <nav class="p-4">
+            <div class="container mx-auto flex justify-between items-center">
+                <a href="{% url 'core:home' %}"
+                   class="text-3xl font-bold text-brand-text uppercase tracking-widest">
+                    🧬 <span class="px-1 border-brand-text border-b-2">Bibliotype</span>
+                </a>
+                <div class="flex items-center space-x-4 text-lg uppercase font-bold">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'core:display_dna' %}"
+                           class="bg-white hover:bg-brand-pink px-2 border-2 border-brand-text shadow-neo-sm">Dashboard</a>
+                        <a href="{% url 'core:logout' %}"
+                           class="bg-white hover:bg-brand-cyan px-2 border-2 border-brand-text shadow-neo-sm">Logout</a>
+                    {% else %}
+                        <a href="{% url 'core:login' %}"
+                           class="bg-white hover:bg-brand-yellow px-2 border-2 border-brand-text shadow-neo-sm">Login</a>
+                        <a href="{% url 'core:signup' %}"
+                           class="bg-brand-green text-brand-text px-4 py-1 border-2 border-brand-text shadow-neo-sm transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5">Sign Up</a>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
+        <main class="container mx-auto p-6 flex-grow flex flex-col justify-center">
+            {% if messages %}
+                {% for message in messages %}
+                    <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 8000)" x-show="show" class="relative p-4 mb-6 border-2 border-brand-text shadow-neo text-lg font-bold
+                        {% if message.tags == 'error' %}
+                            bg-red-500 text-white
+                        {% elif message.tags == 'success' %}
+                            bg-brand-green text-brand-text
+                        {% else %}
+                            bg-brand-cyan text-brand-text
+                        {% endif %}
+                        " role="alert">
+                        <span>{{ message }}</span>
+                        <button @click="show = false"
+                                class="absolute top-2 right-3 text-2xl font-bold leading-none px-2 border-2 border-brand-text bg-white text-brand-text shadow-neo-sm hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 cursor-pointer">
+                            &times;
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            {% block content %}{% endblock %}
+        </main>
+    </body>
 </html>

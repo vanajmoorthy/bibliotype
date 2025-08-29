@@ -1,4 +1,6 @@
-import itertools
+import hashlib
+import json
+import os
 import random
 import re
 from collections import Counter
@@ -6,10 +8,12 @@ from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 from urllib.parse import quote_plus
 
+import google.generativeai as genai
 import pandas as pd
 import requests
 from django.core.cache import cache
 from django.db.models import F
+from dotenv import load_dotenv
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from .dna_constants import (
@@ -21,6 +25,103 @@ from .dna_constants import (
 )
 from .models import Author, Book, Genre, UserProfile
 from .percentile_engine import calculate_percentiles_from_aggregates, update_analytics_from_stats
+
+load_dotenv()
+
+# Configure the Gemini API key at the module level
+# This ensures it's set up once when the application starts
+api_key = os.getenv("GEMINI_API_KEY")
+if api_key:
+    genai.configure(api_key=api_key)
+else:
+    print("⚠️ WARNING: GEMINI_API_KEY environment variable not found. Vibe generation will be disabled.")
+
+
+def create_vibe_prompt(dna: dict) -> str:
+    """
+    Creates a detailed, few-shot prompt for the Gemini API to generate reading vibes.
+    """
+    # Extract the most salient data points from the DNA to feed the LLM
+    reader_type = dna.get("reader_type", "Eclectic Reader")
+    top_genres = list(dna.get("top_genres", {}).keys())[:3]
+    top_authors = list(dna.get("top_authors", {}).keys())[:2]
+    avg_pub_year = dna.get("user_stats", {}).get("avg_publish_year", 2000)
+
+    # Simple logic to determine the era
+    era = "classic" if avg_pub_year < 1980 else "modern"
+
+    prompt = f"""
+You are a witty, poetic observer who can distill the "vibe" of a person's reading list into short, aesthetic phrases. You are not a robot; you are creative and a little quirky.
+
+Your task is to generate 4 short, evocative, lowercase phrases that capture the feeling of this person's reading DNA.
+
+**RULES:**
+- Phrases must be short (2-6 words).
+- All lowercase.
+- No punctuation at the end of phrases.
+- Do NOT describe the user's reading habits directly (e.g., "you read fantasy"). Instead, evoke the *feeling* of those habits.
+- Output ONLY a valid JSON object with a single key "vibe_phrases" which is a list of 4 strings.
+
+**User's Reading DNA:**
+- Primary Reader Type: "{reader_type}"
+- Top Genres: {', '.join(top_genres)}
+- Favorite Authors: {', '.join(top_authors)}
+- General Era: {era}
+
+**Example of GOOD output for a Fantasy/Classic reader:**
+{{
+  "vibe_phrases": [
+    "dusty maps and forgotten prophecies",
+    "the scent of old paper",
+    "a quiet corner in a grand library",
+    "a story that echoes through ages"
+  ]
+}}
+
+**Example of BAD output (Do NOT do this):**
+{{
+  "vibe_phrases": [
+    "You enjoy reading fantasy books.",
+    "Your favorite author is Brandon Sanderson.",
+    "You read a lot of classics.",
+    "Your vibe is nerdy."
+  ]
+}}
+
+Now, generate the JSON for the provided User's Reading DNA.
+"""
+    return prompt
+
+
+def generate_vibe_with_llm(dna: dict) -> list:
+    """
+    Uses the Gemini API to generate a creative "vibe" for the user's DNA.
+    """
+    if not api_key:
+        print("⚠️ Vibe generation skipped because API key is not configured.")
+        return ["vibe generation disabled", "please configure api key"]
+
+    prompt = create_vibe_prompt(dna)
+
+    try:
+        model = genai.GenerativeModel("gemini-1.5-flash-latest")
+        generation_config = genai.GenerationConfig(response_mime_type="application/json")
+        response = model.generate_content(prompt, generation_config=generation_config)
+
+        response_json = json.loads(response.text)
+        vibe_phrases = response_json.get("vibe_phrases", [])
+
+        if isinstance(vibe_phrases, list) and all(isinstance(p, str) for p in vibe_phrases):
+            return vibe_phrases
+        else:
+            return ["error parsing vibe", "unexpected format received"]
+
+    except json.JSONDecodeError:
+        print(f"❌ LLM Error: Failed to decode JSON from response: {response.text}")
+        return ["error generating vibe", "invalid json response"]
+    except Exception as e:
+        print(f"❌ LLM Error: An unexpected error occurred: {e}")
+        return ["error generating vibe", "api call failed"]
 
 
 def normalize_and_filter_genres(subjects):
@@ -174,6 +275,7 @@ def assign_reader_type(read_df, enriched_data, all_genres):
                 scores["Modern Maverick"] += 1
 
         publisher = details.get("publisher")
+
         if publisher:
             is_major = any(major.lower() in publisher.lower() for major in MAJOR_PUBLISHERS)
             if not is_major:
@@ -189,13 +291,16 @@ def assign_reader_type(read_df, enriched_data, all_genres):
 
     # The number of unique keys in genre_counts is now much smaller and more accurate
     unique_canonical_genres = len(genre_counts)
+
     print(f"   ℹ️ Found {unique_canonical_genres} unique CANONICAL genres.")
+
     if unique_canonical_genres >= DIVERSITY_THRESHOLD:
         scores["Versatile Valedictorian"] += DIVERSITY_BONUS
 
     # --- Determine Winner ---
     if not scores or all(s == 0 for s in scores.values()):
         return "Eclectic Reader", scores
+
     if scores.get("Rapacious Reader", 0) > 0:
         return "Rapacious Reader", scores
 
@@ -230,6 +335,7 @@ def analyze_and_print_genres(all_raw_genres, canonical_map):
     print(f"Of those, {len(unmapped_genres)} are currently UNMAPPED.")
 
     print("\n--- UNMAPPED GENRES (Most Common First) ---")
+
     if not sorted_unmapped:
         print("✅ Great news! All genres are already mapped!")
     else:
@@ -241,14 +347,21 @@ def analyze_and_print_genres(all_raw_genres, canonical_map):
 
 def generate_reading_dna(csv_file_content: str, user) -> dict:
     print("🚀 Starting Reading DNA generation...")
+
     try:
         df = pd.read_csv(StringIO(csv_file_content))
     except Exception as e:
         raise ValueError(f"Could not parse CSV file. Error: {e}")
 
     read_df = df[df["Exclusive Shelf"] == "read"].copy()
+
     if read_df.empty:
         raise ValueError("No books found on the 'read' shelf in your CSV.")
+
+    # Create the hash from the user's book list
+    book_fingerprint_list = sorted([f"{row['Title']}{row['Author']}" for _, row in read_df.iterrows()])
+    fingerprint_string = "".join(book_fingerprint_list)
+    new_data_hash = hashlib.sha256(fingerprint_string.encode()).hexdigest()
 
     print(f"📖 Found {len(read_df)} books marked as 'read' for statistical analysis.")
     # --- Data cleaning ---
@@ -257,6 +370,7 @@ def generate_reading_dna(csv_file_content: str, user) -> dict:
         temp_df["Number of Pages"] = pd.to_numeric(temp_df["Number of Pages"], errors="coerce")
         temp_df["Average Rating"] = pd.to_numeric(temp_df["Average Rating"], errors="coerce")
         temp_df["Date Read"] = pd.to_datetime(temp_df["Date Read"], errors="coerce")
+
         if "Original Publication Year" in temp_df.columns:
             temp_df["Original Publication Year"] = pd.to_numeric(temp_df["Original Publication Year"], errors="coerce")
         else:
@@ -265,6 +379,7 @@ def generate_reading_dna(csv_file_content: str, user) -> dict:
 
     # --- Phase 1 & 2: API and DB Sync ---
     print("🎭 Fetching book data from Open Library API (in parallel)...")
+
     with ThreadPoolExecutor(max_workers=10) as executor, requests.Session() as session:
 
         def fetch_book_details(book_row):
@@ -331,6 +446,7 @@ def generate_reading_dna(csv_file_content: str, user) -> dict:
 
     # --- Community Analytics Calculation ---
     print("📈 Calculating base user statistics...")
+
     user_base_stats = {
         "total_books_read": int(len(read_df)),
         "total_pages_read": int(read_df["Number of Pages"].dropna().sum()),
@@ -348,11 +464,14 @@ def generate_reading_dna(csv_file_content: str, user) -> dict:
     }
 
     print("🌍 Calculating community stats...")
+
     update_analytics_from_stats(user_base_stats)
+
     percentiles = calculate_percentiles_from_aggregates(user_base_stats)
 
     # --- Other Personal Stats Calculations ---
     most_niche_book = None
+
     if user_book_objects:
         user_book_objects.sort(key=lambda b: b.global_read_count)
         most_niche_book = {
@@ -369,13 +488,17 @@ def generate_reading_dna(csv_file_content: str, user) -> dict:
 
     controversial_df = read_df.dropna(subset=["My Rating", "Average Rating"]).copy()
     controversial_df = controversial_df[controversial_df["My Rating"] > 0]
+
     top_controversial_list = []
+
     if not controversial_df.empty:
         controversial_df["Rating Difference"] = abs(controversial_df["My Rating"] - controversial_df["Average Rating"])
         top_books = controversial_df.sort_values(by="Rating Difference", ascending=False).head(3)
+
         top_books["my_rating"] = top_books["My Rating"].astype(float)
         top_books["average_rating"] = top_books["Average Rating"].astype(float)
         top_books["rating_difference"] = top_books["Rating Difference"].astype(float)
+
         top_controversial_list = top_books.rename(columns={"Title": "Title", "Author": "Author"})[
             ["Title", "Author", "my_rating", "average_rating", "rating_difference"]
         ].to_dict("records")
@@ -386,36 +509,44 @@ def generate_reading_dna(csv_file_content: str, user) -> dict:
         & (df["My Rating"].notna())
         & (df["My Rating"] > 0)
     ].copy()
+
     most_positive_review, most_negative_review = None, None
+
     if not reviews_df.empty:
         analyzer = SentimentIntensityAnalyzer()
+
         reviews_df["sentiment"] = reviews_df["My Review"].apply(lambda r: analyzer.polarity_scores(r)["compound"])
+
         pos_candidate = (
             reviews_df[reviews_df["My Rating"] == 5]
             if not reviews_df[reviews_df["My Rating"] == 5].empty
             else reviews_df
         )
+
         pos_review_row = pos_candidate.loc[pos_candidate["sentiment"].idxmax()]
+
         neg_candidate = (
             reviews_df[reviews_df["My Rating"] == 1]
             if not reviews_df[reviews_df["My Rating"] == 1].empty
             else reviews_df
         )
+
         neg_review_row = neg_candidate.loc[neg_candidate["sentiment"].idxmin()]
+
         most_positive_review = pos_review_row.rename({"My Review": "my_review"})[
             ["Title", "Author", "my_review", "sentiment"]
         ].to_dict()
+
         most_positive_review["sentiment"] = float(most_positive_review["sentiment"])
+
         most_negative_review = neg_review_row.rename({"My Review": "my_review"})[
             ["Title", "Author", "my_review", "sentiment"]
         ].to_dict()
+
         most_negative_review["sentiment"] = float(most_negative_review["sentiment"])
 
-    # =========================================================================
-    # === NEW CODE BLOCK TO FIX THE CHART =====================================
-    # =========================================================================
-    # This calculates the statistics needed for the yearly charts in the template.
     stats_by_year_list = []
+
     if "Date Read" in read_df.columns and not read_df["Date Read"].dropna().empty:
         yearly_df = read_df.dropna(subset=["Date Read"]).copy()
         yearly_df["year"] = yearly_df["Date Read"].dt.year
@@ -432,11 +563,9 @@ def generate_reading_dna(csv_file_content: str, user) -> dict:
             item["year"] = int(item["year"])
             item["count"] = int(item["count"])
             item["avg_rating"] = float(item["avg_rating"])
-    # =========================================================================
-    # === END OF NEW CODE BLOCK ===============================================
-    # =========================================================================
 
     mainstream_score = 0
+
     if user_book_objects:
         # A book is "mainstream" if its read count is over 50.
         mainstream_books_count = sum(1 for book in user_book_objects if book.global_read_count > 50)
@@ -445,7 +574,6 @@ def generate_reading_dna(csv_file_content: str, user) -> dict:
         if total_user_books > 0:
             mainstream_score = round((mainstream_books_count / total_user_books) * 100)
 
-    # --- Assemble final DNA dictionary ---
     dna = {
         "user_stats": user_base_stats,
         "bibliotype_percentiles": percentiles,
@@ -465,6 +593,30 @@ def generate_reading_dna(csv_file_content: str, user) -> dict:
         "stats_by_year": stats_by_year_list,
         "mainstream_score_percent": mainstream_score,
     }
+
+    # === VIBE GENERATION & SAVING (LLM VERSION) ===============================
+    reading_vibe = []
+
+    if user.is_authenticated:
+        profile = user.userprofile
+        # Check if the data is unchanged AND a vibe already exists.
+        if profile.vibe_data_hash == new_data_hash and profile.reading_vibe:
+            print("✅ Vibe data is unchanged. Using cached vibe from database.")
+            reading_vibe = profile.reading_vibe  # Use the cached vibe from DB
+        else:
+            print("✨ Vibe data has changed. Generating a new vibe with LLM...")
+            reading_vibe = generate_vibe_with_llm(dna)  # Generate a new one with Gemini
+            profile.reading_vibe = reading_vibe
+            profile.vibe_data_hash = new_data_hash
+            # The profile object will be saved later in the view.
+    else:
+        # For anonymous users, we always generate it fresh.
+        # The view can handle session caching if desired.
+        print("✨ Anonymous user. Generating a new vibe with LLM...")
+        reading_vibe = generate_vibe_with_llm(dna)
+
+    dna["reading_vibe"] = reading_vibe  # Add the vibe to the final payload
+    dna["vibe_data_hash"] = new_data_hash
 
     # Final cleanup of NaN values for JSON serialization
     def clean_dict(d):
