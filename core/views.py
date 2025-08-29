@@ -33,9 +33,9 @@ def display_dna_view(request):
         if user_profile.dna_data:
             dna_data = user_profile.dna_data
 
-    # If we still have no data, the user needs to upload.
     if not dna_data:
-        messages.info(request, "No Reading DNA found. Please upload your Goodreads export to begin.")
+        messages.info(request, "First, upload your library file to generate your Readprint!")
+        return redirect("core:home")
 
     context = {"dna": dna_data, "user_profile": user_profile}
     return render(request, "core/dna_display.html", context)
@@ -56,14 +56,25 @@ def upload_view(request):
         # 1. Always save the full, fresh data to the session for immediate display.
         request.session["dna_data"] = dna_data
 
-        # 2. If the user is logged in, ALSO save the full data to their profile for future visits.
         if request.user.is_authenticated:
             try:
                 profile = request.user.userprofile
-                profile.dna_data = dna_data  # Save the FULL dictionary
-                profile.save()
+
+                # 1. Save the full blob to the "junk drawer"
+                profile.dna_data = dna_data
+
+                # 2. Populate the important "labeled drawers"
+                profile.reader_type = dna_data.get("reader_type")
+                profile.total_books_read = dna_data.get("user_stats", {}).get("total_books_read")
+                profile.reading_vibe = dna_data.get("reading_vibe")
+                profile.vibe_data_hash = dna_data.get("vibe_data_hash")
+
+                profile.save()  # This now saves everything cleanly.
+
                 messages.success(request, "Your Reading DNA has been updated and saved to your profile!")
                 print(f"   [DB] Saved FULL DNA data for user: {request.user.username}")
+            except UserProfile.DoesNotExist:
+                messages.error(request, "Could not find a user profile to save DNA to.")
             except UserProfile.DoesNotExist:
                 messages.error(request, "Could not find a user profile to save DNA to.")
 
@@ -88,7 +99,7 @@ def signup_view(request):
                 user.userprofile.dna_data = request.session.pop("dna_data")
                 user.userprofile.save()
                 messages.success(request, "Account created and your Reading DNA has been saved!")
-            return redirect("core:display_dna")  # Redirect to the consolidated view
+            return redirect("core:home")  # Redirect to the consolidated view
     else:
         form = UserCreationForm()
     return render(request, "core/signup.html", {"form": form})

@@ -45,9 +45,23 @@ class Book(models.Model):
 # This model is perfect for saving the generated DNA for authenticated users.
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    dna_data = models.JSONField(null=True, blank=True)
     last_updated = models.DateTimeField(auto_now=True)
     is_public = models.BooleanField(default=False)
+
+    # --- The "Junk Drawer" for all the detailed, non-critical stats ---
+    # We keep this for charts, niche details, etc.
+    dna_data = models.JSONField(null=True, blank=True)
+
+    # --- "LABELED DRAWERS" for important, queryable data ---
+    # Key Summary Stats
+    reader_type = models.CharField(
+        max_length=100, blank=True, null=True, db_index=True
+    )  # db_index=True is for performance!
+    total_books_read = models.PositiveIntegerField(null=True, blank=True)
+
+    # The Vibe Feature Data
+    reading_vibe = models.JSONField(null=True, blank=True)
+    vibe_data_hash = models.CharField(max_length=64, blank=True, null=True)
 
     def __str__(self):
         return f"DNA for {self.user.username}"

@@ -1,52 +1,42 @@
-{% extends 'core/base.html' %} {% block content %}
-<div class="max-w-md mx-auto mt-10 bg-white p-8 rounded-lg shadow-lg">
-  <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">
-    Create Your Readprint Account
-  </h1>
-  <p class="text-center text-gray-600 mb-6">
-    Create an account to save and share your Reading DNA.
-  </p>
-
-  <form method="post">
-    {% csrf_token %} {% for field in form %}
-    <div class="mb-4">
-      <label
-        for="{{ field.id_for_label }}"
-        class="block text-sm font-medium text-gray-700"
-        >{{ field.label }}</label
-      >
-      <input
-        type="{{ field.field.widget.input_type }}"
-        name="{{ field.name }}"
-        id="{{ field.id_for_label }}"
-        class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-      />
-      {% if field.help_text %}
-      <p class="mt-2 text-xs text-gray-500">{{ field.help_text|safe }}</p>
-      {% endif %} {% for error in field.errors %}
-      <p class="mt-2 text-sm text-red-600">{{ error }}</p>
-      {% endfor %}
+{% extends 'core/base.html' %}
+{% block content %}
+    <div class="max-w-xl mx-auto   text-center p-4">
+        <!-- Main container with the retro styling (no changes here) -->
+        <div class="bg-white p-8 border-2 border-brand-text shadow-neo">
+            <!-- Header section -->
+            <h1 class="text-4xl font-bold uppercase tracking-widest">Create an Account</h1>
+            <p class="mt-2 text-lg text-brand-text">Save your Bibliotype to track your history & share it with friends.</p>
+            <!-- The Form -->
+            <form method="post" class="mt-8 text-left space-y-6">
+                {% csrf_token %}
+                <!-- Loop through each form field (no changes here) -->
+                {% for field in form %}
+                    <div>
+                        <label for="{{ field.id_for_label }}"
+                               class="block text-xl font-bold uppercase mb-1">{{ field.label }}</label>
+                        <input type="{{ field.field.widget.input_type }}"
+                               name="{{ field.name }}"
+                               id="{{ field.id_for_label }}"
+                               class="w-full bg-white p-3 border-2 border-brand-text text-lg focus:outline-none focus:ring-2 focus:ring-brand-purple"
+                               placeholder="{{ field.label }}..." />
+                        {% if field.help_text %}<p class="mt-2 text-sm text-gray-600">{{ field.help_text|safe }}</p>{% endif %}
+                        {% for error in field.errors %}<p class="mt-2 text-sm text-red-600 font-bold uppercase">{{ error }}</p>{% endfor %}
+                    </div>
+                {% endfor %}
+                <!-- MODIFIED: Added `cursor-pointer` to the button -->
+                <button type="submit"
+                        class="mt-6 w-full bg-brand-green text-brand-text text-2xl font-bold py-3 px-4 border-2 border-brand-text shadow-neo cursor-pointer transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1">
+                    Create Account & Save DNA
+                </button>
+            </form>
+        </div>
+        <!-- "Already have an account?" link (no changes here) -->
+        <div class="mt-8">
+            <p class="text-lg">
+                Already have an account?
+                <a href="{% url 'core:login' %}"
+                   class="font-bold uppercase underline hover:bg-brand-yellow">Log In</a>
+            </p>
+        </div>
     </div>
-    {% endfor %}
-
-    <button
-      type="submit"
-      class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-md hover:bg-indigo-700 transition-colors"
-    >
-      Create Account
-    </button>
-  </form>
-
-  <div class="mt-6 text-center">
-    <p class="text-sm text-gray-600">
-      Already have an account?
-      <a
-        href="{% url 'core:login' %}"
-        class="font-medium text-indigo-600 hover:text-indigo-500"
-      >
-        Log In
-      </a>
-    </p>
-  </div>
-</div>
 {% endblock %}
