@@ -16,16 +16,14 @@ def _save_dna_to_profile(profile, dna_data):
     to the user's profile, populating both the main JSON blob and the
     optimized, separate fields.
     """
-    # 1. Save the full blob to the "junk drawer" for detailed display
     profile.dna_data = dna_data
 
-    # 2. Populate the important "labeled drawers" for querying and performance
     profile.reader_type = dna_data.get("reader_type")
     profile.total_books_read = dna_data.get("user_stats", {}).get("total_books_read")
     profile.reading_vibe = dna_data.get("reading_vibe")
     profile.vibe_data_hash = dna_data.get("vibe_data_hash")
 
-    profile.save()  # This saves everything cleanly.
+    profile.save()
     print(f"   [DB] Saved DNA data and promoted fields for user: {profile.user.username}")
 
 
@@ -38,13 +36,11 @@ def display_dna_view(request):
     dna_data = None
     user_profile = None
 
-    # We now use .get() to read the data without deleting it from the session.
-    # This keeps the data available for the signup/login flow.
     if "dna_data" in request.session:
         print("   [View] Found fresh DNA in session.")
         dna_data = request.session.get("dna_data")
 
-    # 2. If no session data, check if the user is logged in and has a saved profile.
+    # If no session data, check if the user is logged in and has a saved profile.
     elif request.user.is_authenticated:
         print(f"   [View] No session DNA. Checking profile for user {request.user.username}.")
         user_profile = request.user.userprofile
@@ -68,10 +64,9 @@ def upload_view(request):
 
     try:
         csv_content = csv_file.read().decode("utf-8")
-        # --- The function no longer needs the user object ---
         dna_data = generate_reading_dna(csv_content, request.user)
 
-        # 1. Always save the full, fresh data to the session for immediate display.
+        # Always save the full, fresh data to the session for immediate display.
         request.session["dna_data"] = dna_data
 
         if request.user.is_authenticated:
@@ -125,7 +120,6 @@ def login_view(request):
             user = form.get_user()
             login(request, user)
 
-            # --- THIS IS THE NEW, SAFE LOGIC ---
             if "dna_data" in request.session:
                 profile = user.userprofile
 
@@ -140,8 +134,6 @@ def login_view(request):
                     request.session.pop("dna_data", None)  # Safely pop it
                     messages.success(request, f"Welcome back, {user.username}!")
 
-            # Redirect all successful logins to the home page.
-            # They can click "Dashboard" to see their (un-overwritten) data.
             return redirect("core:home")
     else:
         form = AuthenticationForm()
@@ -163,7 +155,7 @@ def update_privacy_view(request):
     profile.is_public = is_public
     profile.save()
     messages.success(request, f"Your profile is now {"public" if is_public else "private"}.")
-    return redirect("core:display_dna")  # Redirect to the consolidated view
+    return redirect("core:display_dna")
 
 
 def public_profile_view(request, username):
@@ -177,7 +169,6 @@ def public_profile_view(request, username):
         context = {"dna": profile.dna_data, "profile_user": user}
         return render(request, "core/public_profile.html", context)
     except User.DoesNotExist:
-        # Handle user not found (404)
         from django.http import Http404
 
         raise Http404("User does not exist.")
