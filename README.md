@@ -1,6 +1,17 @@
 # 🧬 Bibliotype - Your Reading DNA
 
-Bibliotype is a lightweight web app that generates a personalized “Reading DNA” dashboard from a user's Goodreads or StoryGraph export file. It provides visual insights into reading habits, preferences, and statistics, presented in a fun, neobrutalist UI inspired by "Wrapped" style summaries.
+Bibliotype is a web application that generates a personalized “Reading DNA” dashboard from a user's Goodreads or StoryGraph export file. It provides visual insights into reading habits and preferences, presented in a fun, shareable, neobrutalist UI inspired by "Wrapped" style summaries.
+
+The app uses a powerful Python backend with Pandas for data analysis and calls the Gemini API to generate a creative, AI-powered "vibe" for each user's unique reading taste.
+
+![Bibliotype Screenshot](https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23) <
+
+https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
+
+
+---
+
+
 
 ## TODO
 
@@ -19,133 +30,106 @@ Bibliotype is a lightweight web app that generates a personalized “Reading DNA
 - support StoryGraph
 - set up public profile
 - compare book lengths, number of books read in total, number read per year, average book lengths, number of pages read with global averages
-
-note: the cache lives on the server side? would it be better to save this data in my sqlite db? then i can also save some other data anonymously and tell the user things like book lengths, number of books read in total, number read per year, average book lengths, number of pages read compared with global averages which i can get somewhere and hardcode but also compare these values against other bibliotype users and i can even give them a rating for how mainstream their taste is in both genres and authors and books and give them their most niche author and book. i can keep "books" with their data in my db and increment a value every time someone has read them and calculate nicheness scores and stuff
-
+  
 ## ✨ Features
 
-- **CSV Upload:** Supports both Goodreads and StoryGraph export `.csv` files.
-- **Data Analysis:** A powerful backend script written in Python with Pandas analyzes the user's reading history.
-- **Dynamic Dashboard:** The results page is an adaptive dashboard that only displays analytics for which there is sufficient data.
-- **Rich Analytics:**
-  - Core stats: Total books read, total pages read, average rating.
-  - Time-based analysis: Books and average rating per year.
-  - Reading preferences: Top authors and top genres (enriched via the Open Library API).
-  - StoryGraph Exclusives: Common moods and reading pace distribution.
-  - Insightful highlights: Most "controversial" books and sentiment analysis of the most positive/negative reviews.
-- **Modern Frontend:** Styled with Tailwind CSS v4, with interactive elements powered by Alpine.js and charts by Chart.js.
-- **Performant:** API calls for genre data are cached using Django's file-based cache to ensure fast subsequent loads.
+- **Robust Data Analysis:** Ingests Goodreads export `.csv` files and performs detailed analysis using Pandas.
+- **AI-Powered Vibe:** Utilizes Google's Gemini API to generate a creative, multi-phrase "vibe" that poetically summarizes the user's reading taste.
+- **Rich Analytics & Dashboard:**
+  - **Reader Archetype:** Assigns users a primary "Reader Type" (e.g., *Classic Collector*, *Tome Tussler*).
+  - **Core Stats:** Total books & pages read, average rating.
+  - **Community Benchmarking:** Compares user stats (like average book length and total books read) against the global Bibliotype user base, showing percentiles.
+  - **Taste Analysis:** Identifies top authors and genres, enriched with data from the Open Library API.
+  - **Niche vs. Mainstream:** Calculates a "Mainstream Meter" score and highlights the user's most niche book based on community read counts.
+  - **Review Insights:** Performs sentiment analysis on user reviews to find their most positive and negative takes.
+- **User Accounts & Sharing:**
+  - Full user authentication (signup with email, login, logout).
+  - Ability to save and update your Bibliotype to your profile.
+  - Publicly shareable profile pages (e.g., `bibliotype.com/u/username`).
+- **Performant & Scalable:**
+  - API calls are cached server-side using Django's cache framework.
+  - Caching logic prevents re-running expensive AI generation for unchanged data.
+  - Important user data is stored in indexed database fields for efficient querying.
 
 ## 🛠️ Tech Stack
 
-- **Backend:** Django 5.x, Python 3.11+
+- **Backend:** Django 5.x, Python 3.13+
+- **Dependency Management:** Poetry
 - **Data Processing:** Pandas
-- **Frontend Build:** Tailwind CSS v4 CLI, `npm`
-- **Frontend Libraries:** Alpine.js, Chart.js
-- **Database:** SQLite (development)
-- **Process Manager:** Honcho / Foreman
+- **AI Integration:** Google Generative AI (Gemini)
+- **Database:** PostgreSQL (production), SQLite (fallback for non-Docker dev)
+- **Containerization:** Docker, Docker Compose
+- **Frontend:** Tailwind CSS, Alpine.js, Chart.js
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started (Docker & Poetry)
 
-Follow these instructions to get a local development environment running.
+This is the recommended method for local development. It creates a consistent, isolated environment with a dedicated PostgreSQL database, mirroring a production setup.
 
 ### 1. Prerequisites
 
-- Python 3.11+
-- Node.js and `npm`
-- A process manager like `honcho` (`pip install honcho`) or `foreman` (`gem install foreman`).
+- Docker and Docker Compose
+- Poetry
+- An environment file for your secrets.
 
 ### 2. Installation & Setup
 
 1.  **Clone the repository:**
-
     ```bash
-    git clone <your-repo-url>
+    git clone https://github.com/your-username/bibliotype.git
     cd bibliotype
     ```
 
-2.  **Set up the Python environment:**
+2.  **Create your environment file:**
+    Create a file named `.env` in the project root. This file is ignored by Git and will hold your secret keys.
+    ```env
+    # .env
 
-    ```bash
-    # Create and activate a virtual environment
-    python3 -m venv venv
-    source venv/bin/activate
+    # Generate a new secret key for your project
+    SECRET_KEY="django-insecure-your-secret-key-here"
 
-    # Install Python dependencies
-    pip install -r requirements.txt
+    # Get your API key from Google AI Studio
+    GEMINI_API_KEY="your-real-gemini-api-key"
+
+    # Credentials for the local PostgreSQL container
+    POSTGRES_DB=bibliotype_db
+    POSTGRES_USER=bibliotype_user
+    POSTGRES_PASSWORD=yoursecurepassword123
     ```
 
-3.  **Set up the Frontend environment:**
-
+3.  **Build and Run the Containers:**
+    From the project root, run the following command. This will build the Django image, pull the Postgres image, and start both services.
     ```bash
-    # Install Node.js dependencies (tailwindcss, etc.)
-    npm install
+    docker-compose up --build
+    ```
+    The application will be running at **`http://127.0.0.1:8000`**.
+
+### 3. Database Setup (First Time Only)
+
+The first time you start the Docker environment, you need to set up the database and load your initial data.
+
+Open a **new terminal window** (while `docker-compose up` is running in the other) and run these commands:
+
+1.  **Apply database migrations:**
+    ```bash
+    docker-compose exec web poetry run python manage.py migrate
     ```
 
-4.  **Prepare the Django application:**
+2.  **(Optional) Load seed data:**
+    To populate your database with popular books and community analytics for a richer experience, run the seeders:
     ```bash
-    # Apply database migrations
-    python manage.py migrate
+    docker-compose exec web poetry run python manage.py seed_books
+    docker-compose exec web poetry run python manage.py seed_analytics
     ```
 
-### 3. Running the Development Server
-
-This project uses a `Procfile` to run both the Django backend and the Tailwind CSS build process simultaneously.
-
-From the project root, simply run:
-
-```bash
-honcho start
-```
-
-(or `foreman start` if you prefer)
-
-This single command will:
-
-1.  Start the Django development server on `http://127.0.0.1:8000`.
-2.  Start the Tailwind CLI watcher, which will automatically rebuild your CSS file (`static/dist/output.css`) whenever you make changes to your templates or `static/src/input.css`.
-
-You can now access the application at **`http://127.0.0.1:8000`** in your web browser.
+3.  **(Optional) Create a superuser:**
+    ```bash
+    docker-compose exec web poetry run python manage.py createsuperuser
+    ```
 
 ---
 
 ## 🏛️ Project Structure
 
-The project is organized into a main Django project folder (`bibliotype_project`), a core application (`core`), and a root-level frontend build system.
-
-```
-/
-├── core/                  # Main Django app for all application logic
-│   ├── migrations/
-│   ├── templates/core/    # All HTML templates reside here
-│   ├── analytics.py       # The heart of the project: all CSV parsing and data analysis
-│   ├── models.py          # Django data models (e.g., UserProfile)
-│   ├── views.py           # Handles HTTP requests and renders templates
-│   └── urls.py            # URL routing for the core app
-│
-├── bibliotype_project/    # Main Django project configuration
-│   ├── settings.py        # Project settings (INSTALLED_APPS, database, etc.)
-│   └── urls.py            # Root URL configuration
-│
-├── static/                # Static asset directory
-│   ├── src/
-│   │   └── input.css      # The source CSS file where the Tailwind theme is defined
-│   └── dist/
-│       └── output.css     # The final, compiled CSS file (auto-generated)
-│
-├── manage.py              # Django's command-line utility
-├── package.json           # Defines frontend dependencies and build scripts
-├── tailwind.config.js     # Configures Tailwind (e.g., content paths)
-└── Procfile               # Defines processes for Honcho/Foreman to run
-```
-
-### Key Files Explained
-
-- **`core/analytics.py`**: This is the most important file in the project. It contains the `generate_reading_dna` function, which takes the raw CSV content and performs all the data cleaning, analysis, API calls (with caching), and statistical calculations. If you want to add a new analytic, this is the place to start.
-- **`static/src/input.css`**: This is the single source of truth for the application's visual theme. It imports the base Tailwind styles and defines all custom colors, fonts, and shadows using the `@theme` directive.
-- **`tailwind.config.js`**: This file's primary job is to tell the Tailwind CLI which template files to scan for class names.
-- **`core/templates/core/base.html`**: The main site template. It includes all necessary CSS and JS files and defines the navigation bar and overall page structure.
-- **`core/templates/core/home.html`**: The landing page, featuring the interactive drag-and-drop file upload component powered by Alpine.js.
-- **`core/templates/core/dna_results.html`**: The dashboard template, which uses conditional Django template tags (`{% if %}`) to adaptively render the analytics cards based on the data provided by `analytics.py`.
+The project is a standard Django application, containerized with Docker.
