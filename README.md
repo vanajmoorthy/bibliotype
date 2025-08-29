@@ -4,8 +4,6 @@ Bibliotype is a web application that generates a personalized “Reading DNA” 
 
 The app uses a powerful Python backend with Pandas for data analysis and calls the Gemini API to generate a creative, AI-powered "vibe" for each user's unique reading taste.
 
-![Bibliotype Screenshot](https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23) <
-
 https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 
 
