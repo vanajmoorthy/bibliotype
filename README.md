@@ -102,30 +102,41 @@ This is the recommended method for local development. It creates a consistent, i
     docker-compose up --build
     ```
     The application will be running at **`http://127.0.0.1:8000`**.
-
+    
 ### 3. Database Setup (First Time Only)
 
-The first time you start the Docker environment, you need to set up the database and load your initial data.
+The first time you start the Docker environment, you need to set up the database.
 
 Open a **new terminal window** (while `docker-compose up` is running in the other) and run these commands:
 
-1.  **Apply database migrations:**
+1.  **Apply Database Migrations:**
+    This command creates all the necessary tables in the new PostgreSQL database.
     ```bash
     docker-compose exec web poetry run python manage.py migrate
     ```
 
-2.  **(Optional) Load seed data:**
-    To populate your database with popular books and community analytics for a richer experience, run the seeders:
+2.  **Seed the Database (Recommended):**
+    To populate your database with popular books and community analytics for a rich development experience, run the seeder commands. This will make API calls to fetch the latest metadata.
     ```bash
     docker-compose exec web poetry run python manage.py seed_books
     docker-compose exec web poetry run python manage.py seed_analytics
     ```
 
-3.  **(Optional) Create a superuser:**
+3.  **Create a Superuser:**
+    This allows you to access the Django admin panel at `/admin/`.
     ```bash
     docker-compose exec web poetry run python manage.py createsuperuser
     ```
 
+---
+#### Alternative: Restoring from a Backup
+
+If you have a `db_dump.json` file, you can restore the database to that specific state instead of running the seeders. This is useful for restoring a backup or syncing your database with another developer's.
+
+**Do not run this if you have already run the seeders.** Start with a fresh, migrated database.
+
+```bash
+docker-compose exec web poetry run python manage.py loaddata db_dump.json
 ---
 
 ## 🏛️ Project Structure
