@@ -1,47 +1,50 @@
 {% extends 'core/base.html' %}
 {% block content %}
-    <div class="w-full max-w-2xl mx-auto  text-center p-4">
-        <!-- Main container with the retro styling (no changes here) -->
-        <div class="bg-white p-8 border-2 border-brand-text shadow-neo">
-            <!-- Header section -->
-            <h1 class="text-4xl font-bold uppercase tracking-widest">Welcome Back</h1>
-            <p class="mt-2 text-lg text-brand-text">Log in to view your saved Bibliotype.</p>
-            <!-- The Form -->
-            <form method="post" class="mt-8 text-left space-y-6">
-                {% csrf_token %}
-                <!-- Error message display (no changes here) -->
-                {% if form.non_field_errors %}
-                    <div class="bg-brand-pink p-3 border-2 border-brand-text text-brand-text">
-                        {% for error in form.non_field_errors %}<p class="font-bold uppercase text-center">{{ error }}</p>{% endfor %}
-                    </div>
-                {% endif %}
-                <!-- Form field loop (no changes here) -->
-                {% for field in form %}
-                    <div>
-                        <label for="{{ field.id_for_label }}"
-                               class="block text-xl font-bold uppercase mb-1">{{ field.label }}</label>
-                        <input type="{{ field.field.widget.input_type }}"
-                               name="{{ field.name }}"
-                               id="{{ field.id_for_label }}"
-                               class="w-full bg-white p-3 border-2 border-brand-text text-lg focus:outline-none focus:ring-2 focus:ring-brand-purple"
-                               placeholder="{{ field.label }}..." />
-                        {% for error in field.errors %}<p class="mt-2 text-sm text-red-600 font-bold uppercase">{{ error }}</p>{% endfor %}
-                    </div>
-                {% endfor %}
-                <!-- MODIFIED: Changed bg-brand-cyan to bg-brand-green and added `cursor-pointer` -->
-                <button type="submit"
-                        class="mt-6 w-full bg-brand-green text-brand-text text-2xl font-bold py-3 px-4 border-2 border-brand-text shadow-neo cursor-pointer transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1">
-                    Log In
-                </button>
-            </form>
-        </div>
-        <!-- "Don't have an account?" link (no changes here) -->
-        <div class="mt-8">
-            <p class="text-lg">
-                Don't have an account?
-                <a href="{% url 'core:signup' %}"
-                   class="font-bold uppercase underline hover:bg-brand-yellow">Sign Up</a>
-            </p>
+    <div class="h-full flex flex-col justify-center">
+        <!-- Your original content block, now being centered by the wrapper above -->
+        <div class="w-full max-w-2xl mx-auto text-center p-4">
+            <!-- Main container with the retro styling (no changes here) -->
+            <div class="bg-white p-8 border-2 border-brand-text shadow-neo">
+                <!-- Header section -->
+                <h1 class="text-4xl font-bold uppercase tracking-widest">Welcome Back</h1>
+                <p class="mt-2 text-lg text-brand-text">Log in to view your saved Bibliotype.</p>
+                <!-- The Form -->
+                <form method="post" class="mt-8 text-left space-y-6">
+                    {% csrf_token %}
+                    <!-- Error message display (no changes here) -->
+                    {% if form.non_field_errors %}
+                        <div class="bg-brand-pink p-3 border-2 border-brand-text text-brand-text">
+                            {% for error in form.non_field_errors %}<p class="font-bold uppercase text-center">{{ error }}</p>{% endfor %}
+                        </div>
+                    {% endif %}
+                    <!-- Form field loop (no changes here) -->
+                    {% for field in form %}
+                        <div>
+                            <label for="{{ field.id_for_label }}"
+                                   class="block text-xl font-bold uppercase mb-1">{{ field.label }}</label>
+                            <input type="{{ field.field.widget.input_type }}"
+                                   name="{{ field.name }}"
+                                   id="{{ field.id_for_label }}"
+                                   class="w-full bg-white p-3 border-2 border-brand-text text-lg focus:outline-none focus:ring-2 focus:ring-brand-purple"
+                                   placeholder="{{ field.label }}..." />
+                            {% for error in field.errors %}<p class="mt-2 text-sm text-red-600 font-bold uppercase">{{ error }}</p>{% endfor %}
+                        </div>
+                    {% endfor %}
+                    <!-- MODIFIED: Changed bg-brand-cyan to bg-brand-green and added `cursor-pointer` -->
+                    <button type="submit"
+                            class="mt-6 w-full bg-brand-green text-brand-text text-2xl font-bold py-3 px-4 border-2 border-brand-text shadow-neo cursor-pointer transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1">
+                        Log In
+                    </button>
+                </form>
+            </div>
+            <!-- "Don't have an account?" link (no changes here) -->
+            <div class="mt-8">
+                <p class="text-lg">
+                    Don't have an account?
+                    <a href="{% url 'core:signup' %}"
+                       class="font-bold uppercase underline hover:bg-brand-yellow">Sign Up</a>
+                </p>
+            </div>
         </div>
     </div>
 {% endblock %}
