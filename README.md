@@ -1,8 +1,8 @@
 # 🧬 Bibliotype - Your Reading DNA
 
-Bibliotype is a web application that generates a personalized “Reading DNA” dashboard from a user's Goodreads or StoryGraph export file. It provides visual insights into reading habits and preferences, presented in a fun, shareable, neobrutalist UI inspired by "Wrapped" style summaries.
+Bibliotype is a web application that generates a personalised “Reading DNA” dashboard from a user's Goodreads or StoryGraph export file and provides visual insights into reading habits and preferences.
 
-The app uses a powerful Python backend with Pandas for data analysis and calls the Gemini API to generate a creative, AI-powered "vibe" for each user's unique reading taste.
+The app uses a Python backend with Pandas for data analysis and calls the Gemini API to generate a creative, AI-powered vibe for each user's unique reading taste.
 
 https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 
@@ -31,9 +31,9 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
   
 ## ✨ Features
 
-- **Robust Data Analysis:** Ingests Goodreads export `.csv` files and performs detailed analysis using Pandas.
+- ** Data Analysis:** Ingests Goodreads export `.csv` files and performs detailed analysis using Pandas.
 - **AI-Powered Vibe:** Utilizes Google's Gemini API to generate a creative, multi-phrase "vibe" that poetically summarizes the user's reading taste.
-- **Rich Analytics & Dashboard:**
+- **Analytics & Dashboard:**
   - **Reader Archetype:** Assigns users a primary "Reader Type" (e.g., *Classic Collector*, *Tome Tussler*).
   - **Core Stats:** Total books & pages read, average rating.
   - **Community Benchmarking:** Compares user stats (like average book length and total books read) against the global Bibliotype user base, showing percentiles.
