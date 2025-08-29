@@ -2,6 +2,26 @@
 
 Bibliotype is a lightweight web app that generates a personalized “Reading DNA” dashboard from a user's Goodreads or StoryGraph export file. It provides visual insights into reading habits, preferences, and statistics, presented in a fun, neobrutalist UI inspired by "Wrapped" style summaries.
 
+## TODO
+
+- Don't show tiles if there is no data for them
+- add borders to chart segments to make look consistent
+- long author names and genre names cutting of count when hovering on chart
+- distribution of length of books
+- get rid of books per year
+- ai text explanation of most controversial ratings and possible explanations
+- make most controversial ratings tab look better
+- different colours for different reader types
+- pixel square background for banner
+- few sentence ai generated bio summary
+- ui for login and sign up
+- make upload modal icon better and pixel art
+- support StoryGraph
+- set up public profile
+- compare book lengths, number of books read in total, number read per year, average book lengths, number of pages read with global averages
+
+note: the cache lives on the server side? would it be better to save this data in my sqlite db? then i can also save some other data anonymously and tell the user things like book lengths, number of books read in total, number read per year, average book lengths, number of pages read compared with global averages which i can get somewhere and hardcode but also compare these values against other bibliotype users and i can even give them a rating for how mainstream their taste is in both genres and authors and books and give them their most niche author and book. i can keep "books" with their data in my db and increment a value every time someone has read them and calculate nicheness scores and stuff
+
 ## ✨ Features
 
 - **CSV Upload:** Supports both Goodreads and StoryGraph export `.csv` files.
