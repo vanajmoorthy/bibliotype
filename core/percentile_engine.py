@@ -41,7 +41,6 @@ def update_analytics_from_stats(user_stats):
     print("   [Analytics] Updated global aggregate statistics.")
 
 
-# --- THIS IS THE CORRECTED FUNCTION ---
 def calculate_percentiles_from_aggregates(user_stats):
     """
     Calculates where a user's stats fall within the global distribution.
