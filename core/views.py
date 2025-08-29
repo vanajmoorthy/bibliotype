@@ -10,6 +10,25 @@ from .analytics import generate_reading_dna
 from .models import UserProfile
 
 
+def _save_dna_to_profile(profile, dna_data):
+    """
+    A reusable helper to correctly save all parts of the DNA dictionary
+    to the user's profile, populating both the main JSON blob and the
+    optimized, separate fields.
+    """
+    # 1. Save the full blob to the "junk drawer" for detailed display
+    profile.dna_data = dna_data
+
+    # 2. Populate the important "labeled drawers" for querying and performance
+    profile.reader_type = dna_data.get("reader_type")
+    profile.total_books_read = dna_data.get("user_stats", {}).get("total_books_read")
+    profile.reading_vibe = dna_data.get("reading_vibe")
+    profile.vibe_data_hash = dna_data.get("vibe_data_hash")
+
+    profile.save()  # This saves everything cleanly.
+    print(f"   [DB] Saved DNA data and promoted fields for user: {profile.user.username}")
+
+
 def home_view(request):
     """Displays the main upload page."""
     return render(request, "core/home.html")
@@ -19,12 +38,11 @@ def display_dna_view(request):
     dna_data = None
     user_profile = None
 
-    # --- THIS IS THE NEW, CORRECTED LOGIC ---
-    # 1. ALWAYS prioritize fresh data from the session first.
+    # We now use .get() to read the data without deleting it from the session.
+    # This keeps the data available for the signup/login flow.
     if "dna_data" in request.session:
         print("   [View] Found fresh DNA in session.")
-        # .pop() gets the data and removes it so the page is correct on reload.
-        dna_data = request.session.pop("dna_data")
+        dna_data = request.session.get("dna_data")
 
     # 2. If no session data, check if the user is logged in and has a saved profile.
     elif request.user.is_authenticated:
@@ -58,23 +76,9 @@ def upload_view(request):
 
         if request.user.is_authenticated:
             try:
-                profile = request.user.userprofile
-
-                # 1. Save the full blob to the "junk drawer"
-                profile.dna_data = dna_data
-
-                # 2. Populate the important "labeled drawers"
-                profile.reader_type = dna_data.get("reader_type")
-                profile.total_books_read = dna_data.get("user_stats", {}).get("total_books_read")
-                profile.reading_vibe = dna_data.get("reading_vibe")
-                profile.vibe_data_hash = dna_data.get("vibe_data_hash")
-
-                profile.save()  # This now saves everything cleanly.
+                _save_dna_to_profile(request.user.userprofile, dna_data)
 
                 messages.success(request, "Your Reading DNA has been updated and saved to your profile!")
-                print(f"   [DB] Saved FULL DNA data for user: {request.user.username}")
-            except UserProfile.DoesNotExist:
-                messages.error(request, "Could not find a user profile to save DNA to.")
             except UserProfile.DoesNotExist:
                 messages.error(request, "Could not find a user profile to save DNA to.")
 
@@ -95,11 +99,20 @@ def signup_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+
+            # Check if there's a pending DNA in the session from before signup.
             if "dna_data" in request.session:
-                user.userprofile.dna_data = request.session.pop("dna_data")
-                user.userprofile.save()
-                messages.success(request, "Account created and your Reading DNA has been saved!")
-            return redirect("core:home")  # Redirect to the consolidated view
+                dna_to_save = request.session.pop("dna_data")
+
+                _save_dna_to_profile(user.userprofile, dna_to_save)
+
+                messages.success(request, "Account created and your Bibliotype has been saved!")
+                # Redirect to the DNA page to show them their saved results.
+                return redirect("core:display_dna")
+
+            # If no DNA in session, just redirect to the home page.
+            messages.success(request, "Account created! Now, let's generate your Bibliotype.")
+            return redirect("core:home")
     else:
         form = UserCreationForm()
     return render(request, "core/signup.html", {"form": form})
@@ -111,10 +124,25 @@ def login_view(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
+
+            # --- THIS IS THE NEW, SAFE LOGIC ---
             if "dna_data" in request.session:
-                user.userprofile.dna_data = request.session.pop("dna_data")
-                user.userprofile.save()
-            return redirect("core:display_dna")  # Redirect to the consolidated view
+                profile = user.userprofile
+
+                # Only save the session DNA if the user's profile is currently empty.
+                if not profile.dna_data:
+                    dna_to_save = request.session.pop("dna_data")
+                    _save_dna_to_profile(profile, dna_to_save)
+                    messages.success(request, "Logged in and your first Bibliotype has been saved!")
+                    return redirect("core:display_dna")
+                else:
+                    # If the profile already has data, discard the temporary session data.
+                    request.session.pop("dna_data", None)  # Safely pop it
+                    messages.success(request, f"Welcome back, {user.username}!")
+
+            # Redirect all successful logins to the home page.
+            # They can click "Dashboard" to see their (un-overwritten) data.
+            return redirect("core:home")
     else:
         form = AuthenticationForm()
     return render(request, "core/login.html", {"form": form})
