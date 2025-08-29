@@ -7,6 +7,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from .analytics import generate_reading_dna
+from .forms import CustomUserCreationForm
 from .models import UserProfile
 
 
@@ -90,7 +91,8 @@ def upload_view(request):
 
 def signup_view(request):
     if request.method == "POST":
-        form = UserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST)
+
         if form.is_valid():
             user = form.save()
             login(request, user)
@@ -109,7 +111,7 @@ def signup_view(request):
             messages.success(request, "Account created! Now, let's generate your Bibliotype.")
             return redirect("core:home")
     else:
-        form = UserCreationForm()
+        form = CustomUserCreationForm()
     return render(request, "core/signup.html", {"form": form})
 
 

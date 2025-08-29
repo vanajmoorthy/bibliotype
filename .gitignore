@@ -61,3 +61,6 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# DB
+db_dump.json
