@@ -58,4 +58,5 @@ var/
 .installed.cfg
 *.egg
 
-# DB
+db_dump.json
+!core/fixtures/
