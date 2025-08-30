@@ -7,8 +7,8 @@
             {# This script tag is still needed for the charts to work #}
             {{ dna|json_script:"dna-data" }}
             <!-- The main header, personalized with the profile owner's name -->
-            <h1 class="text-5xl font-bold mb-8 text-center uppercase tracking-widest">
-                {{ profile_user.first_name|default:profile_user.username }}'s Reading DNA
+            <h1 class="text-5xl font-bold mb-8 text-center mx-auto uppercase tracking-widest w-max title-underline">
+              {{ title }}
             </h1>
             <!-- The AI-generated vibe -->
             {% if dna.reading_vibe %}
