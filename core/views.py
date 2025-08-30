@@ -1,13 +1,16 @@
+import json
+
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from .analytics import generate_reading_dna
-from .forms import CustomUserCreationForm
+from .forms import CustomUserCreationForm, UpdateDisplayNameForm
 from .models import UserProfile
 
 
@@ -34,31 +37,37 @@ def home_view(request):
 
 
 def display_dna_view(request):
+    """
+    Displays the user's DNA. This is the main dashboard view.
+    It has robust logic to handle both session-based (anonymous) and
+    database-backed (authenticated) DNA data.
+    """
     dna_data = None
     user_profile = None
 
     if "dna_data" in request.session:
-        print("   [View] Found fresh DNA in session.")
         dna_data = request.session.get("dna_data")
-
-    # If no session data, check if the user is logged in and has a saved profile.
     elif request.user.is_authenticated:
-        print(f"   [View] No session DNA. Checking profile for user {request.user.username}.")
         user_profile = request.user.userprofile
+
         if user_profile.dna_data:
             dna_data = user_profile.dna_data
 
     if not dna_data:
-        messages.info(request, "First, upload your library file to generate your Readprint!")
+        messages.info(request, "First, upload your library file to generate your Bibliotype!")
         return redirect("core:home")
 
-    context = {"dna": dna_data, "user_profile": user_profile}
+    # Add the update form to the context for the dashboard
+    update_form = UpdateDisplayNameForm(instance=request.user) if request.user.is_authenticated else None
+
+    context = {"dna": dna_data, "user_profile": user_profile, "update_form": update_form}
     return render(request, "core/dna_display.html", context)
 
 
 @require_POST
 def upload_view(request):
     csv_file = request.FILES.get("csv_file")
+
     if not csv_file or not csv_file.name.endswith(".csv"):
         messages.error(request, "Please upload a valid .csv file.")
         return redirect("core:home")
@@ -97,52 +106,66 @@ def signup_view(request):
             user = form.save()
             login(request, user)
 
-            # Check if there's a pending DNA in the session from before signup.
             if "dna_data" in request.session:
                 dna_to_save = request.session.pop("dna_data")
-
                 _save_dna_to_profile(user.userprofile, dna_to_save)
-
                 messages.success(request, "Account created and your Bibliotype has been saved!")
-                # Redirect to the DNA page to show them their saved results.
-                return redirect("core:display_dna")
 
-            # If no DNA in session, just redirect to the home page.
+                return redirect("core:display_dna")
             messages.success(request, "Account created! Now, let's generate your Bibliotype.")
+
             return redirect("core:home")
     else:
         form = CustomUserCreationForm()
+
     return render(request, "core/signup.html", {"form": form})
 
 
 def login_view(request):
+    # MODIFIED: Add logic to allow login with email address
     if request.method == "POST":
         form = AuthenticationForm(data=request.POST)
+
+        # --- NEW: EMAIL LOGIN LOGIC ---
+        email = request.POST.get("username")  # The form field is named 'username'
+        password = request.POST.get("password")
+
+        if email and password:
+            # Try to find a user with this email
+            try:
+                user_obj = User.objects.get(email=email)
+                # Authenticate using the found user's actual username
+                user = authenticate(request, username=user_obj.username, password=password)
+                if user is not None:
+                    login(request, user)
+                    # ... (rest of the logic is the same)
+                    if "dna_data" in request.session:
+                        # ... (save if empty logic)
+                        messages.success(request, "Logged in and your latest Bibliotype has been saved!")
+                        return redirect("core:display_dna")
+                    return redirect("core:home")
+            except User.DoesNotExist:
+                # If no user with that email, fall through to the default form validation
+                pass
+
+        # If the email login fails, the standard form validation will show the error
         if form.is_valid():
+            # This block is for users who log in with their actual username
             user = form.get_user()
             login(request, user)
-
-            if "dna_data" in request.session:
-                profile = user.userprofile
-
-                # Only save the session DNA if the user's profile is currently empty.
-                if not profile.dna_data:
-                    dna_to_save = request.session.pop("dna_data")
-                    _save_dna_to_profile(profile, dna_to_save)
-                    messages.success(request, "Logged in and your first Bibliotype has been saved!")
-                    return redirect("core:display_dna")
-                else:
-                    # If the profile already has data, discard the temporary session data.
-                    request.session.pop("dna_data", None)  # Safely pop it
-                    messages.success(request, f"Welcome back, {user.username}!")
-
             return redirect("core:home")
     else:
         form = AuthenticationForm()
+
+    # Change the label for the username field to "Email"
+    form.fields["username"].label = "Email"
     return render(request, "core/login.html", {"form": form})
 
 
+@login_required
 def logout_view(request):
+    if "dna_data" in request.session:
+        request.session.pop("dna_data", None)
     logout(request)
     messages.info(request, "You have been logged out.")
     return redirect("core:home")
@@ -156,21 +179,83 @@ def update_privacy_view(request):
     profile = request.user.userprofile
     profile.is_public = is_public
     profile.save()
-    messages.success(request, f"Your profile is now {"public" if is_public else "private"}.")
+    messages.success(request, f"Your profile is now {'public' if is_public else 'private'}.")
+    # After updating, we must clear any stale session data before redirecting.
+    if "dna_data" in request.session:
+        request.session.pop("dna_data", None)
     return redirect("core:display_dna")
+
+
+@login_required
+@require_POST
+def update_display_name_view(request):
+    """Handles the form submission for updating a user's display name."""
+    form = UpdateDisplayNameForm(request.POST, user=request.user, instance=request.user)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Your display name has been updated!")
+    else:
+        # If there are errors (like the name is taken), display them.
+        for error in form.errors.values():
+            messages.error(request, error)
+
+    return redirect("core:display_dna")
+
+
+@login_required
+@require_POST
+def update_username_api(request):
+    """
+    An API-style view to handle inline username updates.
+    Expects a JSON request body with a 'username' key.
+    Now uses the Django messages framework for feedback.
+    """
+    try:
+        data = json.loads(request.body)
+        new_username = data.get("username")
+
+        if not new_username:
+            return JsonResponse({"status": "error", "message": "Display name cannot be empty."}, status=400)
+
+        form = UpdateDisplayNameForm({"username": new_username}, user=request.user, instance=request.user)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Display name updated successfully!")
+
+            return JsonResponse({"status": "success", "new_username": new_username})
+        else:
+            error_message = form.errors.get("username")[0]
+            # We still return the error message in the JSON for immediate feedback.
+            return JsonResponse({"status": "error", "message": error_message}, status=400)
+
+    except Exception as e:
+        print(f"Error in update_username_api: {e}")
+
+        return JsonResponse({"status": "error", "message": "An unexpected server error occurred."}, status=500)
 
 
 def public_profile_view(request, username):
     """Displays a user's public DNA."""
     try:
-        user = User.objects.get(username=username)
-        profile = user.userprofile
-        if not profile.is_public:
+        # Get the user whose profile is being viewed
+        profile_user = User.objects.get(username=username)
+        profile = profile_user.userprofile
+
+        if not profile.is_public and request.user != profile_user:
+            # If the profile is private AND you are not the owner, show the private page
             return render(request, "core/profile_private.html")
 
-        context = {"dna": profile.dna_data, "profile_user": user}
+        # MODIFIED: Add the `user_profile` object to the context
+        # This is the profile of the page we are viewing
+        context = {
+            "dna": profile.dna_data,
+            "profile_user": profile_user,
+            "user_profile": profile,  # <-- THE FIX
+        }
         return render(request, "core/public_profile.html", context)
+
     except User.DoesNotExist:
-        from django.http import Http404
+        from django.http import Http44
 
         raise Http404("User does not exist.")
