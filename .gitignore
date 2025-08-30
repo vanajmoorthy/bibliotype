@@ -24,10 +24,6 @@ staticfiles/
 static/dist/
 local_settings.py
 
-# Django migrations
-**/migrations/*.py
-**/migrations/*.pyc
-!*/migrations/__init__.py
 django_cache
 
 # OS files

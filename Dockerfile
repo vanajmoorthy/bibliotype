@@ -1,5 +1,7 @@
 FROM python:3.13-slim
 
+RUN apt-get update && apt-get install -y postgresql-client
+
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 ENV POETRY_NO_INTERACTION=1 
@@ -7,6 +9,8 @@ ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 ENV POETRY_VIRTUALENVS_CREATE=true 
 
 WORKDIR /app
+
+COPY ./wait-for-postgres.sh .
 
 RUN pip install poetry
 
