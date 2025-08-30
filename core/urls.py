@@ -14,4 +14,6 @@ urlpatterns = [
     path("logout/", views.logout_view, name="logout"),
     path("dashboard/update-privacy/", views.update_privacy_view, name="update_privacy"),
     path("u/<str:username>/", views.public_profile_view, name="public_profile"),
+    path("dashboard/update-name/", views.update_display_name_view, name="update_name"),
+    path("api/update-username/", views.update_username_api, name="api_update_username"),
 ]
