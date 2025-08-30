@@ -1,38 +1,42 @@
 {% extends 'core/base.html' %}
 {% load humanize %}
 {% block content %}
-    <div class="max-w-4xl mx-auto space-y-8 p-4">
+    <div class="mx-auto max-w-4xl space-y-8 p-4">
         {# Check if DNA data exists for this user #}
         {% if dna %}
             {# This script tag is still needed for the charts to work #}
             {{ dna|json_script:"dna-data" }}
             <!-- The main header, personalized with the profile owner's name -->
-            <h1 class="text-5xl font-bold mb-8 text-center mx-auto uppercase tracking-widest w-max title-underline">
-              {{ title }}
+            <h1 class="title-underline mx-auto mb-8 w-max text-center text-5xl font-bold tracking-widest uppercase">
+                {{ title }}
             </h1>
             <!-- The AI-generated vibe -->
             {% if dna.reading_vibe %}
-                <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-xl italic text-gray-600 mb-8">
+                <div
+                    class="mb-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-xl text-gray-600 italic"
+                >
                     {% for phrase in dna.reading_vibe %}
                         <span>{{ phrase }}</span>
-                        {% if not forloop.last %}<span class="text-gray-400 font-bold">·</span>{% endif %}
+                        {% if not forloop.last %}<span class="font-bold text-gray-400">·</span>{% endif %}
                     {% endfor %}
                 </div>
             {% endif %}
             <!-- Reader Type Card, personalized -->
             {% if dna.reader_type %}
-                <div class="bg-brand-purple p-6 border-2 border-brand-text shadow-neo text-center">
-                    <div class="text-lg uppercase">{{ profile_user.first_name|default:profile_user.username }}'s Reader Type is...</div>
-                    <div class="text-5xl font-bold uppercase tracking-widest mt-1">{{ dna.reader_type }}</div>
+                <div class="bg-brand-purple border-brand-text shadow-neo border-2 p-6 text-center">
+                    <div class="text-lg uppercase">
+                        {{ profile_user.first_name|default:profile_user.username }}'s Reader Type is...
+                    </div>
+                    <div class="mt-1 text-5xl font-bold tracking-widest uppercase">{{ dna.reader_type }}</div>
                     {% if dna.reader_type_explanation %}
-                        <p class="text-lg mt-4 max-w-2xl mx-auto">{{ dna.reader_type_explanation }}</p>
+                        <p class="mx-auto mt-4 max-w-2xl text-lg">{{ dna.reader_type_explanation }}</p>
                     {% endif %}
                 </div>
             {% endif %}
             <!-- Top Reader Traits Leaderboard -->
             {% if dna.top_reader_types %}
-                <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
-                    <h2 class="text-2xl font-bold mb-4 uppercase">Top Reader Traits</h2>
+                <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+                    <h2 class="mb-4 text-2xl font-bold uppercase">Top Reader Traits</h2>
                     <ol class="space-y-2 text-lg">
                         {% for item in dna.top_reader_types %}
                             {% if forloop.first %}
@@ -53,49 +57,59 @@
                 </div>
             {% endif %}
             <!-- Key Stats -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-brand-yellow p-6 border-2 border-brand-text shadow-neo text-center">
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+                <div class="bg-brand-yellow border-brand-text shadow-neo border-2 p-6 text-center">
                     <div class="text-5xl font-bold">{{ dna.user_stats.total_books_read }}</div>
-                    <div class="text-lg uppercase mt-2">Total Books Read</div>
+                    <div class="mt-2 text-lg uppercase">Total Books Read</div>
                 </div>
-                <div class="bg-brand-pink p-6 border-2 border-brand-text shadow-neo text-center">
+                <div class="bg-brand-pink border-brand-text shadow-neo border-2 p-6 text-center">
                     <div class="text-5xl font-bold">{{ dna.user_stats.total_pages_read|intcomma }}</div>
-                    <div class="text-lg uppercase mt-2">Total Pages Read</div>
+                    <div class="mt-2 text-lg uppercase">Total Pages Read</div>
                 </div>
-                <div class="bg-brand-cyan p-6 border-2 border-brand-text shadow-neo text-center">
+                <div class="bg-brand-cyan border-brand-text shadow-neo border-2 p-6 text-center">
                     <div class="text-5xl font-bold">{{ dna.average_rating_overall }}</div>
-                    <div class="text-lg uppercase mt-2">Overall Rating</div>
+                    <div class="mt-2 text-lg uppercase">Overall Rating</div>
                 </div>
             </div>
             <!-- Comparative Analytics Tile -->
-            <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
-                <h2 class="text-2xl font-bold mb-4 uppercase">Comparative Analytics</h2>
+            <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+                <h2 class="mb-4 text-2xl font-bold uppercase">Comparative Analytics</h2>
                 {% if dna.bibliotype_percentiles %}
                     <div class="space-y-4 text-lg">
-                        <div class="p-3 bg-gray-50 border-2 border-brand-text shadow-neo-sm">
+                        <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
                             <p>
-                                Their average book length is <strong>{{ dna.user_stats.avg_book_length }} pages</strong>.
-                                <span class="text-gray-600">(Global avg: ~{{ dna.global_averages.avg_book_length_pages }})</span>
+                                Their average book length is
+                                <strong>{{ dna.user_stats.avg_book_length }} pages</strong>.
+                                <span class="text-gray-600"
+                                    >(Global avg: ~{{ dna.global_averages.avg_book_length_pages }})</span
+                                >
                             </p>
-                            <p class="text-base mt-1">
-                                This is longer than <strong>{{ dna.bibliotype_percentiles.avg_book_length|floatformat:1 }}%</strong> of other Bibliotype readers.
+                            <p class="mt-1 text-base">
+                                This is longer than
+                                <strong>{{ dna.bibliotype_percentiles.avg_book_length|floatformat:1 }}%</strong> of
+                                other Bibliotype readers.
                             </p>
                         </div>
-                        <div class="p-3 bg-gray-50 border-2 border-brand-text shadow-neo-sm">
+                        <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
                             <p>
-                                The average age of books they read is from <strong>{{ dna.user_stats.avg_publish_year|floatformat:0 }}</strong>.
-                                <span class="text-gray-600">(Global avg: ~{{ dna.global_averages.avg_publish_year }})</span>
+                                The average age of books they read is from
+                                <strong>{{ dna.user_stats.avg_publish_year|floatformat:0 }}</strong>.
+                                <span class="text-gray-600"
+                                    >(Global avg: ~{{ dna.global_averages.avg_publish_year }})</span
+                                >
                             </p>
-                            <p class="text-base mt-1">
-                                Their reading tastes are older than <strong>{{ dna.bibliotype_percentiles.avg_publish_year|floatformat:1 }}%</strong> of other Bibliotype readers.
+                            <p class="mt-1 text-base">
+                                Their reading tastes are older than
+                                <strong>{{ dna.bibliotype_percentiles.avg_publish_year|floatformat:1 }}%</strong> of
+                                other Bibliotype readers.
                             </p>
                         </div>
-                        <div class="p-3 bg-gray-50 border-2 border-brand-text shadow-neo-sm">
-                            <p>
-                                They have read <strong>{{ dna.user_stats.total_books_read }} books</strong> in total.
-                            </p>
-                            <p class="text-base mt-1">
-                                They've read more books than <strong>{{ dna.bibliotype_percentiles.total_books_read|floatformat:1 }}%</strong> of other Bibliotype readers.
+                        <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
+                            <p>They have read <strong>{{ dna.user_stats.total_books_read }} books</strong> in total.</p>
+                            <p class="mt-1 text-base">
+                                They've read more books than
+                                <strong>{{ dna.bibliotype_percentiles.total_books_read|floatformat:1 }}%</strong> of
+                                other Bibliotype readers.
                             </p>
                         </div>
                     </div>
@@ -104,190 +118,244 @@
                 {% endif %}
             </div>
             <!-- Niche Book & Mainstream Score -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
-                    <h2 class="text-2xl font-bold mb-4 uppercase">Most Niche Read</h2>
+            <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+                <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+                    <h2 class="mb-4 text-2xl font-bold uppercase">Most Niche Read</h2>
                     {% if dna.most_niche_book %}
-                        <p class="font-bold text-xl">{{ dna.most_niche_book.title }}</p>
+                        <p class="text-xl font-bold">{{ dna.most_niche_book.title }}</p>
                         <p class="text-lg">by {{ dna.most_niche_book.author }}</p>
-                        <p class="text-base mt-2 bg-brand-cyan inline-block px-2 py-1 border-2 border-brand-text">
+                        <p class="bg-brand-cyan border-brand-text mt-2 inline-block border-2 px-2 py-1 text-base">
                             Read by only {{ dna.most_niche_book.read_count }} Bibliotype user(s)!
                         </p>
                     {% else %}
                         <p class="text-lg">Not enough data to determine niche reads yet.</p>
                     {% endif %}
                 </div>
-                <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
-                    <h2 class="text-2xl font-bold mb-4 uppercase">Mainstream Meter</h2>
+                <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+                    <h2 class="mb-4 text-2xl font-bold uppercase">Mainstream Meter</h2>
                     <p class="text-lg">
-                        <strong>{{ dna.mainstream_score_percent }}%</strong> of the books in this library are considered "mainstream" reads on Bibliotype.
+                        <strong>{{ dna.mainstream_score_percent }}%</strong> of the books in this library are considered
+                        "mainstream" reads on Bibliotype.
                     </p>
                 </div>
             </div>
             <!-- Books Per Year Chart -->
-            <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
-                <h2 class="text-2xl font-bold mb-4 uppercase">Books Read Per Year</h2>
+            <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+                <h2 class="mb-4 text-2xl font-bold uppercase">Books Read Per Year</h2>
                 <canvas id="booksByYearChart"></canvas>
             </div>
             <!-- Preferences: Genres & Authors -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="bg-white p-6 border-2 border-brand-text shadow-neo relative overflow-hidden">
-                    <h2 class="text-2xl font-bold mb-4 uppercase">Top Genres</h2>
+            <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+                <div class="border-brand-text shadow-neo relative overflow-hidden border-2 bg-white p-6">
+                    <h2 class="mb-4 text-2xl font-bold uppercase">Top Genres</h2>
                     {% if dna.top_genres %}
                         <ol class="space-y-2 text-lg">
                             {% for genre, count in dna.top_genres.items %}
                                 <li class="capitalize">
-                                    <span class="font-bold bg-brand-yellow px-2 py-1 border-2 border-brand-text">{{ genre }}</span> ({{ count }} books)
+                                    <span class="bg-brand-yellow border-brand-text border-2 px-2 py-1 font-bold"
+                                        >{{ genre }}</span
+                                    >
+                                    ({{ count }} books)
                                 </li>
                             {% endfor %}
                         </ol>
-                        <div class="absolute top-2 right-2 w-32 h-32">
+                        <div class="absolute top-2 right-2 h-32 w-32">
                             <canvas id="topGenresChart"></canvas>
                         </div>
                     {% endif %}
                 </div>
-                <div class="bg-white p-6 border-2 border-brand-text shadow-neo relative overflow-hidden">
-                    <h2 class="text-2xl font-bold mb-4 uppercase">Top Authors</h2>
+                <div class="border-brand-text shadow-neo relative overflow-hidden border-2 bg-white p-6">
+                    <h2 class="mb-4 text-2xl font-bold uppercase">Top Authors</h2>
                     {% if dna.top_authors %}
                         <ol class="space-y-2 text-lg">
                             {% for author, count in dna.top_authors.items %}
                                 <li>
-                                    <span class="font-bold bg-brand-cyan px-2 py-1 border-2 border-brand-text">{{ author }}</span> ({{ count }} books)
+                                    <span class="bg-brand-cyan border-brand-text border-2 px-2 py-1 font-bold"
+                                        >{{ author }}</span
+                                    >
+                                    ({{ count }} books)
                                 </li>
                             {% endfor %}
                         </ol>
-                        <div class="absolute top-2 right-2 w-32 h-32">
+                        <div class="absolute top-2 right-2 h-32 w-32">
                             <canvas id="topAuthorsChart"></canvas>
                         </div>
                     {% endif %}
                 </div>
             </div>
             <!-- Controversial Ratings -->
-            <div class="bg-white p-6 border-2 border-brand-text shadow-neo">
-                <h2 class="text-2xl font-bold mb-4 uppercase">Most "Controversial" Ratings 🤯</h2>
-                <p class="text-lg mb-4">Books where their rating differs most from the Goodreads average.</p>
+            <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+                <h2 class="mb-4 text-2xl font-bold uppercase">Most "Controversial" Ratings 🤯</h2>
+                <p class="mb-4 text-lg">Books where their rating differs most from the Goodreads average.</p>
                 <div class="space-y-4 text-lg">
                     {% for book in dna.top_controversial_books %}
-                        <div class="p-3 bg-gray-50 border-2 border-brand-text shadow-neo-sm">
+                        <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
                             <p class="font-bold">{{ book.Title }}</p>
-                            <div class="flex justify-between items-center mt-1 text-base">
-                                <span>Their Rating: <span class="font-bold text-xl">{{ book.my_rating|floatformat:1 }}★</span></span>
-                                <span>Goodreads Avg: <span class="font-bold text-xl">{{ book.average_rating|floatformat:1 }}★</span></span>
-                                <span class="bg-brand-purple text-brand-text font-bold px-2 py-1 border-2 border-brand-text">Diff: {{ book.rating_difference|floatformat:1 }}</span>
+                            <div class="mt-1 flex items-center justify-between text-base">
+                                <span
+                                    >Their Rating:
+                                    <span class="text-xl font-bold">{{ book.my_rating|floatformat:1 }}★</span></span
+                                >
+                                <span
+                                    >Goodreads Avg:
+                                    <span class="text-xl font-bold"
+                                        >{{ book.average_rating|floatformat:1 }}★</span
+                                    ></span
+                                >
+                                <span
+                                    class="bg-brand-purple text-brand-text border-brand-text border-2 px-2 py-1 font-bold"
+                                    >Diff: {{ book.rating_difference|floatformat:1 }}</span
+                                >
                             </div>
                         </div>
-                    {% empty %}
+                        {% empty %}
                         <p>Not enough data to calculate controversial ratings.</p>
                     {% endfor %}
                 </div>
             </div>
             <!-- The entire script block is copied to ensure the charts render correctly on the public page -->
             <script>
-            document.addEventListener("DOMContentLoaded", function () {
-              const dnaData = JSON.parse(document.getElementById("dna-data").textContent);
-        
-              Chart.defaults.font.family = "VT323";
-              Chart.defaults.font.size = 16;
-              Chart.defaults.color = "#1f2937";
-              
-              const booksByYearCtx = document.getElementById("booksByYearChart")?.getContext("2d");
-              if (booksByYearCtx) {
-                new Chart(booksByYearCtx, {
-                    type: "bar",
-                    data: {
-                        labels: dnaData.stats_by_year.map((d) => d.year),
-                        datasets: [{
-                            label: "# of Books",
-                            data: dnaData.stats_by_year.map((d) => d.count),
-                            backgroundColor: "#fde047",
-                            borderColor: "#1f2937",
-                            borderWidth: 2,
-                        }],
-                    },
-                    options: {
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { beginAtZero: true, grid: { color: "#e5e7eb" }, ticks: { stepSize: 1 } },
-                            x: { grid: { display: false } },
-                        },
-                    },
-                });
-              }
-        
-              const topGenresCtx = document.getElementById("topGenresChart")?.getContext("2d");
-              if (topGenresCtx && dnaData.top_genres) {
-                const topGenresData = dnaData.top_genres;
-                const genreLabels = Object.keys(topGenresData);
-                const genreValues = Object.values(topGenresData);
-                new Chart(topGenresCtx, {
-                    type: "doughnut",
-                    data: {
-                        labels: genreLabels,
-                        datasets: [{
-                            label: "Genres",
-                            data: genreValues,
-                            backgroundColor: ["#fde047", "#f9a8d4", "#a78bfa", "#60a5fa", "#34d399", "#fb923c", "#e879f9", "#c084fc", "#f472b6", "#be185d"],
-                        }],
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: function (context) {
-                                        let label = context.label || "";
-                                        if (label) { label += ": "; }
-                                        if (context.parsed !== null) { label += context.parsed; }
-                                        return label;
+                document.addEventListener("DOMContentLoaded", function () {
+                    const dnaData = JSON.parse(document.getElementById("dna-data").textContent);
+
+                    Chart.defaults.font.family = "VT323";
+                    Chart.defaults.font.size = 16;
+                    Chart.defaults.color = "#1f2937";
+
+                    const booksByYearCtx = document.getElementById("booksByYearChart")?.getContext("2d");
+                    if (booksByYearCtx) {
+                        new Chart(booksByYearCtx, {
+                            type: "bar",
+                            data: {
+                                labels: dnaData.stats_by_year.map((d) => d.year),
+                                datasets: [
+                                    {
+                                        label: "# of Books",
+                                        data: dnaData.stats_by_year.map((d) => d.count),
+                                        backgroundColor: "#fde047",
+                                        borderColor: "#1f2937",
+                                        borderWidth: 2,
+                                    },
+                                ],
+                            },
+                            options: {
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    y: { beginAtZero: true, grid: { color: "#e5e7eb" }, ticks: { stepSize: 1 } },
+                                    x: { grid: { display: false } },
+                                },
+                            },
+                        });
+                    }
+
+                    const topGenresCtx = document.getElementById("topGenresChart")?.getContext("2d");
+                    if (topGenresCtx && dnaData.top_genres) {
+                        const topGenresData = dnaData.top_genres;
+                        const genreLabels = Object.keys(topGenresData);
+                        const genreValues = Object.values(topGenresData);
+                        new Chart(topGenresCtx, {
+                            type: "doughnut",
+                            data: {
+                                labels: genreLabels,
+                                datasets: [
+                                    {
+                                        label: "Genres",
+                                        data: genreValues,
+                                        backgroundColor: [
+                                            "#fde047",
+                                            "#f9a8d4",
+                                            "#a78bfa",
+                                            "#60a5fa",
+                                            "#34d399",
+                                            "#fb923c",
+                                            "#e879f9",
+                                            "#c084fc",
+                                            "#f472b6",
+                                            "#be185d",
+                                        ],
+                                    },
+                                ],
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function (context) {
+                                                let label = context.label || "";
+                                                if (label) {
+                                                    label += ": ";
+                                                }
+                                                if (context.parsed !== null) {
+                                                    label += context.parsed;
+                                                }
+                                                return label;
+                                            },
+                                        },
                                     },
                                 },
                             },
-                        },
-                    },
-                });
-              }
-        
-              const topAuthorsCtx = document.getElementById("topAuthorsChart")?.getContext("2d");
-              if (topAuthorsCtx && dnaData.top_authors) {
-                const topAuthorsData = dnaData.top_authors;
-                const authorLabels = Object.keys(topAuthorsData);
-                const authorValues = Object.values(topAuthorsData);
-                new Chart(topAuthorsCtx, {
-                    type: "doughnut",
-                    data: {
-                        labels: authorLabels,
-                        datasets: [{
-                            label: "Authors",
-                            data: authorValues,
-                            backgroundColor: ["#fde047", "#f9a8d4", "#a78bfa", "#60a5fa", "#34d399", "#fb923c", "#e879f9", "#c084fc", "#f472b6", "#be185d"],
-                        }],
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: function (context) {
-                                        let label = context.label || "";
-                                        if (label) { label += ": "; }
-                                        if (context.parsed !== null) { label += context.parsed; }
-                                        return label;
+                        });
+                    }
+
+                    const topAuthorsCtx = document.getElementById("topAuthorsChart")?.getContext("2d");
+                    if (topAuthorsCtx && dnaData.top_authors) {
+                        const topAuthorsData = dnaData.top_authors;
+                        const authorLabels = Object.keys(topAuthorsData);
+                        const authorValues = Object.values(topAuthorsData);
+                        new Chart(topAuthorsCtx, {
+                            type: "doughnut",
+                            data: {
+                                labels: authorLabels,
+                                datasets: [
+                                    {
+                                        label: "Authors",
+                                        data: authorValues,
+                                        backgroundColor: [
+                                            "#fde047",
+                                            "#f9a8d4",
+                                            "#a78bfa",
+                                            "#60a5fa",
+                                            "#34d399",
+                                            "#fb923c",
+                                            "#e879f9",
+                                            "#c084fc",
+                                            "#f472b6",
+                                            "#be185d",
+                                        ],
+                                    },
+                                ],
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function (context) {
+                                                let label = context.label || "";
+                                                if (label) {
+                                                    label += ": ";
+                                                }
+                                                if (context.parsed !== null) {
+                                                    label += context.parsed;
+                                                }
+                                                return label;
+                                            },
+                                        },
                                     },
                                 },
                             },
-                        },
-                    },
+                        });
+                    }
                 });
-              }
-            });
             </script>
         {% else %}
-            <div class="text-center bg-white p-8 border-2 border-brand-text shadow-neo">
-                <h2 class="text-2xl font-bold uppercase tracking-tight text-gray-900">No Bibliotype Found</h2>
+            <div class="border-brand-text shadow-neo border-2 bg-white p-8 text-center">
+                <h2 class="text-2xl font-bold tracking-tight text-gray-900 uppercase">No Bibliotype Found</h2>
                 <p class="mt-3 text-lg text-gray-600">This user hasn't generated their public Bibliotype yet.</p>
             </div>
         {% endif %}

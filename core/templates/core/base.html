@@ -1,5 +1,5 @@
 {% load static %}
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="h-full">
     <head>
         <meta charset="UTF--8" />
@@ -7,56 +7,72 @@
         <title>Bibliotype - Your Literary Personality</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap"
-              rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
         <link href="{% static 'dist/output.css' %}" rel="stylesheet" />
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script defer
-                src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     </head>
-    <body class="bg-brand-background text-brand-text font-sans antialiased grid-background h-full flex flex-col">
+    <body class="bg-brand-background text-brand-text grid-background flex h-full flex-col font-sans antialiased">
         <nav class="p-4">
-            <div class="container mx-auto flex justify-between items-center">
-                <a href="{% url 'core:home' %}"
-                   class="text-3xl font-bold text-brand-text uppercase tracking-widest">
-                    🧬 <span class="px-1 border-brand-text border-b-2">Bibliotype</span>
+            <div class="container mx-auto flex items-center justify-between">
+                <a href="{% url 'core:home' %}" class="text-brand-text text-3xl font-bold tracking-widest uppercase">
+                    🧬 <span class="border-brand-text border-b-2 px-1">Bibliotype</span>
                 </a>
-                <div class="flex items-center space-x-4 text-lg uppercase font-bold">
+                <div class="flex items-center space-x-4 text-lg font-bold uppercase">
                     {% if user.is_authenticated %}
-                        <a href="{% url 'core:display_dna' %}"
-                           class="bg-white hover:bg-brand-pink px-2 border-2 border-brand-text shadow-neo-sm">Dashboard</a>
-                        <a href="{% url 'core:logout' %}"
-                           class="bg-white hover:bg-brand-cyan px-2 border-2 border-brand-text shadow-neo-sm">Logout</a>
+                        <a
+                            href="{% url 'core:display_dna' %}"
+                            class="hover:bg-brand-pink border-brand-text shadow-neo-sm border-2 bg-white px-2"
+                            >Dashboard</a
+                        >
+                        <a
+                            href="{% url 'core:logout' %}"
+                            class="hover:bg-brand-cyan border-brand-text shadow-neo-sm border-2 bg-white px-2"
+                            >Logout</a
+                        >
                     {% else %}
-                        <a href="{% url 'core:login' %}"
-                           class="bg-white hover:bg-brand-yellow px-2 border-2 border-brand-text shadow-neo-sm">Login</a>
-                        <a href="{% url 'core:signup' %}"
-                           class="bg-brand-green text-brand-text px-4 py-1 border-2 border-brand-text shadow-neo-sm transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5">Sign Up</a>
+                        <a
+                            href="{% url 'core:login' %}"
+                            class="hover:bg-brand-yellow border-brand-text shadow-neo-sm border-2 bg-white px-2"
+                            >Login</a
+                        >
+                        <a
+                            href="{% url 'core:signup' %}"
+                            class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm border-2 px-4 py-1 transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                            >Sign Up</a
+                        >
                     {% endif %}
                 </div>
             </div>
         </nav>
-        <main class="container mx-auto p-6 flex-grow">
+        <main class="container mx-auto flex-grow p-6">
             {% if messages %}
                 {% for message in messages %}
-                    <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 8000)" x-show="show" class="relative p-4 mb-6 border-2 border-brand-text shadow-neo text-lg font-bold
-                        {% if message.tags == 'error' %}
+                    <div
+                        x-data="{ show: true }"
+                        x-init="setTimeout(() => show = false, 8000)"
+                        x-show="show"
+                        class="border-brand-text shadow-neo {% if message.tags == 'error' %}
                             bg-red-500 text-white
                         {% elif message.tags == 'success' %}
                             bg-brand-green text-brand-text
                         {% else %}
                             bg-brand-cyan text-brand-text
-                        {% endif %}
-                        " role="alert">
+                        {% endif %} relative mb-6 border-2 p-4 text-lg font-bold"
+                        role="alert"
+                    >
                         <span>{{ message }}</span>
-                        <button @click="show = false"
-                                class="absolute top-2 right-3 text-2xl font-bold leading-none px-2 border-2 border-brand-text bg-white text-brand-text shadow-neo-sm hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 cursor-pointer">
+                        <button
+                            @click="show = false"
+                            class="border-brand-text text-brand-text shadow-neo-sm absolute top-2 right-3 cursor-pointer border-2 bg-white px-2 text-2xl leading-none font-bold hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                        >
                             &times;
                         </button>
                     </div>
                 {% endfor %}
             {% endif %}
-            {% block content %}{% endblock %}
+            {% block content %}
+            {% endblock %}
         </main>
     </body>
 </html>

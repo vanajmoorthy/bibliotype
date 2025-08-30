@@ -21,7 +21,7 @@ env.bak/
 db.sqlite3
 media/
 staticfiles/
-static/
+static/dist/
 local_settings.py
 
 # Django migrations
@@ -63,4 +63,3 @@ var/
 *.egg
 
 # DB
-db_dump.json
