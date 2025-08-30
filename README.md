@@ -7,10 +7,6 @@ The app uses a Python backend with Pandas for data analysis and calls the Gemini
 https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 
 
----
-
-
-
 ## TODO
 
 - Don't show tiles if there is no data for them
@@ -54,12 +50,11 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - **Backend:** Django 5.x, Python 3.13+
 - **Dependency Management:** Poetry
 - **Data Processing:** Pandas
-- **AI Integration:** Google Generative AI (Gemini)
+- **AI Integration:** Gemini
 - **Database:** PostgreSQL (production), SQLite (fallback for non-Docker dev)
 - **Containerization:** Docker, Docker Compose
 - **Frontend:** Tailwind CSS, Alpine.js, Chart.js
 
----
 
 ## 🚀 Getting Started (Docker & Poetry)
 
@@ -69,7 +64,6 @@ This is the recommended method for local development. It creates a consistent, i
 
 - Docker and Docker Compose
 - Poetry
-- An environment file for your secrets.
 
 ### 2. Installation & Setup
 
@@ -84,10 +78,7 @@ This is the recommended method for local development. It creates a consistent, i
     ```env
     # .env
 
-    # Generate a new secret key for your project
-    SECRET_KEY="django-insecure-your-secret-key-here"
-
-    # Get your API key from Google AI Studio
+    SECRET_KEY="generate-a-new-secret-key"
     GEMINI_API_KEY="your-real-gemini-api-key"
 
     # Credentials for the local PostgreSQL container
@@ -97,17 +88,14 @@ This is the recommended method for local development. It creates a consistent, i
     ```
 
 3.  **Build and Run the Containers:**
-    From the project root, run the following command. This will build the Django image, pull the Postgres image, and start both services.
+    From the project root, run the following command. The `-d` flag runs the services in the background.
     ```bash
-    docker-compose up --build
+    docker-compose up --build -d
     ```
-    The application will be running at **`http://127.0.0.1:8000`**.
-    
+
 ### 3. Database Setup (First Time Only)
 
-The first time you start the Docker environment, you need to set up the database.
-
-Open a **new terminal window** (while `docker-compose up` is running in the other) and run these commands:
+The first time you start the Docker environment, you need to set up the database. Open a **new terminal window** and run these commands:
 
 1.  **Apply Database Migrations:**
     This command creates all the necessary tables in the new PostgreSQL database.
@@ -115,19 +103,10 @@ Open a **new terminal window** (while `docker-compose up` is running in the othe
     docker-compose exec web poetry run python manage.py migrate
     ```
 
-2.  **Load Initial Data (Choose ONE method):**
-
-    **A) Seed the Database (Recommended for Fresh Start)**
-    This populates your database with popular books and community analytics for a rich development experience. It will make live API calls.
+2.  **Load Initial Data:**
+    This command populates the database with a large catalog of books and pre-calculated community analytics from a local fixture file. This is the fastest way to get started.
     ```bash
-    docker-compose exec web poetry run python manage.py seed_books
-    docker-compose exec web poetry run python manage.py seed_analytics
-    ```
-
-    **B) Restore from a Backup Fixture (For Syncing/Recovery)**
-    If you have a `db_dump.json` file, use this custom command to load it. This command is a special wrapper around Django's `loaddata` that safely handles the creation of users and their profiles.
-    ```bash
-    docker-compose exec web poetry run python manage.py load_fixture_data db_dump.json
+    docker-compose exec web poetry run python manage.py loaddata core/fixtures/initial_data.json
     ```
 
 3.  **Create a Superuser:**
@@ -135,26 +114,17 @@ Open a **new terminal window** (while `docker-compose up` is running in the othe
     ```bash
     docker-compose exec web poetry run python manage.py createsuperuser
     ```
----
 
-### Why This is the Superior Solution
+You can now access the application at **`http://127.0.0.1:8000`**.
 
-*   **No Code Changes:** You no longer need to remember to comment and uncomment code. The process is fully automated.
-*   **Reliable:** The `try...finally` block guarantees that the signals are reconnected, even if the `loaddata` command fails for some other reason. This prevents you from leaving your application in a broken state.
-*   **Clear Documentation:** The `README` now presents two distinct, clear paths for data setup, explaining the purpose of each. It's professional and easy to follow.
 
-You've now built a truly robust and developer-friendly setup for your project.
+#### Optional: Refreshing the Fixture File
 
-#### Alternative: Restoring from a Backup
-
-If you have a `db_dump.json` file, you can restore the database to that specific state instead of running the seeders. This is useful for restoring a backup or syncing your database with another developer's.
-
-**Do not run this if you have already run the seeders.** Start with a fresh, migrated database.
-
-```bash
-docker-compose exec web poetry run python manage.py loaddata db_dump.json
-```
-
-## 🏛️ Project Structure
-
-The project is a standard Django application, containerized with Docker.
+If you update the book list in `seed_books.py` and want to regenerate the `initial_data.json` fixture, follow these steps:
+1.  `docker-compose down -v`
+2.  `docker-compose up -d`
+3.  `docker-compose exec web poetry run python manage.py migrate`
+4.  `docker-compose exec web poetry run python manage.py seed_books`
+5.  `docker-compose exec web poetry run python manage.py seed_analytics`
+6.  `docker-compose exec web poetry run python manage.py dumpdata core.Book core.Author core.Genre core.AggregateAnalytics --indent 2 > core/fixtures/initial_data.json`
+7.  Commit the updated `initial_data.json` file to Git.
