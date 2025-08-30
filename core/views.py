@@ -238,23 +238,27 @@ def update_username_api(request):
 def public_profile_view(request, username):
     """Displays a user's public DNA."""
     try:
-        # Get the user whose profile is being viewed
         profile_user = User.objects.get(username=username)
         profile = profile_user.userprofile
 
         if not profile.is_public and request.user != profile_user:
-            # If the profile is private AND you are not the owner, show the private page
             return render(request, "core/profile_private.html")
 
-        # MODIFIED: Add the `user_profile` object to the context
-        # This is the profile of the page we are viewing
+        display_name = profile_user.first_name if profile_user.first_name else profile_user.username
+
+        if display_name.lower().endswith("s"):
+            title = f"{display_name}' Reading DNA"
+        else:
+            title = f"{display_name}'s Reading DNA"
+        # --------------------------------
+
         context = {
             "dna": profile.dna_data,
             "profile_user": profile_user,
-            "user_profile": profile,  # <-- THE FIX
+            "user_profile": profile,
+            "title": title,  # <-- Pass the pre-formatted title to the template
         }
         return render(request, "core/public_profile.html", context)
-
     except User.DoesNotExist:
         from django.http import Http44
 
