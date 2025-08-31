@@ -46,8 +46,9 @@ jobs:
 
                       docker pull $DOCKERHUB_USERNAME/bibliotype:$IMAGE_TAG
 
-                      docker-compose -f docker-compose.prod.yml up -d
+                      docker-compose -f docker-compose.prod.yml up -d --wait
 
                       docker-compose -f docker-compose.prod.yml exec -T web poetry run python manage.py migrate --noinput
+                      docker-compose -f docker-compose.prod.yml exec -T web poetry run python manage.py collectstatic --noinput
 
                       docker image prune -f
