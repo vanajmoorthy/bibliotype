@@ -37,6 +37,8 @@ jobs:
                   username: ${{ secrets.DO_SSH_USERNAME }}
                   key: ${{ secrets.DO_SSH_KEY }}
                   script: |
+                      cd /home/bibliotype/app
+
                       git pull origin main
 
                       export IMAGE_TAG=${{ steps.vars.outputs.sha_short }}
@@ -44,7 +46,6 @@ jobs:
 
                       export $(cat /home/bibliotype/app/.env | xargs)
 
-                      cd /home/bibliotype/app
 
                       docker pull $DOCKERHUB_USERNAME/bibliotype:$IMAGE_TAG
 
