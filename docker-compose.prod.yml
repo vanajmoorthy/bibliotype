@@ -13,7 +13,7 @@ services:
 
     web:
         build: .
-        image: vanajmoorthy/bibliotype:latest # Use the image we will push
+        image: vanajmoorthy/bibliotype
         command: poetry run gunicorn bibliotype.wsgi:application --bind 0.0.0.0:8000
         volumes:
             - static_volume:/app/staticfiles
