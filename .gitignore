@@ -21,7 +21,6 @@ env.bak/
 db.sqlite3
 media/
 staticfiles/
-static/dist/
 local_settings.py
 
 django_cache
