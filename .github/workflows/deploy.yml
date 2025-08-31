@@ -1,5 +1,4 @@
 name: Deploy to DigitalOcean
-
 on:
     push:
         branches:
@@ -26,7 +25,7 @@ jobs:
               with:
                   context: .
                   push: true
-                  # Tag with both 'latest' for convenience and the specific commit hash for reliability
+                  # Tag with 'latest'
                   tags: |
                       ${{ secrets.DOCKERHUB_USERNAME }}/bibliotype:latest
                       ${{ secrets.DOCKERHUB_USERNAME }}/bibliotype:${{ steps.vars.outputs.sha_short }}
@@ -38,25 +37,17 @@ jobs:
                   username: ${{ secrets.DO_SSH_USERNAME }}
                   key: ${{ secrets.DO_SSH_KEY }}
                   script: |
-                      # Set environment variable for the image tag
                       export IMAGE_TAG=${{ steps.vars.outputs.sha_short }}
                       export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
 
                       cd /home/bibliotype/app
 
-                      # Update the docker-compose.prod.yml file on the server to use the new image tag
-                      # This is safer than passing it as a command-line variable
                       sed -i "s|image: .*|image: $DOCKERHUB_USERNAME/bibliotype:$IMAGE_TAG|" docker-compose.prod.yml
 
-                      # Pull the newly pushed, specifically tagged image
                       docker pull $DOCKERHUB_USERNAME/bibliotype:$IMAGE_TAG
 
-                      # Restart the services. Docker Compose is smart and will only
-                      # recreate the 'web' service because its image has changed.
                       docker-compose -f docker-compose.prod.yml up -d
 
-                      # Run migrations AFTER the new code is running
                       docker-compose -f docker-compose.prod.yml exec -T web poetry run python manage.py migrate --noinput
 
-                      # Clean up old, unused images to save disk space
                       docker image prune -f
