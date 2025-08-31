@@ -12,18 +12,23 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - Don't show tiles if there is no data for them
 - add borders to chart segments to make look consistent
 - long author names and genre names cutting of count when hovering on chart
-- distribution of length of books
-- get rid of books per year
-- ai text explanation of most controversial ratings and possible explanations
+- distribution of length of books ✅
+- get rid of books per year 
+- ai text explanation of most controversial ratings and possible explanations 
 - make most controversial ratings tab look better
 - different colours for different reader types
 - pixel square background for banner
-- few sentence ai generated bio summary
-- ui for login and sign up
+- few sentence ai generated bio summary ✅
+- ui for login and sign up ✅
 - make upload modal icon better and pixel art
 - support StoryGraph
-- set up public profile
-- compare book lengths, number of books read in total, number read per year, average book lengths, number of pages read with global averages
+- set up public profile ✅
+- compare book lengths, number of books read in total, number read per year, average book lengths, number of pages read with global averages ✅
+
+- set up celery ⚠️
+- change "dashboard" to "profile" and allow deleting user account and data
+- show profile even when no bibliotype has been generated so user can at least change display name and delete profile and prompt them to back and generate one
+
   
 ## ✨ Features
 
