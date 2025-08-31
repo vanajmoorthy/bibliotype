@@ -10,6 +10,7 @@ services:
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
         # We don't need to expose the port to the outside world,
         # as the web service will connect to it internally via Docker's network.
+    #
     healthcheck:
         test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
         interval: 5s
