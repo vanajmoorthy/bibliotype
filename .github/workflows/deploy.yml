@@ -54,8 +54,5 @@ jobs:
                       echo "Running database migrations..."
                       docker-compose -f docker-compose.prod.yml exec -T web poetry run python manage.py migrate --noinput
 
-                      echo "Collecting static files..."
-                      docker-compose -f docker-compose.prod.yml exec -T web poetry run python manage.py collectstatic --noinput
-
                       echo "Pruning old Docker images..."
                       docker image prune -f
