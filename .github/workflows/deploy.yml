@@ -36,6 +36,7 @@ jobs:
                   host: ${{ secrets.DO_SSH_HOST }}
                   username: ${{ secrets.DO_SSH_USERNAME }}
                   key: ${{ secrets.DO_SSH_KEY }}
+
                   script: |
                       cd /home/bibliotype/app
 
