@@ -1,0 +1,34 @@
+services:
+    db:
+        image: postgres:15
+        volumes:
+            # This will store the database data on your VPS's filesystem
+            - postgres_data:/var/lib/postgresql/data/
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB}
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+        # We don't need to expose the port to the outside world,
+        # as the web service will connect to it internally via Docker's network.
+
+    web:
+        build: .
+        image: vanajmoorthy/bibliotype:latest # Use the image we will push
+        command: poetry run gunicorn bibliotype.wsgi:application --bind 0.0.0.0:8000
+        volumes:
+            - static_volume:/app/staticfiles
+        expose:
+            - 8000
+        environment:
+            # These are all read from the .env file on your server
+            - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+            - SECRET_KEY=${SECRET_KEY}
+            - GEMINI_API_KEY=${GEMINI_API_KEY}
+            - DEBUG=${DEBUG}
+            - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+        depends_on:
+            - db
+
+volumes:
+    postgres_data:
+    static_volume:
