@@ -6,8 +6,8 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 from django.core.management.base import BaseCommand
 
-from core.analytics import get_book_details_from_open_library
 from core.models import Author, Book
+from core.tasks import get_book_details_from_open_library
 
 # Using the same comprehensive list from before
 COMPREHENSIVE_BOOK_LIST = [

@@ -21,7 +21,10 @@ services:
     web:
         build: .
         image: ${DOCKERHUB_USERNAME}/bibliotype:${IMAGE_TAG:-latest}
-        command: gunicorn bibliotype.wsgi:application --bind 0.0.0.0:8000
+        command: >
+            sh -c "poetry run python manage.py migrate &&
+                   poetry run python manage.py collectstatic --noinput &&
+                   poetry run gunicorn bibliotype.wsgi:application --bind 0.0.0.0:8000"
         volumes:
             - ./staticfiles:/app/staticfiles
         ports:
@@ -48,7 +51,7 @@ services:
         build: .
         image: ${DOCKERHUB_USERNAME}/bibliotype:${IMAGE_TAG:-latest}
         # This command is the same as your local one
-        command: sh -c "./wait-for-postgres.sh db && poetry run celery -A bibliotype worker -l info"
+        command: poetry run celery -A bibliotype worker -l info
         # VOLUMES ARE REMOVED FOR PRODUCTION. The code is inside the image.
         environment:
             - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
