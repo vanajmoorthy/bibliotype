@@ -11,6 +11,7 @@ ENV POETRY_VIRTUALENVS_CREATE=true
 WORKDIR /app
 
 COPY ./wait-for-postgres.sh .
+COPY ./docker-entrypoint.sh .
 
 RUN pip install poetry
 
@@ -20,6 +21,8 @@ RUN poetry install --no-root --no-interaction
 
 COPY . .
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+
 EXPOSE 8000
 
-CMD ["/app/.venv/bin/python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["poetry", "run", "gunicorn", "bibliotype.wsgi:application", "--bind", "0.0.0.0:8000"]
