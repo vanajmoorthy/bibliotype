@@ -51,6 +51,8 @@ jobs:
 
                       docker compose -f docker-compose.prod.yml up -d --force-recreate
 
+                      echo "Fixing static file permissions..."
                       sudo chown -R $USER:www-data staticfiles/ && sudo chmod -R 775 staticfiles/
 
+                      echo "Pruning old docker images"
                       docker image prune -f
