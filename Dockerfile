@@ -1,3 +1,5 @@
+# Corrected Dockerfile
+
 FROM python:3.13-slim-bookworm
 
 RUN apt-get update && apt-get install -y postgresql-client
@@ -16,13 +18,11 @@ RUN poetry install --no-root --no-interaction
 
 COPY . .
 
-COPY ./wait-for-postgres.sh .
-COPY ./docker-entrypoint.sh .
+# Make scripts executable
 RUN chmod +x /app/wait-for-postgres.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
+# The entrypoint will run first, then the command from docker-compose.
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
-EXPOSE 8000
-
-CMD ["poetry", "run", "gunicorn", "bibliotype.wsgi:application", "--bind", "0.0.0.0:8000", "--timeout", "120"]
+# REMOVED: The CMD will now be in docker-compose.yml
