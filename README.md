@@ -90,7 +90,7 @@ This is the recommended method for local development. It creates a consistent, i
 3.  **Build and Run the Containers:**
     From the project root, run the following command. The `-d` flag runs the services in the background.
     ```bash
-    docker-compose up --build -d
+    docker-compose -f docker-compose.local.yml up --build -d
     ```
 
 ### 3. Database Setup (First Time Only)
@@ -100,19 +100,19 @@ The first time you start the Docker environment, you need to set up the database
 1.  **Apply Database Migrations:**
     This command creates all the necessary tables in the new PostgreSQL database.
     ```bash
-    docker-compose exec web poetry run python manage.py migrate
+    docker-compose -f docker-compose.local.yml exec web poetry run python manage.py migrate
     ```
 
 2.  **Load Initial Data:**
     This command populates the database with a large catalog of books and pre-calculated community analytics from a local fixture file. This is the fastest way to get started.
     ```bash
-    docker-compose exec web poetry run python manage.py loaddata core/fixtures/initial_data.json
+    docker-compose -f docker-compose.local.yml exec web poetry run python manage.py loaddata core/fixtures/initial_data.json
     ```
 
 3.  **Create a Superuser:**
     This allows you to access the Django admin panel at `/admin/`.
     ```bash
-    docker-compose exec web poetry run python manage.py createsuperuser
+    docker-compose -f docker-compose.local.yml exec web poetry run python manage.py createsuperuser
     ```
 
 You can now access the application at **`http://127.0.0.1:8000`**.
