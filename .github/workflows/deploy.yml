@@ -40,9 +40,9 @@ jobs:
                       export IMAGE_TAG=${{ steps.vars.outputs.sha_short }}
                       export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
 
-                      cd /home/bibliotype/app
+                      export $(cat /home/bibliotype/app/.env | xargs)
 
-                      sed -i "s|image: .*|image: $DOCKERHUB_USERNAME/bibliotype:$IMAGE_TAG|" docker-compose.prod.yml
+                      cd /home/bibliotype/app
 
                       docker pull $DOCKERHUB_USERNAME/bibliotype:$IMAGE_TAG
 
