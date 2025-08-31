@@ -2,7 +2,7 @@
 
 FROM python:3.13-slim-bookworm
 
-RUN apt-get update && apt-get install -y postgresql-client
+RUN apt-get update && apt-get install -y postgresql-client dos2unix
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -18,6 +18,9 @@ RUN poetry install --no-root --no-interaction
 
 COPY . .
 
+RUN dos2unix /app/wait-for-postgres.sh
+RUN dos2unix /app/docker-entrypoint.sh
+
 # Make scripts executable
 RUN chmod +x /app/wait-for-postgres.sh
 RUN chmod +x /app/docker-entrypoint.sh
@@ -25,4 +28,3 @@ RUN chmod +x /app/docker-entrypoint.sh
 # The entrypoint will run first, then the command from docker-compose.
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
-# REMOVED: The CMD will now be in docker-compose.yml

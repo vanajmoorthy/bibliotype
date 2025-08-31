@@ -1,11 +1,14 @@
-# Corrected docker-entrypoint.sh
-
 #!/bin/sh
 set -e
 
-# This script's only job is to wait for Postgres to be ready.
-# After it finishes, Docker will run the 'command' from docker-compose.
+# This script prepares the container for local development
+
+# Wait for the database to be ready.
 ./wait-for-postgres.sh db
 
-# exec "$@" allows the command from docker-compose to be the container's main process.
+echo "Applying database migrations (local)..."
+poetry run python manage.py migrate
+
+# This special command tells the script to run whatever was passed
+# as the 'command' in the docker-compose file.
 exec "$@"
