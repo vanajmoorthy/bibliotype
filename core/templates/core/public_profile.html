@@ -7,17 +7,18 @@
             {# This script tag is still needed for the charts to work #}
             {{ dna|json_script:"dna-data" }}
             <!-- The main header, personalized with the profile owner's name -->
-            <h1 class="title-underline mx-auto mb-8 w-max text-center text-5xl font-bold tracking-widest uppercase">
-                {{ title }}
+            <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
+                <div>{{ profile_user.first_name|default:profile_user.username }}'s</div>
+                <div>Reading DNA</div>
             </h1>
-            <!-- The AI-generated vibe -->
+
+            <!-- The AI-generated vibe, now stacked vertically -->
             {% if dna.reading_vibe %}
                 <div
-                    class="mb-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-xl text-gray-600 italic"
+                    class="mb-8 flex flex-col items-center justify-center gap-y-2 text-center text-xl text-gray-600 italic"
                 >
                     {% for phrase in dna.reading_vibe %}
                         <span>{{ phrase }}</span>
-                        {% if not forloop.last %}<span class="font-bold text-gray-400">·</span>{% endif %}
                     {% endfor %}
                 </div>
             {% endif %}

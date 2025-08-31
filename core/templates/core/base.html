@@ -12,42 +12,46 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     </head>
-    <body
-        class="bg-brand-background text-brand-text grid-background flex h-full flex-col bg-red-500 font-sans antialiased"
-    >
+    <body class="bg-brand-background text-brand-text grid-background flex h-full flex-col font-sans antialiased">
         <nav class="p-4">
             <div class="container mx-auto flex items-center justify-between">
-                <a href="{% url 'core:home' %}" class="text-brand-text text-3xl font-bold tracking-widest uppercase">
-                    🧬 <span class="border-brand-text border-b-2 px-1">Bibliotype</span>
+                <!-- Logo: Reduced font size on smaller screens -->
+                <a
+                    href="{% url 'core:home' %}"
+                    class="text-brand-text text-2xl font-bold tracking-widest uppercase md:text-3xl"
+                >
+                    🧬<span class="border-brand-text border-b-2 lg:px-1">Bibliotype</span>
                 </a>
-                <div class="flex items-center space-x-4 text-lg font-bold uppercase">
+                <!-- Button Group: Reduced spacing and font size on smaller screens -->
+                <div class="flex items-center space-x-2 text-base font-bold uppercase md:space-x-4 md:text-lg">
                     {% if user.is_authenticated %}
                         <a
                             href="{% url 'core:display_dna' %}"
-                            class="hover:bg-brand-pink border-brand-text shadow-neo-sm border-2 bg-white px-2"
+                            class="hover:bg-brand-pink border-brand-text shadow-neo-sm border-2 bg-white px-2 whitespace-nowrap"
                             >Dashboard</a
                         >
                         <a
                             href="{% url 'core:logout' %}"
-                            class="hover:bg-brand-cyan border-brand-text shadow-neo-sm border-2 bg-white px-2"
+                            class="hover:bg-brand-cyan border-brand-text shadow-neo-sm border-2 bg-white px-2 whitespace-nowrap"
                             >Logout</a
                         >
                     {% else %}
                         <a
                             href="{% url 'core:login' %}"
-                            class="hover:bg-brand-yellow border-brand-text shadow-neo-sm border-2 bg-white px-2"
+                            class="hover:bg-brand-yellow border-brand-text shadow-neo-sm border-2 bg-white px-2 whitespace-nowrap"
                             >Login</a
                         >
+                        <!-- Sign Up Button: Reduced padding on smaller screens -->
                         <a
                             href="{% url 'core:signup' %}"
-                            class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm border-2 px-4 py-1 transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                            class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm border-2 px-2 py-1 whitespace-nowrap transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 md:px-4"
                             >Sign Up</a
                         >
                     {% endif %}
                 </div>
             </div>
         </nav>
-        <main class="container mx-auto flex-grow p-6">
+        <main class="container mx-auto flex-grow p-2 md:p-6">
             {% if messages %}
                 {% for message in messages %}
                     <div
@@ -63,7 +67,7 @@
                         {% endif %} relative mb-6 border-2 p-4 text-lg font-bold"
                         role="alert"
                     >
-                        <span>{{ message }}</span>
+                        <span>{{ message|safe }}</span>
                         <button
                             @click="show = false"
                             class="border-brand-text text-brand-text shadow-neo-sm absolute top-2 right-3 cursor-pointer border-2 bg-white px-2 text-2xl leading-none font-bold hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"

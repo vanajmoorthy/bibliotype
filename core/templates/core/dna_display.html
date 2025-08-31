@@ -1,15 +1,15 @@
 {% extends 'core/base.html' %}
 {% load humanize %}
 {% block content %}
-    <div class="mx-auto h-full max-w-4xl space-y-8 p-4">
+    <div class="mx-auto h-full max-w-4xl space-y-8 p-2">
         {# =================================================================== #}
         {# --- STATE 1: USER IS LOGGED IN AND ACTIVELY PROCESSING --- #}
         {# =================================================================== #}
         {% if is_processing %}
-            <div class="flex h-full flex-col p-4">
+            <div class="flex h-full flex-col p-0">
                 <div class="w-full">
-                    <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
-                        <span class="relative z-10">Generating Your Reading DNA...</span>
+                    <h1 class="mt-8 text-center text-4xl font-bold tracking-widest uppercase sm:text-5xl">
+                        <span class="relative z-10">Generating Your Reading DNA</span>
                     </h1>
                 </div>
                 <div class="flex flex-grow items-center justify-center">
@@ -36,10 +36,10 @@
                                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                     ></path>
                                 </svg>
-                                <p class="text-2xl font-bold text-[var(--color-brand-text)] uppercase">
-                                    Analyzing Your Library...
+                                <p class="text-center text-2xl font-bold text-[var(--color-brand-text)] uppercase">
+                                    Analyzing Your Library
                                 </p>
-                                <p class="text-lg">This page will refresh automatically when it's ready!</p>
+                                <p class="text-center text-lg">This page will refresh automatically when it's ready!</p>
                             </div>
                         </div>
                     </div>
@@ -95,75 +95,80 @@
                             });
                         }
                     }"
-                            class="title-underline inline-flex items-center justify-center"
+                            class="inline-block"
                         >
-                            <div>
-                                <div>
-                                    <!-- VIEW STATE -->
-                                    <div x-show="!editing" class="inline-flex items-center">
-                                        <div
-                                            @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
-                                            class="group relative cursor-pointer"
-                                        >
-                                            <span
-                                                class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"
-                                            ></span>
-                                            <span class="relative z-20 px-2" x-text="originalName"></span>
-                                            <div class="text-brand-text absolute -right-2 -bottom-4 z-30">
-                                                <svg
-                                                    class="h-7 w-7"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 16 16"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        d="M14 0l2 2-2 2-2-2 2-2zM12 2l2 2-8 8H4v-2l8-8zM2 12v2h2l-l-2-2z"
-                                                    />
-                                                </svg>
-                                            </div>
-                                        </div>
-                                        <span
-                                            x-text="originalName.toLowerCase().endsWith('s') ? `' Reading DNA` : `'s Reading DNA`"
-                                        ></span>
-                                    </div>
-
-                                    <!-- EDIT STATE -->
-                                    <form
-                                        x-show="editing"
-                                        x-cloak
-                                        @submit.prevent="updateUsername"
-                                        @keydown.escape.window="editing = false; newName = originalName"
-                                        class="inline-flex items-stretch gap-4"
+                            <!-- VIEW STATE (FIXED) -->
+                            <div
+                                x-show="!editing"
+                                class="flex flex-col items-center justify-center gap-y-2 text-4xl sm:text-5xl md:flex-row md:gap-x-3"
+                            >
+                                <!-- [ANYA]'S -->
+                                <div class="inline-flex items-center">
+                                    <!-- Clickable username area -->
+                                    <div
+                                        @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
+                                        class="group relative cursor-pointer"
                                     >
-                                        <input
-                                            type="text"
-                                            x-ref="usernameInput"
-                                            x-model="newName"
-                                            maxlength="15"
-                                            class="border-brand-text focus:border-brand-purple w-auto border-2 bg-white p-1 text-5xl font-bold tracking-widest uppercase focus:outline-none"
-                                        />
-                                        <button
-                                            type="submit"
-                                            class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm border-2 px-4 py-2 text-xl font-bold transition-colors hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                                            :disabled="!isNewNameValid"
-                                            :class="{ 'opacity-50 cursor-not-allowed': !isNewNameValid }"
-                                        >
-                                            Save
-                                        </button>
-                                    </form>
+                                        <!-- Yellow background -->
+                                        <span
+                                            class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"
+                                        ></span>
+                                        <!-- Username text -->
+                                        <span class="relative z-20 px-2" x-text="originalName"></span>
+                                        <!-- Pencil Icon -->
+                                        <div class="text-brand-text absolute -right-2 -bottom-2 z-30">
+                                            <svg
+                                                class="h-7 w-7"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                viewBox="0 0 16 16"
+                                                fill="currentColor"
+                                            >
+                                                <path
+                                                    d="M14 0l2 2-2 2-2-2 2-2zM12 2l2 2-8 8H4v-2l8-8zM2 12v2h2l-l-2-2z"
+                                                />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <!-- Possessive 's -->
+                                    <span x-text="originalName.toLowerCase().endsWith('s') ? `'` : `'s`"></span>
                                 </div>
-                                <div
-                                    x-show="editing && newName.length > 15"
-                                    class="mt-2 text-sm font-bold text-red-600"
-                                >
-                                    Display name cannot be more than 15 characters.
-                                </div>
-                                <div
-                                    x-show="editing && errorMessage"
-                                    x-text="errorMessage"
-                                    class="mt-2 text-sm font-bold text-red-600"
-                                ></div>
+
+                                <!-- READING DNA -->
+                                <span>Reading DNA</span>
                             </div>
+
+                            <!-- EDIT STATE -->
+                            <div x-show="editing" x-cloak class="flex justify-center">
+                                <form
+                                    @submit.prevent="updateUsername"
+                                    @keydown.escape.window="editing = false; newName = originalName"
+                                    class="inline-flex items-stretch gap-4"
+                                >
+                                    <input
+                                        type="text"
+                                        x-ref="usernameInput"
+                                        x-model="newName"
+                                        maxlength="15"
+                                        class="border-brand-text focus:border-brand-purple w-full border-2 bg-white p-1 text-5xl font-bold tracking-widest uppercase focus:outline-none"
+                                    />
+                                    <button
+                                        type="submit"
+                                        class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm border-2 px-4 py-2 text-xl font-bold transition-colors hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                                        :disabled="!isNewNameValid"
+                                        :class="{ 'opacity-50 cursor-not-allowed': !isNewNameValid }"
+                                    >
+                                        Save
+                                    </button>
+                                </form>
+                            </div>
+                            <div x-show="editing && newName.length > 15" class="mt-2 text-sm font-bold text-red-600">
+                                Display name cannot be more than 15 characters.
+                            </div>
+                            <div
+                                x-show="editing && errorMessage"
+                                x-text="errorMessage"
+                                class="mt-2 text-sm font-bold text-red-600"
+                            ></div>
                         </div>
                     {% else %}
                         Your Reading DNA
@@ -173,11 +178,14 @@
 
             {% if dna.reading_vibe %}
                 <div
-                    class="mb-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-xl text-gray-600 italic"
+                    class="mb-8 flex flex-col flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-xl text-gray-600 italic sm:flex-row"
                 >
                     {% for phrase in dna.reading_vibe %}
                         <span>{{ phrase }}</span>
-                        {% if not forloop.last %}<span class="font-bold text-gray-400">·</span>{% endif %}
+                        {# This separator dot is now hidden on extra-small screens to avoid awkward wrapping #}
+                        {% if not forloop.last %}
+                            <span class="hidden font-bold text-gray-400 sm:inline">·</span>
+                        {% endif %}
                     {% endfor %}
                 </div>
             {% endif %}
@@ -641,84 +649,90 @@
                             });
                         }
                     }"
-                                class="title-underline inline-flex items-center justify-center"
+                                class="inline-block"
                             >
-                                <div>
-                                    <div>
-                                        <!-- VIEW STATE -->
-                                        <div x-show="!editing" class="inline-flex items-center">
-                                            <div
-                                                @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
-                                                class="group relative cursor-pointer"
-                                            >
-                                                <span
-                                                    class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"
-                                                ></span>
-                                                <span class="relative z-20 px-2" x-text="originalName"></span>
-                                                <div class="text-brand-text absolute -right-2 -bottom-4 z-30">
-                                                    <svg
-                                                        class="h-7 w-7"
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        viewBox="0 0 16 16"
-                                                        fill="currentColor"
-                                                    >
-                                                        <path
-                                                            d="M14 0l2 2-2 2-2-2 2-2zM12 2l2 2-8 8H4v-2l8-8zM2 12v2h2l-l-2-2z"
-                                                        />
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                            <span
-                                                x-text="originalName.toLowerCase().endsWith('s') ? `' Reading DNA` : `'s Reading DNA`"
-                                            ></span>
-                                        </div>
-                                        <!-- EDIT STATE -->
-                                        <form
-                                            x-show="editing"
-                                            x-cloak
-                                            @submit.prevent="updateUsername"
-                                            @keydown.escape.window="editing = false; newName = originalName"
-                                            class="inline-flex items-stretch gap-4"
+                                <!-- VIEW STATE (FIXED) -->
+                                <div
+                                    x-show="!editing"
+                                    class="flex flex-col items-center justify-center gap-y-2 text-4xl sm:text-5xl md:flex-row md:gap-x-3"
+                                >
+                                    <!-- [ANYA]'S -->
+                                    <div class="inline-flex items-center">
+                                        <!-- Clickable username area -->
+                                        <div
+                                            @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
+                                            class="group relative cursor-pointer"
                                         >
-                                            <input
-                                                type="text"
-                                                x-ref="usernameInput"
-                                                x-model="newName"
-                                                class="border-brand-text focus:border-brand-purple w-auto border-2 bg-white p-1 text-5xl font-bold tracking-widest uppercase focus:outline-none"
-                                            />
-                                            <button
-                                                type="submit"
-                                                class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm border-2 px-4 py-2 text-xl font-bold hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                                            >
-                                                Save
-                                            </button>
-                                        </form>
+                                            <!-- Yellow background -->
+                                            <span
+                                                class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"
+                                            ></span>
+                                            <!-- Username text -->
+                                            <span class="relative z-20 px-2" x-text="originalName"></span>
+                                            <!-- Pencil Icon -->
+                                            <div class="text-brand-text absolute -right-2 -bottom-2 z-30">
+                                                <svg
+                                                    class="h-7 w-7"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 16 16"
+                                                    fill="currentColor"
+                                                >
+                                                    <path
+                                                        d="M14 0l2 2-2 2-2-2 2-2zM12 2l2 2-8 8H4v-2l8-8zM2 12v2h2l-l-2-2z"
+                                                    />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                        <!-- Possessive 's -->
+                                        <span x-text="originalName.toLowerCase().endsWith('s') ? `'` : `'s`"></span>
                                     </div>
-                                    <div
-                                        x-show="editing && errorMessage"
-                                        x-text="errorMessage"
-                                        class="mt-2 text-sm font-bold text-red-600"
-                                    ></div>
+
+                                    <!-- READING DNA -->
+                                    <span>Reading DNA</span>
                                 </div>
+                                <!-- EDIT STATE -->
+                                <form
+                                    x-show="editing"
+                                    x-cloak
+                                    @submit.prevent="updateUsername"
+                                    @keydown.escape.window="editing = false; newName = originalName"
+                                    class="inline-flex items-stretch gap-4"
+                                >
+                                    <input
+                                        type="text"
+                                        x-ref="usernameInput"
+                                        x-model="newName"
+                                        class="border-brand-text focus:border-brand-purple w-full border-2 bg-white p-1 text-5xl font-bold tracking-widest uppercase focus:outline-none"
+                                    />
+                                    <button
+                                        type="submit"
+                                        class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm cursor-pointer border-2 px-4 py-2 text-xl font-bold hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                                    >
+                                        Save
+                                    </button>
+                                </form>
+                                <div
+                                    x-show="editing && errorMessage"
+                                    x-text="errorMessage"
+                                    class="mt-2 text-sm font-bold text-red-600"
+                                ></div>
                             </div>
                         </span>
                     </h1>
                 </div>
                 <div class="flex flex-grow items-center justify-center">
-                    <div class="w-full">
-                        <div class="border-brand-text shadow-neo border-2 bg-white p-6 text-center">
-                            <div class="mb-4 text-2xl font-bold uppercase">Welcome to Bibliotype!</div>
-                            <p class="text-lg">
-                                Your account is ready. To generate your Reading DNA, please go to the homepage and
-                                upload your library export.
-                            </p>
-                            <a
-                                href="{% url 'core:home' %}"
-                                class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm hover:bg-opacity-90 mt-6 inline-block border-2 px-3 py-3 text-center font-bold uppercase"
-                            >
-                                Upload Your Library File
-                            </a>
-                        </div>
+                    <div class="w-full text-center">
+                        <h2 class="mb-4 text-4xl font-bold uppercase">uh oh</h2>
+                        <p class="text-brand-text text-xl italic">
+                            Your account is ready but you haven't uploaded your data yet! To generate your Reading DNA,
+                            please go to the homepage and upload your library export.
+                        </p>
+                        <a
+                            href="{% url 'core:home' %}"
+                            class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm hover:bg-opacity-90 mt-8 inline-block border-2 px-3 py-3 text-center font-bold uppercase"
+                        >
+                            Upload Your Library File
+                        </a>
                     </div>
                 </div>
             </div>

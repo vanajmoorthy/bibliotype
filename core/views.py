@@ -174,15 +174,34 @@ def logout_view(request):
 @login_required
 @require_POST
 def update_privacy_view(request):
-    """Toggle the public status of a user's profile."""
+    """
+    Toggle the public status of a user's profile and provide a shareable
+    link in the success message if made public.
+    """
     is_public = request.POST.get("is_public") == "true"
     profile = request.user.userprofile
     profile.is_public = is_public
     profile.save()
-    messages.success(request, f"Your profile is now {'public' if is_public else 'private'}.")
+
+    if is_public:
+        # If the profile is now public, generate the full URL for their profile.
+        # This assumes your public profile URL is named 'core:public_profile'
+        # and takes a 'username' keyword argument.
+        public_url = request.build_absolute_uri(
+            reverse("core:public_profile", kwargs={"username": request.user.username})
+        )
+        # Create a message that includes the clickable link.
+        # Adding a few utility classes to make the link match the site's style.
+        message_text = f'Your profile is now public! Share it here: <a href="{public_url}" class="hover:bg-brand-yellow font-bold underline" target="_blank">{public_url}</a>'
+        messages.success(request, message_text)
+    else:
+        # If the profile is now private, show a simpler message.
+        messages.success(request, "Your profile is now private.")
+
     # After updating, we must clear any stale session data before redirecting.
     if "dna_data" in request.session:
         request.session.pop("dna_data", None)
+
     return redirect("core:display_dna")
 
 
