@@ -21,7 +21,7 @@ services:
         image: ${DOCKERHUB_USERNAME}/bibliotype:${IMAGE_TAG:-latest}
         volumes:
             - static_volume:/app/staticfiles
-        expose:
+        ports:
             - "127.0.0.1:8000:8000"
         environment:
             # These are all read from the .env file on your server
