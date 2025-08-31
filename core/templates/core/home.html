@@ -3,9 +3,10 @@
 {% block content %}
     <div class="h-full flex flex-col justify-center">
         <div x-data="{ isUploading: false }"
-             class="w-full max-w-2xl mx-auto text-center p-4">
-            <h1 class="text-5xl font-bold uppercase tracking-widest">
+             class="w-full max-w-2xl mx-auto text-center p-2">
+            <h1 class="text-4xl md:text-5xl font-bold uppercase tracking-widest">
                 Discover Your
+                <br />
                 <span class="bg-[var(--color-brand-yellow)] px-2">Reading DNA</span>
             </h1>
             <p class="mt-4 text-xl text-[var(--color-brand-text)]">
@@ -124,8 +125,8 @@
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
                         </path>
                     </svg>
-                    <p class="text-2xl font-bold uppercase text-[var(--color-brand-text)]">Analyzing Your Library...</p>
-                    <p class="text-lg">This can take a minute for the first run.</p>
+                    <p class="text-2xl font-bold uppercase text-center text-[var(--color-brand-text)]">Analyzing Your Library</p>
+                    <p class="text-lg text-center">This can take a minute for the first run.</p>
                 </div>
             </div>
         </div>

@@ -2,9 +2,9 @@
 {% block content %}
     <div class="flex h-full flex-col justify-center">
         <!-- Your original content block, now being centered by the wrapper above -->
-        <div class="mx-auto w-full max-w-2xl p-4 text-center">
+        <div class="mx-auto w-full max-w-2xl p-2 text-center">
             <!-- Main container with the retro styling (no changes here) -->
-            <div class="border-brand-text shadow-neo border-2 bg-white p-8">
+            <div class="border-brand-text shadow-neo border-2 bg-white px-4 py-8 md:px-8">
                 <!-- Header section -->
                 <h1 class="text-4xl font-bold tracking-widest uppercase">Welcome Back</h1>
                 <p class="text-brand-text mt-2 text-lg">Log in to view your saved Bibliotype.</p>
@@ -14,9 +14,9 @@
                     <!-- Error message display (no changes here) -->
                     {% if form.non_field_errors %}
                         <div class="bg-brand-pink border-brand-text text-brand-text border-2 p-3">
-                            {% for error in form.non_field_errors %}<p class="text-center font-bold uppercase">
-                                {{ error }}
-                            </p>{% endfor %}
+                            {% for error in form.non_field_errors %}
+                                <p class="text-center font-bold uppercase">{{ error }}</p>
+                            {% endfor %}
                         </div>
                     {% endif %}
                     <!-- Form field loop (no changes here) -->
@@ -36,9 +36,9 @@
                                 class="border-brand-text focus:ring-brand-purple w-full border-2 bg-white p-3 text-lg focus:ring-2 focus:outline-none"
                                 placeholder="{{ field.label }}..."
                             />
-                            {% for error in field.errors %}<p class="mt-2 text-sm font-bold text-red-600 uppercase">
-                                {{ error }}
-                            </p>{% endfor %}
+                            {% for error in field.errors %}
+                                <p class="mt-2 text-sm font-bold text-red-600 uppercase">{{ error }}</p>
+                            {% endfor %}
                         </div>
                     {% endfor %}
                     <!-- MODIFIED: Changed bg-brand-cyan to bg-brand-green and added `cursor-pointer` -->
