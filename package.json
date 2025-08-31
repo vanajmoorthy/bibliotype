@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "scripts": {
         "dev": "npx @tailwindcss/cli -i ./static/src/input.css -o ./static/dist/output.css --watch",
-        "build": "npx @tailwindcss/cli -i ./static/src/input.css -o ./static/dist/output.css --minify"
+        "build": "npx @tailwindcss/cli -c ./tailwind.config.js -i ./static/src/input.css -o ./static/dist/output.css --minify"
     },
     "dependencies": {
         "@tailwindcss/cli": "^4.1.11",
