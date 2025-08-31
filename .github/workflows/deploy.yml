@@ -37,6 +37,8 @@ jobs:
                   username: ${{ secrets.DO_SSH_USERNAME }}
                   key: ${{ secrets.DO_SSH_KEY }}
                   script: |
+                      git pull origin main
+
                       export IMAGE_TAG=${{ steps.vars.outputs.sha_short }}
                       export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
 
@@ -48,5 +50,4 @@ jobs:
 
                       docker compose -f docker-compose.prod.yml up -d --force-recreate
 
-                      echo "Pruning old Docker images..."
                       docker image prune -f
