@@ -3,32 +3,16 @@ import json
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.forms import (
+    AuthenticationForm,
+)
 from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
-from .analytics import generate_reading_dna
 from .forms import CustomUserCreationForm, UpdateDisplayNameForm
-from .models import UserProfile
-
-
-def _save_dna_to_profile(profile, dna_data):
-    """
-    A reusable helper to correctly save all parts of the DNA dictionary
-    to the user's profile, populating both the main JSON blob and the
-    optimized, separate fields.
-    """
-    profile.dna_data = dna_data
-
-    profile.reader_type = dna_data.get("reader_type")
-    profile.total_books_read = dna_data.get("user_stats", {}).get("total_books_read")
-    profile.reading_vibe = dna_data.get("reading_vibe")
-    profile.vibe_data_hash = dna_data.get("vibe_data_hash")
-
-    profile.save()
-    print(f"   [DB] Saved DNA data and promoted fields for user: {profile.user.username}")
+from .tasks import _save_dna_to_profile, generate_reading_dna_task
 
 
 def home_view(request):
@@ -72,29 +56,33 @@ def upload_view(request):
         messages.error(request, "Please upload a valid .csv file.")
         return redirect("core:home")
 
+    # --- NEW ASYNCHRONOUS LOGIC ---
     try:
+        # 1. Read the file content into a string. This is fast.
+        #    Add a size check for safety.
+        if csv_file.size > 10 * 1024 * 1024:  # 10MB limit
+            messages.error(request, "File is too large. Please upload an export smaller than 10MB.")
+            return redirect("core:home")
         csv_content = csv_file.read().decode("utf-8")
-        dna_data = generate_reading_dna(csv_content, request.user)
 
-        # Always save the full, fresh data to the session for immediate display.
-        request.session["dna_data"] = dna_data
+        # 2. Get the user's ID.
+        user_id = request.user.id if request.user.is_authenticated else None
 
-        if request.user.is_authenticated:
-            try:
-                _save_dna_to_profile(request.user.userprofile, dna_data)
+        # 3. Call the Celery task with .delay() to run it in the background.
+        #    This is non-blocking and returns instantly.
+        generate_reading_dna_task.delay(csv_content, user_id)
 
-                messages.success(request, "Your Reading DNA has been updated and saved to your profile!")
-            except UserProfile.DoesNotExist:
-                messages.error(request, "Could not find a user profile to save DNA to.")
+        # 4. Give the user immediate feedback.
+        messages.success(
+            request,
+            "Success! We've received your file and have started building your Reading DNA. "
+            "This can take a few minutes. Your dashboard will update automatically when it's ready!",
+        )
+        return redirect("core:home")  # Redirect immediately
 
-        return redirect("core:display_dna")
-
-    except ValueError as e:
-        messages.error(request, f"Analysis Error: {e}")
-        return redirect("core:home")
     except Exception as e:
         print(f"UNEXPECTED ERROR in upload_view: {e}")
-        messages.error(request, "An unexpected error occurred during analysis. Please try again.")
+        messages.error(request, "An unexpected error occurred. Please try again.")
         return redirect("core:home")
 
 
