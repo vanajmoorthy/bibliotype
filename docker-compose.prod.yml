@@ -21,7 +21,7 @@ services:
     web:
         build: .
         image: ${DOCKERHUB_USERNAME}/bibliotype:${IMAGE_TAG:-latest}
-        command: poetry run gunicorn bibliotype.wsgi:application --bind 0.0.0.0:8000
+        command: sh -c "poetry run gunicorn bibliotype.wsgi:application --bind 0.0.0.0:8000"
         volumes:
             - ./staticfiles:/app/staticfiles
         ports:
@@ -29,16 +29,16 @@ services:
         environment:
             # These are all read from the .env file on your server
             - DJANGO_ENV=production
-              - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-              - CELERY_BROKER_URL=redis://redis:6379/0
-              - CELERY_RESULT_BACKEND=redis://redis:6379/0
-              - SECRET_KEY=${SECRET_KEY}
-              - GEMINI_API_KEY=${GEMINI_API_KEY}
-              - DEBUG=${DEBUG}
-              - ALLOWED_HOSTS=${ALLOWED_HOSTS}
-              - POSTGRES_DB=${POSTGRES_DB}
-              - POSTGRES_USER=${POSTGRES_USER}
-              - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+            - CELERY_BROKER_URL=redis://redis:6379/0
+            - CELERY_RESULT_BACKEND=redis://redis:6379/0
+            - SECRET_KEY=${SECRET_KEY}
+            - GEMINI_API_KEY=${GEMINI_API_KEY}
+            - DEBUG=${DEBUG}
+            - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+            - POSTGRES_DB=${POSTGRES_DB}
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
         depends_on:
             db:
                 condition: service_healthy
@@ -52,6 +52,7 @@ services:
         command: poetry run celery -A bibliotype worker -l info
         # VOLUMES ARE REMOVED FOR PRODUCTION. The code is inside the image.
         environment:
+            - DJANGO_ENV=production
             - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
             - CELERY_BROKER_URL=redis://redis:6379/0
             - CELERY_RESULT_BACKEND=redis://redis:6379/0
