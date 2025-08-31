@@ -117,7 +117,6 @@ The first time you start the Docker environment, you need to set up the database
 
 You can now access the application at **`http://127.0.0.1:8000`**.
 
-
 #### Optional: Refreshing the Fixture File
 
 If you update the book list in `seed_books.py` and want to regenerate the `initial_data.json` fixture, follow these steps:
@@ -128,3 +127,169 @@ If you update the book list in `seed_books.py` and want to regenerate the `initi
 5.  `docker-compose exec web poetry run python manage.py seed_analytics`
 6.  `docker-compose exec web poetry run python manage.py dumpdata core.Book core.Author core.Genre core.AggregateAnalytics --indent 2 > core/fixtures/initial_data.json`
 7.  Commit the updated `initial_data.json` file to Git.
+
+## 🚀 Deploying to Production
+
+This guide outlines the steps to deploy the application to a production environment on a fresh Ubuntu 22.04 server (e.g., a DigitalOcean VPS). The stack uses Docker Compose, Nginx as a reverse proxy, and GitHub Actions for fully automated CI/CD.
+
+### 1. Initial Server Setup
+
+1.  **Create an Ubuntu 22.04 Server:**
+    *   Provision a new VPS and ensure you can connect via SSH using your public key.
+
+2.  **Create a Deployment User:**
+    *   Log in as `root` and create a dedicated non-root user for the deployment.
+        ```bash
+        # Replace 'deploy' with your preferred username
+        adduser deploy
+        ```
+    *   Grant this user `sudo` privileges and add them to the `docker` group (this requires installing Docker first, see next step).
+        ```bash
+        usermod -aG sudo deploy
+        ```
+    *   Copy your SSH key to the new user so you can log in directly:
+        ```bash
+        # This command copies the keys from the root user
+        rsync --archive --chown=deploy:deploy ~/.ssh /home/deploy/
+        ```
+    *   Log out and log back in as your new `deploy` user.
+
+3.  **Install Software & Configure Firewall:**
+    *   Install Docker, Nginx, and Certbot.
+        ```bash
+        # Install Docker
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sudo sh get-docker.sh
+        sudo usermod -aG docker $USER # Add current user to docker group
+
+        # Install Nginx and Certbot
+        sudo apt update
+        sudo apt install nginx python3-certbot-nginx -y
+        ```
+    *   Configure the firewall to allow web and SSH traffic.
+        ```bash
+        sudo ufw allow OpenSSH
+        sudo ufw allow 'Nginx Full'
+        sudo ufw enable
+        ```
+    *   **Important:** Log out and log back in to apply the Docker group permissions. Verify with `docker ps`.
+
+### 2. Project Setup on the Server
+
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/your-username/bibliotype.git app
+    cd app
+    ```
+
+2.  **Create the Production `.env` File:**
+    Create a new `.env` file for production secrets. **Use strong, unique credentials.**
+    ```bash
+    nano .env
+    ```
+    Paste and edit the following content:
+    ```ini
+    # .env (Production)
+
+    SECRET_KEY="..."
+    GEMINI_API_KEY="..."
+
+    POSTGRES_DB=bibliotype_prod_db
+    POSTGRES_USER=bibliotype_prod_user
+    POSTGRES_PASSWORD="..."
+
+    DEBUG=False
+    ALLOWED_HOSTS="your_domain.com,www.your_domain.com"
+    ```
+
+3.  **Create the Static Files Directory:**
+    This empty folder on the host will be mapped into the container so Nginx can access the collected static files.
+    ```bash
+    mkdir staticfiles
+    ```
+
+### 3. Nginx & SSL Configuration
+
+1.  **Create Nginx Config:**
+    Create a new configuration file for your site.
+    ```bash
+    sudo nano /etc/nginx/sites-available/bibliotype
+    ```
+    Paste the following configuration, replacing `your_domain.com` and `/home/deploy/app/` with your actual values.
+    ```nginx
+    server {
+        listen 80;
+        server_name your_domain.com www.your_domain.com;
+        return 301 https://$host$request_uri;
+    }
+
+    server {
+        listen 443 ssl http2;
+        server_name your_domain.com www.your_domain.com;
+
+        # Path for static files
+        location /static/ {
+            alias /home/deploy/app/staticfiles/;
+        }
+
+        # Proxy requests to the Django app
+        location / {
+            proxy_pass http://127.0.0.1:8000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # SSL settings will be added by Certbot below
+    }
+    ```
+
+2.  **Enable the Site & Get SSL Certificate:**
+    *   Activate the configuration by creating a symlink.
+        ```bash
+        sudo ln -s /etc/nginx/sites-available/bibliotype /etc/nginx/sites-enabled/
+        ```
+    *   **Point your domain's DNS A records** to your server's IP address.
+    *   Run Certbot to obtain an SSL certificate and automatically update the Nginx config.
+        ```bash
+        sudo certbot --nginx -d your_domain.com -d www.your_domain.com
+        ```
+
+### 4. Setting Up GitHub Actions for CI/CD
+
+1.  **Create a Deploy-Specific SSH Key:**
+    On your **local machine**, create a new SSH key pair dedicated to this deployment. Do not use your personal key.
+    ```bash
+    ssh-keygen -t ed25519 -C "github-deploy-bibliotype" -f ~/.ssh/bibliotype_deploy_key
+    ```
+
+2.  **Add Public Key to Server:**
+    Copy the content of the **public key** (`cat ~/.ssh/bibliotype_deploy_key.pub`) and paste it as a new line in your server's `/home/deploy/.ssh/authorized_keys` file.
+
+3.  **Add Secrets to GitHub Repository:**
+    Go to `Your Repo > Settings > Secrets and variables > Actions` and add the following repository secrets:
+    *   `DO_SSH_HOST`: Your server's IP address.
+    *   `DO_SSH_USERNAME`: Your deployment username (e.g., `deploy`).
+    *   `DO_SSH_KEY`: The content of the **private key** (`cat ~/.ssh/bibliotype_deploy_key`).
+    *   `DOCKERHUB_USERNAME`: Your Docker Hub username.
+    *   `DOCKERHUB_TOKEN`: A Docker Hub access token.
+
+4.  **Configure Passwordless `sudo`:**
+    The deployment script needs to fix file permissions. Allow your deploy user to run `sudo` without a password.
+    *   Run `sudo visudo` on your server.
+    *   Add this line at the very bottom of the file (replace `deploy` if you used a different username):
+        ```
+        deploy ALL=(ALL) NOPASSWD: ALL
+        ```
+
+### 5. First Deployment
+
+Commit your final `docker-compose.prod.yml`, `.github/workflows/deploy.yml`, and `settings.py` files to your repository and push to the `main` branch.
+
+```bash
+git push origin main
+```
+
+The GitHub Action will now run and automatically build, test, and deploy your application. Subsequent pushes to `main` will automatically update the live site.
+
