@@ -46,7 +46,7 @@ jobs:
 
                       docker pull $DOCKERHUB_USERNAME/bibliotype:$IMAGE_TAG
 
-                      docker-compose -f docker-compose.prod.yml up -d --force-recreate
+                      docker compose -f docker-compose.prod.yml up -d --force-recreate
 
                       echo "Pruning old Docker images..."
                       docker image prune -f
