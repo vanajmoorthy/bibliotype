@@ -19,7 +19,6 @@ RUN chmod +x /app/docker-entrypoint.sh
 RUN pip install poetry
 
 COPY pyproject.toml poetry.lock ./
-
 RUN poetry install --no-root --no-interaction
 
 COPY . .
