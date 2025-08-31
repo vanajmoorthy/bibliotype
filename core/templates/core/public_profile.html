@@ -7,18 +7,24 @@
             {# This script tag is still needed for the charts to work #}
             {{ dna|json_script:"dna-data" }}
             <!-- The main header, personalized with the profile owner's name -->
-            <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
-                <div>{{ profile_user.first_name|default:profile_user.username }}'s</div>
-                <div>Reading DNA</div>
+            <h1
+                class="mb-8 flex flex-col items-center justify-center gap-x-4 text-center text-4xl font-bold tracking-widest uppercase sm:text-5xl md:flex-row"
+            >
+                <span>{{ profile_user.first_name|default:profile_user.username }}'s</span>
+                <span class="whitespace-nowrap">Reading DNA</span>
             </h1>
 
             <!-- The AI-generated vibe, now stacked vertically -->
             {% if dna.reading_vibe %}
                 <div
-                    class="mb-8 flex flex-col items-center justify-center gap-y-2 text-center text-xl text-gray-600 italic"
+                    id="vibe-container"
+                    class="mb-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-xl italic"
                 >
                     {% for phrase in dna.reading_vibe %}
-                        <span>{{ phrase }}</span>
+                        <span class="vibe-item whitespace-nowrap text-gray-600">{{ phrase }}</span>
+                        {% if not forloop.last %}
+                            <span class="vibe-separator font-bold text-blue-400">·</span>
+                        {% endif %}
                     {% endfor %}
                 </div>
             {% endif %}
@@ -216,7 +222,35 @@
             </div>
             <!-- The entire script block is copied to ensure the charts render correctly on the public page -->
             <script>
+                function updateVibeSeparators() {
+                    const vibeContainer = document.getElementById("vibe-container");
+                    if (!vibeContainer) return;
+
+                    const items = vibeContainer.querySelectorAll(".vibe-item");
+                    const separators = vibeContainer.querySelectorAll(".vibe-separator");
+
+                    if (items.length < 2) return;
+
+                    // 1. First, show all separators
+                    separators.forEach((sep) => (sep.style.display = "inline"));
+
+                    // 2. Loop through items to find line breaks
+                    for (let i = 0; i < items.length - 1; i++) {
+                        const currentItem = items[i];
+                        const nextItem = items[i + 1];
+
+                        // If the next item is on a new line, hide the separator after the current one
+                        if (nextItem.offsetTop > currentItem.offsetTop) {
+                            const separatorToHide = separators[i];
+                            if (separatorToHide) {
+                                separatorToHide.style.display = "none";
+                            }
+                        }
+                    }
+                }
+
                 document.addEventListener("DOMContentLoaded", function () {
+                    updateVibeSeparators();
                     const dnaData = JSON.parse(document.getElementById("dna-data").textContent);
 
                     Chart.defaults.font.family = "VT323";
@@ -353,6 +387,8 @@
                         });
                     }
                 });
+
+                window.addEventListener("resize", updateVibeSeparators);
             </script>
         {% else %}
             <div class="border-brand-text shadow-neo border-2 bg-white p-8 text-center">
