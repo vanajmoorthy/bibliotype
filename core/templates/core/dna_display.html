@@ -1,8 +1,60 @@
 {% extends 'core/base.html' %}
 {% load humanize %}
 {% block content %}
-    <div class="mx-auto max-w-4xl space-y-8 p-4">
-        {% if dna %}
+    <div class="mx-auto h-full max-w-4xl space-y-8 p-4">
+        {# =================================================================== #}
+        {# --- STATE 1: USER IS LOGGED IN AND ACTIVELY PROCESSING --- #}
+        {# =================================================================== #}
+        {% if is_processing %}
+            <div class="flex h-full flex-col p-4">
+                <div class="w-full">
+                    <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
+                        <span class="relative z-10">Generating Your Reading DNA...</span>
+                    </h1>
+                </div>
+                <div class="flex flex-grow items-center justify-center">
+                    <div class="w-full">
+                        <div class="shadow-neo border-2 border-[var(--color-brand-text)] bg-white p-8">
+                            <div class="flex flex-col items-center justify-center space-y-4">
+                                <svg
+                                    class="h-10 w-10 animate-spin text-[var(--color-brand-text)]"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <circle
+                                        class="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        stroke-width="4"
+                                    ></circle>
+                                    <path
+                                        class="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    ></path>
+                                </svg>
+                                <p class="text-2xl font-bold text-[var(--color-brand-text)] uppercase">
+                                    Analyzing Your Library...
+                                </p>
+                                <p class="text-lg">This page will refresh automatically when it's ready!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                setTimeout(function () {
+                    window.location.href = "{% url 'core:display_dna' %}";
+                }, 5000);
+            </script>
+
+            {# =================================================================== #}
+            {# --- STATE 2: USER (LOGGED IN OR ANON) HAS DNA TO DISPLAY --- #}
+            {# =================================================================== #}
+        {% elif dna %}
             {{ dna|json_script:"dna-data" }}
 
             <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
@@ -14,9 +66,13 @@
                         newName: '{{ user.username|escapejs }}',
                         originalName: '{{ user.username|escapejs }}',
                         errorMessage: '',
+
+                        get isNewNameValid() {
+                            return this.newName.trim() !== '' && this.newName.length <= 15;
+                        },
                         
-                        // --- THIS IS THE COMPLETE, WORKING FUNCTION ---
                         updateUsername: function() {
+                            if (!this.isNewNameValid) return;
                             this.errorMessage = '';
                             fetch('{% url "core:api_update_username" %}', {
                                 method: 'POST',
@@ -45,24 +101,14 @@
                                 <div>
                                     <!-- VIEW STATE -->
                                     <div x-show="!editing" class="inline-flex items-center">
-                                        <!-- The container for the text, yellow box, and pencil. It's the clickable area. -->
                                         <div
                                             @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
                                             class="group relative cursor-pointer"
                                         >
-                                            <!-- Layer 1: The Yellow Background -->
-                                            <!-- This is an empty span that acts as the background layer. -->
-                                            <!-- It has a lower z-index than the pencil. -->
                                             <span
                                                 class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"
                                             ></span>
-
-                                            <!-- Layer 2: The Text -->
-                                            <!-- The text itself needs to be relative to sit on top of the background. -->
                                             <span class="relative z-20 px-2" x-text="originalName"></span>
-
-                                            <!-- Layer 3: The Pencil Icon -->
-                                            <!-- This has the highest z-index, so it appears on top of everything. -->
                                             <div class="text-brand-text absolute -right-2 -bottom-4 z-30">
                                                 <svg
                                                     class="h-7 w-7"
@@ -89,23 +135,29 @@
                                         @keydown.escape.window="editing = false; newName = originalName"
                                         class="inline-flex items-stretch gap-4"
                                     >
-                                        <!-- MODIFIED: Use items-stretch -->
-
                                         <input
                                             type="text"
                                             x-ref="usernameInput"
                                             x-model="newName"
+                                            maxlength="15"
                                             class="border-brand-text focus:border-brand-purple w-auto border-2 bg-white p-1 text-5xl font-bold tracking-widest uppercase focus:outline-none"
                                         />
                                         <button
                                             type="submit"
-                                            class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm border-2 px-4 py-2 text-xl font-bold hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                                            class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm border-2 px-4 py-2 text-xl font-bold transition-colors hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                                            :disabled="!isNewNameValid"
+                                            :class="{ 'opacity-50 cursor-not-allowed': !isNewNameValid }"
                                         >
                                             Save
                                         </button>
                                     </form>
                                 </div>
-
+                                <div
+                                    x-show="editing && newName.length > 15"
+                                    class="mt-2 text-sm font-bold text-red-600"
+                                >
+                                    Display name cannot be more than 15 characters.
+                                </div>
                                 <div
                                     x-show="editing && errorMessage"
                                     x-text="errorMessage"
@@ -118,6 +170,7 @@
                     {% endif %}
                 </span>
             </h1>
+
             {% if dna.reading_vibe %}
                 <div
                     class="mb-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-xl text-gray-600 italic"
@@ -133,13 +186,12 @@
                 <div class="bg-brand-purple border-brand-text shadow-neo border-2 p-6 text-center">
                     <div class="text-lg uppercase">Your Reader Type is...</div>
                     <div class="mt-1 text-5xl font-bold tracking-widest uppercase">{{ dna.reader_type }}</div>
-                    <!-- Add the explanation text here -->
                     {% if dna.reader_type_explanation %}
                         <p class="mx-auto mt-4 max-w-2xl text-lg">{{ dna.reader_type_explanation }}</p>
                     {% endif %}
                 </div>
             {% endif %}
-            <!-- NEW: Improved "Top 3" Leaderboard -->
+
             {% if dna.top_reader_types %}
                 <div class="border-brand-text shadow-neo border-2 bg-white p-6">
                     <h2 class="mb-4 text-2xl font-bold uppercase">Your Top Reader Traits</h2>
@@ -162,7 +214,7 @@
                     </ol>
                 </div>
             {% endif %}
-            <!-- Key Stats -->
+
             <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
                 <div class="bg-brand-yellow border-brand-text shadow-neo border-2 p-6 text-center">
                     <div class="text-5xl font-bold">{{ dna.user_stats.total_books_read }}</div>
@@ -177,12 +229,11 @@
                     <div class="mt-2 text-lg uppercase">Overall Rating</div>
                 </div>
             </div>
-            <!-- NEW: Comparative Analytics Tile -->
+
             <div class="border-brand-text shadow-neo border-2 bg-white p-6">
                 <h2 class="mb-4 text-2xl font-bold uppercase">Comparative Analytics</h2>
                 {% if dna.bibliotype_percentiles %}
                     <div class="space-y-4 text-lg">
-                        <!-- Average Book Length -->
                         <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
                             <p>
                                 Your average book length is <strong>{{ dna.user_stats.avg_book_length }} pages</strong>.
@@ -196,7 +247,6 @@
                                 other Bibliotype readers.
                             </p>
                         </div>
-                        <!-- Average Publication Year ("Oldness") -->
                         <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
                             <p>
                                 The average age of books you read is from
@@ -211,7 +261,6 @@
                                 other Bibliotype readers.
                             </p>
                         </div>
-                        <!-- Total Books Read -->
                         <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
                             <p>You have read <strong>{{ dna.user_stats.total_books_read }} books</strong> in total.</p>
                             <p class="mt-1 text-base">
@@ -228,7 +277,7 @@
                     </p>
                 {% endif %}
             </div>
-            <!-- Niche Book & Mainstream Score -->
+
             <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                 <div class="border-brand-text shadow-neo border-2 bg-white p-6">
                     <h2 class="mb-4 text-2xl font-bold uppercase">Your Most Niche Read</h2>
@@ -250,12 +299,12 @@
                     </p>
                 </div>
             </div>
-            <!-- Books Per Year Chart (now full-width) -->
+
             <div class="border-brand-text shadow-neo border-2 bg-white p-6">
                 <h2 class="mb-4 text-2xl font-bold uppercase">Books Read Per Year</h2>
                 <canvas id="booksByYearChart"></canvas>
             </div>
-            <!-- Preferences: Genres & Authors -->
+
             <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                 <div class="border-brand-text shadow-neo relative overflow-hidden border-2 bg-white p-6">
                     <h2 class="mb-4 text-2xl font-bold uppercase">Top Genres</h2>
@@ -270,9 +319,7 @@
                                 </li>
                             {% endfor %}
                         </ol>
-                        <div class="absolute top-2 right-2 h-32 w-32">
-                            <canvas id="topGenresChart"></canvas>
-                        </div>
+                        <div class="absolute top-2 right-2 h-32 w-32"><canvas id="topGenresChart"></canvas></div>
                     {% else %}
                         <p class="text-lg">Not enough genre data to display.</p>
                     {% endif %}
@@ -290,15 +337,13 @@
                                 </li>
                             {% endfor %}
                         </ol>
-                        <div class="absolute top-2 right-2 h-32 w-32">
-                            <canvas id="topAuthorsChart"></canvas>
-                        </div>
+                        <div class="absolute top-2 right-2 h-32 w-32"><canvas id="topAuthorsChart"></canvas></div>
                     {% else %}
                         <p class="text-lg">Not enough author data to display.</p>
                     {% endif %}
                 </div>
             </div>
-            <!-- Review Analysis -->
+
             <div class="border-brand-text shadow-neo border-2 bg-white p-6">
                 <h2 class="mb-4 text-2xl font-bold uppercase">Review Analysis</h2>
                 <div class="grid grid-cols-1 gap-6 text-lg md:grid-cols-2">
@@ -326,7 +371,7 @@
                     </div>
                 </div>
             </div>
-            <!-- Controversial Ratings -->
+
             <div class="border-brand-text shadow-neo border-2 bg-white p-6">
                 <h2 class="mb-4 text-2xl font-bold uppercase">Most "Controversial" Ratings 🤯</h2>
                 <p class="mb-4 text-lg">Books where your rating differs most from the Goodreads average.</p>
@@ -356,10 +401,9 @@
                     {% endfor %}
                 </div>
             </div>
+
             {% if user.is_authenticated %}
-                <!-- Settings Section -->
                 <div class="grid grid-cols-1 items-center gap-6 md:grid-cols-3">
-                    <!-- Privacy Settings -->
                     <div
                         class="border-brand-text shadow-neo flex h-full items-center border-2 bg-white p-4 md:col-span-2"
                     >
@@ -407,20 +451,17 @@
                             {% endif %}
                         </form>
                     </div>
-                    <!-- Update DNA -->
                     <div
                         class="border-brand-text shadow-neo flex h-full items-center justify-center border-2 bg-white p-4"
                     >
                         <a
                             href="{% url 'core:home' %}"
                             class="bg-brand-purple border-brand-text shadow-neo-sm hover:bg-opacity-90 block w-full border-2 px-4 py-2 text-center font-bold"
+                            >Update Readprint</a
                         >
-                            Update Readprint
-                        </a>
                     </div>
                 </div>
             {% else %}
-                <!-- CTA to Save -->
                 <div class="bg-brand-purple border-brand-text shadow-neo border-2 p-6 text-center">
                     <h2 class="text-2xl font-bold uppercase">Enjoying Your Readprint?</h2>
                     <p class="mt-2 text-lg">
@@ -431,11 +472,10 @@
                     </p>
                 </div>
             {% endif %}
+
             <script>
                 document.addEventListener("DOMContentLoaded", function () {
                     const dnaData = JSON.parse(document.getElementById("dna-data").textContent);
-
-                    // Books per Year Chart (from dna_results.html)
                     Chart.defaults.font.family = "VT323";
                     Chart.defaults.font.size = 16;
                     Chart.defaults.color = "#1f2937";
@@ -462,13 +502,10 @@
                             },
                         },
                     });
-
-                    // Top Genres Chart (new)
                     const topGenresCtx = document.getElementById("topGenresChart").getContext("2d");
                     const topGenresData = dnaData.top_genres;
                     const genreLabels = Object.keys(topGenresData);
                     const genreValues = Object.values(topGenresData);
-
                     new Chart(topGenresCtx, {
                         type: "doughnut",
                         data: {
@@ -478,16 +515,16 @@
                                     label: "Genres",
                                     data: genreValues,
                                     backgroundColor: [
-                                        "#fde047", // yellow
-                                        "#f9a8d4", // pink
-                                        "#a78bfa", // purple
-                                        "#60a5fa", // blue
-                                        "#34d399", // green
-                                        "#fb923c", // orange
-                                        "#e879f9", // fuchsia
-                                        "#c084fc", // violet
-                                        "#f472b6", // rose
-                                        "#be185d", // dark pink
+                                        "#fde047",
+                                        "#f9a8d4",
+                                        "#a78bfa",
+                                        "#60a5fa",
+                                        "#34d399",
+                                        "#fb923c",
+                                        "#e879f9",
+                                        "#c084fc",
+                                        "#f472b6",
+                                        "#be185d",
                                     ],
                                 },
                             ],
@@ -496,9 +533,7 @@
                             responsive: true,
                             maintainAspectRatio: false,
                             plugins: {
-                                legend: {
-                                    display: false, // Hide legend for small chart
-                                },
+                                legend: { display: false },
                                 tooltip: {
                                     callbacks: {
                                         label: function (context) {
@@ -516,13 +551,10 @@
                             },
                         },
                     });
-
-                    // Top Authors Chart (new)
                     const topAuthorsCtx = document.getElementById("topAuthorsChart").getContext("2d");
                     const topAuthorsData = dnaData.top_authors;
                     const authorLabels = Object.keys(topAuthorsData);
                     const authorValues = Object.values(topAuthorsData);
-
                     new Chart(topAuthorsCtx, {
                         type: "doughnut",
                         data: {
@@ -532,16 +564,16 @@
                                     label: "Authors",
                                     data: authorValues,
                                     backgroundColor: [
-                                        "#fde047", // yellow
-                                        "#f9a8d4", // pink
-                                        "#a78bfa", // purple
-                                        "#60a5fa", // blue
-                                        "#34d399", // green
-                                        "#fb923c", // orange
-                                        "#e879f9", // fuchsia
-                                        "#c084fc", // violet
-                                        "#f472b6", // rose
-                                        "#be185d", // dark pink
+                                        "#fde047",
+                                        "#f9a8d4",
+                                        "#a78bfa",
+                                        "#60a5fa",
+                                        "#34d399",
+                                        "#fb923c",
+                                        "#e879f9",
+                                        "#c084fc",
+                                        "#f472b6",
+                                        "#be185d",
                                     ],
                                 },
                             ],
@@ -550,9 +582,7 @@
                             responsive: true,
                             maintainAspectRatio: false,
                             plugins: {
-                                legend: {
-                                    display: false, // Hide legend for small chart
-                                },
+                                legend: { display: false },
                                 tooltip: {
                                     callbacks: {
                                         label: function (context) {
@@ -572,6 +602,126 @@
                     });
                 });
             </script>
+
+            {# =================================================================== #}
+            {# --- STATE 3: LOGGED IN USER, NO DNA, NOT PROCESSING (WELCOME) --- #}
+            {# =================================================================== #}
+        {% else %}
+            <div class="flex h-full flex-col p-4">
+                <div class="w-full">
+                    <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
+                        <span class="relative z-10">
+                            <div
+                                x-data="{
+                        editing: false,
+                        newName: '{{ user.username|escapejs }}',
+                        originalName: '{{ user.username|escapejs }}',
+                        errorMessage: '',
+                        
+                        updateUsername: function() {
+                            this.errorMessage = '';
+                            fetch('{% url "core:api_update_username" %}', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': '{{ csrf_token }}'
+                                },
+                                body: JSON.stringify({ username: this.newName })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.status === 'success') {
+                                    window.location.reload();
+                                } else {
+                                    this.errorMessage = data.message;
+                                }
+                            })
+                            .catch(() => {
+                                this.errorMessage = 'Could not connect to the server.';
+                            });
+                        }
+                    }"
+                                class="title-underline inline-flex items-center justify-center"
+                            >
+                                <div>
+                                    <div>
+                                        <!-- VIEW STATE -->
+                                        <div x-show="!editing" class="inline-flex items-center">
+                                            <div
+                                                @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
+                                                class="group relative cursor-pointer"
+                                            >
+                                                <span
+                                                    class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"
+                                                ></span>
+                                                <span class="relative z-20 px-2" x-text="originalName"></span>
+                                                <div class="text-brand-text absolute -right-2 -bottom-4 z-30">
+                                                    <svg
+                                                        class="h-7 w-7"
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 16 16"
+                                                        fill="currentColor"
+                                                    >
+                                                        <path
+                                                            d="M14 0l2 2-2 2-2-2 2-2zM12 2l2 2-8 8H4v-2l8-8zM2 12v2h2l-l-2-2z"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                            <span
+                                                x-text="originalName.toLowerCase().endsWith('s') ? `' Reading DNA` : `'s Reading DNA`"
+                                            ></span>
+                                        </div>
+                                        <!-- EDIT STATE -->
+                                        <form
+                                            x-show="editing"
+                                            x-cloak
+                                            @submit.prevent="updateUsername"
+                                            @keydown.escape.window="editing = false; newName = originalName"
+                                            class="inline-flex items-stretch gap-4"
+                                        >
+                                            <input
+                                                type="text"
+                                                x-ref="usernameInput"
+                                                x-model="newName"
+                                                class="border-brand-text focus:border-brand-purple w-auto border-2 bg-white p-1 text-5xl font-bold tracking-widest uppercase focus:outline-none"
+                                            />
+                                            <button
+                                                type="submit"
+                                                class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm border-2 px-4 py-2 text-xl font-bold hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                                            >
+                                                Save
+                                            </button>
+                                        </form>
+                                    </div>
+                                    <div
+                                        x-show="editing && errorMessage"
+                                        x-text="errorMessage"
+                                        class="mt-2 text-sm font-bold text-red-600"
+                                    ></div>
+                                </div>
+                            </div>
+                        </span>
+                    </h1>
+                </div>
+                <div class="flex flex-grow items-center justify-center">
+                    <div class="w-full">
+                        <div class="border-brand-text shadow-neo border-2 bg-white p-6 text-center">
+                            <div class="mb-4 text-2xl font-bold uppercase">Welcome to Bibliotype!</div>
+                            <p class="text-lg">
+                                Your account is ready. To generate your Reading DNA, please go to the homepage and
+                                upload your library export.
+                            </p>
+                            <a
+                                href="{% url 'core:home' %}"
+                                class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm hover:bg-opacity-90 mt-6 inline-block border-2 px-3 py-3 text-center font-bold uppercase"
+                            >
+                                Upload Your Library File
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         {% endif %}
     </div>
 {% endblock %}

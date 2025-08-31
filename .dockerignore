@@ -1,19 +1,37 @@
-# .dockerignore
-
-# Git
+# Git files
 .git
 .gitignore
 
-# Docker
-.dockerignore
-Dockerfile
-docker-compose.yml
-
-# Python
-__pycache__/
-*.pyc
+# Python virtual environment
+venv/
 .venv/
-/django_cache/
+env/
 
-# Environment
-.env
+# Node dependencies
+node_modules/
+
+# Python cache and compiled files
+__pycache__/
+django_cache/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE and editor configuration
+.idea/
+.vscode/
+
+# Local database file
+db.sqlite3
+
+# Docker files (no need to copy them into the image)
+Dockerfile
+docker-compose.local.yml
+.dockerignore
+
+# Any local media or static files that shouldn't be in the image
+media/
+staticfiles/
+
+# README
+README.md

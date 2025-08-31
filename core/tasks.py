@@ -11,15 +11,13 @@ from urllib.parse import quote_plus
 import google.generativeai as genai
 import pandas as pd
 import requests
+from celery import shared_task
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db.models import F
 from dotenv import load_dotenv
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-from celery import shared_task
-
-# IMPORTANT: Use relative imports for local modules within the same app
 from .dna_constants import (
     CANONICAL_GENRE_MAP,
     EXCLUDED_GENRES,
@@ -35,7 +33,9 @@ from .percentile_engine import (
 
 # All of your helper functions can live inside this file as well
 load_dotenv()
+
 api_key = os.getenv("GEMINI_API_KEY")
+
 if api_key:
     genai.configure(api_key=api_key)
 else:
@@ -352,12 +352,26 @@ def analyze_and_print_genres(all_raw_genres, canonical_map):
 
 # THIS IS THE NEW CELERY TASK
 @shared_task
-def generate_reading_dna_task(csv_file_content: str, user_id: int):
+def generate_reading_dna_task(csv_file_content: str, user_id: int | None):
     """
     The Celery task that wraps the original DNA generation logic.
     """
+    print("✅✅✅ RUNNING THE LATEST VERSION OF THE CELERY TASK ✅✅✅")
+    user = None  # Default user to None for the anonymous case
+
     try:
-        user = User.objects.get(pk=user_id)
+        # --- FIX: Conditionally fetch the user ---
+        # Only try to get a user object if a user_id was actually passed.
+        if user_id is not None:
+            try:
+                user = User.objects.get(pk=user_id)
+            except User.DoesNotExist:
+                # This is a critical error if an ID was passed but is invalid.
+                print(f"❌ Error: Could not run task. User with id {user_id} not found.")
+                # Stop execution if the user is invalid.
+                raise
+        else:
+            print("👤 Processing request for an anonymous user.")
 
         try:
             df = pd.read_csv(StringIO(csv_file_content))
@@ -613,29 +627,26 @@ def generate_reading_dna_task(csv_file_content: str, user_id: int):
 
         # === VIBE GENERATION & SAVING (LLM VERSION) ===============================
         reading_vibe = []
-
-        if user.is_authenticated:
+        # Check if we have a logged-in user
+        if user:
             profile = user.userprofile
-            # Check if the data is unchanged AND a vibe already exists.
             if profile.vibe_data_hash == new_data_hash and profile.reading_vibe:
                 print("✅ Vibe data is unchanged. Using cached vibe from database.")
-                reading_vibe = profile.reading_vibe  # Use the cached vibe from DB
+                reading_vibe = profile.reading_vibe
             else:
                 print("✨ Vibe data has changed. Generating a new vibe with LLM...")
-                reading_vibe = generate_vibe_with_llm(dna)  # Generate a new one with Gemini
+                reading_vibe = generate_vibe_with_llm(dna)
                 profile.reading_vibe = reading_vibe
                 profile.vibe_data_hash = new_data_hash
-                # The profile object will be saved later in the view.
         else:
-            # For anonymous users, we always generate it fresh.
-            # The view can handle session caching if desired.
+            # For anonymous users, always generate it fresh.
             print("✨ Anonymous user. Generating a new vibe with LLM...")
             reading_vibe = generate_vibe_with_llm(dna)
 
-        dna["reading_vibe"] = reading_vibe  # Add the vibe to the final payload
+        dna["reading_vibe"] = reading_vibe
         dna["vibe_data_hash"] = new_data_hash
 
-        # Final cleanup of NaN values for JSON serialization
+        # --- Final cleanup (remains the same) ---
         def clean_dict(d):
             if not isinstance(d, dict):
                 return d
@@ -645,20 +656,24 @@ def generate_reading_dna_task(csv_file_content: str, user_id: int):
         dna["most_positive_review"] = clean_dict(dna.get("most_positive_review"))
         dna["most_negative_review"] = clean_dict(dna.get("most_negative_review"))
 
+        # --- MODIFIED: Final save/return logic ---
         if user:
-            profile = user.userprofile
-            # Use the same helper function from your views.py!
-            _save_dna_to_profile(profile, dna)
-            print(f"✅ Successfully generated and saved DNA for user: {user.username}")
+            # For logged-in users, save to the profile and return a success message.
+            _save_dna_to_profile(user.userprofile, dna)
+            print(f"✅ Saved DNA for user: {user.username}")
+            return f"DNA saved for user {user_id}"  # Celery needs a serializable return value
         else:
-            # If there's no user, we can't save. The task is done.
-            # The view could potentially handle anonymous data differently if needed.
-            print("🧬 DNA generated for an anonymous user. Not saving to a profile.")
+            # For anonymous users, RETURN the final DNA dictionary.
+            print("🧬 DNA generated for an anonymous user. Returning result.")
+            return dna
 
-    except User.DoesNotExist:
-        print(f"❌ Error: Could not run task. User with id {user_id} not found.")
     except Exception as e:
+        # This generic catch-all is important. It ensures that if anything
+        # goes wrong (CSV parsing, API call, etc.), the task fails gracefully.
         print(f"❌❌❌ A critical error occurred in generate_reading_dna_task for user_id {user_id}: {e}")
+        # Re-raise the exception to mark the Celery task as FAILED.
+        # This is crucial for the frontend to show the error message.
+        raise
 
 
 def _save_dna_to_profile(profile, dna_data):
@@ -667,12 +682,19 @@ def _save_dna_to_profile(profile, dna_data):
     to the user's profile, populating both the main JSON blob and the
     optimized, separate fields.
     """
-    profile.dna_data = dna_data
+    print(f"🔍 DEBUG: Saving DNA to profile for user: {profile.user.username}")
+    print(f"🔍 DEBUG: DNA data keys: {list(dna_data.keys()) if dna_data else 'None'}")
 
+    profile.dna_data = dna_data
     profile.reader_type = dna_data.get("reader_type")
     profile.total_books_read = dna_data.get("user_stats", {}).get("total_books_read")
     profile.reading_vibe = dna_data.get("reading_vibe")
     profile.vibe_data_hash = dna_data.get("vibe_data_hash")
 
-    profile.save()
-    print(f"   [DB] Saved DNA data and promoted fields for user: {profile.user.username}")
+    try:
+        profile.save()
+        print(f"✅ [DB] Successfully saved DNA data for user: {profile.user.username}")
+        print(f"🔍 DEBUG: Profile.dna_data is now: {profile.dna_data is not None}")
+    except Exception as e:
+        print(f"❌ [DB] Error saving profile: {e}")
+        raise
