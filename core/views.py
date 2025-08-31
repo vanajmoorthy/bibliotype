@@ -1,5 +1,6 @@
 import json
 
+from celery.result import AsyncResult
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -9,6 +10,7 @@ from django.contrib.auth.forms import (
 from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from .forms import CustomUserCreationForm, UpdateDisplayNameForm
@@ -21,30 +23,36 @@ def home_view(request):
 
 
 def display_dna_view(request):
-    """
-    Displays the user's DNA. This is the main dashboard view.
-    It has robust logic to handle both session-based (anonymous) and
-    database-backed (authenticated) DNA data.
-    """
-    dna_data = None
+    # Check for the signal in the URL
+    is_processing = request.GET.get("processing") == "true"
+
+    dna_data = request.session.get("dna_data")
     user_profile = None
 
-    if "dna_data" in request.session:
-        dna_data = request.session.get("dna_data")
-    elif request.user.is_authenticated:
+    if request.user.is_authenticated:
         user_profile = request.user.userprofile
+        user_profile.refresh_from_db()
 
-        if user_profile.dna_data:
+        # If we don't have DNA data in the profile yet BUT we are in the processing state,
+        # we will force the template to show the spinner.
+        if is_processing and not user_profile.dna_data:
+            return render(request, "core/dna_display.html", {"is_processing": True})
+
+        # If not processing, try to load existing DNA data
+        if dna_data is None and user_profile.dna_data:
             dna_data = user_profile.dna_data
 
-    if not dna_data:
+    # This handles anonymous users
+    if not request.user.is_authenticated and dna_data is None:
         messages.info(request, "First, upload your library file to generate your Bibliotype!")
         return redirect("core:home")
 
-    # Add the update form to the context for the dashboard
-    update_form = UpdateDisplayNameForm(instance=request.user) if request.user.is_authenticated else None
+    context = {
+        "dna": dna_data,
+        "user_profile": user_profile,
+        "is_processing": False,  # Explicitly set to false unless handled above
+    }
 
-    context = {"dna": dna_data, "user_profile": user_profile, "update_form": update_form}
     return render(request, "core/dna_display.html", context)
 
 
@@ -56,29 +64,29 @@ def upload_view(request):
         messages.error(request, "Please upload a valid .csv file.")
         return redirect("core:home")
 
-    # --- NEW ASYNCHRONOUS LOGIC ---
     try:
-        # 1. Read the file content into a string. This is fast.
-        #    Add a size check for safety.
         if csv_file.size > 10 * 1024 * 1024:  # 10MB limit
             messages.error(request, "File is too large. Please upload an export smaller than 10MB.")
             return redirect("core:home")
+
         csv_content = csv_file.read().decode("utf-8")
 
-        # 2. Get the user's ID.
-        user_id = request.user.id if request.user.is_authenticated else None
+        if request.user.is_authenticated:
+            # Authenticated users still use the original background flow
+            generate_reading_dna_task.delay(csv_content, request.user.id)
 
-        # 3. Call the Celery task with .delay() to run it in the background.
-        #    This is non-blocking and returns instantly.
-        generate_reading_dna_task.delay(csv_content, user_id)
+            messages.success(
+                request,
+                "Success! We're updating your Reading DNA. Your dashboard will update automatically when it's ready!",
+            )
 
-        # 4. Give the user immediate feedback.
-        messages.success(
-            request,
-            "Success! We've received your file and have started building your Reading DNA. "
-            "This can take a few minutes. Your dashboard will update automatically when it's ready!",
-        )
-        return redirect("core:home")  # Redirect immediately
+            processing_url = reverse("core:display_dna") + "?processing=true"
+
+            return redirect(processing_url)
+        else:
+            result = generate_reading_dna_task.delay(csv_content, None)
+            task_id = result.id
+            return redirect("core:task_status", task_id=task_id)
 
     except Exception as e:
         print(f"UNEXPECTED ERROR in upload_view: {e}")
@@ -110,43 +118,47 @@ def signup_view(request):
 
 
 def login_view(request):
-    # MODIFIED: Add logic to allow login with email address
     if request.method == "POST":
-        form = AuthenticationForm(data=request.POST)
-
-        # --- NEW: EMAIL LOGIN LOGIC ---
-        email = request.POST.get("username")  # The form field is named 'username'
+        email = request.POST.get("username")
         password = request.POST.get("password")
 
+        user = None
         if email and password:
-            # Try to find a user with this email
             try:
-                user_obj = User.objects.get(email=email)
-                # Authenticate using the found user's actual username
+                # Find the user by their email, case-insensitive
+                user_obj = User.objects.get(email__iexact=email)
+
+                # Use Django's backend to authenticate with the found user's
+                # actual username and the provided password.
                 user = authenticate(request, username=user_obj.username, password=password)
-                if user is not None:
-                    login(request, user)
-                    # ... (rest of the logic is the same)
-                    if "dna_data" in request.session:
-                        # ... (save if empty logic)
-                        messages.success(request, "Logged in and your latest Bibliotype has been saved!")
-                        return redirect("core:display_dna")
-                    return redirect("core:home")
             except User.DoesNotExist:
-                # If no user with that email, fall through to the default form validation
+                # If the email doesn't exist, user remains None
                 pass
 
-        # If the email login fails, the standard form validation will show the error
-        if form.is_valid():
-            # This block is for users who log in with their actual username
-            user = form.get_user()
+        if user is not None:
+            # If authentication was successful, log them in
             login(request, user)
-            return redirect("core:home")
-    else:
-        form = AuthenticationForm()
 
-    # Change the label for the username field to "Email"
+            # Check for and save any anonymous DNA data
+            if "dna_data" in request.session:
+                dna_to_save = request.session.pop("dna_data")
+                # Only save if they don't already have DNA to prevent overwriting
+                if not user.userprofile.dna_data:
+                    _save_dna_to_profile(user.userprofile, dna_to_save)
+                messages.success(request, "Logged in successfully!")
+                return redirect("core:display_dna")
+
+            # If no DNA in session, redirect to home
+            return redirect("core:home")
+
+        # If authentication fails for any reason, show a clear error message.
+        messages.error(request, "Invalid email or password. Please try again.")
+
+    # For a GET request, create a blank form
+    form = AuthenticationForm()
+    # Ensure the label on the page says "Email"
     form.fields["username"].label = "Email"
+
     return render(request, "core/login.html", {"form": form})
 
 
@@ -248,6 +260,48 @@ def public_profile_view(request, username):
         }
         return render(request, "core/public_profile.html", context)
     except User.DoesNotExist:
-        from django.http import Http44
+        from django.http import Http404
 
         raise Http404("User does not exist.")
+
+
+def task_status_view(request, task_id):
+    """
+    Renders the "waiting" page. The JavaScript on this page will
+    do the actual work of polling for the result.
+    """
+    # We pass the task_id to the template
+    return render(request, "core/task_status.html", {"task_id": task_id})
+
+
+def get_task_result_view(request, task_id):
+    """
+    An API endpoint that the frontend can call to check a task's status.
+    """
+
+    # Get the task result from Celery
+    result = AsyncResult(task_id)
+
+    if result.ready():
+        # The task is complete.
+        if result.successful():
+            # The task completed without errors. Get the result.
+            dna_data = result.get()
+
+            # Store the final DNA data in the session for the anonymous user
+            request.session["dna_data"] = dna_data
+            request.session.save()
+
+            return JsonResponse(
+                {
+                    "status": "SUCCESS",
+                    # Tell the frontend where to redirect the user
+                    "redirect_url": reverse("core:display_dna"),
+                }
+            )
+        else:
+            # The task failed.
+            return JsonResponse({"status": "FAILURE", "error": "An error occurred during processing."})
+    else:
+        # The task is still running.
+        return JsonResponse({"status": "PENDING"})

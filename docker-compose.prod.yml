@@ -2,23 +2,26 @@ services:
     db:
         image: postgres:15
         volumes:
-            # This will store the database data on your VPS's filesystem
             - postgres_data:/var/lib/postgresql/data/
         environment:
             - POSTGRES_DB=${POSTGRES_DB}
             - POSTGRES_USER=${POSTGRES_USER}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-        # We don't need to expose the port to the outside world,
-        # as the web service will connect to it internally via Docker's network.
         healthcheck:
             test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
             interval: 5s
             timeout: 5s
             retries: 5
 
+    redis:
+        image: redis:7-alpine
+        # No ports are exposed to the outside world in production.
+        # The 'web' and 'worker' services can still access it via the internal Docker network.
+
     web:
         build: .
         image: ${DOCKERHUB_USERNAME}/bibliotype:${IMAGE_TAG:-latest}
+        command: gunicorn bibliotype.wsgi:application --bind 0.0.0.0:8000
         volumes:
             - ./staticfiles:/app/staticfiles
         ports:
@@ -26,6 +29,8 @@ services:
         environment:
             # These are all read from the .env file on your server
             - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+            - CELERY_BROKER_URL=redis://redis:6379/0
+            - CELERY_RESULT_BACKEND=redis://redis:6379/0
             - SECRET_KEY=${SECRET_KEY}
             - GEMINI_API_KEY=${GEMINI_API_KEY}
             - DEBUG=${DEBUG}
@@ -36,5 +41,31 @@ services:
         depends_on:
             db:
                 condition: service_healthy
+            redis:
+                condition: service_started
+
+    worker:
+        build: .
+        image: ${DOCKERHUB_USERNAME}/bibliotype:${IMAGE_TAG:-latest}
+        # This command is the same as your local one
+        command: sh -c "./wait-for-postgres.sh db && poetry run celery -A bibliotype worker -l info"
+        # VOLUMES ARE REMOVED FOR PRODUCTION. The code is inside the image.
+        environment:
+            - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+            - CELERY_BROKER_URL=redis://redis:6379/0
+            - CELERY_RESULT_BACKEND=redis://redis:6379/0
+            - SECRET_KEY=${SECRET_KEY}
+            - GEMINI_API_KEY=${GEMINI_API_KEY}
+            - DEBUG=${DEBUG} # Should be False in your production .env
+            - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+            - POSTGRES_DB=${POSTGRES_DB}
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_started
+
 volumes:
     postgres_data:

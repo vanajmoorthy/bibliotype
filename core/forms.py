@@ -1,45 +1,46 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
 
 
 class CustomUserCreationForm(UserCreationForm):
     """
-    A custom form for user signup that collects a unique display name (username)
-    and an email address.
+    A custom form for user signup that requires a unique email and a unique,
+    case-insensitive display name.
     """
 
-    # We rename the fields here for clarity in the template
+    email = forms.EmailField(required=True, help_text="Required. Used for login and account recovery.")
+
     username = forms.CharField(
-        max_length=30,
+        label="Display Name",
+        max_length=15,
         required=True,
-        help_text="Required. 30 characters or fewer. Letters, digits and @/./+/-/_ only. Don't worry, you can change this later!",
-        label="Display Name",  # This is how it will appear on the page
+        help_text="Required. Your public name (15 characters or fewer, case-insensitive).",
     )
-    email = forms.EmailField(required=True, help_text="Required. Will be used for login and account recovery.")
 
     class Meta(UserCreationForm.Meta):
         model = User
-        # The fields that will be displayed on the form, in order.
         fields = ("username", "email")
+
+    def clean_username(self):
+        """
+        Ensures the display name is unique (case-insensitively) and
+        returns a lowercased version.
+        """
+        username = self.cleaned_data.get("username")
+        if username and User.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError("This display name is already taken. Please choose another.")
+        # MODIFICATION: Force the username to lowercase before saving
+        return username.lower()
 
     def clean_email(self):
         """
-        Ensure the email is unique in the system.
+        Ensures the email is unique, case-insensitively.
         """
         email = self.cleaned_data.get("email")
-        if User.objects.filter(email=email).exists():
-            raise ValidationError("An account with this email address already exists.")
+        if email and User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("An account with this email address already exists.")
         return email
-
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        user.username = self.cleaned_data["username"]
-        user.email = self.cleaned_data["email"]
-        if commit:
-            user.save()
-        return user
 
 
 class UpdateDisplayNameForm(forms.ModelForm):
@@ -47,30 +48,25 @@ class UpdateDisplayNameForm(forms.ModelForm):
     A form for users to update their public display name (username).
     """
 
+    username = forms.CharField(label="New Display Name", max_length=15, help_text="15 characters or fewer.")
+
     class Meta:
         model = User
         fields = ["username"]
-        labels = {
-            "username": "New Display Name",
-        }
 
     def __init__(self, *args, **kwargs):
-        # We need to know who the current user is to check for uniqueness correctly
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
 
     def clean_username(self):
         """
-        Ensure the new username is unique, excluding the current user's
-        existing username.
+        Ensures the new display name is unique (case-insensitive),
+        excluding the current user, and returns a lowercased version.
         """
         new_username = self.cleaned_data.get("username")
-        # If the username hasn't changed, it's valid.
-        if new_username == self.user.username:
-            return new_username
 
-        # Check if any OTHER user already has this username.
-        if User.objects.filter(username=new_username).exists():
-            raise ValidationError("This display name is already taken. Please choose another.")
+        if new_username and User.objects.filter(username__iexact=new_username).exclude(pk=self.user.pk).exists():
+            raise forms.ValidationError("This display name is already taken. Please choose another.")
 
-        return new_username
+        # MODIFICATION: Force the username to lowercase before saving
+        return new_username.lower()
