@@ -1,6 +1,6 @@
-FROM python:3.13-slim
+FROM python:3.11-slim-bookworm
 
-RUN apt-get update && apt-get install -y postgresql-client
+RUN apt-get update && apt-get install -y postgresql-client npm
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -10,18 +10,21 @@ ENV POETRY_VIRTUALENVS_CREATE=true
 
 WORKDIR /app
 
-COPY ./wait-for-postgres.sh .
-COPY ./docker-entrypoint.sh .
-
-RUN chmod +x /app/wait-for-postgres.sh
-RUN chmod +x /app/docker-entrypoint.sh
-
-RUN pip install poetry
-
 COPY pyproject.toml poetry.lock ./
+RUN pip install poetry
 RUN poetry install --no-root --no-interaction
 
+COPY package.json package-lock.json* ./
+RUN npm install
+
 COPY . .
+
+RUN npm run build
+
+COPY ./wait-for-postgres.sh .
+COPY ./docker-entrypoint.sh .
+RUN chmod +x /app/wait-for-postgres.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
