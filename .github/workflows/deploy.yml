@@ -46,9 +46,16 @@ jobs:
 
                       docker pull $DOCKERHUB_USERNAME/bibliotype:$IMAGE_TAG
 
-                      docker-compose -f docker-compose.prod.yml up -d --wait
+                      docker-compose -f docker-compose.prod.yml up -d --force-recreate
 
+                      echo "Waiting for services to stabilize..."
+                      sleep 10
+
+                      echo "Running database migrations..."
                       docker-compose -f docker-compose.prod.yml exec -T web poetry run python manage.py migrate --noinput
+
+                      echo "Collecting static files..."
                       docker-compose -f docker-compose.prod.yml exec -T web poetry run python manage.py collectstatic --noinput
 
+                      echo "Pruning old Docker images..."
                       docker image prune -f
