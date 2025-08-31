@@ -120,12 +120,12 @@ You can now access the application at **`http://127.0.0.1:8000`**.
 #### Optional: Refreshing the Fixture File
 
 If you update the book list in `seed_books.py` and want to regenerate the `initial_data.json` fixture, follow these steps:
-1.  `docker-compose down -v`
-2.  `docker-compose up -d`
-3.  `docker-compose exec web poetry run python manage.py migrate`
-4.  `docker-compose exec web poetry run python manage.py seed_books`
-5.  `docker-compose exec web poetry run python manage.py seed_analytics`
-6.  `docker-compose exec web poetry run python manage.py dumpdata core.Book core.Author core.Genre core.AggregateAnalytics --indent 2 > core/fixtures/initial_data.json`
+1.  `docker-compose -f docker-compose.local.yml down -v`
+2.  `docker-compose -f docker-compose.local.yml up --build -d`
+3.  `docker-compose -f docker-compose.local.yml exec web poetry run python manage.py migrate`
+4.  `docker-compose -f docker-compose.local.yml exec web poetry run python manage.py seed_books`
+5.  `docker-compose -f docker-compose.local.yml exec web poetry run python manage.py seed_analytics`
+6.  `docker-compose -f docker-compose.local.yml exec web poetry run python manage.py dumpdata core.Book core.Author core.Genre core.AggregateAnalytics --indent 2 > core/fixtures/initial_data.json`
 7.  Commit the updated `initial_data.json` file to Git.
 
 ## 🚀 Deploying to Production
