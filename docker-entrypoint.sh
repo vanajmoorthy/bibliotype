@@ -5,6 +5,7 @@ set -e
 
 # Wait for the database to be ready (optional but good practice)
 # We can add this back in for extra safety if needed.
+./wait-for-postgres.sh db
 
 echo "Applying database migrations..."
 poetry run python manage.py migrate --noinput
