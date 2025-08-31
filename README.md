@@ -28,7 +28,7 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - set up celery ⚠️
 - change "dashboard" to "profile" and allow deleting user account and data
 - show profile even when no bibliotype has been generated so user can at least change display name and delete profile and prompt them to back and generate one
-
+- upload to instagram story
   
 ## ✨ Features
 
