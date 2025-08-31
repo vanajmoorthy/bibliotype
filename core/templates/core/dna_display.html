@@ -178,13 +178,13 @@
 
             {% if dna.reading_vibe %}
                 <div
-                    class="mb-8 flex flex-col flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-xl text-gray-600 italic sm:flex-row"
+                    id="vibe-container"
+                    class="mb-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-xl italic"
                 >
                     {% for phrase in dna.reading_vibe %}
-                        <span>{{ phrase }}</span>
-                        {# This separator dot is now hidden on extra-small screens to avoid awkward wrapping #}
+                        <span class="vibe-item whitespace-nowrap text-gray-600">{{ phrase }}</span>
                         {% if not forloop.last %}
-                            <span class="hidden font-bold text-gray-400 sm:inline">·</span>
+                            <span class="vibe-separator font-bold text-blue-400">·</span>
                         {% endif %}
                     {% endfor %}
                 </div>
@@ -482,7 +482,35 @@
             {% endif %}
 
             <script>
+                function updateVibeSeparators() {
+                    const vibeContainer = document.getElementById("vibe-container");
+                    if (!vibeContainer) return;
+
+                    const items = vibeContainer.querySelectorAll(".vibe-item");
+                    const separators = vibeContainer.querySelectorAll(".vibe-separator");
+
+                    if (items.length < 2) return;
+
+                    // 1. First, show all separators
+                    separators.forEach((sep) => (sep.style.display = "inline"));
+
+                    // 2. Loop through items to find line breaks
+                    for (let i = 0; i < items.length - 1; i++) {
+                        const currentItem = items[i];
+                        const nextItem = items[i + 1];
+
+                        // If the next item is on a new line, hide the separator after the current one
+                        if (nextItem.offsetTop > currentItem.offsetTop) {
+                            const separatorToHide = separators[i];
+                            if (separatorToHide) {
+                                separatorToHide.style.display = "none";
+                            }
+                        }
+                    }
+                }
+
                 document.addEventListener("DOMContentLoaded", function () {
+                    updateVibeSeparators();
                     const dnaData = JSON.parse(document.getElementById("dna-data").textContent);
                     Chart.defaults.font.family = "VT323";
                     Chart.defaults.font.size = 16;
@@ -609,6 +637,7 @@
                         },
                     });
                 });
+                window.addEventListener("resize", updateVibeSeparators);
             </script>
 
             {# =================================================================== #}
