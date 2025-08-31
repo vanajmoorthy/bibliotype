@@ -49,7 +49,7 @@ services:
         build: .
         image: ${DOCKERHUB_USERNAME}/bibliotype:${IMAGE_TAG:-latest}
         # This command is the same as your local one
-        command: poetry run celery -A bibliotype worker -l info
+        command: sh -c "poetry run celery -A bibliotype worker -l info"
         # VOLUMES ARE REMOVED FOR PRODUCTION. The code is inside the image.
         environment:
             - DJANGO_ENV=production
