@@ -20,7 +20,7 @@ services:
         build: .
         image: ${DOCKERHUB_USERNAME}/bibliotype:${IMAGE_TAG:-latest}
         volumes:
-            - static_volume:/app/staticfiles
+            - ./staticfiles:/app/staticfiles
         ports:
             - "127.0.0.1:8000:8000"
         environment:
@@ -38,4 +38,3 @@ services:
                 condition: service_healthy
 volumes:
     postgres_data:
-    static_volume:
