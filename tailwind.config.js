@@ -1,8 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  // This is the only thing the config file needs.
-  // It tells Tailwind where to look for class names.
-  content: [
-    './core/templates/**/*.html'
-  ],
-}
+    content: [
+        // This is the key change. The './**/' pattern will search
+        // through ALL directories in your project for a `templates` folder.
+        "./**/templates/**/*.html",
+    ],
+    theme: {
+        extend: {},
+    },
+    plugins: [],
+};
