@@ -13,6 +13,9 @@ WORKDIR /app
 COPY ./wait-for-postgres.sh .
 COPY ./docker-entrypoint.sh .
 
+RUN chmod +x /app/wait-for-postgres.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 RUN pip install poetry
 
 COPY pyproject.toml poetry.lock ./
