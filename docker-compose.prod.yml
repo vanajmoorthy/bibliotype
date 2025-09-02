@@ -20,7 +20,7 @@ services:
     web:
         build: .
         image: ${DOCKERHUB_USERNAME}/bibliotype:${IMAGE_TAG:-latest}
-        command: sh -c "poetry run gunicorn bibliotype.wsgi:application --bind 0.0.0.0:8000"
+        command: ["poetry", "run", "gunicorn", "bibliotype.wsgi:application", "--bind", "0.0.0.0:8000"]
         volumes:
             - ./staticfiles:/app/staticfiles
         ports:
