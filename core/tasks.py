@@ -149,39 +149,59 @@ def normalize_and_filter_genres(subjects):
     return plausible_genres[:5]
 
 
-def get_book_details_from_open_library(title, author, session):
+def get_or_enrich_book_details(title: str, author_name: str, isbn13: str | None, session: requests.Session) -> dict:
     """
-    Looks up a book's genres, publish year, publisher, AND page count by
-    fetching from both the Work and Edition endpoints.
-    Uses a cache to avoid repeated API calls.
-    """
-    LOGIC_VERSION = "v11_with_pages"  # <-- Updated version to ensure fresh cache
-    cache_key = f"book_details:{LOGIC_VERSION}:{author}:{title}".lower().replace(" ", "_")
+    Looks up a book's details by checking CACHE -> DATABASE -> API.
 
+    Returns a dictionary with the book's enriched details.
+    """
+    LOGIC_VERSION = "v13_db_aware"  # <-- Bump version for new logic
+
+    # Prioritize ISBN for the cache key if it exists, as it's more unique
+    base_key = isbn13 if isbn13 else f"{author_name}:{title}".lower().replace(" ", "_")
+    cache_key = f"book_details:{LOGIC_VERSION}:{base_key}"
+
+    # 1. --- Check Cache First (Fastest) ---
     cached_data = cache.get(cache_key)
     if cached_data is not None:
         print(f"   ✅ Found details for '{title}' in cache.")
         return cached_data
 
-    print(f"   📚 Fetching details for: '{title}' by {author} (from API)")
+    # 2. --- Check Database Second (Fast, Local) ---
+    try:
+        # Use a case-insensitive lookup for better matching
+        book_obj = Book.objects.get(title__iexact=title, author__name__iexact=author_name)
+
+        # A non-null publish_year is a good sign the book has been enriched before
+        if book_obj.publish_year:
+            print(f"   💾 Found enriched details for '{title}' in the database.")
+            book_details = {
+                "genres": [genre.name for genre in book_obj.genres.all()],
+                "publish_year": book_obj.publish_year,
+                "publisher": book_obj.publisher,
+                "page_count": book_obj.page_count,
+            }
+            # IMPORTANT: Put the data we found in the DB back into the cache
+            cache.set(cache_key, book_details, timeout=60 * 60 * 24 * 30)
+            return book_details
+    except Book.DoesNotExist:
+        # This is expected if the book is new to our system. We'll fetch it from the API.
+        pass
+
+    # 3. --- Call External API as a Last Resort (Slowest) ---
+    print(f"   📚 Fetching details for: '{title}' by {author_name} (from API)")
+
     clean_title = re.split(r"[:(]", title)[0].strip()
     query_title = quote_plus(clean_title)
-    query_author = quote_plus(author)
+    query_author = quote_plus(author_name)
     search_url = f"https://openlibrary.org/search.json?title={query_title}&author={query_author}"
 
-    # Default empty structure now includes page_count
-    book_details = {
-        "genres": [],
-        "publish_year": None,
-        "publisher": None,
-        "page_count": None,  # <-- NEW FIELD
-    }
+    book_details = {"genres": [], "publish_year": None, "publisher": None, "page_count": None}
 
     try:
         response = session.get(search_url, timeout=5)
         if response.status_code != 200:
             return book_details
-
         data = response.json()
         if not data.get("docs"):
             return book_details
@@ -191,43 +211,31 @@ def get_book_details_from_open_library(title, author, session):
         edition_key = search_result.get("cover_edition_key")
 
         if work_key:
-            work_url = f"https://openlibrary.org{work_key}.json"
-            work_response = session.get(work_url, timeout=5)
+            work_response = session.get(f"https://openlibrary.org{work_key}.json", timeout=5)
             if work_response.status_code == 200:
                 work_data = work_response.json()
                 subjects = work_data.get("subjects", [])
                 book_details["genres"] = normalize_and_filter_genres(subjects)
 
         if edition_key:
-            edition_url = f"https://openlibrary.org/books/{edition_key}.json"
-            edition_response = session.get(edition_url, timeout=5)
+            edition_response = session.get(f"https://openlibrary.org/books/{edition_key}.json", timeout=5)
             if edition_response.status_code == 200:
                 edition_data = edition_response.json()
 
                 publish_year_str = edition_data.get("publish_date", "")
-                if publish_year_str:
-                    match = re.search(r"\d{4}", publish_year_str)
-                    if match:
-                        try:
-                            book_details["publish_year"] = int(match.group())
-                        except ValueError:
-                            pass
+                if publish_year_str and (match := re.search(r"\d{4}", publish_year_str)):
+                    book_details["publish_year"] = int(match.group())
 
-                # === NEW: EXTRACT PAGE COUNT ====================================
-                # The API field is typically 'number_of_pages'.
-                # We add a check to ensure it's a valid integer before storing.
                 raw_page_count = edition_data.get("number_of_pages")
-                if raw_page_count:
-                    try:
-                        book_details["page_count"] = int(raw_page_count)
-                    except (ValueError, TypeError):
-                        # If the value is not a clean integer, ignore it.
-                        book_details["page_count"] = None
-                # ================================================================
+                if raw_page_count and isinstance(raw_page_count, int):
+                    book_details["page_count"] = raw_page_count
 
                 book_details["publisher"] = edition_data.get("publishers", [None])[0]
 
-        cache.set(cache_key, book_details, timeout=60 * 60 * 24 * 30)
+        # Cache the newly fetched API results for next time
+        if book_details.get("publish_year"):
+            cache.set(cache_key, book_details, timeout=60 * 60 * 24 * 30)
+
         return book_details
 
     except requests.RequestException as e:
@@ -405,78 +413,52 @@ def generate_reading_dna_task(csv_file_content: str, user_id: int | None):
             temp_df.loc[:, "My Review"] = temp_df["My Review"].fillna("")
 
         # --- Phase 1 & 2: API and DB Sync ---
-        print("🎭 Fetching book data from Open Library API (in parallel)...")
-
-        with ThreadPoolExecutor(max_workers=10) as executor, requests.Session() as session:
-
-            def fetch_book_details(book_row):
-                return (book_row, get_book_details_from_open_library(book_row["Title"], book_row["Author"], session))
-
-            api_results = list(executor.map(fetch_book_details, [row for _, row in read_df.iterrows()]))
-
-        print("💾 Syncing book data with the database (serially)...")
+        print("🎭 Enriching book data from Cache -> DB -> API (in parallel)...")
 
         all_raw_genres, user_book_objects = [], []
+        with ThreadPoolExecutor(max_workers=10) as executor, requests.Session() as session:
 
-        for original_row, api_details in api_results:
+            def fetch_and_enrich_book(book_row):
+                raw_isbn13 = book_row.get("ISBN13")
+                clean_isbn13 = None
+                if pd.notna(raw_isbn13):
+                    if match := re.search(r"\d{13}", str(raw_isbn13)):
+                        clean_isbn13 = match.group(0)
+
+                enriched_details = get_or_enrich_book_details(
+                    book_row["Title"], book_row["Author"], clean_isbn13, session
+                )
+                return (book_row, enriched_details)
+
+            enrichment_results = list(executor.map(fetch_and_enrich_book, [row for _, row in read_df.iterrows()]))
+
+        print("💾 Syncing book data with the database...")
+
+        for original_row, enriched_details in enrichment_results:
             author, _ = Author.objects.get_or_create(name=original_row["Author"])
+            page_count_from_csv = int(p) if pd.notna(p := original_row.get("Number of Pages")) else None
 
-            raw_isbn13 = original_row.get("ISBN13")
-            clean_isbn13 = None
-
-            if pd.notna(raw_isbn13):
-                # First, convert to string to handle both numbers and text
-                isbn_str = str(raw_isbn13)
-
-                # Use regex to find any sequence of 10 or 13 digits
-                match = re.search(r"\d{10,13}", isbn_str)
-
-                if match:
-                    # Only keep the pure numeric part
-                    potential_isbn = match.group(0)
-                    # Ensure it's a 13-digit ISBN before storing
-                    if len(potential_isbn) == 13:
-                        clean_isbn13 = potential_isbn
-
-            # Get the raw values from the pandas row (which might be NaN)
-            raw_page_count = original_row.get("Number of Pages")
-            raw_avg_rating = original_row.get("Average Rating")
-
-            # Convert NaN to None, otherwise cast to the correct type (int/float).
-            # This ensures the data is clean before hitting the database.
-            clean_page_count = int(raw_page_count) if pd.notna(raw_page_count) else None
-            clean_avg_rating = float(raw_avg_rating) if pd.notna(raw_avg_rating) else None
-            # =========================================================================
-
-            book, _ = Book.objects.get_or_create(
+            book, created = Book.objects.update_or_create(
                 title=original_row["Title"],
                 author=author,
                 defaults={
-                    # Use the cleaned variables here
-                    "page_count": clean_page_count,
-                    "average_rating": clean_avg_rating,
-                    "publish_year": api_details.get("publish_year"),
-                    "publisher": api_details.get("publisher"),
-                    "isbn13": clean_isbn13,
+                    "page_count": page_count_from_csv or enriched_details.get("page_count"),
+                    "publish_year": enriched_details.get("publish_year"),
+                    "publisher": enriched_details.get("publisher"),
                 },
             )
 
             Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
             book.refresh_from_db()
 
-            raw_genres_for_book = api_details.get("genres", [])
-
-            # 1. Map raw genres to their canonical form.
+            # CORRECTLY INDENTED: This logic now runs for EACH book in the loop
+            raw_genres_for_book = enriched_details.get("genres", [])
             mapped_genres = [CANONICAL_GENRE_MAP.get(g) for g in raw_genres_for_book]
-
-            # 2. Filter out any that didn't have a mapping (are None) and get unique values.
             final_canonical_genres = set(g for g in mapped_genres if g)
 
-            # 3. Only save the clean, canonical genres to the database.
             if final_canonical_genres:
                 genre_pks = [Genre.objects.get_or_create(name=g)[0].pk for g in final_canonical_genres]
                 book.genres.set(genre_pks)
-            # =========================================================================
 
             user_book_objects.append(book)
             all_raw_genres.extend(raw_genres_for_book)
