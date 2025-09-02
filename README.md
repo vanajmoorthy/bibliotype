@@ -35,6 +35,8 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - favicon
 - adjust copy
 - make "instructions" button and modal on home page
+- implement "create an account and come back later" + email
+- forgot password email, CAPTCHA? email validation?
   
 ## ✨ Features
 
