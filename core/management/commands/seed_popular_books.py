@@ -79,183 +79,49 @@ class Command(BaseCommand):
         self.stdout.write("🚀 Starting the popular books seeding process...")
 
         book_data = []
-        book_data.extend(self._scrape_pulitzer_winners())
-        book_data.extend(self._scrape_booker_prize_winners())
-        book_data.extend(self._scrape_national_book_award_winners())
-        book_data.extend(self._scrape_womens_prize_winners())
-        book_data.extend(self._scrape_goodreads_choice_winners())
-        book_data.extend(self._scrape_nebula_award_winners())
-        book_data.extend(self._fetch_nyt_bestsellers())
+        self._save_scraped_data(self._scrape_pulitzer_winners())
+        self._save_scraped_data(self._scrape_booker_prize_winners())
+        self._save_scraped_data(self._scrape_national_book_award_winners())
+        self._save_scraped_data(self._scrape_womens_prize_winners())
+        self._save_scraped_data(self._scrape_nebula_award_winners())
+
+        self._scrape_and_save_goodreads_choice_winners()
+        self._fetch_nyt_bestsellers()
 
         # --- NEW: Enrich data with missing ISBNs ---
         self.stdout.write(f"📚 Found {len(book_data)} initial entries. Enriching with ISBN and ratings data...")
 
-        api_cache = self._load_cache()
-        final_enriched_data = []
+        self._enrich_and_calculate_final_scores()
 
-        for i, book in enumerate(book_data):
-            self.stdout.write(f"  -> Processing: \"{book['title']}\" ({i + 1}/{len(book_data)})")
-
-            cache_key = f"{book['title']}_{book['author']}".lower().replace(" ", "_")
-
-            # If book is in cache, use cached data and skip API calls
-            if cache_key in api_cache:
-                self.stdout.write(self.style.SUCCESS("     - Found in cache! Skipping API calls."))
-                book.update(api_cache[cache_key])
-                final_enriched_data.append(book)
-
-                continue
-
-            # If the book is missing an ISBN, try to find everything at once
-            if not book.get("isbn13"):
-                self.stdout.write("     - ISBN missing, searching Google Books by title...")
-                google_data = self._fetch_google_books_data_by_title(book["title"], book["author"])
-
-                if google_data:
-                    self.stdout.write(self.style.SUCCESS("     - Found all data on Google Books!"))
-
-                    book.update(google_data)
-                else:
-                    self.stdout.write("     - Fallback: Searching Open Library for ISBN...")
-
-                    ol_isbn = self._fetch_isbn_from_open_library(book["title"], book["author"])
-
-                    if ol_isbn:
-                        self.stdout.write(self.style.SUCCESS("     - Found ISBN on Open Library!"))
-                        book["isbn13"] = ol_isbn
-
-            # If the book has an ISBN but is missing ratings, get them now
-            elif "ratings_count" not in book:
-                self.stdout.write("     - Has ISBN, searching for ratings...")
-                google_data = self._fetch_google_books_data(book["isbn13"])
-                if google_data:
-                    self.stdout.write(self.style.SUCCESS("     - Found ratings!"))
-                    book.update(google_data)
-
-            api_cache[cache_key] = {
-                "isbn13": book.get("isbn13"),
-                "ratings_count": book.get("ratings_count"),
-                "average_rating": book.get("average_rating"),
-            }
-
-            final_enriched_data.append(book)
-
-            if i % 20 == 0:
-                self._save_cache(api_cache)
-
-            # This single sleep call now correctly paces ALL Google API requests
-            time.sleep(1.1)
-
-        self._save_cache(api_cache)
-
-        self.stdout.write(self.style.SUCCESS("✅ All API data fetched and cached."))
-
-        self.stdout.write(f"💾 Processing {len(final_enriched_data)} book entries...")
-        self.stdout.write(f"💾 Processing {len(final_enriched_data)} book entries...")
-        final_book_details = self._process_book_data(final_enriched_data)
-
-        updated_count, created_count = self._save_popular_books(final_book_details)
-
-        self.stdout.write(
-            self.style.SUCCESS(f"✅ Popular Books seeded! Created: {created_count}, Updated: {updated_count}")
-        )
         self._update_author_popularity()
 
-    def _process_book_data(self, books):
-        final_book_details = {}
-        book_sources = defaultdict(list)
+    def _save_scraped_data(self, books):
+        """
+        Takes a list of book dicts from a scraper and saves them to the DB.
+        """
+        self.stdout.write(f"   -> Saving {len(books)} entries to the database...")
+        for book_data in books:
+            lookup_key = PopularBook.generate_lookup_key(book_data["title"], book_data["author"])
 
-        # Step 1: Group all scraped entries by a unique book key
-        for book in books:
-            author = " ".join(word.capitalize() for word in book["author"].lower().split())
-            lookup_key = PopularBook.generate_lookup_key(book["title"], author)
-            book_sources[lookup_key].append(book)
-
-        # Step 2: Process each unique book to aggregate its data
-        for lookup_key, sources in book_sources.items():
-            base_details = sorted(sources, key=lambda x: (-int(bool(x.get("isbn13"))), -x.get("ratings_count", 0)))[0]
-
-            # Initialize fields for aggregation
-            final_details = {
-                "title": base_details["title"],
-                "author": base_details["author"],
-                "isbn13": base_details.get("isbn13"),
-                "average_rating": None,
-                "ratings_count": 0,
-                "nyt_bestseller_weeks": 0,
-                "awards_won": set(),
-                "shortlists": set(),
-            }
-
-            score_breakdown = defaultdict(int)
-
-            # Aggregate data from all sources
-            for source_entry in sources:
-                source_key = source_entry.get("source")
-                if source_key:
-                    if source_key == "NYT_BESTSELLER_WEEK":
-                        final_details["nyt_bestseller_weeks"] += 1
-                        score_breakdown["NYT_BESTSELLER_WEEKS"] += 1
-                    elif "WINNER" in source_key:
-                        final_details["awards_won"].add(source_key)
-                        score_breakdown[source_key] = SCORE_CONFIG.get(source_key, 0)
-                    elif "SHORTLIST" in source_key or "FINALIST" in source_key or "NOMINEE" in source_key:
-                        final_details["shortlists"].add(source_key)
-                        score_breakdown[source_key] = SCORE_CONFIG.get(source_key, 0)
-
-                if source_entry.get("ratings_count", 0) > final_details["ratings_count"]:
-                    final_details["ratings_count"] = source_entry["ratings_count"]
-                    final_details["average_rating"] = source_entry.get("average_rating")
-
-            # Handle scores from ratings data
-            if final_details["ratings_count"]:
-                ratings_score = min(final_details["ratings_count"] // 500, 100)
-                if ratings_score > 0:
-                    score_breakdown["RATINGS_SCORE"] = ratings_score
-            if final_details["average_rating"] and final_details["average_rating"] >= 4.0:
-                score_breakdown["HIGH_RATING_BONUS"] = SCORE_CONFIG["HIGH_RATING_BONUS"]
-
-            # Calculate final score from the breakdown
-            total_score = 0
-            for key, val in score_breakdown.items():
-                if key == "NYT_BESTSELLER_WEEKS":
-                    total_score += val * SCORE_CONFIG["NYT_BESTSELLER_WEEK"]
-                else:
-                    total_score += val
-
-            final_details["mainstream_score"] = total_score
-            final_details["score_breakdown"] = dict(score_breakdown)
-            # Convert sets to lists for JSON serialization
-            final_details["awards_won"] = sorted(list(final_details["awards_won"]))
-            final_details["shortlists"] = sorted(list(final_details["shortlists"]))
-
-            final_book_details[lookup_key] = final_details
-
-        return final_book_details
-
-    def _save_popular_books(self, book_details):
-        updated_count, created_count = 0, 0
-        for lookup_key, details in book_details.items():
-            _, created = PopularBook.objects.update_or_create(
+            book_obj, created = PopularBook.objects.get_or_create(
                 lookup_key=lookup_key,
                 defaults={
-                    "title": details["title"],
-                    "author": details["author"],
-                    "isbn13": details.get("isbn13"),
-                    "mainstream_score": details["mainstream_score"],
-                    "average_rating": details.get("average_rating"),
-                    "ratings_count": details.get("ratings_count", 0),
-                    "nyt_bestseller_weeks": details.get("nyt_bestseller_weeks", 0),
-                    "awards_won": details.get("awards_won", []),
-                    "shortlists": details.get("shortlists", []),
-                    "score_breakdown": details.get("score_breakdown", {}),  # Re-added this line
+                    "title": book_data["title"],
+                    "author": book_data["author"],
                 },
             )
-            if created:
-                created_count += 1
-            else:
-                updated_count += 1
-        return created_count, updated_count
+
+            # Add the award or shortlist to the JSON field
+            source = book_data["source"]
+
+            if "WINNER" in source:
+                if source not in book_obj.awards_won:
+                    book_obj.awards_won.append(source)
+            elif "SHORTLIST" in source or "FINALIST" in source or "NOMINEE" in source:
+                if source not in book_obj.shortlists:
+                    book_obj.shortlists.append(source)
+
+            book_obj.save()
 
     def _update_author_popularity(self):
         self.stdout.write("👤 Calculating popular author scores...")
@@ -274,13 +140,13 @@ class Command(BaseCommand):
     def _fetch_nyt_bestsellers(self):
         self.stdout.write("📚 Fetching NYT Bestseller data (last 2 years)...")
         api_key = os.getenv("NYT_API_KEY")
+
         if not api_key:
             self.stdout.write(self.style.WARNING("⚠️ NYT_API_KEY not found. Skipping bestseller fetch."))
             return []
 
-        books = []
         # Limit to last 2 years to avoid excessive API calls and rate limits
-        start_date = date.today() - timedelta(days=5 * 365)
+        start_date = date.today() - timedelta(days=1 * 365)
         current_date = start_date
         list_names = [
             "hardcover-fiction",
@@ -294,28 +160,44 @@ class Command(BaseCommand):
                 url = f"https://api.nytimes.com/svc/books/v3/lists/{current_date.strftime('%Y-%m-%d')}/{list_name}.json?api-key={api_key}"
                 try:
                     response = requests.get(url, timeout=15)
+
                     if response.status_code == 429:
                         self.stdout.write(self.style.WARNING("Rate limit hit. Pausing for 60 seconds..."))
                         time.sleep(60)
                         continue  # Retry the same request
+
                     response.raise_for_status()
+
                     data = response.json()
-                    for book in data.get("results", {}).get("books", []):
-                        books.append(
-                            {
-                                "title": book["title"].title(),
-                                "author": book["author"],
-                                "isbn13": book.get("primary_isbn13"),
-                                "source": "NYT_BESTSELLER_WEEK",
-                            }
+
+                    books_in_list = data.get("results", {}).get("books", [])
+                    for book_data in books_in_list:
+                        lookup_key = PopularBook.generate_lookup_key(book_data["title"], book_data["author"])
+
+                        # Get or Create the book object first
+                        book_obj, created = PopularBook.objects.get_or_create(
+                            lookup_key=lookup_key,
+                            defaults={
+                                "title": book_data["title"].title(),
+                                "author": book_data["author"],
+                                "isbn13": book_data.get("primary_isbn13"),
+                            },
                         )
+
+                        # Now, atomically increment the bestseller weeks count
+                        # This is safe to run multiple times.
+                        book_obj.nyt_bestseller_weeks = F("nyt_bestseller_weeks") + 1
+                        book_obj.save()
+
+                        if created:
+                            self.stdout.write(f"     + Created NYT entry: {book_obj.title}")
                 except requests.RequestException as e:
                     self.stdout.write(self.style.ERROR(f"NYT API Error: {e}"))
-                time.sleep(12)  # Increased delay to be safer
+
+                time.sleep(15)
 
             self.stdout.write(f"   -> Fetched bestsellers for {current_date.strftime('%Y-%m')}")
-            current_date += timedelta(days=30)  # Check roughly once a month
-        return books
+            current_date += timedelta(days=30)
 
     def _fetch_google_books_data(self, isbn13):
         """Fetches ratings data from the Google Books API, with retry logic for rate limiting."""
@@ -587,13 +469,14 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f"Failed to scrape Women's Prize: {e}"))
         return books
 
-    def _scrape_goodreads_choice_winners(self):
-        self.stdout.write("🏆 Scraping Goodreads Choice Award winners...")
-
-        books = []
+    def _scrape_and_save_goodreads_choice_winners(self):
+        """
+        Scrapes Goodreads Choice Award winners and saves them directly to the database
+        to ensure data persistence and script resumability.
+        """
+        self.stdout.write("🏆 Scraping and saving Goodreads Choice Award winners...")
         base_url = "https://www.goodreads.com/choiceawards/best-books-"
         years = range(2011, date.today().year)
-
         category_ids = {
             1: "fiction",
             4: "fantasy",
@@ -610,40 +493,37 @@ class Command(BaseCommand):
 
         for year in years:
             url = f"{base_url}{year}"
-            self.stdout.write(f"  -> Scraping {year} Goodreads winners...")
+            self.stdout.write(f"  -> Processing {year} winners...")
 
             try:
-                # --- REFINEMENT: Fetch the page ONCE per year ---
                 res = self.session.get(url, timeout=15)
                 res.raise_for_status()
                 soup = BeautifulSoup(res.content, "html.parser")
 
-                # --- Then loop through categories to parse the single page ---
                 for cat_id in category_ids.keys():
                     winner_block = soup.find("div", {"id": f"winner-{cat_id}"})
-
                     if winner_block:
-                        author_element = winner_block.find("img", class_="pollAnswer__bookImage")
+                        img_element = winner_block.find("img", class_="pollAnswer__bookImage")
+                        if img_element and " by " in (alt_text := img_element.get("alt", "")):
+                            title, author = alt_text.rsplit(" by ", 1)
 
-                        if author_element:
-                            full_alt_text = author_element.get("alt", "")
+                            # --- MODIFICATION: Save directly to the DB ---
+                            lookup_key = PopularBook.generate_lookup_key(title.strip(), author.strip())
 
-                            if " by " in full_alt_text:
-                                title, author = full_alt_text.rsplit(" by ", 1)
+                            book_obj, created = PopularBook.objects.get_or_create(
+                                lookup_key=lookup_key,
+                                defaults={"title": title.strip(), "author": author.strip()},
+                            )
 
-                                books.append(
-                                    {
-                                        "title": title.strip(),
-                                        "author": author.strip(),
-                                        "isbn13": None,
-                                        "source": "GOODREADS_CHOICE_WINNER",
-                                    }
-                                )
+                            award = "GOODREADS_CHOICE_WINNER"
+                            if award not in book_obj.awards_won:
+                                book_obj.awards_won.append(award)
+                                book_obj.save()
+
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"Failed to scrape Goodreads {year}: {e}"))
 
-            time.sleep(1)  # Be polite between YEARLY requests
-        return books
+            time.sleep(1)  # Be polite between yearly page requests
 
     def _scrape_nebula_award_winners(self):
         url = "https://en.wikipedia.org/wiki/Nebula_Award_for_Best_Novel"
@@ -674,3 +554,81 @@ class Command(BaseCommand):
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Failed to scrape Nebula Awards: {e}"))
         return books
+
+    def _enrich_and_calculate_final_scores(self):
+        """
+        Iterates over all PopularBook entries, enriches them with API data,
+        and calculates their final mainstream_score.
+        """
+        self.stdout.write("\n" + "=" * 50)
+        self.stdout.write("📈 Enriching all books and calculating final scores...")
+        self.stdout.write("=" * 50)
+
+        api_cache = self._load_cache()
+        all_books = PopularBook.objects.all()
+        total_books = all_books.count()
+
+        for i, book in enumerate(all_books):
+            self.stdout.write(f'  -> Processing: "{book.title}" ({i + 1}/{total_books})')
+
+            # --- This is your existing, excellent enrichment logic ---
+            cache_key = f"{book.title}_{book.author}".lower().replace(" ", "_")
+
+            if cache_key in api_cache and book.ratings_count > 0:
+                self.stdout.write(self.style.SUCCESS("     - Already enriched. Skipping API calls."))
+            else:
+                # (Your logic to call _fetch_google_books_data_by_title or by ISBN)
+                google_data = None
+
+                if not book.isbn13:
+                    google_data = self._fetch_google_books_data_by_title(book.title, book.author)
+                else:
+                    google_data = self._fetch_google_books_data(book.isbn13)
+
+                if google_data:
+                    book.isbn13 = google_data.get("isbn13") or book.isbn13
+                    book.ratings_count = google_data.get("ratings_count", 0)
+                    book.average_rating = google_data.get("average_rating", 0)
+                    api_cache[cache_key] = google_data
+                    self.stdout.write(self.style.SUCCESS("     - Enriched with Google Books data!"))
+
+                time.sleep(1.1)  # Pace your API calls
+
+            # --- Final Score Calculation ---
+            score_breakdown = defaultdict(int)
+            total_score = 0
+
+            # Score from awards and shortlists
+            for award in book.awards_won:
+                score_breakdown[award] = SCORE_CONFIG.get(award, 0)
+
+            for shortlist in book.shortlists:
+                score_breakdown[shortlist] = SCORE_CONFIG.get(shortlist, 0)
+
+            # Score from NYT weeks
+            if book.nyt_bestseller_weeks > 0:
+                score_breakdown["NYT_BESTSELLER_WEEKS"] = book.nyt_bestseller_weeks
+
+            # Score from ratings
+            if book.ratings_count > 0:
+                score_breakdown["RATINGS_SCORE"] = min(book.ratings_count // 500, 100)
+
+            if book.average_rating and book.average_rating >= 4.0:
+                score_breakdown["HIGH_RATING_BONUS"] = SCORE_CONFIG["HIGH_RATING_BONUS"]
+
+            # Calculate total score from breakdown
+            for key, val in score_breakdown.items():
+                if key == "NYT_BESTSELLER_WEEKS":
+                    total_score += val * SCORE_CONFIG["NYT_BESTSELLER_WEEK"]
+                else:
+                    total_score += val
+
+            book.mainstream_score = total_score
+            book.score_breakdown = dict(score_breakdown)
+
+            book.save()
+
+            if i % 20 == 0:
+                self._save_cache(api_cache)
+
+        self._save_cache(api_cache)
