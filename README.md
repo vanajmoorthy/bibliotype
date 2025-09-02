@@ -40,6 +40,7 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - forgot password email, CAPTCHA? email validation?
 - mixpanel integration
 - analytics
+- show loading statements on "generating your reading dna" interstitial page for non logged in users
   
 ## ✨ Features
 
