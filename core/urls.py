@@ -18,4 +18,5 @@ urlpatterns = [
     path("api/update-username/", views.update_username_api, name="api_update_username"),
     path("task/<str:task_id>/", views.task_status_view, name="task_status"),
     path("api/task-result/<str:task_id>/", views.get_task_result_view, name="get_task_result"),
+    path("api/dna-status/", views.check_dna_status_view, name="api_check_dna_status"),
 ]

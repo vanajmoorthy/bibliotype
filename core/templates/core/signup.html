@@ -3,47 +3,91 @@
     <div class="flex h-full flex-col justify-center">
         <div class="mx-auto w-full max-w-2xl p-2 text-center">
             <div class="border-brand-text shadow-neo border-2 bg-white px-4 py-8 md:px-8">
-                <h1 class="text-4xl font-bold tracking-widest uppercase">Create an Account</h1>
+                <h1 class="text-3xl font-bold tracking-widest uppercase sm:text-4xl">Create an Account</h1>
                 <p class="text-brand-text mt-2 text-lg">
                     Save your Bibliotype to track your history & share it with friends.
                 </p>
-                <form method="post" class="mt-8 space-y-6 text-left">
-                    {% csrf_token %}
-                    {% for field in form %}
-                        <div>
-                            <label for="{{ field.id_for_label }}" class="mb-1 block text-xl font-bold uppercase"
-                                >{{ field.label }}</label
-                            >
 
-                            {# --- MODIFICATION IS HERE --- #}
-                            {% if field.name == 'username' %}
-                                <input
-                                    type="text"
-                                    name="{{ field.name }}"
-                                    id="{{ field.id_for_label }}"
-                                    class="border-brand-text focus:ring-brand-purple w-full border-2 bg-white p-3 text-lg focus:ring-2 focus:outline-none"
-                                    placeholder="{{ field.label }}..."
-                                    x-data
-                                    @input="$el.value = $el.value.toLowerCase()"
-                                />
-                            {% else %}
+                <form
+                    method="post"
+                    class="mt-8 space-y-6 text-left"
+                    x-data="{ displayName: '{{ form.username.value|default:''|escapejs }}' }"
+                    novalidate
+                >
+                    {% csrf_token %}
+
+                    <!-- Display Name Field with Live Validation -->
+                    <div>
+                        <label for="{{ form.username.id_for_label }}" class="mb-1 block text-xl font-bold uppercase">
+                            {{ form.username.label }}
+                        </label>
+                        <input
+                            type="text"
+                            name="{{ form.username.name }}"
+                            id="{{ form.username.id_for_label }}"
+                            class="border-brand-text focus:ring-brand-purple w-full border-2 bg-white p-3 text-lg focus:ring-2 focus:outline-none"
+                            placeholder="Display Name..."
+                            value="{{ form.username.value|default:'' }}"
+                            x-model="displayName"
+                            required
+                        />
+
+                        {% if form.username.help_text %}
+                            <p class="mt-2 text-lg text-gray-600">{{ form.username.help_text|safe }}</p>
+                        {% endif %}
+
+                        <!-- 
+                        ======================================================================
+                        REVISED ERROR LOGIC
+                        - The live client-side error shows immediately.
+                        - The server-side error only shows if there's no client-side error.
+                        ======================================================================
+                        -->
+
+                        <!-- LIVE CLIENT-SIDE ERROR (from Alpine.js) -->
+                        <div
+                            x-show="displayName.length > 15"
+                            x-cloak
+                            class="mt-2 text-lg font-bold text-red-600 uppercase"
+                        >
+                            Ensure this value has at most 15 characters (it has
+                            <span x-text="displayName.length"></span>).
+                        </div>
+
+                        <!-- SERVER-SIDE ERROR (from Django) -->
+                        {% for error in form.username.errors %}
+                            <p x-show="displayName.length <= 15" class="mt-2 text-lg font-bold text-red-600 uppercase">
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Other Fields (Email, Passwords) -->
+                    {% for field in form %}
+                        {% if field.name != 'username' %}
+                            <div>
+                                <label for="{{ field.id_for_label }}" class="mb-1 block text-xl font-bold uppercase"
+                                    >{{ field.label }}</label
+                                >
                                 <input
                                     type="{{ field.field.widget.input_type }}"
                                     name="{{ field.name }}"
                                     id="{{ field.id_for_label }}"
                                     class="border-brand-text focus:ring-brand-purple w-full border-2 bg-white p-3 text-lg focus:ring-2 focus:outline-none"
                                     placeholder="{{ field.label }}..."
+                                    value="{{ field.value|default:'' }}"
+                                    required
                                 />
-                            {% endif %}
-
-                            {% if field.help_text %}
-                                <p class="mt-2 text-sm text-gray-600">{{ field.help_text|safe }}</p>
-                            {% endif %}
-                            {% for error in field.errors %}
-                                <p class="mt-2 text-sm font-bold text-red-600 uppercase">{{ error }}</p>
-                            {% endfor %}
-                        </div>
+                                {% if field.help_text %}
+                                    <p class="mt-2 text-lg text-gray-600">{{ field.help_text|safe }}</p>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <p class="mt-2 text-lg font-bold text-red-600 uppercase">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     {% endfor %}
+
                     <button
                         type="submit"
                         class="bg-brand-green text-brand-text border-brand-text shadow-neo mt-6 w-full cursor-pointer border-2 px-4 py-3 text-2xl font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1"

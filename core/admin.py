@@ -1,19 +1,33 @@
 from django.contrib import admin
 
-from .models import AggregateAnalytics, Author, Book, Genre, UserProfile
+from .models import AggregateAnalytics, Author, Book, Genre, PopularBook, UserProfile
 
 
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
-    list_display = ("title", "author", "global_read_count", "page_count", "publish_year")
-    search_fields = ("title", "author__name")
-    list_filter = ("author", "genres")
+    list_display = ("title", "author", "global_read_count", "publish_year", "isbn13")
+    search_fields = ("title", "author__name", "isbn13")
+    list_filter = ("publish_year",)
     readonly_fields = ("global_read_count",)
 
 
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
-    search_fields = ("name",)
+    """Customizes the display for the Author model in the admin."""
+
+    list_display = ("name", "popularity_score")  # Columns to show in the list view
+    search_fields = ("name",)  # Adds a search bar for author names
+    ordering = ("-popularity_score", "name")  # Default sort order
+
+
+@admin.register(PopularBook)
+class PopularBookAdmin(admin.ModelAdmin):
+    """Customizes the display for the PopularBook model in the admin."""
+
+    list_display = ("title", "author", "mainstream_score", "isbn13")
+    search_fields = ("title", "author", "isbn13")
+    list_filter = ("mainstream_score",)  # Adds a filter sidebar for the score
+    ordering = ("-mainstream_score", "title")
 
 
 @admin.register(Genre)
@@ -23,7 +37,10 @@ class GenreAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "is_public", "last_updated")
+    """Customizes the display for the UserProfile model."""
+
+    list_display = ("user", "reader_type", "total_books_read", "last_updated")
+    search_fields = ("user__username",)
 
 
 # --- NEW: Register the AggregateAnalytics model ---

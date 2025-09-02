@@ -84,10 +84,8 @@ DATABASES = {"default": dj_database_url.config(default=f'sqlite:///{os.path.join
 # ADD THIS CACHE CONFIGURATION
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
-        # This will create a cache folder in your project's root directory.
-        # Make sure your application has permission to write here.
-        "LOCATION": BASE_DIR / "django_cache",
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://redis:6379/1",
     }
 }
 

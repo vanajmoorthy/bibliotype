@@ -6,7 +6,7 @@
             <!-- Main container with the retro styling (no changes here) -->
             <div class="border-brand-text shadow-neo border-2 bg-white px-4 py-8 md:px-8">
                 <!-- Header section -->
-                <h1 class="text-4xl font-bold tracking-widest uppercase">Welcome Back</h1>
+                <h1 class="text-3xl font-bold tracking-widest uppercase sm:text-4xl">Welcome Back</h1>
                 <p class="text-brand-text mt-2 text-lg">Log in to view your saved Bibliotype.</p>
                 <!-- The Form -->
                 <form method="post" class="mt-8 space-y-6 text-left">
@@ -37,7 +37,7 @@
                                 placeholder="{{ field.label }}..."
                             />
                             {% for error in field.errors %}
-                                <p class="mt-2 text-sm font-bold text-red-600 uppercase">{{ error }}</p>
+                                <p class="mt-2 text-lg font-bold text-red-600 uppercase">{{ error }}</p>
                             {% endfor %}
                         </div>
                     {% endfor %}
