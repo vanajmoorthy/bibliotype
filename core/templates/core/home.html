@@ -1,136 +1,237 @@
 {% extends 'core/base.html' %}
 {% load static %}
 {% block content %}
-    <div class="h-full flex flex-col justify-center">
-        <div x-data="{ isUploading: false }"
-             class="w-full max-w-2xl mx-auto text-center p-2">
-            <h1 class="text-4xl md:text-5xl font-bold uppercase tracking-widest">
+    <!--
+    The main x-data is initialized on the container.
+    'instructionsOpen' will control the modal's visibility.
+    -->
+    <div
+        x-data="{ isUploading: false, instructionsOpen: false }"
+        @keydown.escape.window="instructionsOpen = false"
+        class="flex h-full flex-col justify-center"
+    >
+        <div class="mx-auto w-full max-w-2xl p-2 text-center">
+            <!-- Main Heading -->
+            <h1 class="flex flex-wrap justify-center gap-2 text-4xl font-bold tracking-widest uppercase md:text-5xl">
                 Discover Your
-                <br />
                 <span class="bg-[var(--color-brand-yellow)] px-2">Reading DNA</span>
             </h1>
             <p class="mt-4 text-xl text-[var(--color-brand-text)]">
-                Upload your Goodreads export file to generate a personalized "Wrapped" style dashboard.
+                Upload your Goodreads or StoryGraph data to learn your literary personality type.
             </p>
-            <div x-data="{ open: false }" class="mt-6 text-left">
-                <button @click="open = !open"
-                        class="text-lg font-bold uppercase flex items-center justify-center w-full">
-                    <span class="underline">Where to find your export file</span>
-                    <svg x-show="!open"
-                         class="w-6 h-6 ml-2"
-                         fill="none"
-                         stroke="currentColor"
-                         viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+
+            <!-- Instructions Button -->
+            <div class="mt-6">
+                <button
+                    @click="instructionsOpen = true"
+                    class="bg-brand-pink text-brand-text border-brand-text shadow-neo text-md cursor-pointer border-2 px-1 font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1"
+                >
+                    Instructions
+                </button>
+            </div>
+
+            <!-- The Upload Form Section -->
+            <div x-data="{ isDragging: false, fileName: '' }" class="mt-12">
+                <!-- The Form (visible when not loading) -->
+                <form
+                    x-show="!isUploading"
+                    x-transition
+                    action="{% url 'core:upload' %}"
+                    method="post"
+                    enctype="multipart/form-data"
+                    @submit.prevent="isUploading = true; setTimeout(() => $refs.uploadForm.submit(), 50)"
+                    x-ref="uploadForm"
+                >
+                    {% csrf_token %}
+                    <div
+                        class="border-brand-text shadow-neo relative mt-8 border-2 bg-white p-6 transition-all duration-300"
+                        :class="{ 'border-dashed border-4 bg-brand-cyan/20': isDragging }"
+                        @dragover.prevent="isDragging = true"
+                        @dragleave.prevent="isDragging = false"
+                        @drop.prevent="isDragging = false; $refs.fileInput.files = $event.dataTransfer.files; fileName = $refs.fileInput.files[0].name;"
+                    >
+                        <input
+                            type="file"
+                            name="csv_file"
+                            id="csv_file"
+                            required
+                            accept=".csv"
+                            class="hidden"
+                            x-ref="fileInput"
+                            @change="fileName = $refs.fileInput.files.length > 0 ? $refs.fileInput.files[0].name : ''"
+                        />
+                        <label
+                            for="csv_file"
+                            class="flex min-h-[150px] cursor-pointer flex-col items-center justify-center space-y-4"
+                        >
+                            <svg
+                                class="text-brand-text h-16 w-16"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.0"
+                                    d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                                ></path>
+                            </svg>
+                            <p class="text-brand-text text-xl font-bold uppercase" x-show="!fileName">
+                                <span class="border-brand-text bg-brand-cyan border-2 px-2">Browse</span> or drag your
+                                file here
+                            </p>
+                            <p
+                                x-show="fileName"
+                                x-transition
+                                class="text-brand-text bg-brand-yellow shadow-neo-sm border-brand-text border-2 px-3 py-1 text-xl font-bold"
+                                x-text="fileName"
+                            ></p>
+                        </label>
+                    </div>
+                    <button
+                        type="submit"
+                        class="bg-brand-green text-brand-text shadow-neo border-brand-text mt-6 w-full border-2 px-4 py-3 text-2xl font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1"
+                        :disabled="!fileName"
+                        :class="{ 'opacity-50 !shadow-none cursor-not-allowed': !fileName, 'cursor-pointer': fileName }"
+                    >
+                        Generate My Bibliotype
+                    </button>
+                </form>
+            </div>
+
+            <!-- The "Uploading..." State -->
+            <div
+                x-show="isUploading"
+                x-cloak
+                x-transition
+                class="shadow-neo mt-8 border-2 border-[var(--color-brand-text)] bg-white p-8"
+            >
+                <div class="flex flex-col items-center justify-center space-y-4">
+                    <svg
+                        class="h-10 w-10 animate-spin text-[var(--color-brand-text)]"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                    >
+                        <circle
+                            class="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            stroke-width="4"
+                        ></circle>
+                        <path
+                            class="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                     </svg>
-                    <svg x-show="open"
-                         x-cloak
-                         class="w-6 h-6 ml-2"
-                         fill="none"
-                         stroke="currentColor"
-                         viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                    <p class="text-center text-2xl font-bold text-[var(--color-brand-text)] uppercase">
+                        Analyzing Your Library
+                    </p>
+                    <p class="text-center text-lg">This can take a minute on the first run.</p>
+                </div>
+            </div>
+        </div>
+
+        <p class="mt-10 text-center text-lg">Your data is processed ephemerally. Create an account to save & share!</p>
+
+        <!--
+        ======================================================================
+        CORRECTED Instructions Modal Overlay
+        This entire block is placed at the end of the main container.
+        Its fixed position will make it appear on top of everything.
+        ======================================================================
+        -->
+        <!-- Instructions Modal Overlay -->
+        <div x-show="instructionsOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <!-- Modal Backdrop -->
+            <div
+                x-show="instructionsOpen"
+                x-transition:enter="ease-out duration-300"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                @click="instructionsOpen = false"
+                class="absolute inset-0 bg-black/50"
+            ></div>
+
+            <!-- Modal Content - UPDATED -->
+            <div
+                x-show="instructionsOpen"
+                x-transition:enter="ease-out duration-300"
+                x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-95"
+                class="shadow-neo border-brand-text relative w-full max-w-2xl border-2 bg-white p-6 text-left"
+            >
+                <!-- Close Button -->
+                <button
+                    @click="instructionsOpen = false"
+                    class="shadow-neo-sm bg-brand-pink border-brand-text absolute -top-3 -right-3 cursor-pointer border-2 p-2 transition-all hover:shadow-none"
+                >
+                    <svg class="text-brand-text h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                        ></path>
                     </svg>
                 </button>
-                <div x-show="open"
-                     x-cloak
-                     x-transition
-                     class="mt-4 p-4 bg-white border-2 border-brand-text shadow-neo space-y-4 text-base">
+
+                <!-- Instructions Content -->
+                <h2 class="mb-4 text-2xl font-bold uppercase">How to Get Your File</h2>
+                <div class="space-y-6 text-lg">
                     <div>
-                        <h3 class="font-bold text-xl uppercase">Goodreads</h3>
-                        <ol class="list-decimal list-inside mt-1">
+                        <h3 class="bg-brand-yellow inline-block px-2 text-xl font-bold tracking-wider uppercase">
+                            Goodreads
+                        </h3>
+                        <ol class="mt-2 list-outside list-decimal space-y-1 pl-6">
                             <li>
                                 Go to
-                                <a href="https://www.goodreads.com/review/import"
-                                   target="_blank"
-                                   class="underline hover:bg-brand-yellow">Goodreads' import/export page</a>.
+                                <a
+                                    href="https://www.goodreads.com/review/import?intent=web"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onclick="event.preventDefault(); window.open(this.href, '_blank', 'noopener,noreferrer');"
+                                    class="hover:bg-brand-yellow underline"
+                                    >https://www.goodreads.com/review/import</a
+                                >.
                             </li>
-                            <li>Click "Export Library" and wait for the export to generate.</li>
+                            <li>
+                                Click the <span class="font-bold">"Export Library"</span> button and wait for the file
+                                to generate.
+                            </li>
                             <li>Download the `goodreads_library_export.csv` file.</li>
                         </ol>
                     </div>
+                    <div class="border-brand-text my-4 border-t"></div>
                     <div>
-                        <h3 class="font-bold text-xl uppercase">StoryGraph</h3>
-                        <ol class="list-decimal list-inside mt-1">
-                            <li>Go to your StoryGraph profile page.</li>
-                            <li>Click "Manage library" -> "Import/Export".</li>
-                            <li>Under "Export Library", select all options and click "Export".</li>
+                        <h3 class="bg-brand-cyan inline-block px-2 text-xl font-bold tracking-wider uppercase">
+                            StoryGraph
+                        </h3>
+                        <ol class="mt-2 list-outside list-decimal space-y-1 pl-6">
+                            <li>Navigate to your main profile page.</li>
+                            <li>
+                                Click <span class="font-bold">"Manage library"</span>, then choose
+                                <span class="font-bold">"Import/Export"</span>.
+                            </li>
+                            <li>
+                                Under the "Export Library" section, click the
+                                <span class="font-bold">"Export"</span> button.
+                            </li>
                             <li>Download the `.csv` file (e.g., `storygraph-export.csv`).</li>
                         </ol>
                     </div>
                 </div>
             </div>
-            <div x-data="{ isUploading: false, isDragging: false, fileName: '' }"
-                 class="mt-8">
-                <!-- The Form (visible when not loading) -->
-                <form x-show="!isUploading"
-                      x-transition
-                      action="{% url 'core:upload' %}"
-                      method="post"
-                      enctype="multipart/form-data"
-                      @submit.prevent="isUploading = true; setTimeout(() => $refs.uploadForm.submit(), 50)"
-                      x-ref="uploadForm">
-                    {% csrf_token %}
-                    <!-- The Drag-and-Drop Zone -->
-                    <div class="relative bg-white mt-8 p-6 border-2 border-brand-text shadow-neo transition-all duration-300"
-                         :class="{ 'border-dashed border-4 bg-brand-cyan/20': isDragging }"
-                         @dragover.prevent="isDragging = true"
-                         @dragleave.prevent="isDragging = false"
-                         @drop.prevent="isDragging = false; $refs.fileInput.files = $event.dataTransfer.files; fileName = $refs.fileInput.files[0].name;">
-                        <input type="file"
-                               name="csv_file"
-                               id="csv_file"
-                               required
-                               accept=".csv"
-                               class="hidden"
-                               x-ref="fileInput"
-                               @change="fileName = $refs.fileInput.files.length > 0 ? $refs.fileInput.files[0].name : ''" />
-                        <label for="csv_file"
-                               class="cursor-pointer flex flex-col items-center justify-center space-y-4 min-h-[150px]">
-                            <svg class="w-16 h-16 text-brand-text"
-                                 fill="none"
-                                 stroke="currentColor"
-                                 viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.0" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z">
-                                </path>
-                            </svg>
-                            <p class="text-xl font-bold uppercase text-brand-text"
-                               x-show="!fileName">
-                                <span class="bg-brand-pink px-2 border-2 border-brand-text">Browse</span> or drag your file here
-                            </p>
-                            <p x-show="fileName"
-                               x-transition
-                               class="text-xl font-bold text-brand-text bg-brand-yellow px-3 py-1 border-2 border-brand-text shadow-neo-sm"
-                               x-text="fileName"></p>
-                        </label>
-                    </div>
-                    <button type="submit"
-                            class="mt-6 w-full bg-brand-green text-brand-text text-2xl font-bold py-3 px-4 border-2 border-brand-text shadow-neo transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1"
-                            :disabled="!fileName"
-                            :class="{ 'opacity-50 !shadow-none cursor-not-allowed': !fileName, 'cursor-pointer': fileName }">
-                        Generate My Bibliotype
-                    </button>
-                </form>
-            </form>
-            <div x-show="isUploading"
-                 x-cloak
-                 x-transition
-                 class="mt-8 bg-white p-8 border-2 border-[var(--color-brand-text)] shadow-neo">
-                <div class="flex flex-col justify-center items-center space-y-4">
-                    <svg class="animate-spin h-10 w-10 text-[var(--color-brand-text)]"
-                         xmlns="http://www.w3.org/2000/svg"
-                         fill="none"
-                         viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                        </path>
-                    </svg>
-                    <p class="text-2xl font-bold uppercase text-center text-[var(--color-brand-text)]">Analyzing Your Library</p>
-                    <p class="text-lg text-center">This can take a minute for the first run.</p>
-                </div>
-            </div>
         </div>
-        <p class="mt-10 text-lg">Your data is processed ephemerally. Create an account to save & share!</p>
     </div>
-</div>
 {% endblock %}

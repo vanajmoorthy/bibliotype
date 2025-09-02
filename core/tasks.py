@@ -421,7 +421,23 @@ def generate_reading_dna_task(csv_file_content: str, user_id: int | None):
         for original_row, api_details in api_results:
             author, _ = Author.objects.get_or_create(name=original_row["Author"])
 
-            # === FIX IS HERE =========================================================
+            raw_isbn13 = original_row.get("ISBN13")
+            clean_isbn13 = None
+
+            if pd.notna(raw_isbn13):
+                # First, convert to string to handle both numbers and text
+                isbn_str = str(raw_isbn13)
+
+                # Use regex to find any sequence of 10 or 13 digits
+                match = re.search(r"\d{10,13}", isbn_str)
+
+                if match:
+                    # Only keep the pure numeric part
+                    potential_isbn = match.group(0)
+                    # Ensure it's a 13-digit ISBN before storing
+                    if len(potential_isbn) == 13:
+                        clean_isbn13 = potential_isbn
+
             # Get the raw values from the pandas row (which might be NaN)
             raw_page_count = original_row.get("Number of Pages")
             raw_avg_rating = original_row.get("Average Rating")
@@ -441,6 +457,7 @@ def generate_reading_dna_task(csv_file_content: str, user_id: int | None):
                     "average_rating": clean_avg_rating,
                     "publish_year": api_details.get("publish_year"),
                     "publisher": api_details.get("publisher"),
+                    "isbn13": clean_isbn13,
                 },
             )
 

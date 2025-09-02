@@ -254,6 +254,19 @@ def update_username_api(request):
         return JsonResponse({"status": "error", "message": "An unexpected server error occurred."}, status=500)
 
 
+@login_required
+def check_dna_status_view(request):
+    """
+    An API endpoint for the frontend to poll to see if DNA processing is complete.
+    """
+    profile = request.user.userprofile
+    # The presence of dna_data is our signal that processing is done.
+    if profile.dna_data:
+        return JsonResponse({"status": "SUCCESS"})
+    else:
+        return JsonResponse({"status": "PENDING"})
+
+
 def public_profile_view(request, username):
     """Displays a user's public DNA."""
     try:

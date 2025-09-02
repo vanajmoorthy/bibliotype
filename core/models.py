@@ -1,7 +1,10 @@
+import re
+
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils.text import slugify
 
 
 class Genre(models.Model):
@@ -13,33 +16,64 @@ class Genre(models.Model):
 
 class Author(models.Model):
     name = models.CharField(max_length=255, unique=True, db_index=True)
+    popularity_score = models.PositiveIntegerField(default=0, db_index=True)
 
     def __str__(self):
         return self.name
 
 
 class Book(models.Model):
-    # Core Details
     title = models.CharField(max_length=255)
     author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name="books")
     page_count = models.PositiveIntegerField(null=True, blank=True)
-    average_rating = models.FloatField(null=True, blank=True)  # The global average (Goodreads, etc.)
+    average_rating = models.FloatField(null=True, blank=True)
     publish_year = models.IntegerField(null=True, blank=True)
     publisher = models.CharField(max_length=255, null=True, blank=True)
-
-    # Relationships
     genres = models.ManyToManyField(Genre, related_name="books")
-
-    # --- THE MAGIC FIELD FOR YOUR COMMUNITY STATS ---
-    # Every time a user's CSV contains this book, we will increment this counter.
     global_read_count = models.PositiveIntegerField(default=0, db_index=True)
 
+    # --- NEW FIELD ---
+    # The ISBN is the most reliable way to uniquely identify a book edition.
+    isbn13 = models.CharField(max_length=13, null=True, blank=True, db_index=True)
+
     class Meta:
-        # A book is defined as a unique combination of a title and an author
         unique_together = ("title", "author")
 
     def __str__(self):
         return f'"{self.title}" by {self.author.name}'
+
+
+class PopularBook(models.Model):
+    title = models.CharField(max_length=255)
+    author = models.CharField(max_length=255)
+    isbn13 = models.CharField(max_length=13, null=True, blank=True, unique=True)
+    mainstream_score = models.IntegerField(default=0)
+
+    # Google Books Data
+    average_rating = models.FloatField(null=True, blank=True)
+    ratings_count = models.PositiveIntegerField(default=0)
+
+    # NYT Bestseller Data
+    nyt_bestseller_weeks = models.PositiveIntegerField(default=0)
+
+    # Awards Data (using JSONField to store a list of strings)
+    awards_won = models.JSONField(default=list)
+    shortlists = models.JSONField(default=list)
+
+    score_breakdown = models.JSONField(default=dict)
+    # A unique key to prevent duplicate book/author pairs
+    lookup_key = models.CharField(max_length=512, unique=True, editable=False)
+
+    def save(self, *args, **kwargs):
+        self.lookup_key = self.generate_lookup_key(self.title, self.author)
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def generate_lookup_key(title, author):
+        return slugify(f"{title}-{author}")
+
+    def __str__(self):
+        return f'"{self.title}" by {self.author}'
 
 
 # This model is perfect for saving the generated DNA for authenticated users.
