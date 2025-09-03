@@ -9,15 +9,15 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 
 ## TODO
 
-- distribution of length of books ✅
-- few sentence ai generated bio summary ✅
-- ui for login and sign up ✅
-- set up public profile ✅
-- set up celery ✅
-- hover states for all buttons ✅ (??)
-- compare book lengths, number of books read in total, number read per year, average book lengths, number of pages read with global averages ✅
-- implement seed_popular_books ✅ (??)
-- implement "cultural impact" metric and refine mainstream meter
+- ✅ distribution of length of books 
+- ✅ few sentence ai generated bio summary ✅
+- ✅ ui for login and sign up ✅
+- ✅ set up public profile ✅
+- ✅ set up celery ✅
+- ✅ hover states for all buttons ✅ (??)
+- ✅ compare book lengths, number of books read in total, number read per year, average book lengths, number of pages read with global averages ✅
+- ⚠️ implement seed_popular_books ✅ (??)
+- ✅ implement "cultural impact" metric and refine mainstream meter
 - Don't show tiles if there is no data for them
 - add borders to chart segments to make look consistent
 - long author names and genre names cutting of count when hovering on chart
@@ -35,8 +35,8 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - SEO stuff
 - favicon ⚠️
 - adjust copy ⚠️
-- make "instructions" button and modal on home page ✅
-- implement "create an account and come back later" if profile is still generating and later save the data to their profile
+- ⚠️ make "instructions" button and modal on home page ✅
+- ✅ implement "create an account and come back later" if profile is still generating and later save the data to their profile
 - forgot password email, CAPTCHA? email validation?
 - mixpanel integration
 - analytics
