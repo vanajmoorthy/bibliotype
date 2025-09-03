@@ -14,7 +14,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from .forms import CustomUserCreationForm, UpdateDisplayNameForm
-from .tasks import _save_dna_to_profile, generate_reading_dna_task
+from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
 
 
 def home_view(request):
@@ -86,6 +86,12 @@ def upload_view(request):
         else:
             result = generate_reading_dna_task.delay(csv_content, None)
             task_id = result.id
+
+            # Save the task_id to the session
+            request.session["anonymous_task_id"] = task_id
+            request.session.save()
+
+            # Redirect to the status page as before
             return redirect("core:task_status", task_id=task_id)
 
     except Exception as e:
@@ -95,26 +101,48 @@ def upload_view(request):
 
 
 def signup_view(request):
+    """
+    Handles user registration. Can also claim a pending anonymous task
+    if a task_id is provided in the URL.
+    """
+    task_id = request.GET.get("task_id")
+
     if request.method == "POST":
         form = CustomUserCreationForm(request.POST)
+
+        # We get the task_id to claim from the hidden field in the POST data
+        task_id_to_claim = request.POST.get("task_id_to_claim")
 
         if form.is_valid():
             user = form.save()
             login(request, user)
 
+            if task_id_to_claim:
+                user.userprofile.pending_dna_task_id = task_id_to_claim
+                user.userprofile.save()
+                claim_anonymous_dna_task.delay(user.id, task_id_to_claim)
+                messages.success(request, "Account created! We'll save your Bibliotype as soon as it's ready.")
+                processing_url = reverse("core:display_dna") + "?processing=true"
+                return redirect(processing_url)
+
             if "dna_data" in request.session:
                 dna_to_save = request.session.pop("dna_data")
                 _save_dna_to_profile(user.userprofile, dna_to_save)
                 messages.success(request, "Account created and your Bibliotype has been saved!")
-
                 return redirect("core:display_dna")
+
             messages.success(request, "Account created! Now, let's generate your Bibliotype.")
-
             return redirect("core:home")
-    else:
-        form = CustomUserCreationForm()
 
-    return render(request, "core/signup.html", {"form": form})
+        # If we are here, the form was invalid. The function will fall through
+        # to the render() call below. 'task_id' will have a value from the top.
+
+    else:  # This is for a GET request
+        form = CustomUserCreationForm()
+        # No need to define task_id here anymore, it's handled above.
+
+    # This context will now work for both invalid POSTs and initial GETs.
+    return render(request, "core/signup.html", {"form": form, "task_id_to_claim": task_id})
 
 
 def login_view(request):

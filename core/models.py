@@ -96,6 +96,7 @@ class UserProfile(models.Model):
     # The Vibe Feature Data
     reading_vibe = models.JSONField(null=True, blank=True)
     vibe_data_hash = models.CharField(max_length=64, blank=True, null=True)
+    pending_dna_task_id = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f"DNA for {self.user.username}"
