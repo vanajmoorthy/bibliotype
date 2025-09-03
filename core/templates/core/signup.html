@@ -16,6 +16,10 @@
                 >
                     {% csrf_token %}
 
+                    {% if task_id_to_claim %}
+                        <input type="hidden" name="task_id_to_claim" value="{{ task_id_to_claim }}" />
+                    {% endif %}
+
                     <!-- Display Name Field with Live Validation -->
                     <div>
                         <label for="{{ form.username.id_for_label }}" class="mb-1 block text-xl font-bold uppercase">

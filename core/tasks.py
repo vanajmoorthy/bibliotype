@@ -12,6 +12,8 @@ import google.generativeai as genai
 import pandas as pd
 import requests
 from celery import shared_task
+from celery.exceptions import Ignore
+from celery.result import AsyncResult
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db.models import F
@@ -40,6 +42,49 @@ if api_key:
     genai.configure(api_key=api_key)
 else:
     print("⚠️ WARNING: GEMINI_API_KEY environment variable not found. Vibe generation will be disabled.")
+
+
+@shared_task(bind=True)
+def claim_anonymous_dna_task(self, user_id: int, task_id: str):
+    """
+    Checks the CACHE for a completed DNA result and saves it to the user's profile.
+    This is non-blocking and avoids calling result.get().
+    """
+    try:
+        # 1. Check the cache for the result data using the original task's ID.
+        dna_data = cache.get(f"dna_result:{task_id}")
+
+        if dna_data:
+            # The data was found! We can claim it.
+            print(f"✅ Found DNA in cache for task {task_id}. Claiming for user {user_id}.")
+            user = User.objects.get(pk=user_id)
+
+            _save_dna_to_profile(user.userprofile, dna_data)
+
+            # Clean up the pending task ID and the cache entry.
+            user.userprofile.pending_dna_task_id = None
+            user.userprofile.save()
+            cache.delete(f"dna_result:{task_id}")
+
+            print(f"✅ Successfully claimed and saved DNA for user {user_id}.")
+            return
+        else:
+            # The data is not in the cache yet. Check if the original task failed.
+            original_task_result = AsyncResult(task_id)
+            if original_task_result.state == "FAILURE":
+                print(f"❌ Claiming Error: Original task {task_id} failed. Stopping retries.")
+                raise Ignore()
+
+            # Otherwise, the task might still be running. Retry this claiming task.
+            print(f"DNA for task {task_id} not in cache yet. Retrying claim for user {user_id} in 10s...")
+            raise self.retry(countdown=10, max_retries=120)
+
+    except User.DoesNotExist:
+        print(f"❌ Claiming Error: User with ID {user_id} not found. Stopping retries.")
+        raise Ignore()
+    except Exception as e:
+        print(f"❌❌❌ An unexpected error occurred while claiming task {task_id} for user {user_id}: {e}")
+        raise self.retry(countdown=60, max_retries=5)
 
 
 def create_vibe_prompt(dna: dict) -> str:
@@ -359,8 +404,8 @@ def analyze_and_print_genres(all_raw_genres, canonical_map):
 
 
 # THIS IS THE NEW CELERY TASK
-@shared_task
-def generate_reading_dna_task(csv_file_content: str, user_id: int | None):
+@shared_task(bind=True)
+def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None):
     """
     The Celery task that wraps the original DNA generation logic.
     """
@@ -368,7 +413,6 @@ def generate_reading_dna_task(csv_file_content: str, user_id: int | None):
     user = None  # Default user to None for the anonymous case
 
     try:
-        # --- FIX: Conditionally fetch the user ---
         # Only try to get a user object if a user_id was actually passed.
         if user_id is not None:
             try:
@@ -660,10 +704,17 @@ def generate_reading_dna_task(csv_file_content: str, user_id: int | None):
             # For logged-in users, save to the profile and return a success message.
             _save_dna_to_profile(user.userprofile, dna)
             print(f"✅ Saved DNA for user: {user.username}")
-            return f"DNA saved for user {user_id}"  # Celery needs a serializable return value
+            return f"DNA saved for user {user_id}"
         else:
-            # For anonymous users, RETURN the final DNA dictionary.
-            print("🧬 DNA generated for an anonymous user. Returning result.")
+            # For anonymous users, we do TWO things:
+            # 1. Save the result to the cache so the 'claim_anonymous_dna_task' can get it safely.
+            if self.request.id:
+                # The key is the task's own ID. Timeout is 1 hour.
+                cache.set(f"dna_result:{self.request.id}", dna, timeout=3600)
+                print(f"🧬 DNA result for task {self.request.id} saved to cache for potential claim.")
+
+            # 2. RETURN the result so the frontend polling view ('get_task_result_view') can get it and display it.
+            print("🧬 DNA generated for an anonymous user. Returning result for display.")
             return dna
 
     except Exception as e:
