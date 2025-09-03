@@ -34,7 +34,7 @@ jobs:
 
             # Build and start all the services (web, worker, db, redis) in the background
             - name: Build and start the Docker containers
-              run: docker-compose -f docker-compose.local.yml up -d
+              run: docker compose -f docker-compose.local.yml up -d
 
             # A crucial step. Even after 'up' completes, the database might need a few seconds
             # to initialize fully. This pause prevents tests from failing by trying to connect too early.
@@ -43,9 +43,9 @@ jobs:
 
             # Run the test suite using the exact command that works locally
             - name: Run tests
-              run: docker-compose -f docker-compose.local.yml exec web poetry run python manage.py test
+              run: docker compose -f docker-compose.local.yml exec web poetry run python manage.py test
 
             # Optional but good practice: This step will run even if the tests fail.
             - name: Tear down containers
               if: always()
-              run: docker-compose -f docker-compose.local.yml down
+              run: docker compose -f docker-compose.local.yml down
