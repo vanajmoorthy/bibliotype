@@ -20,6 +20,7 @@ class Publisher(models.Model):
     is_mainstream = models.BooleanField(default=False, db_index=True)
     # Self-referencing key to link subsidiaries (e.g., "Viking Press") to a parent ("Penguin Random House")
     parent = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="subsidiaries")
+    mainstream_last_checked = models.DateTimeField(null=True, blank=True, default=None)
 
     def save(self, *args, **kwargs):
         # Use the same normalization logic as Author for consistency
