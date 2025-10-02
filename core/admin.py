@@ -1,33 +1,54 @@
 from django.contrib import admin
 
-from .models import AggregateAnalytics, Author, Book, Genre, PopularBook, UserProfile
-
-
-@admin.register(Book)
-class BookAdmin(admin.ModelAdmin):
-    list_display = ("title", "author", "global_read_count", "publish_year", "isbn13")
-    search_fields = ("title", "author__name", "isbn13")
-    list_filter = ("publish_year",)
-    readonly_fields = ("global_read_count",)
+from .models import AggregateAnalytics, Author, Book, Genre, Publisher, UserProfile
 
 
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
     """Customizes the display for the Author model in the admin."""
 
-    list_display = ("name", "popularity_score")  # Columns to show in the list view
-    search_fields = ("name",)  # Adds a search bar for author names
-    ordering = ("-popularity_score", "name")  # Default sort order
+    # --- UPDATED: Added normalized_name ---
+    list_display = ("name", "normalized_name", "is_mainstream", "popularity_score")
+    list_editable = ("is_mainstream",)
+    # --- UPDATED: Made normalized_name searchable ---
+    search_fields = ("name", "normalized_name")
+    ordering = ("-popularity_score", "name")
 
 
-@admin.register(PopularBook)
-class PopularBookAdmin(admin.ModelAdmin):
-    """Customizes the display for the PopularBook model in the admin."""
+@admin.register(Publisher)
+class PublisherAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_mainstream", "parent")
+    list_editable = ("is_mainstream",)
+    search_fields = ("name",)
+    list_filter = ("is_mainstream", "parent")
+    ordering = ("name",)
 
-    list_display = ("title", "author", "mainstream_score", "isbn13")
-    search_fields = ("title", "author", "isbn13")
-    list_filter = ("mainstream_score",)  # Adds a filter sidebar for the score
-    ordering = ("-mainstream_score", "title")
+
+@admin.register(Book)
+class BookAdmin(admin.ModelAdmin):
+    list_display = (
+        "title",
+        "author",
+        "publisher",
+        "publish_year",
+        "global_read_count",  # Your app's metric
+        "isbn13",
+        "normalized_title",
+    )
+    list_filter = ("publish_year", "genres")
+    search_fields = ("title", "author__name", "isbn13")
+    # This lets you see the read-only JSON data directly in the admin
+    # This organizes the edit page into logical sections
+    readonly_fields = ("google_books_average_rating", "google_books_ratings_count", "google_books_last_checked")
+    fieldsets = (
+        (None, {"fields": ("title", "author", "isbn13")}),
+        ("Publication Info", {"fields": ("page_count", "publish_year", "publisher", "genres")}),
+        ("App Metrics", {"fields": ("global_read_count",)}),  #
+        (
+            "Google Books Data",
+            {"fields": ("google_books_average_rating", "google_books_ratings_count", "google_books_last_checked")},
+        ),
+    )
 
 
 @admin.register(Genre)
