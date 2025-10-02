@@ -42,6 +42,8 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - ✅ analytics
 - ✅ show loading statements on "generating your reading dna" interstitial page for non logged in users
 - ui elements for community stats
+- update tests
+- add cron job to check publishers for mainstreamness
 
 right now todos for metrics and stuff
 
