@@ -10,20 +10,13 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 ## TODO
 
 - ✅ distribution of length of books 
-- ✅ few sentence ai generated bio summary ✅
-- ✅ ui for login and sign up ✅
-- ✅ set up public profile ✅
-- ✅ set up celery ✅
-- ✅ hover states for all buttons ✅ (??)
-- ✅ compare book lengths, number of books read in total, number read per year, average book lengths, number of pages read with global averages ✅
-- ⚠️ implement seed_popular_books ✅ (??)
-- ✅ implement "cultural impact" metric and refine mainstream meter
-- ~Don't show tiles if there is no data for them~
+- improve mainstream meter
+- improve community stats look
+- hover states for all buttons
 - add borders to chart segments to make look consistent
+- color match above
 - long author names and genre names cutting of count when hovering on chart
-- show profile even when no bibliotype has been generated so user can at least change display name and prompt them to back and generate one ✅
 - allow user to delete profile
-- change "dashboard" to "profile" and allow deleting user account and data
 - ✅ ~get rid of books per year~ 
 - ~ai text explanation of most controversial ratings and possible explanations~ 
 - make most controversial ratings tab look better
@@ -36,16 +29,12 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - favicon ⚠️
 - adjust copy ⚠️
 - ⚠️ make "instructions" button and modal on home page ✅
-- ✅ implement "create an account and come back later" if profile is still generating and later save the data to their profile
-- forgot password email, CAPTCHA? email validation?
 - posthog integration
-- ✅ analytics
-- ✅ show loading statements on "generating your reading dna" interstitial page for non logged in users
+- check ui on loading pages for logged in and non logged in
 - ui elements for community stats
 - update tests
 - add cron job to check publishers for mainstreamness
 
-right now todos for metrics and stuff
 
 ### Phase 1: Finalize Backend Data Foundation
 Upgrade the Database Schema:
