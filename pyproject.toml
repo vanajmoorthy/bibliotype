@@ -33,7 +33,8 @@ dependencies = [
     "celery (>=5.5.3,<6.0.0)",
     "redis (>=6.4.0,<7.0.0)",
     "bs4 (>=0.0.2,<0.0.3)",
-    "django-redis (>=6.0.0,<7.0.0)"
+    "django-redis (>=6.0.0,<7.0.0)",
+    "django-celery-results (>=2.6.0,<3.0.0)"
 ]
 
 
