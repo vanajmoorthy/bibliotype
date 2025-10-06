@@ -26,6 +26,7 @@ from ..book_enrichment_service import enrich_book_from_apis
 import hashlib
 import random
 import time
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 import requests
@@ -88,21 +89,16 @@ def assign_reader_type(read_df, enriched_data, all_genres):
                 print(f"   ℹ️ Found non-major publisher: {publisher}")
                 scores["Small Press Supporter"] += 1
 
-    # --- THE DEFINITIVE FIX FOR EQUITY ---
-    # Give a flat bonus for high variety instead of a runaway score.
-    DIVERSITY_THRESHOLD = 10  # Number of UNIQUE CANONICAL genres to qualify
-    DIVERSITY_BONUS = 15  # Flat score bonus for meeting the threshold
-
-    # The number of unique keys in genre_counts is now much smaller and more accurate
+    DIVERSITY_THRESHOLD = 10
+    DIVERSITY_BONUS = 15
     unique_canonical_genres = len(genre_counts)
 
     print(f"   ℹ️ Found {unique_canonical_genres} unique CANONICAL genres.")
 
     if unique_canonical_genres >= DIVERSITY_THRESHOLD:
         scores["Versatile Valedictorian"] += DIVERSITY_BONUS
-
-    # --- Determine Winner ---
     if not scores or all(s == 0 for s in scores.values()):
+
         return "Eclectic Reader", scores
 
     if scores.get("Rapacious Reader", 0) > 0:
@@ -358,7 +354,7 @@ def calculate_full_dna(csv_file_content: str, user=None):
         stats_by_year_list = []
 
         if "Date Read" in read_df.columns and not read_df["Date Read"].dropna().empty:
-            yearly_df = read_df.dropna(subset=["Date Read"]).copy()
+            yearly_df = read_df.dropna(subset=["Date Read"])
             yearly_df["year"] = yearly_df["Date Read"].dt.year
 
             yearly_stats = (
@@ -451,3 +447,59 @@ def calculate_full_dna(csv_file_content: str, user=None):
         user_identifier = user.id if user else "Anonymous"
         print(f"❌❌❌ A critical error occurred in DNA calculation for user_id {user_identifier}: {e}")
         raise
+
+def normalize_and_filter_genres(subjects):
+    """
+    Cleans the raw subject list from the API, using the master EXCLUDED_GENRES set.
+    """
+    plausible_genres = []
+    for s in subjects:
+        s_lower = s.lower().strip()
+        # Check against the imported exclusion set
+        if s_lower in EXCLUDED_GENRES:
+            continue
+        # Check for junk patterns (e.g., call numbers, NYT lists)
+        if "ps35" in s_lower or "nyt:" in s_lower or "b485" in s_lower:
+            continue
+        # Filter out overly long or non-genre-like subjects
+        if len(s.split()) < 4 and "history" not in s_lower and "accessible" not in s_lower:
+            plausible_genres.append(s_lower)
+
+    return plausible_genres[:5]
+
+
+def analyze_and_print_genres(all_raw_genres, canonical_map):
+    """
+    A helper function to analyze and print the frequency of raw genres,
+    separating them into unmapped and already-mapped categories.
+    """
+    print("\n" + "=" * 50)
+    print("🔬 RUNNING GENRE ANALYSIS 🔬")
+    print("=" * 50)
+
+    if not all_raw_genres:
+        print("No genres were found to analyze.")
+        return
+
+    raw_genre_counts = Counter(all_raw_genres)
+    unmapped_genres = {}
+
+    for genre, count in raw_genre_counts.items():
+        if genre not in canonical_map:
+            unmapped_genres[genre] = count
+
+    # Sort the unmapped genres by frequency (most common first)
+    sorted_unmapped = sorted(unmapped_genres.items(), key=lambda item: item[1], reverse=True)
+
+    print(f"\nFound {len(raw_genre_counts)} unique raw genre strings in total.")
+    print(f"Of those, {len(unmapped_genres)} are currently UNMAPPED.")
+
+    print("\n--- UNMAPPED GENRES (Most Common First) ---")
+
+    if not sorted_unmapped:
+        print("✅ Great news! All genres are already mapped!")
+    else:
+        for genre, count in sorted_unmapped:
+            print(f"  - '{genre}' (appears {count} times)")
+
+    print("\n" + "=" * 50 + "\n")
