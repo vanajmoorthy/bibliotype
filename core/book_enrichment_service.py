@@ -237,77 +237,75 @@ def _fetch_ratings_from_google_books(book, session, slow_down=False):
 def enrich_book_from_apis(book, session, slow_down=False):
     """
     The main public function to enrich a single Book object.
-    It orchestrates the calls to the different APIs.
+    It orchestrates the calls to the different APIs, but only if data is missing.
     Returns the updated book object and the total number of API calls made.
     """
     ol_api_calls = 0
     gb_api_calls = 0
     is_updated = False
 
-    # --- Step 1: Get general data from Open Library ---
-    ol_data, calls_made = _fetch_from_open_library(book, session, slow_down)
-    ol_api_calls += calls_made
+    # --- Step 1: Get general data from Open Library if needed ---
+    # Only run if we are missing key data like publisher, page count, or genres.
+    if not book.publisher or not book.page_count or not book.genres.exists():
+        ol_data, calls_made = _fetch_from_open_library(book, session, slow_down)
+        ol_api_calls += calls_made
 
-    if ol_data:
-        if not book.isbn13 and ol_data.get("isbn_13"):
-            book.isbn13 = ol_data["isbn_13"]
-            is_updated = True
-        if not book.page_count and ol_data.get("page_count"):
-            book.page_count = ol_data["page_count"]
-            is_updated = True
-        if not book.publish_year and ol_data.get("publish_year"):
-            book.publish_year = ol_data["publish_year"]
-            is_updated = True
-
-        if publisher_name := ol_data.get("publisher"):
-            # Don't overwrite an existing publisher unless it's null
-            if not book.publisher:
-                # Find or create the publisher object and link it to the book
-                publisher_obj, _ = Publisher.objects.get_or_create(
-                    normalized_name=Author._normalize(publisher_name), defaults={"name": publisher_name}
-                )
-                book.publisher = publisher_obj
+        if ol_data:
+            if not book.isbn13 and ol_data.get("isbn_13"):
+                book.isbn13 = ol_data["isbn_13"]
+                is_updated = True
+            if not book.page_count and ol_data.get("page_count"):
+                book.page_count = ol_data["page_count"]
+                is_updated = True
+            if not book.publish_year and ol_data.get("publish_year"):
+                book.publish_year = ol_data["publish_year"]
                 is_updated = True
 
-        if new_genres := ol_data.get("genres"):
-            # Get the names of genres the book already has
-            current_genre_names = set(book.genres.values_list("name", flat=True))
+            if publisher_name := ol_data.get("publisher"):
+                if not book.publisher:
+                    publisher_obj, _ = Publisher.objects.get_or_create(
+                        normalized_name=Author._normalize(publisher_name), defaults={"name": publisher_name}
+                    )
+                    book.publisher = publisher_obj
+                    is_updated = True
 
-            # Figure out which of the new genres are actually new
-            genres_to_add = [g_name for g_name in new_genres if g_name not in current_genre_names]
+            if new_genres := ol_data.get("genres"):
+                current_genre_names = set(book.genres.values_list("name", flat=True))
+                genres_to_add = [g_name for g_name in new_genres if g_name not in current_genre_names]
+                if genres_to_add:
+                    print(f"     - Adding new genres: {genres_to_add}")
+                    genre_objs = [Genre.objects.get_or_create(name=g_name)[0] for g_name in genres_to_add]
+                    book.genres.add(*genre_objs)
+                    is_updated = True
 
-            if genres_to_add:
-                print(f"     - Adding new genres: {genres_to_add}")
-                genre_objs = [Genre.objects.get_or_create(name=g_name)[0] for g_name in genres_to_add]
-                book.genres.add(*genre_objs)
+    # --- Step 2: Get ratings data from Google Books if needed ---
+    # Only run if the book has never been checked with Google Books before.
+    if book.google_books_last_checked is None:
+        gb_data, calls_made = _fetch_ratings_from_google_books(book, session, slow_down)
+        gb_api_calls += calls_made
+
+        if gb_data:
+            if gb_data.get("ratings_count") is not None:
+                book.google_books_ratings_count = gb_data["ratings_count"]
                 is_updated = True
-
-    # --- Step 2: Get ratings data from Google Books ---
-    gb_data, calls_made = _fetch_ratings_from_google_books(book, session, slow_down)
-    gb_api_calls += calls_made
-
-    if gb_data:
-        if gb_data.get("ratings_count") is not None:
-            book.google_books_ratings_count = gb_data["ratings_count"]
-            is_updated = True
-        if gb_data.get("average_rating") is not None:
-            book.google_books_average_rating = gb_data["average_rating"]
-            is_updated = True
+            if gb_data.get("average_rating") is not None:
+                book.google_books_average_rating = gb_data["average_rating"]
+                is_updated = True
+        
+        # Mark as checked *after* the API call is attempted.
+        book.google_books_last_checked = timezone.now()
+        is_updated = True # Always true if we ran the check
 
     # --- Step 3: Finalize and save ---
     if is_updated:
-        book.google_books_last_checked = timezone.now()
-        # --- START: ADD THIS TRY/EXCEPT BLOCK ---
         try:
             book.save()
             print(f"     - SUCCESS: Enriched and saved '{book.title}'")
         except IntegrityError as e:
-            # This will catch the duplicate ISBN error and any other integrity errors.
             print(
                 f"     - ⚠️ WARNING: Could not save '{book.title}'. An integrity error occurred (e.g., duplicate ISBN)."
             )
             print(f"     -          Error: {e}")
-        # --- END: ADD THIS TRY/EXCEPT BLOCK ---
     else:
         print(f"     - No new data found to update for '{book.title}'.")
 

@@ -1,5 +1,5 @@
 import os
-from collections import Counter
+
 
 import google.generativeai as genai
 from celery import shared_task
