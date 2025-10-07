@@ -34,6 +34,9 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - ui elements for community stats
 - update tests
 - add cron job to check publishers for mainstreamness
+- check lighthouse scores 
+- add privacy statement? ToS
+- add posthog tracking
 
 
 ### Phase 1: Finalize Backend Data Foundation
