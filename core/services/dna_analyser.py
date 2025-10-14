@@ -244,7 +244,7 @@ def calculate_full_dna(csv_file_content: str, user=None):
         explanation = random.choice(READER_TYPE_DESCRIPTIONS.get(reader_type, [""]))
         top_types_list = [{"type": t, "score": s} for t, s in reader_type_scores.most_common(3) if s > 0]
         mapped_genres = [CANONICAL_GENRE_MAP.get(g, g) for g in all_raw_genres]
-        top_genres = dict(Counter(mapped_genres).most_common(10))
+        top_genres = Counter(mapped_genres).most_common(10)
 
         # --- Community Analytics Calculation ---
         print("📈 Calculating base user statistics...")
@@ -282,7 +282,7 @@ def calculate_full_dna(csv_file_content: str, user=None):
                 "read_count": user_book_objects[0].global_read_count,
             }
 
-        top_authors = {k: int(v) for k, v in read_df["Author"].value_counts().head(10).to_dict().items()}
+        top_authors = list(read_df["Author"].value_counts().head(10).items())
 
         ratings_df = read_df[read_df["My Rating"] > 0].dropna(subset=["My Rating"])
         average_rating_overall = float(round(ratings_df["My Rating"].mean(), 2)) if not ratings_df.empty else "N/A"
@@ -448,6 +448,7 @@ def calculate_full_dna(csv_file_content: str, user=None):
         print(f"❌❌❌ A critical error occurred in DNA calculation for user_id {user_identifier}: {e}")
         raise
 
+
 def normalize_and_filter_genres(subjects):
     """
     Cleans the raw subject list from the API, using the master EXCLUDED_GENRES set.
@@ -503,3 +504,4 @@ def analyze_and_print_genres(all_raw_genres, canonical_map):
             print(f"  - '{genre}' (appears {count} times)")
 
     print("\n" + "=" * 50 + "\n")
+
