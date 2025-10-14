@@ -86,4 +86,3 @@ class TaskIntegrationTests(TestCase):
         self.assertEqual(user.userprofile.reader_type, "Claimed Reader")
 
         mock_async_result.assert_called_with(task_id)
-
