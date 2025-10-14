@@ -39,6 +39,9 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - add posthog tracking
 - fix prod db
 - add silk?
+- add little loading text phrases when generating bibliotype for anonymous and logged in
+- <img width="150"  alt="71354" src="https://github.com/user-attachments/assets/d6f95eea-2c09-460f-a184-f7406dfbc11b" />
+
 
 
 ### Phase 1: Finalize Backend Data Foundation
