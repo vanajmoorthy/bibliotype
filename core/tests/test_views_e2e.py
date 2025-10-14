@@ -9,12 +9,11 @@ from django.urls import reverse
 
 @override_settings(
     CELERY_TASK_ALWAYS_EAGER=True,
-    CELERY_RESULT_BACKEND="django-db",
     CELERY_TASK_STORE_EAGER_RESULT=True,
     CACHES={
         "default": {
-            "BACKEND": "django.core.cache.backends.redis.RedisCache",
-            "LOCATION": "redis://redis:6379/1",
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-snowflake",
         }
     },
 )
@@ -36,7 +35,7 @@ class ViewE2E_Tests(TransactionTestCase):
     @patch("core.services.dna_analyser.enrich_book_from_apis")
     def test_anonymous_upload_to_signup_and_claim_flow(self, mock_enrich_book, mock_generate_vibe):
         """
-        THE CRITICAL PATH TEST (REVISED):
+        Critical path test:
         1. Anonymous user uploads a file. The task runs synchronously.
         2. They are redirected to a waiting page with a real task ID.
         3. The frontend polls the result view, which now finds the completed task.
@@ -47,7 +46,7 @@ class ViewE2E_Tests(TransactionTestCase):
         mock_enrich_book.return_value = (None, 0, 0)  # Return dummy values
         mock_generate_vibe.return_value = ["an e2e vibe"]
 
-        # --- Step 1: Anonymous Upload ---
+        # Anonymous Upload
         response = self.client.post(reverse("core:upload"), {"csv_file": self.csv_file})
 
         # The view should redirect to the status page, extracting the task_id from the response
@@ -55,7 +54,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertIn(reverse("core:task_status", kwargs={"task_id": "dummy"})[:-6], response.url)
         task_id = response.url.split("/")[-2]
 
-        # --- Step 2 & 3: Poll for Result ---
+        # Poll for Result
         # With ALWAYS_EAGER=True, the task is already complete.
         # The client can now poll the result view.
         response = self.client.get(reverse("core:get_task_result", kwargs={"task_id": task_id}))
@@ -71,7 +70,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "an e2e vibe")  # Check for some content from the result
 
-        # --- Step 4 & 5: Sign up and Claim ---
+        # Sign up and Claim
         signup_url = reverse("core:signup") + f"?task_id={task_id}"
         response = self.client.get(signup_url)
         self.assertContains(response, task_id)  # Check the hidden field is there
@@ -93,7 +92,6 @@ class ViewE2E_Tests(TransactionTestCase):
         # The final redirect should be to the display page with a processing signal.
         self.assertRedirects(response, reverse("core:display_dna") + "?processing=true")
 
-        # VERIFY THE FINAL RESULT
         new_user = User.objects.get(username="claimeduser")
         new_user.userprofile.refresh_from_db()
         self.assertIsNotNone(new_user.userprofile.dna_data)

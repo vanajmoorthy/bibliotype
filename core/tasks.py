@@ -66,49 +66,50 @@ def check_author_mainstream_status_task(author_id: int):
         raise  # Re-raise to let Celery know the task failed
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, max_retries=5)
 def claim_anonymous_dna_task(self, user_id: int, task_id: str):
     """
-    Checks if an anonymous DNA task is complete. If so, saves the result.
-    If not, retries itself until the task is complete. This is non-blocking.
+    Claims the DNA result from a previously-run anonymous task and saves it
+    to a newly registered user's profile.
+
+    This task checks both the cache and the Celery result backend to handle
+    both eager mode (testing) and production scenarios.
     """
     try:
-        # Get the result object for the original DNA generation task
-        original_task_result = AsyncResult(task_id)
-
-        if original_task_result.ready():
-            # The task is finished! We can now safely get the result.
-            print(f"Task {task_id} is ready. Claiming for user {user_id}.")
-
-            if original_task_result.successful():
-                dna_data = original_task_result.get()
-                user = User.objects.get(pk=user_id)
-                profile = user.userprofile
-
-                # Save the DNA data using your helper
-                _save_dna_to_profile(profile, dna_data)
-
-                # Clear the pending task ID from the profile
-                profile.pending_dna_task_id = None
-                profile.save()
-
-                print(f"✅ Successfully claimed and saved DNA for user {user_id} from task {task_id}.")
-            else:
-                # The original task failed
-                print(f"❌ Claiming Error: Original task {task_id} failed.")
-        else:
-            # The task is not ready. Retry this claiming task in 10 seconds.
-            print(f"Task {task_id} not ready yet. Retrying claim for user {user_id} in 10s...")
-            # This tells Celery to re-queue this task. The worker is now free to do other work.
-            raise self.retry(countdown=10, max_retries=120)  # Retry every 10s for up to 20 mins
-
+        user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
-        print(f"❌ Claiming Error: User with ID {user_id} not found. Stopping retries.")
-        raise Ignore()  # Stop retrying if the user doesn't exist
-    except Exception as e:
-        print(f"❌❌❌ An error occurred while claiming task {task_id} for user {user_id}: {e}")
-        # Retry on other unexpected errors
-        raise self.retry(countdown=60, max_retries=5)
+        print(f"❌ User with id {user_id} not found. Cannot claim task.")
+        return
+
+    # FIRST: Check the cache (this is where eager mode stores results)
+    cached_dna = cache.get(f"dna_result_{task_id}")
+
+    if cached_dna:
+        print(f"✅ Found cached DNA for task {task_id}. Saving to user {user_id}.")
+        _save_dna_to_profile(user.userprofile, cached_dna)
+        user.userprofile.pending_dna_task_id = None
+        user.userprofile.save()
+        print(f"✅ Successfully claimed and saved DNA for user {user_id} from task {task_id}.")
+        return
+
+    # SECOND: Check the Celery result backend (for production)
+    result = AsyncResult(task_id)
+
+    if result.ready():
+        if result.successful():
+            dna_data = result.get()
+            _save_dna_to_profile(user.userprofile, dna_data)
+            user.userprofile.pending_dna_task_id = None
+            user.userprofile.save()
+            print(f"✅ Successfully claimed and saved DNA for user {user_id} from task {task_id}.")
+        else:
+            print(f"❌ Task {task_id} failed. Cannot claim DNA for user {user_id}.")
+            user.userprofile.pending_dna_task_id = None
+            user.userprofile.save()
+    else:
+        # Task is not ready yet, retry
+        print(f"Task {task_id} not ready yet. Retrying claim for user {user_id} in 10s...")
+        raise self.retry(countdown=10, exc=Exception(f"Task {task_id} not ready"))
 
 
 def normalize_and_filter_genres(subjects):
@@ -193,7 +194,7 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None):
             # For anonymous users, the result_data is the DNA dict.
             # We must save it to the cache for the 'claim' task or the polling view.
             if self.request.id:
-                cache.set(f"dna_result:{self.request.id}", result_data, timeout=3600)
+                cache.set(f"dna_result_{self.request.id}", result_data, timeout=3600)
                 print(f"🧬 DNA result for task {self.request.id} saved to cache.")
             return result_data
         else:

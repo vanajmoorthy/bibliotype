@@ -1,5 +1,6 @@
 import json
 
+from django.core.cache import cache
 from celery.result import AsyncResult
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -338,30 +339,40 @@ def get_task_result_view(request, task_id):
     """
     An API endpoint that the frontend can call to check a task's status.
     """
+    # First, check if the result is already cached (it gets cached when the task completes)
+    cached_result = cache.get(f"dna_result_{task_id}")
+    if cached_result is not None:
+        # The task completed and result is in cache
+        request.session["dna_data"] = cached_result
+        request.session.save()
 
-    # Get the task result from Celery
+        return JsonResponse(
+            {
+                "status": "SUCCESS",
+                "redirect_url": reverse("core:display_dna"),
+            }
+        )
+
+    # If not in cache, check the Celery result backend
     result = AsyncResult(task_id)
 
-    if result.ready():
-        # The task is complete.
-        if result.successful():
-            # The task completed without errors. Get the result.
-            dna_data = result.get()
+    if result.state == "SUCCESS":
+        # The task completed successfully. Get the result.
+        dna_data = result.get()
 
-            # Store the final DNA data in the session for the anonymous user
-            request.session["dna_data"] = dna_data
-            request.session.save()
+        # Store the final DNA data in the session for the anonymous user
+        request.session["dna_data"] = dna_data
+        request.session.save()
 
-            return JsonResponse(
-                {
-                    "status": "SUCCESS",
-                    # Tell the frontend where to redirect the user
-                    "redirect_url": reverse("core:display_dna"),
-                }
-            )
-        else:
-            # The task failed.
-            return JsonResponse({"status": "FAILURE", "error": "An error occurred during processing."})
+        return JsonResponse(
+            {
+                "status": "SUCCESS",
+                "redirect_url": reverse("core:display_dna"),
+            }
+        )
+    elif result.state == "FAILURE":
+        # The task failed.
+        return JsonResponse({"status": "FAILURE", "error": "An error occurred during processing."})
     else:
-        # The task is still running.
+        # The task is still running or in an unknown state.
         return JsonResponse({"status": "PENDING"})

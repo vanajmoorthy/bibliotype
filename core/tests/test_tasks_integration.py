@@ -2,10 +2,8 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 
-from core.models import Book, UserProfile
 from core.tasks import claim_anonymous_dna_task, generate_reading_dna_task
 
 
@@ -59,12 +57,10 @@ class TaskIntegrationTests(TestCase):
         row = "Anonymous Book,Anon Author,read,4,180,2022,2023/02/20,3.9,An anon review.,9780000000002"
         csv_content = f"{header}\n{row}".encode("utf-8")
 
-        # Run the task and get the result object
         result = generate_reading_dna_task.delay(csv_content.decode("utf-8"), None)
         task_id = result.id
 
-        # Check that the result was saved to the cache
-        cached_data = cache.get(f"dna_result:{task_id}")
+        cached_data = cache.get(f"dna_result_{task_id}")
         self.assertIsNotNone(cached_data)
         self.assertEqual(cached_data["reader_type"], "Novella Navigator")
 
@@ -78,20 +74,16 @@ class TaskIntegrationTests(TestCase):
         task_id = "fake-task-id-123"
         fake_dna = {"reader_type": "Claimed Reader", "user_stats": {}, "reading_vibe": [], "vibe_data_hash": ""}
 
-        # Configure the mock for AsyncResult
         mock_result = mock_async_result.return_value
         mock_result.ready.return_value = True
         mock_result.successful.return_value = True
         mock_result.get.return_value = fake_dna
 
-        # Run the claiming task
         claim_anonymous_dna_task.delay(user.id, task_id)
 
-        # Verify the result
         user.userprofile.refresh_from_db()
         self.assertIsNotNone(user.userprofile.dna_data)
         self.assertEqual(user.userprofile.reader_type, "Claimed Reader")
 
-        # Verify the task_id was passed to AsyncResult
         mock_async_result.assert_called_with(task_id)
 

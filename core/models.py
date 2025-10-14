@@ -90,7 +90,7 @@ class Book(models.Model):
     google_books_last_checked = models.DateTimeField(null=True, blank=True, default=None)
 
     class Meta:
-        unique_together = ("title", "author")
+        unique_together = ("normalized_title", "author")
 
     def save(self, *args, **kwargs):
         # Automatically populate the normalized field whenever a book is saved
