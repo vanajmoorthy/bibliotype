@@ -35,8 +35,12 @@ class ViewE2E_Tests(TransactionTestCase):
         """Clean up database connections after each test."""
         from django.db import connections
 
+        # Simple, effective cleanup
         for conn in connections.all():
-            conn.close()
+            if conn.connection is not None:
+                conn.close()
+
+        connections.close_all()
         super().tearDown()
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
