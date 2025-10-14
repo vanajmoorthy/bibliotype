@@ -369,16 +369,22 @@
                 <canvas id="booksByYearChart"></canvas>
             </div>
 
+    
             <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
-                <div class="border-brand-text shadow-neo relative overflow-hidden border-2 bg-white p-6">
+                
+                <!-- REVISED: Top Genres section -->
+                <div x-data="{
+                    colors: ['#fde047', '#f9a8d4', '#a78bfa', '#60a5fa', '#34d399', '#fb923c', '#e879f9', '#c084fc', '#f472b6', '#be185d']
+                }" class="border-brand-text shadow-neo relative overflow-hidden border-2 bg-white p-6">
                     <h2 class="mb-4 text-2xl font-bold uppercase">Top Genres</h2>
                     {% if dna.top_genres %}
                         <ol class="space-y-2 text-lg">
-                            {% for genre, count in dna.top_genres.items %}
+                            {% for genre, count in dna.top_genres %}
                                 <li class="capitalize">
-                                    <span class="bg-brand-yellow border-brand-text border-2 px-2 py-1 font-bold"
-                                        >{{ genre }}</span
-                                    >
+                                    <span class="border-brand-text border-2 px-2 py-1 font-bold"
+                                          :style="{ 'background-color': colors[{{ forloop.counter0 }}] }">
+                                        {{ genre }}
+                                    </span>
                                     ({{ count }} books)
                                 </li>
                             {% endfor %}
@@ -388,15 +394,17 @@
                         <p class="text-lg">Not enough genre data to display.</p>
                     {% endif %}
                 </div>
+
+                <!-- REVISED: Top Authors section -->
                 <div class="border-brand-text shadow-neo relative overflow-hidden border-2 bg-white p-6">
                     <h2 class="mb-4 text-2xl font-bold uppercase">Top Authors</h2>
                     {% if dna.top_authors %}
                         <ol class="space-y-2 text-lg">
-                            {% for author, count in dna.top_authors.items %}
+                            {% for author, count in dna.top_authors %}
                                 <li>
-                                    <span class="bg-brand-cyan border-brand-text border-2 px-2 py-1 font-bold"
-                                        >{{ author }}</span
-                                    >
+                                    <span class="bg-brand-cyan border-brand-text border-2 px-2 py-1 font-bold">
+                                        {{ author }}
+                                    </span>
                                     ({{ count }} books)
                                 </li>
                             {% endfor %}
@@ -407,6 +415,8 @@
                     {% endif %}
                 </div>
             </div>
+
+  
 
             <div class="border-brand-text shadow-neo border-2 bg-white p-6">
                 <h2 class="mb-4 text-2xl font-bold uppercase">Review Analysis</h2>
@@ -594,10 +604,16 @@
                             },
                         },
                     });
-                    const topGenresCtx = document.getElementById("topGenresChart").getContext("2d");
+                const topGenresCtx = document.getElementById("topGenresChart").getContext("2d");
                     const topGenresData = dnaData.top_genres;
-                    const genreLabels = Object.keys(topGenresData);
-                    const genreValues = Object.values(topGenresData);
+                    
+                    // NEW: Parse list of tuples instead of an object
+                    const genreLabels = topGenresData.map(item => item[0]);
+                    const genreValues = topGenresData.map(item => item[1]);
+                    
+                    // Define the color palette once to be reused
+                    const chartColors = ["#fde047", "#f9a8d4", "#a78bfa", "#60a5fa", "#34d399", "#fb923c", "#e879f9", "#c084fc", "#f472b6", "#be185d"];
+                    
                     new Chart(topGenresCtx, {
                         type: "doughnut",
                         data: {
@@ -606,18 +622,10 @@
                                 {
                                     label: "Genres",
                                     data: genreValues,
-                                    backgroundColor: [
-                                        "#fde047",
-                                        "#f9a8d4",
-                                        "#a78bfa",
-                                        "#60a5fa",
-                                        "#34d399",
-                                        "#fb923c",
-                                        "#e879f9",
-                                        "#c084fc",
-                                        "#f472b6",
-                                        "#be185d",
-                                    ],
+                                    backgroundColor: chartColors,
+                                    // NEW: Add black borders to the chart segments
+                                    borderColor: '#1f2937', 
+                                    borderWidth: 2,
                                 },
                             ],
                         },
@@ -644,32 +652,27 @@
                         },
                     });
                     const topAuthorsCtx = document.getElementById("topAuthorsChart").getContext("2d");
-                    const topAuthorsData = dnaData.top_authors;
-                    const authorLabels = Object.keys(topAuthorsData);
-                    const authorValues = Object.values(topAuthorsData);
-                    new Chart(topAuthorsCtx, {
-                        type: "doughnut",
-                        data: {
-                            labels: authorLabels,
-                            datasets: [
-                                {
-                                    label: "Authors",
-                                    data: authorValues,
-                                    backgroundColor: [
-                                        "#fde047",
-                                        "#f9a8d4",
-                                        "#a78bfa",
-                                        "#60a5fa",
-                                        "#34d399",
-                                        "#fb923c",
-                                        "#e879f9",
-                                        "#c084fc",
-                                        "#f472b6",
-                                        "#be185d",
-                                    ],
-                                },
-                            ],
-                        },
+    const topAuthorsData = dnaData.top_authors;
+
+    // NEW: Parse list of tuples instead of an object
+    const authorLabels = topAuthorsData.map(item => item[0]);
+    const authorValues = topAuthorsData.map(item => item[1]);
+
+    new Chart(topAuthorsCtx, {
+        type: "doughnut",
+        data: {
+            labels: authorLabels,
+            datasets: [
+                {
+                    label: "Authors",
+                    data: authorValues,
+                    backgroundColor: chartColors, // Reusing the same palette
+                    // NEW: Add black borders to the chart segments
+                    borderColor: '#1f2937',
+                    borderWidth: 2,
+                },
+            ],
+        },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,

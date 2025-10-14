@@ -21,8 +21,8 @@ def create_vibe_prompt(dna: dict) -> str:
     """
     # Extract the most salient data points from the DNA to feed the LLM
     reader_type = dna.get("reader_type", "Eclectic Reader")
-    top_genres = list(dna.get("top_genres", {}).keys())[:3]
-    top_authors = list(dna.get("top_authors", {}).keys())[:2]
+    top_genres = [item[0] for item in dna.get("top_genres", [])[:3]]
+    top_authors = [item[0] for item in dna.get("top_authors", [])[:3]]
     avg_pub_year = dna.get("user_stats", {}).get("avg_publish_year", 2000)
 
     # Simple logic to determine the era
