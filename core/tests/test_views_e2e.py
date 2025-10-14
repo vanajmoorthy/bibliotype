@@ -31,6 +31,14 @@ class ViewE2E_Tests(TransactionTestCase):
         )
         self.sample_dna_data = {"reader_type": "E2E Reader"}
 
+    def tearDown(self):
+        """Clean up database connections after each test."""
+        from django.db import connections
+
+        for conn in connections.all():
+            conn.close()
+        super().tearDown()
+
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
     @patch("core.services.dna_analyser.enrich_book_from_apis")
     def test_anonymous_upload_to_signup_and_claim_flow(self, mock_enrich_book, mock_generate_vibe):
@@ -96,4 +104,3 @@ class ViewE2E_Tests(TransactionTestCase):
         new_user.userprofile.refresh_from_db()
         self.assertIsNotNone(new_user.userprofile.dna_data)
         self.assertIn("an e2e vibe", new_user.userprofile.reading_vibe)
-
