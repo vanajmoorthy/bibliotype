@@ -1,3 +1,5 @@
+# .github/workflows/django-tests.yml
+
 name: Django CI
 
 on:
@@ -11,16 +13,12 @@ jobs:
         runs-on: ubuntu-latest
 
         services:
-            # This is a powerful feature of GitHub Actions. It starts your database and redis
-            # services and makes them available on the network for your test job.
             postgres:
                 image: postgres:15-alpine
                 env:
                     POSTGRES_DB: testdb
                     POSTGRES_USER: testuser
                     POSTGRES_PASSWORD: testpass
-                ports:
-                    - 5432:5432 # Map port to host for connection
                 options: >-
                     --health-cmd pg_isready
                     --health-interval 10s
@@ -29,8 +27,6 @@ jobs:
 
             redis:
                 image: redis:7-alpine
-                ports:
-                    - 6379:6379
 
         steps:
             - name: Check out repository code
@@ -48,9 +44,9 @@ jobs:
               run: docker compose -f docker-compose.local.yml build web
 
             - name: Run Migrations
-              # We use 'run' to create a temporary container just to run migrations
-              run: docker compose -f docker-compose.local.yml run --rm web poetry run python manage.py migrate
+              # Use --no-deps because postgres and redis are already running via the 'services' block
+              run: docker compose -f docker-compose.local.yml run --rm --no-deps web poetry run python manage.py migrate
 
             - name: Run tests
-              # We use 'run' again to create a separate temporary container for the test suite
-              run: docker compose -f docker-compose.local.yml run --rm web poetry run python manage.py test
+              # Use --no-deps here as well for the same reason
+              run: docker compose -f docker-compose.local.yml run --rm --no-deps web poetry run python manage.py test
