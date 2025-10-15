@@ -2,51 +2,50 @@
 
 name: Django CI
 
+# 1. Controls when the workflow will run
 on:
     push:
         branches: ["main"]
     pull_request:
         branches: ["main"]
 
+# 2. A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
     build-and-test:
+        # The type of runner that the job will run on
         runs-on: ubuntu-latest
 
-        services:
-            postgres:
-                image: postgres:15-alpine
-                env:
-                    POSTGRES_DB: testdb
-                    POSTGRES_USER: testuser
-                    POSTGRES_PASSWORD: testpass
-                options: >-
-                    --health-cmd pg_isready
-                    --health-interval 10s
-                    --health-timeout 5s
-                    --health-retries 5
-
-            redis:
-                image: redis:7-alpine
-
+        # 3. Steps represent a sequence of tasks that will be executed as part of the job
         steps:
+            # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
             - name: Check out repository code
               uses: actions/checkout@v4
 
+            # Your docker-compose.local.yml likely depends on a .env file.
+            # This step creates a .env file for the CI environment from a template.
+            # You should create a .env.ci file in your repo with non-secret test values.
             - name: Set up .env file for testing
               run: |
                   echo "SECRET_KEY=ci-secret-key-for-testing" >> .env
-                  echo "DATABASE_URL=postgres://testuser:testpass@postgres:5432/testdb" >> .env
-                  echo "CELERY_BROKER_URL=redis://redis:6379/0" >> .env
-                  echo "CELERY_RESULT_BACKEND=redis://redis:6379/0" >> .env
+                  echo "POSTGRES_DB=testdb" >> .env
+                  echo "POSTGRES_USER=testuser" >> .env
+                  echo "POSTGRES_PASSWORD=testpass" >> .env
                   echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
 
-            - name: Build the Docker image
-              run: docker compose -f docker-compose.local.yml build web
+            # Build and start all the services (web, worker, db, redis) in the background
+            - name: Build and start the Docker containers
+              run: docker compose -f docker-compose.local.yml up -d
 
-            - name: Run Migrations
-              # Use --no-deps because postgres and redis are already running via the 'services' block
-              run: docker compose -f docker-compose.local.yml run --rm --no-deps web poetry run python manage.py migrate
+            # A crucial step. Even after 'up' completes, the database might need a few seconds
+            # to initialize fully. This pause prevents tests from failing by trying to connect too early.
+            - name: Wait for database to be ready
+              run: sleep 10
 
+            # Run the test suite using the exact command that works locally
             - name: Run tests
-              # Use --no-deps here as well for the same reason
-              run: docker compose -f docker-compose.local.yml run --rm --no-deps web poetry run python manage.py test
+              run: docker compose -f docker-compose.local.yml exec web poetry run python manage.py test
+
+            # Optional but good practice: This step will run even if the tests fail.
+            - name: Tear down containers
+              if: always()
+              run: docker compose -f docker-compose.local.yml down
