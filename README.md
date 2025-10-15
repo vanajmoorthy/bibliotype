@@ -9,22 +9,16 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 
 ## TODO
 
-- distribution of length of books ✅
-- few sentence ai generated bio summary ✅
-- ui for login and sign up ✅
-- set up public profile ✅
-- set up celery ✅
-- hover states for all buttons ✅ (??)
-- compare book lengths, number of books read in total, number read per year, average book lengths, number of pages read with global averages ✅
-- implement seed_popular_books ✅ (??)
-- implement "cultural impact" metric and refine mainstream meter
-- Don't show tiles if there is no data for them
+- ✅ distribution of length of books 
+- improve mainstream meter
+- improve community stats look
+- hover states for all buttons
 - add borders to chart segments to make look consistent
+- color match above
 - long author names and genre names cutting of count when hovering on chart
-- show profile even when no bibliotype has been generated so user can at least change display name and prompt them to back and generate one ✅
 - allow user to delete profile
-- change "dashboard" to "profile" and allow deleting user account and data
-- ~get rid of books per year~ 
+- ✅ ~get rid of books per year~ 
+- ^ make this like more granular month by month and scrollable and show genres in every month
 - ~ai text explanation of most controversial ratings and possible explanations~ 
 - make most controversial ratings tab look better
 - different colours for different reader types
@@ -32,16 +26,101 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - make upload modal icon better and pixel art
 - support StoryGraph
 - upload to instagram story
+- ai moodboard/collage. different options of things to upload to instagram 
 - SEO stuff
 - favicon ⚠️
 - adjust copy ⚠️
-- make "instructions" button and modal on home page ✅
-- implement "create an account and come back later" if profile is still generating and later save the data to their profile
-- forgot password email, CAPTCHA? email validation?
-- mixpanel integration
-- analytics
-- show loading statements on "generating your reading dna" interstitial page for non logged in users
-  
+- ⚠️ make "instructions" button and modal on home page ✅
+- posthog integration
+- check ui on loading pages for logged in and non logged in
+- ui elements for community stats
+- update tests
+- add cron job to check publishers for mainstreamness
+- check lighthouse scores 
+- add privacy statement? ToS
+- add posthog tracking
+- fix prod db
+- add silk?
+- add little loading text phrases when generating bibliotype for anonymous and logged in
+- <img width="150"  alt="71354" src="https://github.com/user-attachments/assets/d6f95eea-2c09-460f-a184-f7406dfbc11b" />
+- average "contrarian" score under most controversial ratings with phrases like "my, you're contrarian"
+- sign up form validate password and all on blur
+- store all books for a user and do similarity score set up for recommendations
+- "books you may like"/"books similar readers enjoyed"
+- use ai to explain why they might like them and summarise them 
+- how similar are you/similarity percentage for 2 or more people
+-
+
+
+
+### Phase 1: Finalize Backend Data Foundation
+Upgrade the Database Schema:
+
+- Create a Publisher model with fields for name, a normalized_name for de-duplication, and an is_mainstream boolean flag
+- Convert the Book.publisher field from a simple text field to a proper relationship with the new Publisher model.
+
+ Overhaul All Data Scrapers:
+
+- Update the remaining scripts (scrape_nyt, scrape_goodreads, etc.) to use the new "gold standard" logic, saving to the unified Book and Author models.
+- Ensure all scrapers use the normalized_name for de-duplicating authors and publishers to prevent duplicates like "J.D. Salinger" vs. "J. D. Salinger".
+- Modify scrapers to capture publish_year and page_count whenever the source provides it.
+
+Wipe and Perform a Clean Reseed:
+
+- Completely clear the Book, Author, and Publisher tables in your database.
+- Run all of your updated scraping scripts to populate the database with a clean, de-duplicated foundation of culturally significant books.
+- Run the enrich_books.py command to fill in missing metadata from the Google Books API.
+
+### Phase 2: Refine Backend Analytics & Logic
+Finalize the "Mainstream Score" System:
+
+- Review and finalize the point values in your SCORE_CONFIG based on your complete set of data sources.
+- Run the update_scores.py script to calculate a definitive mainstream_score for every book in the database.
+
+Overhaul and Balance Reader Types:
+
+- Review all existing reader type logic to ensure it is balanced and effective.
+- Crucially, update the "Small Press Supporter" type to use the new, highly accurate Publisher.is_mainstream flag instead of a fuzzy text search.
+- Brainstorm and implement new reader types based on the rich data now available (e.g., "Award Aficionado", "Canon Collector").
+
+Implement Community Popularity Stat Calculation:
+
+- In the backend (generate_reading_dna_task), calculate the popularity brackets for all books on Bibliotype based on global_read_count.
+- Determine the read counts that correspond to the top 10%, 10-30%, 30-50%, 50-70%, 70-90%, and bottom 10% of books.
+- Write the logic to analyze a user's library and calculate the percentage of their books that fall into each of these six brackets.
+- The output should be a data structure ready for a pie chart (e.g., {'Top 10%': 27, '10-30%': 45, ...}).
+
+### Phase 3: Harden the Core Application Logic
+(Goal: Make the user-facing DNA generation process robust, efficient, and respectful of API limits.)
+
+Refactor the User Upload Task (generate_reading_dna_task):
+
+- Implement a strict DB-First, API-Fallback strategy for enriching user-uploaded books. The task must always check your own database before making any external API calls.
+- Integrate an API Quota Management system. The Celery task must track the daily usage of the Google Books API and switch to a fallback (like Open Library) or simply skip enrichment for the day if the limit is reached.
+- Ensure the task reliably and atomically increments the global_read_count for every book a user has read.
+
+### Phase 4: Build New User-Facing Features
+
+(Goal: Translate all the powerful backend data into an engaging and insightful user experience.)
+
+Design and Build the "Mainstream Meter":
+- Create a new UI component that visualizes the user's average mainstream_score.
+- ~This component should provide a clear, fun explanation of what their score means (e.g., "Niche Navigator", "Cultured Curator", "Mainstream Maven").~
+
+Design and Build the "Bibliotype Popularity" Pie Chart:
+
+- Create a pie chart component that displays the breakdown calculated in Phase 2.
+- Each slice of the pie should represent a popularity bracket.
+
+Implement hover-over tooltips for each slice with your custom descriptions:
+
+- Top 10%: "Very Popular!"
+- 10-30%: "Quite Popular"
+- 30-50%: "Above Average to Average"
+ - 50-70%: "A Bit Below Average"
+- 70-90%: "Woah, Quite Niche!"
+- 90-100%: "What Are You Reading?!"
+
 ## ✨ Features
 
 - ** Data Analysis:** Ingests Goodreads export `.csv` files and performs detailed analysis using Pandas.

@@ -1,37 +1,24 @@
-import hashlib
-import json
 import os
-import random
-import re
-from collections import Counter
-from concurrent.futures import ThreadPoolExecutor
-from io import StringIO
-from urllib.parse import quote_plus
+
 
 import google.generativeai as genai
-import pandas as pd
-import requests
 from celery import shared_task
 from celery.exceptions import Ignore
 from celery.result import AsyncResult
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.db.models import F
 from dotenv import load_dotenv
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from .dna_constants import (
-    CANONICAL_GENRE_MAP,
     EXCLUDED_GENRES,
-    GLOBAL_AVERAGES,
-    MAJOR_PUBLISHERS,
-    READER_TYPE_DESCRIPTIONS,
 )
-from .models import Author, Book, Genre, UserProfile
-from .percentile_engine import (
-    calculate_percentiles_from_aggregates,
-    update_analytics_from_stats,
-)
+from .services.dna_analyser import calculate_full_dna, _save_dna_to_profile
+import requests
+from django.utils import timezone
+
+# Make sure to import your service and model
+from .services.author_service import check_author_mainstream_status
+from .models import Author, UserProfile  # Add Author here
 
 # All of your helper functions can live inside this file as well
 load_dotenv()
@@ -44,134 +31,85 @@ else:
     print("⚠️ WARNING: GEMINI_API_KEY environment variable not found. Vibe generation will be disabled.")
 
 
-@shared_task(bind=True)
+@shared_task
+def check_author_mainstream_status_task(author_id: int):
+    """
+    A dedicated background task to check and update the mainstream status
+    for a single author.
+    """
+    try:
+        author = Author.objects.get(pk=author_id)
+        print(f"-> Running mainstream status check for new author: {author.name}...")
+
+        with requests.Session() as session:
+            headers = {"User-Agent": "BibliotypeApp/1.0 (contact@yourdomain.com)"}
+            session.headers.update(headers)
+            status_data = check_author_mainstream_status(author.name, session)
+
+            if status_data["error"]:
+                print(f"    -> API Error for {author.name}: {status_data['error']}")
+            else:
+                if author.is_mainstream != status_data["is_mainstream"]:
+                    author.is_mainstream = status_data["is_mainstream"]
+                    print(
+                        f"    -> Status updated to: {author.is_mainstream}. Reason: {status_data.get('reason', 'N/A')}"
+                    )
+
+                # Always update the last_checked timestamp
+                author.mainstream_last_checked = timezone.now()
+                author.save()
+
+    except Author.DoesNotExist:
+        print(f"❌ Author Status Task Error: Author with ID {author_id} not found.")
+    except Exception as e:
+        print(f"❌❌❌ Critical error in check_author_mainstream_status_task for author_id {author_id}: {e}")
+        raise  # Re-raise to let Celery know the task failed
+
+
+@shared_task(bind=True, max_retries=5)
 def claim_anonymous_dna_task(self, user_id: int, task_id: str):
     """
-    Checks the CACHE for a completed DNA result and saves it to the user's profile.
-    This is non-blocking and avoids calling result.get().
+    Claims the DNA result from a previously-run anonymous task and saves it
+    to a newly registered user's profile.
+
+    This task checks both the cache and the Celery result backend to handle
+    both eager mode (testing) and production scenarios.
     """
     try:
-        # 1. Check the cache for the result data using the original task's ID.
-        dna_data = cache.get(f"dna_result:{task_id}")
+        user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        print(f"❌ User with id {user_id} not found. Cannot claim task.")
+        return
 
-        if dna_data:
-            # The data was found! We can claim it.
-            print(f"✅ Found DNA in cache for task {task_id}. Claiming for user {user_id}.")
-            user = User.objects.get(pk=user_id)
+    # FIRST: Check the cache (this is where eager mode stores results)
+    cached_dna = cache.get(f"dna_result_{task_id}")
 
+    if cached_dna:
+        print(f"✅ Found cached DNA for task {task_id}. Saving to user {user_id}.")
+        _save_dna_to_profile(user.userprofile, cached_dna)
+        user.userprofile.pending_dna_task_id = None
+        user.userprofile.save()
+        print(f"✅ Successfully claimed and saved DNA for user {user_id} from task {task_id}.")
+        return
+
+    # SECOND: Check the Celery result backend (for production)
+    result = AsyncResult(task_id)
+
+    if result.ready():
+        if result.successful():
+            dna_data = result.get()
             _save_dna_to_profile(user.userprofile, dna_data)
-
-            # Clean up the pending task ID and the cache entry.
             user.userprofile.pending_dna_task_id = None
             user.userprofile.save()
-            cache.delete(f"dna_result:{task_id}")
-
-            print(f"✅ Successfully claimed and saved DNA for user {user_id}.")
-            return
+            print(f"✅ Successfully claimed and saved DNA for user {user_id} from task {task_id}.")
         else:
-            # The data is not in the cache yet. Check if the original task failed.
-            original_task_result = AsyncResult(task_id)
-            if original_task_result.state == "FAILURE":
-                print(f"❌ Claiming Error: Original task {task_id} failed. Stopping retries.")
-                raise Ignore()
-
-            # Otherwise, the task might still be running. Retry this claiming task.
-            print(f"DNA for task {task_id} not in cache yet. Retrying claim for user {user_id} in 10s...")
-            raise self.retry(countdown=10, max_retries=120)
-
-    except User.DoesNotExist:
-        print(f"❌ Claiming Error: User with ID {user_id} not found. Stopping retries.")
-        raise Ignore()
-    except Exception as e:
-        print(f"❌❌❌ An unexpected error occurred while claiming task {task_id} for user {user_id}: {e}")
-        raise self.retry(countdown=60, max_retries=5)
-
-
-def create_vibe_prompt(dna: dict) -> str:
-    """
-    Creates a detailed, few-shot prompt for the Gemini API to generate reading vibes.
-    """
-    # Extract the most salient data points from the DNA to feed the LLM
-    reader_type = dna.get("reader_type", "Eclectic Reader")
-    top_genres = list(dna.get("top_genres", {}).keys())[:3]
-    top_authors = list(dna.get("top_authors", {}).keys())[:2]
-    avg_pub_year = dna.get("user_stats", {}).get("avg_publish_year", 2000)
-
-    # Simple logic to determine the era
-    era = "classic" if avg_pub_year < 1980 else "modern"
-
-    prompt = f"""
-You are a witty, poetic observer who can distill the "vibe" of a person's reading list into short, aesthetic phrases. You are not a robot; you are creative and a little quirky.
-
-Your task is to generate 4 short, evocative, lowercase phrases that capture the feeling of this person's reading DNA.
-
-**RULES:**
-- Phrases must be short (2-6 words).
-- All lowercase.
-- No punctuation at the end of phrases.
-- Do NOT describe the user's reading habits directly (e.g., "you read fantasy"). Instead, evoke the *feeling* of those habits.
-- Output ONLY a valid JSON object with a single key "vibe_phrases" which is a list of 4 strings.
-
-**User's Reading DNA:**
-- Primary Reader Type: "{reader_type}"
-- Top Genres: {', '.join(top_genres)}
-- Favorite Authors: {', '.join(top_authors)}
-- General Era: {era}
-
-**Example of GOOD output for a Fantasy/Classic reader:**
-{{
-  "vibe_phrases": [
-    "dusty maps and forgotten prophecies",
-    "the scent of old paper",
-    "a quiet corner in a grand library",
-    "a story that echoes through ages"
-  ]
-}}
-
-**Example of BAD output (Do NOT do this):**
-{{
-  "vibe_phrases": [
-    "You enjoy reading fantasy books.",
-    "Your favorite author is Brandon Sanderson.",
-    "You read a lot of classics.",
-    "Your vibe is nerdy."
-  ]
-}}
-
-Now, generate the JSON for the provided User's Reading DNA.
-"""
-    return prompt
-
-
-def generate_vibe_with_llm(dna: dict) -> list:
-    """
-    Uses the Gemini API to generate a creative "vibe" for the user's DNA.
-    """
-    if not api_key:
-        print("⚠️ Vibe generation skipped because API key is not configured.")
-        return ["vibe generation disabled", "please configure api key"]
-
-    prompt = create_vibe_prompt(dna)
-
-    try:
-        model = genai.GenerativeModel("gemini-1.5-flash-latest")
-        generation_config = genai.GenerationConfig(response_mime_type="application/json")
-        response = model.generate_content(prompt, generation_config=generation_config)
-
-        response_json = json.loads(response.text)
-        vibe_phrases = response_json.get("vibe_phrases", [])
-
-        if isinstance(vibe_phrases, list) and all(isinstance(p, str) for p in vibe_phrases):
-            return vibe_phrases
-        else:
-            return ["error parsing vibe", "unexpected format received"]
-
-    except json.JSONDecodeError:
-        print(f"❌ LLM Error: Failed to decode JSON from response: {response.text}")
-        return ["error generating vibe", "invalid json response"]
-    except Exception as e:
-        print(f"❌ LLM Error: An unexpected error occurred: {e}")
-        return ["error generating vibe", "api call failed"]
+            print(f"❌ Task {task_id} failed. Cannot claim DNA for user {user_id}.")
+            user.userprofile.pending_dna_task_id = None
+            user.userprofile.save()
+    else:
+        # Task is not ready yet, retry
+        print(f"Task {task_id} not ready yet. Retrying claim for user {user_id} in 10s...")
+        raise self.retry(countdown=10, exc=Exception(f"Task {task_id} not ready"))
 
 
 def normalize_and_filter_genres(subjects):
@@ -192,178 +130,6 @@ def normalize_and_filter_genres(subjects):
             plausible_genres.append(s_lower)
 
     return plausible_genres[:5]
-
-
-def get_or_enrich_book_details(title: str, author_name: str, isbn13: str | None, session: requests.Session) -> dict:
-    """
-    Looks up a book's details by checking CACHE -> DATABASE -> API.
-
-    Returns a dictionary with the book's enriched details.
-    """
-    LOGIC_VERSION = "v13_db_aware"  # <-- Bump version for new logic
-
-    # Prioritize ISBN for the cache key if it exists, as it's more unique
-    base_key = isbn13 if isbn13 else f"{author_name}:{title}".lower().replace(" ", "_")
-    cache_key = f"book_details:{LOGIC_VERSION}:{base_key}"
-
-    # 1. --- Check Cache First (Fastest) ---
-    cached_data = cache.get(cache_key)
-    if cached_data is not None:
-        print(f"   ✅ Found details for '{title}' in cache.")
-        return cached_data
-
-    # 2. --- Check Database Second (Fast, Local) ---
-    try:
-        # Use a case-insensitive lookup for better matching
-        book_obj = Book.objects.get(title__iexact=title, author__name__iexact=author_name)
-
-        # A non-null publish_year is a good sign the book has been enriched before
-        if book_obj.publish_year:
-            print(f"   💾 Found enriched details for '{title}' in the database.")
-            book_details = {
-                "genres": [genre.name for genre in book_obj.genres.all()],
-                "publish_year": book_obj.publish_year,
-                "publisher": book_obj.publisher,
-                "page_count": book_obj.page_count,
-            }
-            # IMPORTANT: Put the data we found in the DB back into the cache
-            cache.set(cache_key, book_details, timeout=60 * 60 * 24 * 30)
-            return book_details
-    except Book.DoesNotExist:
-        # This is expected if the book is new to our system. We'll fetch it from the API.
-        pass
-
-    # 3. --- Call External API as a Last Resort (Slowest) ---
-    print(f"   📚 Fetching details for: '{title}' by {author_name} (from API)")
-
-    clean_title = re.split(r"[:(]", title)[0].strip()
-    query_title = quote_plus(clean_title)
-    query_author = quote_plus(author_name)
-    search_url = f"https://openlibrary.org/search.json?title={query_title}&author={query_author}"
-
-    book_details = {"genres": [], "publish_year": None, "publisher": None, "page_count": None}
-
-    try:
-        response = session.get(search_url, timeout=5)
-        if response.status_code != 200:
-            return book_details
-        data = response.json()
-        if not data.get("docs"):
-            return book_details
-
-        search_result = data["docs"][0]
-        work_key = search_result.get("key")
-        edition_key = search_result.get("cover_edition_key")
-
-        if work_key:
-            work_response = session.get(f"https://openlibrary.org{work_key}.json", timeout=5)
-            if work_response.status_code == 200:
-                work_data = work_response.json()
-                subjects = work_data.get("subjects", [])
-                book_details["genres"] = normalize_and_filter_genres(subjects)
-
-        if edition_key:
-            edition_response = session.get(f"https://openlibrary.org/books/{edition_key}.json", timeout=5)
-            if edition_response.status_code == 200:
-                edition_data = edition_response.json()
-
-                publish_year_str = edition_data.get("publish_date", "")
-                if publish_year_str and (match := re.search(r"\d{4}", publish_year_str)):
-                    book_details["publish_year"] = int(match.group())
-
-                raw_page_count = edition_data.get("number_of_pages")
-                if raw_page_count and isinstance(raw_page_count, int):
-                    book_details["page_count"] = raw_page_count
-
-                book_details["publisher"] = edition_data.get("publishers", [None])[0]
-
-        # Cache the newly fetched API results for next time
-        if book_details.get("publish_year"):
-            cache.set(cache_key, book_details, timeout=60 * 60 * 24 * 30)
-
-        return book_details
-
-    except requests.RequestException as e:
-        print(f"    ❌ Request failed for '{title}': {str(e)}")
-        return book_details
-
-
-def assign_reader_type(read_df, enriched_data, all_genres):
-    """
-    Calculates scores for reader traits using the final, equitable bonus-based logic.
-    """
-    scores = Counter()
-    total_books = len(read_df)
-    if total_books == 0:
-        return "Not enough data", Counter()
-
-    # --- HEURISTICS & SCORE CALCULATION ---
-    if "Date Read" in read_df.columns:
-        books_per_year = read_df.dropna(subset=["Date Read"])["Date Read"].dt.year.value_counts().mean()
-        if total_books > 75 and books_per_year > 40:
-            scores["Rapacious Reader"] = 100
-
-    if "Number of Pages" in read_df.columns:
-        long_books = read_df[read_df["Number of Pages"] > 490].shape[0]
-        short_books = read_df[read_df["Number of Pages"] < 200].shape[0]
-        scores["Tome Tussler"] += long_books * 2
-        scores["Novella Navigator"] += short_books
-
-    # Use the CANONICAL_GENRE_MAP to group aliases into their canonical form
-    mapped_genres = [CANONICAL_GENRE_MAP.get(g, g) for g in all_genres]
-    genre_counts = Counter(mapped_genres)
-
-    # These scores are now based on CLEAN, CANONICAL genre counts
-    scores["Fantasy Fanatic"] += genre_counts.get("fantasy", 0) + genre_counts.get("science fiction", 0)
-    scores["Non-Fiction Ninja"] += genre_counts.get("non-fiction", 0)
-    scores["Philosophical Philomath"] += genre_counts.get("philosophy", 0)
-    scores["Nature Nut Case"] += genre_counts.get("nature", 0)
-    scores["Social Savant"] += genre_counts.get("social science", 0)
-    scores["Self Help Scholar"] += genre_counts.get("self-help", 0)
-
-    for index, book in read_df.iterrows():
-        details = enriched_data.get(book["Title"])
-        if not details:
-            continue
-
-        if details.get("publish_year"):
-            if details["publish_year"] < 1970:
-                scores["Classic Collector"] += 1
-            elif details["publish_year"] > 2018:
-                scores["Modern Maverick"] += 1
-
-        publisher = details.get("publisher")
-
-        if publisher:
-            is_major = any(major.lower() in publisher.lower() for major in MAJOR_PUBLISHERS)
-            if not is_major:
-                # --- THIS IS THE CORRECTED LINE ---
-                # It now correctly prints the publisher's name, which is available inside the loop.
-                print(f"   ℹ️ Found non-major publisher: {publisher}")
-                scores["Small Press Supporter"] += 1
-
-    # --- THE DEFINITIVE FIX FOR EQUITY ---
-    # Give a flat bonus for high variety instead of a runaway score.
-    DIVERSITY_THRESHOLD = 10  # Number of UNIQUE CANONICAL genres to qualify
-    DIVERSITY_BONUS = 15  # Flat score bonus for meeting the threshold
-
-    # The number of unique keys in genre_counts is now much smaller and more accurate
-    unique_canonical_genres = len(genre_counts)
-
-    print(f"   ℹ️ Found {unique_canonical_genres} unique CANONICAL genres.")
-
-    if unique_canonical_genres >= DIVERSITY_THRESHOLD:
-        scores["Versatile Valedictorian"] += DIVERSITY_BONUS
-
-    # --- Determine Winner ---
-    if not scores or all(s == 0 for s in scores.values()):
-        return "Eclectic Reader", scores
-
-    if scores.get("Rapacious Reader", 0) > 0:
-        return "Rapacious Reader", scores
-
-    primary_type = scores.most_common(1)[0][0]
-    return primary_type, scores
 
 
 def analyze_and_print_genres(all_raw_genres, canonical_map):
@@ -403,348 +169,40 @@ def analyze_and_print_genres(all_raw_genres, canonical_map):
     print("\n" + "=" * 50 + "\n")
 
 
-# THIS IS THE NEW CELERY TASK
 @shared_task(bind=True)
 def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None):
     """
-    The Celery task that wraps the original DNA generation logic.
+    Celery task wrapper for generating Reading DNA.
+    It fetches the user and calls the main analysis engine.
     """
-    print("✅✅✅ RUNNING THE LATEST VERSION OF THE CELERY TASK ✅✅✅")
-    user = None  # Default user to None for the anonymous case
-
+    print("✅✅✅ RUNNING THE LATEST (REFACTORED) VERSION OF THE CELERY TASK ✅✅✅")
+    user = None
     try:
-        # Only try to get a user object if a user_id was actually passed.
         if user_id is not None:
-            try:
-                user = User.objects.get(pk=user_id)
-            except User.DoesNotExist:
-                # This is a critical error if an ID was passed but is invalid.
-                print(f"❌ Error: Could not run task. User with id {user_id} not found.")
-                # Stop execution if the user is invalid.
-                raise
-        else:
-            print("👤 Processing request for an anonymous user.")
-
-        try:
-            df = pd.read_csv(StringIO(csv_file_content))
-        except Exception as e:
-            raise ValueError(f"Could not parse CSV file. Error: {e}")
-
-        read_df = df[df["Exclusive Shelf"] == "read"].copy()
-
-        if read_df.empty:
-            raise ValueError("No books found on the 'read' shelf in your CSV.")
-
-        # Create the hash from the user's book list
-        book_fingerprint_list = sorted([f"{row['Title']}{row['Author']}" for _, row in read_df.iterrows()])
-        fingerprint_string = "".join(book_fingerprint_list)
-        new_data_hash = hashlib.sha256(fingerprint_string.encode()).hexdigest()
-
-        print(f"📖 Found {len(read_df)} books marked as 'read' for statistical analysis.")
-        # --- Data cleaning ---
-        for temp_df in [df, read_df]:
-            temp_df["My Rating"] = pd.to_numeric(temp_df["My Rating"], errors="coerce")
-            temp_df["Number of Pages"] = pd.to_numeric(temp_df["Number of Pages"], errors="coerce")
-            temp_df["Average Rating"] = pd.to_numeric(temp_df["Average Rating"], errors="coerce")
-            temp_df["Date Read"] = pd.to_datetime(temp_df["Date Read"], errors="coerce")
-
-            if "Original Publication Year" in temp_df.columns:
-                temp_df["Original Publication Year"] = pd.to_numeric(
-                    temp_df["Original Publication Year"], errors="coerce"
-                )
-            else:
-                temp_df["Original Publication Year"] = None
-            temp_df.loc[:, "My Review"] = temp_df["My Review"].fillna("")
-
-        # --- Phase 1 & 2: API and DB Sync ---
-        print("🎭 Enriching book data from Cache -> DB -> API (in parallel)...")
-
-        all_raw_genres, user_book_objects = [], []
-        with ThreadPoolExecutor(max_workers=10) as executor, requests.Session() as session:
-
-            def fetch_and_enrich_book(book_row):
-                raw_isbn13 = book_row.get("ISBN13")
-                clean_isbn13 = None
-                if pd.notna(raw_isbn13):
-                    if match := re.search(r"\d{13}", str(raw_isbn13)):
-                        clean_isbn13 = match.group(0)
-
-                enriched_details = get_or_enrich_book_details(
-                    book_row["Title"], book_row["Author"], clean_isbn13, session
-                )
-                return (book_row, enriched_details)
-
-            enrichment_results = list(executor.map(fetch_and_enrich_book, [row for _, row in read_df.iterrows()]))
-
-        print("💾 Syncing book data with the database...")
-
-        for original_row, enriched_details in enrichment_results:
-            author, _ = Author.objects.get_or_create(name=original_row["Author"])
-            page_count_from_csv = int(p) if pd.notna(p := original_row.get("Number of Pages")) else None
-
-            book, created = Book.objects.update_or_create(
-                title=original_row["Title"],
-                author=author,
-                defaults={
-                    "page_count": page_count_from_csv or enriched_details.get("page_count"),
-                    "publish_year": enriched_details.get("publish_year"),
-                    "publisher": enriched_details.get("publisher"),
-                },
-            )
-
-            Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
-            book.refresh_from_db()
-
-            # CORRECTLY INDENTED: This logic now runs for EACH book in the loop
-            raw_genres_for_book = enriched_details.get("genres", [])
-            mapped_genres = [CANONICAL_GENRE_MAP.get(g) for g in raw_genres_for_book]
-            final_canonical_genres = set(g for g in mapped_genres if g)
-
-            if final_canonical_genres:
-                genre_pks = [Genre.objects.get_or_create(name=g)[0].pk for g in final_canonical_genres]
-                book.genres.set(genre_pks)
-
-            user_book_objects.append(book)
-            all_raw_genres.extend(raw_genres_for_book)
-
-        # --- Personal DNA Calculation ---
-        reader_type, reader_type_scores = assign_reader_type(read_df, {}, all_raw_genres)
-        explanation = random.choice(READER_TYPE_DESCRIPTIONS.get(reader_type, [""]))
-        top_types_list = [{"type": t, "score": s} for t, s in reader_type_scores.most_common(3) if s > 0]
-        mapped_genres = [CANONICAL_GENRE_MAP.get(g, g) for g in all_raw_genres]
-        top_genres = dict(Counter(mapped_genres).most_common(10))
-
-        # --- Community Analytics Calculation ---
-        print("📈 Calculating base user statistics...")
-
-        user_base_stats = {
-            "total_books_read": int(len(read_df)),
-            "total_pages_read": int(read_df["Number of Pages"].dropna().sum()),
-            "avg_book_length": (
-                int(round(read_df["Number of Pages"].dropna().mean()))
-                if not read_df["Number of Pages"].dropna().empty
-                else 0
-            ),
-            "avg_publish_year": (
-                int(round(read_df["Original Publication Year"].dropna().mean()))
-                if "Original Publication Year" in read_df.columns
-                and not read_df["Original Publication Year"].dropna().empty
-                else 0
-            ),
-        }
-
-        print("🌍 Calculating community stats...")
-
-        update_analytics_from_stats(user_base_stats)
-
-        percentiles = calculate_percentiles_from_aggregates(user_base_stats)
-
-        # --- Other Personal Stats Calculations ---
-        most_niche_book = None
-
-        if user_book_objects:
-            user_book_objects.sort(key=lambda b: b.global_read_count)
-            most_niche_book = {
-                "title": user_book_objects[0].title,
-                "author": user_book_objects[0].author.name,
-                "read_count": user_book_objects[0].global_read_count,
-            }
-
-        top_authors = {k: int(v) for k, v in read_df["Author"].value_counts().head(10).to_dict().items()}
-
-        ratings_df = read_df[read_df["My Rating"] > 0].dropna(subset=["My Rating"])
-        average_rating_overall = float(round(ratings_df["My Rating"].mean(), 2)) if not ratings_df.empty else "N/A"
-        ratings_dist = {
-            str(k): int(v) for k, v in ratings_df["My Rating"].value_counts().sort_index().to_dict().items()
-        }
-
-        controversial_df = read_df.dropna(subset=["My Rating", "Average Rating"]).copy()
-        controversial_df = controversial_df[controversial_df["My Rating"] > 0]
-
-        top_controversial_list = []
-
-        if not controversial_df.empty:
-            controversial_df["Rating Difference"] = abs(
-                controversial_df["My Rating"] - controversial_df["Average Rating"]
-            )
-            top_books = controversial_df.sort_values(by="Rating Difference", ascending=False).head(3)
-
-            top_books["my_rating"] = top_books["My Rating"].astype(float)
-            top_books["average_rating"] = top_books["Average Rating"].astype(float)
-            top_books["rating_difference"] = top_books["Rating Difference"].astype(float)
-
-            top_controversial_list = top_books.rename(columns={"Title": "Title", "Author": "Author"})[
-                ["Title", "Author", "my_rating", "average_rating", "rating_difference"]
-            ].to_dict("records")
-
-        reviews_df = df[
-            (df["My Review"].str.strip().ne(""))
-            & (df["My Review"].str.len() > 15)
-            & (df["My Rating"].notna())
-            & (df["My Rating"] > 0)
-        ].copy()
-
-        most_positive_review, most_negative_review = None, None
-
-        if not reviews_df.empty:
-            analyzer = SentimentIntensityAnalyzer()
-
-            reviews_df["sentiment"] = reviews_df["My Review"].apply(lambda r: analyzer.polarity_scores(r)["compound"])
-
-            pos_candidate = (
-                reviews_df[reviews_df["My Rating"] == 5]
-                if not reviews_df[reviews_df["My Rating"] == 5].empty
-                else reviews_df
-            )
-
-            pos_review_row = pos_candidate.loc[pos_candidate["sentiment"].idxmax()]
-
-            neg_candidate = (
-                reviews_df[reviews_df["My Rating"] == 1]
-                if not reviews_df[reviews_df["My Rating"] == 1].empty
-                else reviews_df
-            )
-
-            neg_review_row = neg_candidate.loc[neg_candidate["sentiment"].idxmin()]
-
-            most_positive_review = pos_review_row.rename({"My Review": "my_review"})[
-                ["Title", "Author", "my_review", "sentiment"]
-            ].to_dict()
-
-            most_positive_review["sentiment"] = float(most_positive_review["sentiment"])
-
-            most_negative_review = neg_review_row.rename({"My Review": "my_review"})[
-                ["Title", "Author", "my_review", "sentiment"]
-            ].to_dict()
-
-            most_negative_review["sentiment"] = float(most_negative_review["sentiment"])
-
-        stats_by_year_list = []
-
-        if "Date Read" in read_df.columns and not read_df["Date Read"].dropna().empty:
-            yearly_df = read_df.dropna(subset=["Date Read"]).copy()
-            yearly_df["year"] = yearly_df["Date Read"].dt.year
-
-            yearly_stats = (
-                yearly_df.groupby("year").agg(count=("Title", "size"), avg_rating=("My Rating", "mean")).reset_index()
-            )
-
-            yearly_stats["avg_rating"] = yearly_stats["avg_rating"].fillna(0).round(2)
-            stats_by_year_list = yearly_stats.to_dict("records")
-
-            # Ensure all types are native Python types for JSON serialization
-            for item in stats_by_year_list:
-                item["year"] = int(item["year"])
-                item["count"] = int(item["count"])
-                item["avg_rating"] = float(item["avg_rating"])
-
-        mainstream_score = 0
-
-        if user_book_objects:
-            # A book is "mainstream" if its read count is over 50.
-            mainstream_books_count = sum(1 for book in user_book_objects if book.global_read_count > 50)
-            total_user_books = len(user_book_objects)
-
-            if total_user_books > 0:
-                mainstream_score = round((mainstream_books_count / total_user_books) * 100)
-
-        dna = {
-            "user_stats": user_base_stats,
-            "bibliotype_percentiles": percentiles,
-            "global_averages": GLOBAL_AVERAGES,
-            "most_niche_book": most_niche_book,
-            "reader_type": reader_type,
-            "reader_type_explanation": explanation,
-            "top_reader_types": top_types_list,
-            "reader_type_scores": dict(reader_type_scores),
-            "top_genres": top_genres,
-            "top_authors": top_authors,
-            "average_rating_overall": average_rating_overall,
-            "ratings_distribution": ratings_dist,
-            "top_controversial_books": top_controversial_list,
-            "most_positive_review": most_positive_review,
-            "most_negative_review": most_negative_review,
-            "stats_by_year": stats_by_year_list,
-            "mainstream_score_percent": mainstream_score,
-        }
-
-        # === VIBE GENERATION & SAVING (LLM VERSION) ===============================
-        reading_vibe = []
-        # Check if we have a logged-in user
-        if user:
-            profile = user.userprofile
-            if profile.vibe_data_hash == new_data_hash and profile.reading_vibe:
-                print("✅ Vibe data is unchanged. Using cached vibe from database.")
-                reading_vibe = profile.reading_vibe
-            else:
-                print("✨ Vibe data has changed. Generating a new vibe with LLM...")
-                reading_vibe = generate_vibe_with_llm(dna)
-                profile.reading_vibe = reading_vibe
-                profile.vibe_data_hash = new_data_hash
-        else:
-            # For anonymous users, always generate it fresh.
-            print("✨ Anonymous user. Generating a new vibe with LLM...")
-            reading_vibe = generate_vibe_with_llm(dna)
-
-        dna["reading_vibe"] = reading_vibe
-        dna["vibe_data_hash"] = new_data_hash
-
-        # --- Final cleanup (remains the same) ---
-        def clean_dict(d):
-            if not isinstance(d, dict):
-                return d
-            return {k: v for k, v in d.items() if pd.notna(v)}
-
-        dna["top_controversial_books"] = [clean_dict(b) for b in dna.get("top_controversial_books", [])]
-        dna["most_positive_review"] = clean_dict(dna.get("most_positive_review"))
-        dna["most_negative_review"] = clean_dict(dna.get("most_negative_review"))
-
-        # --- MODIFIED: Final save/return logic ---
-        if user:
-            # For logged-in users, save to the profile and return a success message.
-            _save_dna_to_profile(user.userprofile, dna)
-            print(f"✅ Saved DNA for user: {user.username}")
-            return f"DNA saved for user {user_id}"
-        else:
-            # For anonymous users, we do TWO things:
-            # 1. Save the result to the cache so the 'claim_anonymous_dna_task' can get it safely.
-            if self.request.id:
-                # The key is the task's own ID. Timeout is 1 hour.
-                cache.set(f"dna_result:{self.request.id}", dna, timeout=3600)
-                print(f"🧬 DNA result for task {self.request.id} saved to cache for potential claim.")
-
-            # 2. RETURN the result so the frontend polling view ('get_task_result_view') can get it and display it.
-            print("🧬 DNA generated for an anonymous user. Returning result for display.")
-            return dna
-
-    except Exception as e:
-        # This generic catch-all is important. It ensures that if anything
-        # goes wrong (CSV parsing, API call, etc.), the task fails gracefully.
-        print(f"❌❌❌ A critical error occurred in generate_reading_dna_task for user_id {user_id}: {e}")
-        # Re-raise the exception to mark the Celery task as FAILED.
-        # This is crucial for the frontend to show the error message.
-        raise
-
-
-def _save_dna_to_profile(profile, dna_data):
-    """
-    A reusable helper to correctly save all parts of the DNA dictionary
-    to the user's profile, populating both the main JSON blob and the
-    optimized, separate fields.
-    """
-    print(f"🔍 DEBUG: Saving DNA to profile for user: {profile.user.username}")
-    print(f"🔍 DEBUG: DNA data keys: {list(dna_data.keys()) if dna_data else 'None'}")
-
-    profile.dna_data = dna_data
-    profile.reader_type = dna_data.get("reader_type")
-    profile.total_books_read = dna_data.get("user_stats", {}).get("total_books_read")
-    profile.reading_vibe = dna_data.get("reading_vibe")
-    profile.vibe_data_hash = dna_data.get("vibe_data_hash")
-
+            user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        print(f"❌ Error: Could not run task. User with id {user_id} not found.")
+        raise  # Fail the task if the user is invalid
+
+    # Call the main analysis function from our service
+    # The `calculate_full_dna` function now contains all the heavy logic.
+    # We re-wrap it in a try/except block to handle task-specific outcomes.
     try:
-        profile.save()
-        print(f"✅ [DB] Successfully saved DNA data for user: {profile.user.username}")
-        print(f"🔍 DEBUG: Profile.dna_data is now: {profile.dna_data is not None}")
+        result_data = calculate_full_dna(csv_file_content, user)
+
+        if not user:
+            # For anonymous users, the result_data is the DNA dict.
+            # We must save it to the cache for the 'claim' task or the polling view.
+            if self.request.id:
+                cache.set(f"dna_result_{self.request.id}", result_data, timeout=3600)
+                print(f"🧬 DNA result for task {self.request.id} saved to cache.")
+            return result_data
+        else:
+            # For logged-in users, the data is already saved. The function returns a success message.
+            return result_data
+
     except Exception as e:
-        print(f"❌ [DB] Error saving profile: {e}")
-        raise
+        # If calculate_full_dna raises an error, this block catches it
+        # and ensures the Celery task is marked as FAILED.
+        print(f"❌ Task failed due to an error in the analysis engine: {e}")
+        raise  # Re-raise to mark the task as failed

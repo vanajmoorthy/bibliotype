@@ -7,17 +7,91 @@ Bibliotype is a lightweight web application designed to analyze a user's reading
 *   **Frontend:** Django Templates, Tailwind CSS v4, Alpine.js, Chart.js
 *   **Database:** SQLite (development), PostgreSQL (production)
 *   **Process Management:** Honcho (or Foreman)
+*   **Containerization:** Docker, Docker Compose
+
+## Project Structure
+
+The project is organized into several key directories:
+
+*   `bibliotype/`: The main Django project directory, containing settings, and configurations.
+*   `core/`: The core application logic, including models, views, forms, and services.
+    *   `management/commands`: Custom Django management commands for tasks like seeding the database and analyzing data.
+    *   `services/`: Business logic services for interacting with external APIs (Google Books) and performing data analysis.
+    *   `templates/`: Django templates for rendering the frontend.
+*   `csv/`: Sample CSV files for testing and development.
+*   `static/`: Static files, including CSS and JavaScript.
+*   `scraped_html/`: HTML files scraped from various sources for book data.
+*   `.github/workflows/`: GitHub Actions workflows for CI/CD.
 
 ## Building and Running
 
+This project can be run using either a local Python environment or Docker. Docker is the recommended method for local development.
+
+### Docker (Recommended)
+
+This method creates a consistent, isolated environment with a dedicated PostgreSQL database, mirroring a production setup.
+
+**1. Prerequisites**
+
+*   Docker and Docker Compose
+*   Poetry
+
+**2. Installation & Setup**
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/your-username/bibliotype.git
+    cd bibliotype
+    ```
+
+2.  **Create your environment file:**
+    Create a file named `.env` in the project root.
+    ```env
+    # .env
+
+    SECRET_KEY="generate-a-new-secret-key"
+    GEMINI_API_KEY="your-real-gemini-api-key"
+
+    # Credentials for the local PostgreSQL container
+    POSTGRES_DB=bibliotype_db
+    POSTGRES_USER=bibliotype_user
+    POSTGRES_PASSWORD=yoursecurepassword123
+    ```
+
+3.  **Build and Run the Containers:**
+    ```bash
+    docker-compose -f docker-compose.local.yml up --build -d
+    ```
+
+**3. Database Setup (First Time Only)**
+
+1.  **Apply Database Migrations:**
+    ```bash
+    docker-compose -f docker-compose.local.yml exec web poetry run python manage.py migrate
+    ```
+
+2.  **Load Initial Data:**
+    ```bash
+    docker-compose -f docker-compose.local.yml exec web poetry run python manage.py loaddata core/fixtures/initial_data.json
+    ```
+
+3.  **Create a Superuser:**
+    ```bash
+    docker-compose -f docker-compose.local.yml exec web poetry run python manage.py createsuperuser
+    ```
+
+You can now access the application at **`http://127.0.0.1:8000`**.
+
+### Local Python Environment
+
 This project requires both Python (for Django) and Node.js/npm (for Tailwind CSS).
 
-### Prerequisites
+**1. Prerequisites**
 
 *   Python 3.11+
 *   Node.js and npm
 
-### Setup Instructions
+**2. Setup Instructions**
 
 1.  **Clone the repository (if not already done):**
     ```bash
@@ -32,12 +106,9 @@ This project requires both Python (for Django) and Node.js/npm (for Tailwind CSS
         source venv/bin/activate
         ```
     *   **Install Python dependencies:**
-        This project uses `pyproject.toml` for project metadata. You will likely need a `requirements.txt` file for `pip` or use a tool like `poetry` or `pipenv`.
-        If `requirements.txt` exists:
         ```bash
         pip install -r requirements.txt
         ```
-        If not, you may need to generate it or install dependencies via `poetry install` if `poetry.lock` is present.
     *   **Apply database migrations:**
         ```bash
         python manage.py migrate
@@ -49,7 +120,7 @@ This project requires both Python (for Django) and Node.js/npm (for Tailwind CSS
         npm install
         ```
 
-### Running the Application
+**3. Running the Application**
 
 To run the full application, you need to start both the Django development server and the Tailwind CSS watcher.
 
@@ -62,7 +133,6 @@ To run the full application, you need to start both the Django development serve
     ```bash
     npm run dev
     ```
-    This command watches for changes in `static/src/input.css` and `core/templates/**/*.html` and compiles the CSS to `static/dist/output.css`.
 
 Alternatively, if `Honcho` or `Foreman` is installed, you can use the `Procfile` to run both processes concurrently:
 ```bash
@@ -75,4 +145,8 @@ foreman start
 
 *   **Python Code Formatting:** The project uses `black` and `isort` for Python code formatting, configured with a line length of 120 characters (as indicated in `pyproject.toml`).
 *   **Styling:** Tailwind CSS is used for styling, with its configuration in `tailwind.config.js` set to scan HTML templates in `core/templates/` for classes.
-*   **Testing:** (No explicit testing commands or frameworks were immediately apparent from the initial file scan. Please refer to project-specific documentation or existing test files for how to run tests. A common Django testing command is `python manage.py test`.)
+*   **Testing:** A common Django testing command is `python manage.py test`.
+
+## Deployment
+
+The application is deployed to a production environment on a fresh Ubuntu 22.04 server (e.g., a DigitalOcean VPS). The stack uses Docker Compose, Nginx as a reverse proxy, and GitHub Actions for fully automated CI/CD. For detailed instructions, see the `README.md` file.

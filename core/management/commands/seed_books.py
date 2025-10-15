@@ -5,9 +5,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from django.core.management.base import BaseCommand
-
-from core.models import Author, Book
-from core.tasks import get_book_details_from_open_library
+from django.db import transaction
+from core.models import Author, Book, Publisher
+from core.book_enrichment_service import get_book_details_for_seeder
 
 # Using the same comprehensive list from before
 COMPREHENSIVE_BOOK_LIST = [
@@ -239,7 +239,7 @@ class Command(BaseCommand):
                 """Worker function to fetch API details for a single book."""
                 try:
                     title, author_name = book_data["title"], book_data["author"]
-                    api_details = get_book_details_from_open_library(title, author_name, session)
+                    api_details = get_book_details_for_seeder(title, author_name, session)
                     # Return all the data needed for the next step
                     return {"success": True, "original": book_data, "api_details": api_details}
                 except Exception as e:
@@ -265,26 +265,38 @@ class Command(BaseCommand):
         created_count = 0
         updated_count = 0
 
-        for result in successful_fetches:
-            book_data = result["original"]
-            api_details = result["api_details"]
+        # Use a transaction to make the bulk database writes more efficient
+        with transaction.atomic():
+            for result in successful_fetches:
+                book_data = result["original"]
+                api_details = result["api_details"]
 
-            author, _ = Author.objects.get_or_create(name=book_data["author"])
+                # Use normalized names for authors
+                author_obj, _ = Author.objects.get_or_create(
+                    normalized_name=Author._normalize(book_data["author"]), defaults={"name": book_data["author"]}
+                )
 
-            _, created = Book.objects.update_or_create(
-                title=book_data["title"],
-                author=author,
-                defaults={
-                    "global_read_count": random.randint(75, 500),
-                    "publish_year": api_details.get("publish_year"),
-                    "publisher": api_details.get("publisher"),
-                    "page_count": api_details.get("page_count"),
-                },
-            )
-            if created:
-                created_count += 1
-            else:
-                updated_count += 1
+                publisher_obj = None
+                if publisher_name := api_details.get("publisher_name"):
+                    publisher_obj, _ = Publisher.objects.get_or_create(
+                        normalized_name=Author._normalize(publisher_name), defaults={"name": publisher_name}
+                    )
+
+                _, created = Book.objects.update_or_create(
+                    normalized_title=Book._normalize_title(book_data["title"]),
+                    author=author_obj,
+                    defaults={
+                        "title": book_data["title"],
+                        "global_read_count": random.randint(75, 500),
+                        "publish_year": api_details.get("publish_year"),
+                        "publisher": publisher_obj,  # Assign the Publisher object
+                        "page_count": api_details.get("page_count"),
+                    },
+                )
+                if created:
+                    created_count += 1
+                else:
+                    updated_count += 1
 
         # --- FINAL REPORT ---
         self.stdout.write("\n" + "=" * 50)
