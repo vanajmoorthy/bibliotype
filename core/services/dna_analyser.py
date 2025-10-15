@@ -401,6 +401,7 @@ def calculate_full_dna(csv_file_content: str, user=None):
             "stats_by_year": stats_by_year_list,
             "mainstream_score_percent": mainstream_score,
         }
+        print(dna)
 
         reading_vibe = []
         if user:
@@ -504,4 +505,3 @@ def analyze_and_print_genres(all_raw_genres, canonical_map):
             print(f"  - '{genre}' (appears {count} times)")
 
     print("\n" + "=" * 50 + "\n")
-
