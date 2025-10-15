@@ -53,6 +53,7 @@ def display_dna_view(request):
         "user_profile": user_profile,
         "is_processing": False,  # Explicitly set to false unless handled above
     }
+    print(dna_data)
 
     return render(request, "core/dna_display.html", context)
 
