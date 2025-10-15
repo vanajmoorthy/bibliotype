@@ -81,12 +81,29 @@
                                 <span class="border-brand-text bg-brand-cyan border-2 px-2">Browse</span> or drag your
                                 file here
                             </p>
-                            <p
-                                x-show="fileName"
-                                x-transition
-                                class="text-brand-text bg-brand-yellow shadow-neo-sm border-brand-text border-2 px-3 py-1 text-xl font-bold"
-                                x-text="fileName"
-                            ></p>
+                            
+                            <div x-show="fileName" x-transition class="relative  max-w-md">
+                                <div class="shadow-neo border-brand-text border-2 bg-brand-yellow text-sm md:text-md px-6 py-2">
+                                    <p class="text-brand-text truncate text-xl font-bold" x-text="fileName"></p>
+                                </div>
+
+                                <!-- The 'x' button is positioned relative to the container above -->
+                                <button
+                                    type="button"
+                                    @click.prevent.stop="fileName = ''; $refs.fileInput.value = null;"
+                                    class="shadow-neo bg-brand-pink border-brand-text absolute -top-2 -right-2 z-10 flex h-8 w-8 cursor-pointer items-center justify-center border-2 p-1 transition-all hover:shadow-none active:translate-x-px active:translate-y-px"
+                                    aria-label="Remove selected file"
+                                >
+                                    <svg class="h-5 w-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2.5"
+                                            d="M6 18L18 6M6 6l12 12"
+                                        ></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </label>
                     </div>
                     <button

@@ -1,7 +1,7 @@
 {
-  "include": ["."],
-  "venvPath": ".",
-  "venv": "venv",
-  "pythonVersion": "3.11",
-  "typeCheckingMode": "off"
+    "include": ["."],
+    "venvPath": ".",
+    "venv": ".venv",
+    "pythonVersion": "3.11",
+    "typeCheckingMode": "off"
 }

@@ -3,72 +3,86 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, TestCase, override_settings
+from django.test import Client, TransactionTestCase, override_settings
 from django.urls import reverse
 
 
-# We need Celery tasks to run synchronously for E2E tests too
-@override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-class ViewE2E_Tests(TestCase):
+@override_settings(
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_STORE_EAGER_RESULT=True,
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-snowflake",
+        }
+    },
+)
+class ViewE2E_Tests(TransactionTestCase):
 
     def setUp(self):
         self.client = Client()
+        csv_header = "Title,Author,Exclusive Shelf,My Rating,Number of Pages,Original Publication Year,Date Read,Average Rating,My Review,ISBN13"
+        csv_row = "E2E Book,E2E Author,read,5,150,2021,2023/01/15,4.2,A test review.,9780000000003"
+        csv_content = f"{csv_header}\n{csv_row}".encode("utf-8")
         self.csv_file = SimpleUploadedFile(
             "goodreads.csv",
-            "Title,Author,Exclusive Shelf\nE2E Book,E2E Author,read".encode("utf-8"),
+            csv_content,
             content_type="text/csv",
         )
         self.sample_dna_data = {"reader_type": "E2E Reader"}
 
-    @patch("core.tasks.generate_reading_dna_task.delay")
-    def test_anonymous_upload_to_signup_and_claim_flow(self, mock_generate_task):
+    def tearDown(self):
+        """Clean up database connections after each test."""
+        from django.db import connections
+
+        # Simple, effective cleanup
+        for conn in connections.all():
+            if conn.connection is not None:
+                conn.close()
+
+        connections.close_all()
+        super().tearDown()
+
+    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna_analyser.enrich_book_from_apis")
+    def test_anonymous_upload_to_signup_and_claim_flow(self, mock_enrich_book, mock_generate_vibe):
         """
-        THE CRITICAL PATH TEST:
-        1. Anonymous user uploads a file.
-        2. They are redirected to a waiting page.
-        3. The task finishes, they see their DNA.
+        Critical path test:
+        1. Anonymous user uploads a file. The task runs synchronously.
+        2. They are redirected to a waiting page with a real task ID.
+        3. The frontend polls the result view, which now finds the completed task.
         4. They sign up from the waiting page.
-        5. The DNA is successfully claimed and saved to their new profile.
+        5. The claim task runs, gets the result from the eager backend, and saves it.
         """
-        # --- Step 1 & 2: Anonymous Upload ---
+        # Configure mocks for the services called *inside* the task
+        mock_enrich_book.return_value = (None, 0, 0)  # Return dummy values
+        mock_generate_vibe.return_value = ["an e2e vibe"]
 
-        # Mock the task result so we can control the flow
-        mock_async_result = MagicMock()
-        task_id = "e2e-task-id-456"
-        mock_async_result.id = task_id
-        mock_generate_task.return_value = mock_async_result
-
+        # Anonymous Upload
         response = self.client.post(reverse("core:upload"), {"csv_file": self.csv_file})
-        self.assertRedirects(response, reverse("core:task_status", kwargs={"task_id": task_id}))
 
-        # --- Step 3: Mock Task Completion and Poll for Result ---
+        # The view should redirect to the status page, extracting the task_id from the response
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("core:task_status", kwargs={"task_id": "dummy"})[:-6], response.url)
+        task_id = response.url.split("/")[-2]
 
-        # The frontend would poll this view. We simulate it directly.
-        # Before completion, it should be PENDING
-        with patch("core.views.AsyncResult") as mock_async:
-            mock_async.return_value.ready.return_value = False
-            response = self.client.get(reverse("core:get_task_result", kwargs={"task_id": task_id}))
-            self.assertEqual(response.json()["status"], "PENDING")
+        # Poll for Result
+        # With ALWAYS_EAGER=True, the task is already complete.
+        # The client can now poll the result view.
+        response = self.client.get(reverse("core:get_task_result", kwargs={"task_id": task_id}))
 
-        # After completion, it should be SUCCESS
-        with patch("core.views.AsyncResult") as mock_async:
-            mock_async.return_value.ready.return_value = True
-            mock_async.return_value.successful.return_value = True
-            mock_async.return_value.get.return_value = self.sample_dna_data
+        # The view should return SUCCESS and the URL to the display page
+        self.assertEqual(response.status_code, 200)
+        json_response = response.json()
+        self.assertEqual(json_response["status"], "SUCCESS")
+        self.assertEqual(json_response["redirect_url"], reverse("core:display_dna"))
 
-            response = self.client.get(reverse("core:get_task_result", kwargs={"task_id": task_id}))
-            self.assertEqual(response.json()["status"], "SUCCESS")
-
-        # The API response puts the DNA in the session. Now go to the display page.
+        # The result is now in the session. Go to the display page to confirm.
         response = self.client.get(reverse("core:display_dna"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "E2E Reader")
+        self.assertContains(response, "an e2e vibe")  # Check for some content from the result
 
-        # --- Step 4 & 5: Sign up and Claim ---
-
-        # Manually place the result in the cache, as the real task would
-        cache.set(f"dna_result:{task_id}", self.sample_dna_data, timeout=60)
-
+        # Sign up and Claim
         signup_url = reverse("core:signup") + f"?task_id={task_id}"
         response = self.client.get(signup_url)
         self.assertContains(response, task_id)  # Check the hidden field is there
@@ -86,24 +100,11 @@ class ViewE2E_Tests(TestCase):
             follow=True,
         )
 
-        try:
-            # Check if the final redirect is to the processing page
-            self.assertRedirects(response, reverse("core:display_dna") + "?processing=true")
-        except AssertionError:
-            # If the redirect fails, print the HTML of the page we got back
-            print("\n--- E2E FORM VALIDATION DEBUG ---")
-            print("Redirect failed. The server responded with the form page, likely with errors.")
-            print("Look for error messages in the HTML below:")
-            print(response.content.decode("utf-8"))
-            print("--- END DEBUG ---\n")
-            # Re-raise the error so the test still fails
-            raise
-
-        # The user should now be logged in and on the processing page
+        # The user is created, logged in, and the claim task runs synchronously.
+        # The final redirect should be to the display page with a processing signal.
         self.assertRedirects(response, reverse("core:display_dna") + "?processing=true")
 
-        # VERIFY THE FINAL RESULT
         new_user = User.objects.get(username="claimeduser")
+        new_user.userprofile.refresh_from_db()
         self.assertIsNotNone(new_user.userprofile.dna_data)
-        self.assertEqual(new_user.userprofile.reader_type, "E2E Reader")
-        self.assertIsNone(cache.get(f"dna_result:{task_id}"))  # Cache should be cleared
+        self.assertIn("an e2e vibe", new_user.userprofile.reading_vibe)

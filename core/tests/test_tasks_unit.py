@@ -5,7 +5,7 @@ import pandas as pd
 from django.test import TestCase
 
 from core.models import Book, UserProfile
-from core.tasks import _save_dna_to_profile, assign_reader_type, get_or_enrich_book_details
+from core.services.dna_analyser import _save_dna_to_profile, assign_reader_type
 
 
 class TaskUnitTests(TestCase):
@@ -36,47 +36,7 @@ class TaskUnitTests(TestCase):
         # Assert that the correct winner is chosen
         self.assertEqual(reader_type, "Fantasy Fanatic")
 
-    @patch("core.tasks.cache")
-    @patch("core.tasks.requests.Session")
-    @patch("core.tasks.Book.objects")
-    def test_get_or_enrich_book_details(self, mock_book_manager, mock_session, mock_cache):
-        """
-        Tests the three-tiered data fetching logic (cache -> db -> api).
-        """
-        title = "Dune"
-        author = "Frank Herbert"
-
-        # Scenario 1: Data is found in the cache
-        mock_cache.get.return_value = {"publish_year": 1965, "genres": ["science fiction"]}
-        result = get_or_enrich_book_details(title, author, None, mock_session)
-        self.assertEqual(result["publish_year"], 1965)
-        mock_book_manager.get.assert_not_called()  # Database was not hit
-        mock_session.get.assert_not_called()  # API was not hit
-
-        # Scenario 2: Data is found in the database
-        mock_cache.get.return_value = None  # Cache miss
-        mock_book = MagicMock()
-        mock_book.publish_year = 1965
-        mock_book.genres.all.return_value = []
-        mock_book_manager.get.return_value = mock_book
-
-        result = get_or_enrich_book_details(title, author, None, mock_session)
-        self.assertEqual(result["publish_year"], 1965)
-        mock_cache.set.assert_called_once()  # Result was cached
-        mock_session.get.assert_not_called()  # API was not hit
-
-        # Scenario 3: Data is fetched from the API
-        mock_cache.get.return_value = None
-        mock_book_manager.get.side_effect = Book.DoesNotExist  # DB miss
-
-        mock_api_response = MagicMock()
-        mock_api_response.status_code = 200
-        # A simplified Open Library response
-        mock_api_response.json.return_value = {"docs": [{"cover_edition_key": "OL12345M"}]}
-        mock_session.get.return_value = mock_api_response  # Mock the API call
-
-        get_or_enrich_book_details(title, author, None, mock_session)
-        self.assertTrue(mock_session.get.call_count > 0)  # API was called
+    
 
     def test_save_dna_to_profile(self):
         """

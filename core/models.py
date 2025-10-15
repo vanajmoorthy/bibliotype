@@ -14,66 +14,104 @@ class Genre(models.Model):
         return self.name
 
 
+class Publisher(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    normalized_name = models.CharField(max_length=255, unique=True, editable=False)
+    is_mainstream = models.BooleanField(default=False, db_index=True)
+    # Self-referencing key to link subsidiaries (e.g., "Viking Press") to a parent ("Penguin Random House")
+    parent = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="subsidiaries")
+    mainstream_last_checked = models.DateTimeField(null=True, blank=True, default=None)
+
+    def save(self, *args, **kwargs):
+        # Use the same normalization logic as Author for consistency
+        self.normalized_name = Author._normalize(self.name)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ["name"]
+
+
 class Author(models.Model):
+    # This field stores the clean, human-readable name for display
     name = models.CharField(max_length=255, unique=True, db_index=True)
+
+    # --- NEW FIELD ---
+    # This stores a machine-readable, normalized version for lookups.
+    normalized_name = models.CharField(max_length=255, unique=True, db_index=True, editable=False)
+
     popularity_score = models.PositiveIntegerField(default=0, db_index=True)
+    is_mainstream = models.BooleanField(default=False, db_index=True)
+    mainstream_last_checked = models.DateTimeField(null=True, blank=True, default=None)
+
+    def save(self, *args, **kwargs):
+        # Automatically generate the normalized name whenever the author is saved
+        self.normalized_name = self._normalize(self.name)
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def _normalize(name):
+        # Aggressive cleaning for the lookup key
+        name = name.lower()
+        # Remove all punctuation except spaces
+        name = re.sub(r"[^\w\s]", "", name)
+        # Remove all spaces
+        name = re.sub(r"\s+", "", name)
+        return name
 
     def __str__(self):
         return self.name
 
 
 class Book(models.Model):
+    # --- Existing Fields ---
     title = models.CharField(max_length=255)
     author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name="books")
-    page_count = models.PositiveIntegerField(null=True, blank=True)
+    normalized_title = models.CharField(max_length=255, db_index=True, editable=False)
+
     average_rating = models.FloatField(null=True, blank=True)
+    page_count = models.PositiveIntegerField(null=True, blank=True)
     publish_year = models.IntegerField(null=True, blank=True)
-    publisher = models.CharField(max_length=255, null=True, blank=True)
+    publisher = models.ForeignKey(Publisher, on_delete=models.SET_NULL, null=True, blank=True, related_name="books")
     genres = models.ManyToManyField(Genre, related_name="books")
+
+    # --- Your App-Specific Metric ---
     global_read_count = models.PositiveIntegerField(default=0, db_index=True)
 
-    # --- NEW FIELD ---
-    # The ISBN is the most reliable way to uniquely identify a book edition.
-    isbn13 = models.CharField(max_length=13, null=True, blank=True, db_index=True)
+    # --- Fields Merged from PopularBook ---
+    isbn13 = models.CharField(
+        max_length=13, null=True, blank=True, unique=True, db_index=True
+    )  # Making ISBN unique is good practice
+
+    google_books_average_rating = models.FloatField(null=True, blank=True)
+    google_books_ratings_count = models.PositiveIntegerField(default=0)
+    google_books_last_checked = models.DateTimeField(null=True, blank=True, default=None)
 
     class Meta:
-        unique_together = ("title", "author")
-
-    def __str__(self):
-        return f'"{self.title}" by {self.author.name}'
-
-
-class PopularBook(models.Model):
-    title = models.CharField(max_length=255)
-    author = models.CharField(max_length=255)
-    isbn13 = models.CharField(max_length=13, null=True, blank=True, unique=True)
-    mainstream_score = models.IntegerField(default=0)
-
-    # Google Books Data
-    average_rating = models.FloatField(null=True, blank=True)
-    ratings_count = models.PositiveIntegerField(default=0)
-
-    # NYT Bestseller Data
-    nyt_bestseller_weeks = models.PositiveIntegerField(default=0)
-
-    # Awards Data (using JSONField to store a list of strings)
-    awards_won = models.JSONField(default=list)
-    shortlists = models.JSONField(default=list)
-
-    score_breakdown = models.JSONField(default=dict)
-    # A unique key to prevent duplicate book/author pairs
-    lookup_key = models.CharField(max_length=512, unique=True, editable=False)
+        unique_together = ("normalized_title", "author")
 
     def save(self, *args, **kwargs):
-        self.lookup_key = self.generate_lookup_key(self.title, self.author)
+        # Automatically populate the normalized field whenever a book is saved
+        self.normalized_title = self._normalize_title(self.title)
         super().save(*args, **kwargs)
 
     @staticmethod
-    def generate_lookup_key(title, author):
-        return slugify(f"{title}-{author}")
+    def _normalize_title(title):
+        # This is an aggressive cleaning function for reliable lookups.
+        title = title.lower()
+
+        # Find any text inside parentheses or brackets and remove it.
+        title = re.sub(r"[\(\[].*?[\)\]]", "", title)
+
+        # These lines clean up what's left
+        title = re.sub(r"[^\w\s]", "", title)  # Remove remaining punctuation
+        title = re.sub(r"\s+", "", title)  # Collapse whitespace
+        return title.strip()
 
     def __str__(self):
-        return f'"{self.title}" by {self.author}'
+        return f'"{self.title}" by {self.author.name}'
 
 
 # This model is perfect for saving the generated DNA for authenticated users.

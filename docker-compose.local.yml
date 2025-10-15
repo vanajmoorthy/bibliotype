@@ -17,7 +17,6 @@ services:
     redis:
         image: redis:7-alpine
         ports:
-            # Optional: Expose Redis port for monitoring tools
             - "6379:6379"
 
     web:
@@ -29,10 +28,8 @@ services:
         ports:
             - "8000:8000"
         environment:
-            # This constructs the DATABASE_URL from the other variables
             - DJANGO_ENV=development
             - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-            # These are passed through from your shell's environment (which docker-compose loads from .env)
             - SECRET_KEY=${SECRET_KEY}
             - GEMINI_API_KEY=${GEMINI_API_KEY}
             - POSTGRES_DB=${POSTGRES_DB}
@@ -45,11 +42,9 @@ services:
                 condition: service_started
 
     worker:
-        build: . # It uses the same image/code as the web service
-        # This command starts the Celery worker
+        build: .
         command: sh -c "./wait-for-postgres.sh db && poetry run celery -A bibliotype worker -l info"
         volumes:
-            # Mount the entire project for live code reloading on the worker too
             - .:/app
             - /app/.venv
         environment:

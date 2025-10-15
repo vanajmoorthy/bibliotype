@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "core",
+    "django_celery_results",
 ]
 
 
@@ -107,6 +108,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+
+TEST_RUNNER = "bibliotype.runner.ForceDisconnectTestRunner"
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
