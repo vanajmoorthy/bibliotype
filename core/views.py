@@ -1,5 +1,7 @@
 import json
 
+
+import posthog
 from django.core.cache import cache
 from celery.result import AsyncResult
 from django.contrib import messages
@@ -134,6 +136,8 @@ def signup_view(request):
                 return redirect("core:display_dna")
 
             messages.success(request, "Account created! Now, let's generate your Bibliotype.")
+
+            posthog.capture("user_signed_up_not_after_generating", properties={"example_property": "with_some_value"})
             return redirect("core:home")
 
         # If we are here, the form was invalid. The function will fall through
