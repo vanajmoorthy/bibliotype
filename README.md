@@ -18,6 +18,7 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - long author names and genre names cutting of count when hovering on chart
 - allow user to delete profile
 - ✅ ~get rid of books per year~ 
+- ^ make this like more granular month by month and scrollable and show genres in every month
 - ~ai text explanation of most controversial ratings and possible explanations~ 
 - make most controversial ratings tab look better
 - different colours for different reader types
@@ -25,6 +26,7 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - make upload modal icon better and pixel art
 - support StoryGraph
 - upload to instagram story
+- ai moodboard/collage. different options of things to upload to instagram 
 - SEO stuff
 - favicon ⚠️
 - adjust copy ⚠️
@@ -42,6 +44,12 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - add little loading text phrases when generating bibliotype for anonymous and logged in
 - <img width="150"  alt="71354" src="https://github.com/user-attachments/assets/d6f95eea-2c09-460f-a184-f7406dfbc11b" />
 - average "contrarian" score under most controversial ratings with phrases like "my, you're contrarian"
+- sign up form validate password and all on blur
+- store all books for a user and do similarity score set up for recommendations
+- "books you may like"/"books similar readers enjoyed"
+- use ai to explain why they might like them and summarise them 
+- how similar are you/similarity percentage for 2 or more people
+-
 
 
 
