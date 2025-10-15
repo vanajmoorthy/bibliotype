@@ -403,6 +403,22 @@ argon2 = ["argon2-cffi (>=19.1.0)"]
 bcrypt = ["bcrypt"]
 
 [[package]]
+name = "django-celery-results"
+version = "2.6.0"
+description = "Celery result backends for Django."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "django_celery_results-2.6.0-py3-none-any.whl", hash = "sha256:b9ccdca2695b98c7cbbb8dea742311ba9a92773d71d7b4944a676e69a7df1c73"},
+    {file = "django_celery_results-2.6.0.tar.gz", hash = "sha256:9abcd836ae6b61063779244d8887a88fe80bbfaba143df36d3cb07034671277c"},
+]
+
+[package.dependencies]
+celery = ">=5.2.7,<6.0"
+Django = ">=3.2.25"
+
+[[package]]
 name = "django-redis"
 version = "6.0.0"
 description = "Full featured redis cache backend for Django."
@@ -1520,4 +1536,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.13"
-content-hash = "07b221101670e3bb785039b5fa6f394a8e976299e442d93199cf736f8a489aa8"
+content-hash = "982794d17cb15ccc1a300c5f292531b22f41350d8cef1ccd2c26e8ccbb0b1e2f"
