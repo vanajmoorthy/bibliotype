@@ -47,7 +47,9 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - use ai to explain why they might like them and summarise them 
 - how similar are you/similarity percentage for 2 or more people
 - add "input your csv" link
-
+- make pixelated dna strand logo
+- add emojis in some places
+- think about more animation
 
 ## ✨ Features
 
