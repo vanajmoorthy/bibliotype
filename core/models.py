@@ -92,6 +92,32 @@ class Book(models.Model):
         return f'"{self.title}" by {self.author.name}'
 
 
+class UserBook(models.Model):
+    """Stores the relationship between users and books they've read"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_books")
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="readers")
+    
+    # Data from CSV
+    user_rating = models.IntegerField(null=True, blank=True)  # 1-5 stars
+    user_review = models.TextField(blank=True, null=True)
+    date_read = models.DateTimeField(null=True, blank=True)
+    date_added = models.DateTimeField(auto_now_add=True)
+    
+    # Computed fields for top books
+    is_top_book = models.BooleanField(default=False, db_index=True)
+    top_book_position = models.IntegerField(null=True, blank=True)
+    
+    class Meta:
+        unique_together = ("user", "book")
+        indexes = [
+            models.Index(fields=["user", "is_top_book"]),
+            models.Index(fields=["book", "is_top_book"]),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.book.title}"
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     last_updated = models.DateTimeField(auto_now=True)
@@ -103,9 +129,88 @@ class UserProfile(models.Model):
     reading_vibe = models.JSONField(null=True, blank=True)
     vibe_data_hash = models.CharField(max_length=64, blank=True, null=True)
     pending_dna_task_id = models.CharField(max_length=255, blank=True, null=True)
+    
+    # New field for privacy setting
+    visible_in_recommendations = models.BooleanField(
+        default=True, 
+        help_text="Allow other users to see you as a recommendation source"
+    )
 
+    def get_top_books(self, limit=5):
+        """Returns user's top books ordered by position"""
+        return UserBook.objects.filter(
+            user=self.user, 
+            is_top_book=True
+        ).select_related('book', 'book__author').order_by('top_book_position')[:limit]
+    
     def __str__(self):
         return f"DNA for {self.user.username}"
+
+
+class AnonymousUserSession(models.Model):
+    """Temporary storage for active anonymous sessions"""
+    session_key = models.CharField(max_length=40, unique=True, db_index=True)
+    dna_data = models.JSONField()
+    
+    # Store book IDs and distributions
+    books_data = models.JSONField(default=list)  # List of book IDs
+    top_books_data = models.JSONField(default=list)  # Top 5 book IDs
+    genre_distribution = models.JSONField(default=dict)  # {"genre": count}
+    author_distribution = models.JSONField(default=dict)  # {"normalized_author": count}
+    
+    # Metadata
+    anonymized = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(db_index=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=["session_key", "expires_at"]),
+            models.Index(fields=["expires_at", "anonymized"]),
+        ]
+    
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
+    
+    def __str__(self):
+        return f"Anonymous session: {self.session_key}"
+
+
+class AnonymizedReadingProfile(models.Model):
+    """Permanently stored, anonymized reading profile for comparison"""
+    
+    # Reading patterns (no identifiers)
+    total_books_read = models.PositiveIntegerField()
+    reader_type = models.CharField(max_length=100, db_index=True)
+    
+    # Distributions
+    genre_distribution = models.JSONField(default=dict)
+    author_distribution = models.JSONField(default=dict)
+    
+    # Statistics
+    average_rating = models.FloatField(null=True, blank=True)
+    avg_book_length = models.IntegerField(null=True, blank=True)
+    avg_publish_year = models.IntegerField(null=True, blank=True)
+    mainstream_score = models.IntegerField(null=True, blank=True)
+    genre_diversity_count = models.PositiveIntegerField(default=0)
+    
+    # Top books (just IDs)
+    top_book_ids = models.JSONField(default=list)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    source = models.CharField(max_length=20, default="anonymous")
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['reader_type', 'created_at']),
+            models.Index(fields=['total_books_read']),
+        ]
+    
+    def __str__(self):
+        return f"AnonymizedProfile: {self.reader_type} ({self.total_books_read} books)"
 
 
 class AggregateAnalytics(models.Model):

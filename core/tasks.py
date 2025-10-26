@@ -157,7 +157,7 @@ def analyze_and_print_genres(all_raw_genres, canonical_map):
 
 
 @shared_task(bind=True)
-def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None):
+def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, session_key: str = None):
     logger.info("Running the latest (refactored) version of the Celery task")
     user = None
     try:
@@ -168,7 +168,7 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None):
         raise
 
     try:
-        result_data = calculate_full_dna(csv_file_content, user)
+        result_data = calculate_full_dna(csv_file_content, user, session_key)
 
         if not user:
             if self.request.id:
@@ -181,3 +181,13 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None):
     except Exception as e:
         logger.error(f"Task failed due to an error in the analysis engine: {e}", exc_info=True)
         raise
+
+
+@shared_task
+def anonymize_expired_sessions_task():
+    """Periodic task to convert expired anonymous sessions to anonymized profiles"""
+    from .services.anonymization_service import batch_anonymize_expired_sessions
+    
+    count = batch_anonymize_expired_sessions()
+    logger.info(f"Anonymized {count} expired sessions")
+    return count
