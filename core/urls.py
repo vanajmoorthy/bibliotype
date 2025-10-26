@@ -13,6 +13,7 @@ urlpatterns = [
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
     path("dashboard/update-privacy/", views.update_privacy_view, name="update_privacy"),
+    path("dashboard/update-recommendation-visibility/", views.update_recommendation_visibility, name="update_recommendation_visibility"),
     path("u/<str:username>/", views.public_profile_view, name="public_profile"),
     path("dashboard/update-name/", views.update_display_name_view, name="update_name"),
     path("api/update-username/", views.update_username_api, name="api_update_username"),

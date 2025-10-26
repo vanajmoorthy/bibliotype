@@ -33,6 +33,7 @@ def display_dna_view(request):
 
     dna_data = request.session.get("dna_data")
     user_profile = None
+    recommendations = []
 
     if request.user.is_authenticated:
         user_profile = request.user.userprofile
@@ -43,6 +44,16 @@ def display_dna_view(request):
 
         if dna_data is None and user_profile.dna_data:
             dna_data = user_profile.dna_data
+        
+        # Get recommendations for registered user
+        if user_profile.dna_data:
+            from .services.recommendation_service import get_recommendations_for_user
+            recommendations = get_recommendations_for_user(request.user, limit=6)
+    else:
+        # Anonymous user recommendations
+        if dna_data and request.session.session_key:
+            from .services.recommendation_service import get_recommendations_for_anonymous
+            recommendations = get_recommendations_for_anonymous(request.session.session_key, limit=6)
 
     if not request.user.is_authenticated and dna_data is None:
         messages.info(request, "First, upload your library file to generate your Bibliotype!")
@@ -52,6 +63,7 @@ def display_dna_view(request):
         "dna": dna_data,
         "user_profile": user_profile,
         "is_processing": False,
+        "recommendations": recommendations,
     }
 
     return render(request, "core/dna_display.html", context)
@@ -84,7 +96,7 @@ def upload_view(request):
 
             return redirect(processing_url)
         else:
-            result = generate_reading_dna_task.delay(csv_content, None)
+            result = generate_reading_dna_task.delay(csv_content, None, request.session.session_key)
             task_id = result.id
 
             request.session["anonymous_task_id"] = task_id
@@ -241,6 +253,23 @@ def update_username_api(request):
 
 
 @login_required
+@require_POST
+def update_recommendation_visibility(request):
+    """Toggle visibility in recommendations"""
+    is_visible = request.POST.get("visible_in_recommendations") == "true"
+    profile = request.user.userprofile
+    profile.visible_in_recommendations = is_visible
+    profile.save()
+    
+    if is_visible:
+        messages.success(request, "You are now visible as a recommendation source to similar readers!")
+    else:
+        messages.success(request, "You've opted out of being shown as a recommendation source.")
+    
+    return redirect("core:display_dna")
+
+
+@login_required
 def check_dna_status_view(request):
     profile = request.user.userprofile
     if profile.dna_data:
@@ -265,11 +294,18 @@ def public_profile_view(request, username):
         else:
             title = f"{display_name}'s Reading DNA"
 
+        # Get recommendations for the profile owner
+        recommendations = []
+        if profile.dna_data:
+            from .services.recommendation_service import get_recommendations_for_user
+            recommendations = get_recommendations_for_user(profile_user, limit=6)
+
         context = {
             "dna": profile.dna_data,
             "profile_user": profile_user,
             "user_profile": profile,
             "title": title,
+            "recommendations": recommendations,
         }
         return render(request, "core/public_profile.html", context)
     except User.DoesNotExist:
