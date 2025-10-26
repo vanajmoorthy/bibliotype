@@ -10,6 +10,9 @@ force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
 
+[tool.poetry.group.dev.dependencies]
+djlint = "^1.36.4"
+
 [project]
 name = "bibliotype"
 version = "0.1.0"
@@ -34,7 +37,8 @@ dependencies = [
     "bs4 (>=0.0.2,<0.0.3)",
     "django-redis (>=6.0.0,<7.0.0)",
     "posthog (>=6.7.2,<7.0.0)",
-    "django-celery-results (>=2.6.0,<3.0.0)"
+    "django-celery-results (>=2.6.0,<3.0.0)",
+    "djlint (>=1.36.4,<2.0.0)"
 ]
 
 
