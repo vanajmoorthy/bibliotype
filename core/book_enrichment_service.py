@@ -227,7 +227,11 @@ def enrich_book_from_apis(book, session, slow_down=False):
 
     # --- Step 1: Get general data from Open Library if needed ---
     # Only run if we are missing key data like publisher, page count, or genres.
-    if not book.publisher or not book.page_count or not book.genres.exists():
+    # Use a direct query to avoid relationship caching issues
+    from core.models import Genre
+    has_genres = Genre.objects.filter(books__id=book.pk).exists()
+    
+    if not book.publisher or not book.page_count or not has_genres:
         ol_data, calls_made = _fetch_from_open_library(book, session, slow_down)
         ol_api_calls += calls_made
 
