@@ -1,9 +1,12 @@
+import logging
 import os
 import re
 import json
 import requests
 import google.generativeai as genai
 from urllib.parse import quote
+
+logger = logging.getLogger(__name__)
 
 # This should already be configured in your project from the vibe generation
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -53,7 +56,7 @@ def research_publisher_identity(publisher_name: str, session: requests.Session) 
                 if "extract" in wiki_json and "may refer to" not in wiki_json["extract"].lower():
                     context_text = wiki_json["extract"]
                     found_page_title = wiki_json.get("title", term)
-                    print(f"     - Found Wikipedia page '{found_page_title}' for '{publisher_name}'")
+                    logger.info(f"Found Wikipedia page '{found_page_title}' for '{publisher_name}'")
                     break  # We found a good page, stop searching
 
         if not context_text:
