@@ -320,7 +320,6 @@ GENRE_ALIASES = {
     "short stories": {"short stories", "english short stories", "short story"},
     "comics & graphic novels": {
         "cartoons and comics",
-        "graphic novels",
         "comic books, strips",
     },
     "holiday fiction": {"christmas stories"},
