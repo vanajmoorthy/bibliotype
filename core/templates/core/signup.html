@@ -20,7 +20,6 @@
                         <input type="hidden" name="task_id_to_claim" value="{{ task_id_to_claim }}" />
                     {% endif %}
 
-                    <!-- Display Name Field with Live Validation -->
                     <div>
                         <label for="{{ form.username.id_for_label }}" class="mb-1 block text-xl font-bold uppercase">
                             {{ form.username.label }}
@@ -40,15 +39,6 @@
                             <p class="mt-2 text-lg text-gray-600">{{ form.username.help_text|safe }}</p>
                         {% endif %}
 
-                        <!-- 
-                        ======================================================================
-                        REVISED ERROR LOGIC
-                        - The live client-side error shows immediately.
-                        - The server-side error only shows if there's no client-side error.
-                        ======================================================================
-                        -->
-
-                        <!-- LIVE CLIENT-SIDE ERROR (from Alpine.js) -->
                         <div
                             x-show="displayName.length > 15"
                             x-cloak
@@ -56,9 +46,8 @@
                         >
                             Ensure this value has at most 15 characters (it has
                             <span x-text="displayName.length"></span>).
-                        </div>
+                            </div>
 
-                        <!-- SERVER-SIDE ERROR (from Django) -->
                         {% for error in form.username.errors %}
                             <p x-show="displayName.length <= 15" class="mt-2 text-lg font-bold text-red-600 uppercase">
                                 {{ error }}
@@ -66,7 +55,6 @@
                         {% endfor %}
                     </div>
 
-                    <!-- Other Fields (Email, Passwords) -->
                     {% for field in form %}
                         {% if field.name != 'username' %}
                             <div>
