@@ -295,14 +295,72 @@
                     <!-- Alpine.js component for the gauge logic -->
                     {# djlint:off #}
                     <div x-data="{
+                        // --- STATE ---
                         score: {{ dna.mainstream_score_percent }},
+                        animatedScore: 0,
+                        displayedScore: 0,
+                        hasAnimated: false,
+
+                        // --- GETTERS ---
                         get rotation() {
-                            // Clamps the score between 0 and 100
-                            const clampedScore = Math.max(0, Math.min(100, this.score));
-                            // Maps the 0-100 score to a -90deg (left) to +90deg (right) rotation
+                            const clampedScore = Math.max(-5, Math.min(105, this.animatedScore));
                             return (clampedScore / 100) * 180 - 90;
+                        },
+
+                        // --- METHODS ---
+                        // The animate method now handles both the main animation AND the continuous wiggle.
+                        animate() {
+                            const duration = 1000; // Main animation duration
+                            let startTimestamp = null;
+
+                            const step = (timestamp) => {
+                                if (!startTimestamp) startTimestamp = timestamp;
+                                const elapsed = timestamp - startTimestamp;
+
+                                // 1. Calculate the main progress of the animation (caps at 1)
+                                const mainProgress = Math.min(elapsed / duration, 1);
+                                const easedMainProgress = 0.5 - Math.cos(mainProgress * Math.PI) / 2;
+
+                                // 2. Calculate the continuous wiggle value based on the current time
+                                const wiggle1 = Math.sin(timestamp / 280) * 0.4; // Slower wiggle
+                                const wiggle2 = Math.sin(timestamp / 110) * 0.25; // Faster wiggle
+                                const totalWiggle = wiggle1 + wiggle2;
+
+                                // 3. Scale the wiggle's intensity by the main animation's progress.
+                                // This makes the wiggle start small and grow to full strength.
+                                const scaledWiggle = totalWiggle * easedMainProgress;
+
+                                // 4. Set the final needle position.
+                                // It's the main eased position plus the scaled, continuous wiggle.
+                                this.animatedScore = (this.score * easedMainProgress) + scaledWiggle;
+
+                                // 5. Update the displayed score text, but only during the main animation.
+                                // After it's done, lock it to the final score so the text doesn't wiggle.
+                                if (mainProgress < 1) {
+                                    this.displayedScore = Math.round(this.score * easedMainProgress);
+                                } else {
+                                    this.displayedScore = Math.round(this.score);
+                                }
+                                
+                                // 6. Keep the animation loop running forever to maintain the wiggle.
+                                window.requestAnimationFrame(step);
+                            };
+
+                            // Start the single, continuous animation loop.
+                            window.requestAnimationFrame(step);
+                        },
+
+                        init() {
+                            const observer = new IntersectionObserver((entries) => {
+                                if (entries[0].isIntersecting && !this.hasAnimated) {
+                                    this.hasAnimated = true;
+                                    this.animate(); // This one call now handles everything.
+                                    observer.unobserve(this.$el);
+                                }
+                            }, { threshold: 0.5 });
+                            observer.observe(this.$el);
                         }
-                    }">
+                    }" x-init="init()">
                         <div class="relative mx-auto h-32 w-64">
 
                             <!-- Layer 1: The Semicircle Container (with the necessary clipping) -->
@@ -323,6 +381,7 @@
                          <!-- Border at 20% mark -->
                             <div class="absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2 bg-brand-text"
                                  style="transform: rotate(36deg);"></div>
+
 
                         
                          <!-- Border at 20% mark -->
@@ -352,7 +411,7 @@
                             <div class="absolute -bottom-4 border-brand-text border-4 left-0 w-full h-4 bg-gray-600 z-[15]"></div>
 
                             <!-- Note: Increased width to w-3 to make the taper more visible -->
-                            <div class="absolute bottom-0 left-1/2 h-24 w-3 origin-bottom transition-transform duration-500 z-20"
+                            <div class="absolute bottom-0 left-1/2 h-24 w-3 origin-bottom  z-20"
                                  :style="`transform: translateX(-50%) rotate(${rotation}deg);`">
 
                                 <!-- The SVG element defines the shape and its appearance -->
@@ -370,14 +429,14 @@
                             <!-- Layer 4: The Pivot Point (Not clipped, sits on the very top) -->
 
                             <div class="absolute bottom-0 left-1/2 h-7 w-7 -translate-x-1/2 translate-y-1/2 rounded-full border-2 border-brand-text bg-gray-200 z-29"></div>
-                            <div class="absolute -bottom-1 left-1/2 h-4 w-4 -translate-x-1/2 translate-y-1/2 rounded-full  bg-brand-text z-30"></div>
+                            <div class="absolute bottom-0 left-1/2 h-4 w-4 -translate-x-1/2 translate-y-1/2 rounded-full  bg-brand-text z-30"></div>
 
 
                         </div>
 
                         <!-- The descriptive text below the meter -->
                         <p class="mt-6 text-center text-lg">
-                            <strong x-text="score + '%'"></strong> of the books in your library are considered
+                            <strong x-text="displayedScore + '%'"></strong> of the books in your library are considered
                             "mainstream," based on author and publisher popularity.
                         </p>
                     </div>
