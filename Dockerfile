@@ -43,6 +43,9 @@ RUN dos2unix /app/docker-entrypoint.sh
 RUN chmod +x /app/wait-for-postgres.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
+# Create necessary directories that Django expects
+RUN mkdir -p /app/logs
+
 # The entrypoint will run first, then the command from docker-compose.
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
