@@ -135,6 +135,8 @@ GENRE_ALIASES = {
         "fantastique",
         "quests (expeditions)",
         "discworld (imaginary place",  # Typo fix
+        "adventure fiction",
+        "epic literature",
     },
     "science fiction": {
         "sci-fi",
@@ -280,6 +282,9 @@ GENRE_ALIASES = {
         "achilles (greek mythology)",
         "iphigenia (greek mythology)",
         "thetis",
+        "epic poetry",
+        "greek epic poetry",
+        "classical epic poetry",
     },
     "short stories": {"short stories", "english short stories", "short story"},
     "comics & graphic novels": {"cartoons and comics"},
@@ -458,6 +463,7 @@ GENRE_ALIASES = {
         "animal drama",
         "performing arts",
         "french drama",
+        "drama (dramatic works by one author)",
     },
     "religion & spirituality": {"bible", "christianity", "catholic church"},
 }
@@ -539,6 +545,15 @@ EXCLUDED_GENRES = {
     "fiction - general",
     "academic",
     "crap",
+    # Additional broad exclusions to prevent false matches
+    "continental european fiction",
+    "european fiction",
+    "american fiction",
+    "contemporary fiction",
+    "modern fiction",
+    "historical",
+    "social",
+    "cultural",
     # --- THEMES / SUBJECTS / CHARACTERS (WHAT A BOOK IS ABOUT, NOT WHAT IT IS) ---
     "abandoned children",
     "adoptees, fiction",
