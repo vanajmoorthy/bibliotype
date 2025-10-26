@@ -16,29 +16,15 @@
                     <div class="w-full">
                         <div class="shadow-neo border-2 border-[var(--color-brand-text)] bg-white p-8">
                             <div class="flex flex-col items-center justify-center space-y-4">
-                                <svg
-                                    class="h-10 w-10 animate-spin text-[var(--color-brand-text)]"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <circle
-                                        class="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        stroke-width="4"
-                                    ></circle>
-                                    <path
-                                        class="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                    ></path>
+                                <svg class="h-10 w-10 animate-spin text-[var(--color-brand-text)]"
+                                     xmlns="http://www.w3.org/2000/svg"
+                                     fill="none"
+                                     viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
                                 </svg>
-                                <p class="text-center text-2xl font-bold text-[var(--color-brand-text)] uppercase">
-                                    Analyzing Your Library
-                                </p>
+                                <p class="text-center text-2xl font-bold text-[var(--color-brand-text)] uppercase">Analyzing Your Library</p>
                                 <p class="text-center text-lg">This page will refresh automatically when it's ready!</p>
                             </div>
                         </div>
@@ -67,16 +53,15 @@
                     checkStatus();
                 });
             </script>
-
             {# =================================================================== #}
             {# --- STATE 2: USER (LOGGED IN OR ANON) HAS DNA TO DISPLAY --- #}
             {# =================================================================== #}
         {% elif dna %}
             {{ dna|json_script:"dna-data" }}
-
             <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
                 <span class="relative z-10">
                     {% if user.is_authenticated %}
+                        {# djlint:off #}
                         <div
                             x-data="{
                         editing: false,
@@ -187,26 +172,21 @@
                                 class="mt-2 text-lg font-bold text-red-600"
                             ></div>
                         </div>
+                        {# djlint:on #}
                     {% else %}
                         Your Reading DNA
                     {% endif %}
                 </span>
             </h1>
-
             {% if dna.reading_vibe %}
-                <div
-                    id="vibe-container"
-                    class="mb-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-xl italic"
-                >
+                <div id="vibe-container"
+                     class="mb-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-xl italic">
                     {% for phrase in dna.reading_vibe %}
                         <span class="vibe-item whitespace-nowrap text-gray-600">{{ phrase }}</span>
-                        {% if not forloop.last %}
-                            <span class="vibe-separator font-bold text-blue-400">·</span>
-                        {% endif %}
+                        {% if not forloop.last %}<span class="vibe-separator font-bold text-blue-400">·</span>{% endif %}
                     {% endfor %}
                 </div>
             {% endif %}
-
             {% if dna.reader_type %}
                 <div class="bg-brand-purple border-brand-text shadow-neo border-2 p-6 text-center">
                     <div class="text-lg uppercase">Your Reader Type is...</div>
@@ -216,7 +196,6 @@
                     {% endif %}
                 </div>
             {% endif %}
-
             {% if dna.top_reader_types %}
                 <div class="border-brand-text shadow-neo border-2 bg-white p-6">
                     <h2 class="mb-4 text-2xl font-bold uppercase">Your Top Reader Traits</h2>
@@ -239,7 +218,6 @@
                     </ol>
                 </div>
             {% endif %}
-
             <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
                 <div class="bg-brand-yellow border-brand-text shadow-neo border-2 p-6 text-center">
                     <div class="text-5xl font-bold">{{ dna.user_stats.total_books_read }}</div>
@@ -254,7 +232,6 @@
                     <div class="mt-2 text-lg uppercase">Overall Rating</div>
                 </div>
             </div>
-
             <div class="border-brand-text shadow-neo border-2 bg-white p-6">
                 <h2 class="mb-4 text-2xl font-bold uppercase">Comparative Analytics</h2>
                 {% if dna.bibliotype_percentiles %}
@@ -262,9 +239,7 @@
                         <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
                             <p>
                                 Your average book length is <strong>{{ dna.user_stats.avg_book_length }} pages</strong>.
-                                <span class="text-gray-600"
-                                    >(Global avg: ~{{ dna.global_averages.avg_book_length_pages }})</span
-                                >
+                                <span class="text-gray-600">(Global avg: ~{{ dna.global_averages.avg_book_length_pages }})</span>
                             </p>
                             <p class="mt-1 text-base">
                                 This is longer than
@@ -276,9 +251,7 @@
                             <p>
                                 The average age of books you read is from
                                 <strong>{{ dna.user_stats.avg_publish_year|floatformat:0 }}</strong>.
-                                <span class="text-gray-600"
-                                    >(Global avg: ~{{ dna.global_averages.avg_publish_year }})</span
-                                >
+                                <span class="text-gray-600">(Global avg: ~{{ dna.global_averages.avg_publish_year }})</span>
                             </p>
                             <p class="mt-1 text-base">
                                 Your reading tastes are older than
@@ -287,7 +260,9 @@
                             </p>
                         </div>
                         <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
-                            <p>You have read <strong>{{ dna.user_stats.total_books_read }} books</strong> in total.</p>
+                            <p>
+                                You have read <strong>{{ dna.user_stats.total_books_read }} books</strong> in total.
+                            </p>
                             <p class="mt-1 text-base">
                                 You've read more books than
                                 <strong>{{ dna.bibliotype_percentiles.total_books_read|floatformat:1 }}%</strong> of
@@ -302,7 +277,6 @@
                     </p>
                 {% endif %}
             </div>
-
             <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                 <div class="border-brand-text shadow-neo border-2 bg-white p-6">
                     <h2 class="mb-4 text-2xl font-bold uppercase">Your Most Niche Read</h2>
@@ -316,259 +290,251 @@
                         <p class="text-lg">Not enough data to determine your niche reads yet.</p>
                     {% endif %}
                 </div>
-        
-        <div class="border-brand-text shadow-neo border-2 bg-white p-6">
-    <h2 class="mb-4 text-center text-2xl font-bold uppercase">How Mainstream Your Taste Is</h2>
+                <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+                    <h2 class="mb-4 text-center text-2xl font-bold uppercase">How Mainstream Is Your Taste?</h2>
+                    <!-- Alpine.js component for the gauge logic -->
+                    {# djlint:off #}
+                    <div x-data="{
+                        score: {{ dna.mainstream_score_percent }},
+                        get rotation() {
+                            // Clamps the score between 0 and 100
+                            const clampedScore = Math.max(0, Math.min(100, this.score));
+                            // Maps the 0-100 score to a -90deg (left) to +90deg (right) rotation
+                            return (clampedScore / 100) * 180 - 90;
+                        }
+                    }">
+                        <div class="relative mx-auto h-32 w-64">
 
-    <!-- Alpine.js component for the gauge logic -->
-    <div x-data="{
-        score: {{ dna.mainstream_score_percent }},
-        get rotation() {
-            // Clamps the score between 0 and 100
-            const clampedScore = Math.max(0, Math.min(100, this.score));
-            // Maps the 0-100 score to a -90deg (left) to +90deg (right) rotation
-            return (clampedScore / 100) * 180 - 90;
-        }
-    }">
-        <!-- Gauge container: a 2:1 rectangle that hides the bottom of the circle -->
-        <div class="relative mx-auto h-32 w-64 overflow-hidden">
+                            <!-- Layer 1: The Semicircle Container (with the necessary clipping) -->
+                            <div class="absolute top-0 left-0 h-full w-full overflow-hidden">
+                                <!-- The actual gradient circle that gets clipped -->
+                                <div class="absolute top-0 left-0 h-64 w-64 rounded-full border-4 border-brand-text"
+                                    style="background-image: conic-gradient(
+                                        from 180deg,
+                                        #00c27a 0% 20%,      /* Niche */
+                                        #66d19e 20% 40%,     /* Leaning Niche */
+                                        #ffc107 40% 60%,     /* Balanced */
+                                        #ff8c42 60% 80%,     /* Leaning Mainstream */
+                                        #ff5c5c 80% 100%      /* Mainstream */
+                                        );">
+                                </div>
+                            </div>
 
-            <!-- The gradient circle using a 5-color conic gradient. Positioned behind the needle. -->
-            <div class="absolute top-0 left-0 h-64 w-64 rounded-full border-4 border-brand-text z-10"
-                 style="background-image: conic-gradient(
-                    from 180deg,
-                    #00c27a 0% 20%,      /* Niche */
-                    #66d19e 20% 40%,     /* Leaning Niche */
-                    #ffc107 40% 60%,     /* Balanced */
-                    #ff8c42 60% 80%,     /* Leaning Mainstream */
-                    #ff5c5c 80% 100%      /* Mainstream */
-                 );">
-            </div>
+                         <!-- Border at 20% mark -->
+                            <div class="absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2 bg-brand-text"
+                                 style="transform: rotate(36deg);"></div>
 
-            <!-- Curved text labels above the gauge -->
-            <div class="absolute top-0 left-0 h-64 w-64 z-15">
-                <!-- "not very" label (left side) -->
-                <div class="absolute top-8 left-8 text-sm font-bold text-brand-text transform -rotate-45 origin-center">
-                    not very
-                </div>
-                <!-- "kinda" label (center) -->
-                <div class="absolute top-4 left-1/2 transform -translate-x-1/2 text-sm font-bold text-brand-text">
-                    kinda
-                </div>
-                <!-- "super mainstream" label (right side) -->
-                <div class="absolute top-8 right-8 text-sm font-bold text-brand-text transform rotate-45 origin-center">
-                    super mainstream
-                </div>
-            </div>
-
-            <!-- The needle, with a higher z-index to ensure it's on top of the gradient -->
-            <div class="absolute bottom-0 left-1/2 h-28 w-2 origin-bottom bg-brand-text transition-transform duration-500 z-20"
-                 :style="`transform: translateX(-50%) rotate(${rotation}deg)`">
-            </div>
-
-            <!-- The pivot point for the needle, with the highest z-index -->
-            <div class="absolute bottom-1 left-1/2 h-6 w-6 -translate-x-1/2 rounded-full border-4 border-white bg-brand-text z-30"></div>
-        </div>
-
-        <!-- The descriptive text below the meter -->
-        <p class="mt-4 text-center text-lg">
-            <strong x-text="score + '%'"></strong> of the books in your library are considered
-            "mainstream," based on author and publisher popularity.
-        </p>
-    </div>
-</div>
-
-            </div>
-
-            <div class="border-brand-text shadow-neo border-2 bg-white p-6">
-                <h2 class="mb-4 text-2xl font-bold uppercase">Books Read Per Year</h2>
-                <canvas id="booksByYearChart"></canvas>
-            </div>
-
-    
-            <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
-                
-                <!-- REVISED: Top Genres section -->
-                <div x-data="{
-                    colors: ['#ffb4dd', '#40e7aa', '#ffa75e', '#8bbfff', '#FFE9CE', '#ff647c', '#ffe56c', '#A1CDF1', '#9af6d4', '#fe9393']
-          
-                }" class="border-brand-text shadow-neo relative overflow-hidden border-2 bg-white p-6">
-                    <h2 class="mb-4 text-2xl font-bold uppercase">Top Genres</h2>
-                    {% if dna.top_genres %}
-                        <ol class="space-y-2 text-lg">
-                            {% for genre, count in dna.top_genres %}
-                                <li class="capitalize">
-                                    <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2"
-                                          :style="{ 'background-color': colors[{{ forloop.counter0 }}] }">
-                                        {{ genre }}
-                                    </span>
-                                    ({{ count }} books)
-                                </li>
-                            {% endfor %}
-                        </ol>
-                        <div class="absolute top-2 right-2 h-28 w-28 md:h-32 md:w-32"><canvas id="topGenresChart"></canvas></div>
-                    {% else %}
-                        <p class="text-lg">Not enough genre data to display.</p>
-                    {% endif %}
-                </div>
-
-                <!-- REVISED: Top Authors section -->
-               <div x-data="{
-                    colors: ['#ffb4dd', '#40e7aa', '#ffa75e', '#8bbfff', '#FFE9CE', '#ff647c', '#ffe56c', '#A1CDF1', '#9af6d4', '#fe9393']
-          
-                }" class="border-brand-text shadow-neo relative overflow-hidden border-2 bg-white p-6">
-                    <h2 class="mb-4 text-2xl font-bold uppercase">Top Authors</h2>
-                    {% if dna.top_authors %}
-                        <ol class="space-y-2 text-lg">
-                            {% for author, count in dna.top_authors %}
-                                <li>
-                                    <span class="bg-brand-cyan border-brand-text border-2 px-2 py-1 font-bold mr-2" 
-                                          :style="{ 'background-color': colors[{{ forloop.counter0 }}] }">
-                                        {{ author }}
-                                    </span>
-                                    ({{ count }} books)
-                                </li>
-                            {% endfor %}
-                        </ol>
-                        <div class="absolute top-2 right-2 h-28 w-28 md:h-32 md:w-32"><canvas id="topAuthorsChart"></canvas></div>
-                    {% else %}
-                        <p class="text-lg">Not enough author data to display.</p>
-                    {% endif %}
-                </div>
-            </div>
+                        
+                         <!-- Border at 20% mark -->
+                            <div class="absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2 bg-brand-text"
+                                 style="transform: rotate(-36deg);"></div>
+   
 
   
 
-            <div class="border-brand-text shadow-neo border-2 bg-white p-6">
-                <h2 class="mb-4 text-2xl font-bold uppercase">Review Analysis</h2>
-                <div class="grid grid-cols-1 gap-6 text-lg md:grid-cols-2">
-                    <div>
-                        <h3 class="text-xl font-bold uppercase">Most Positive Review</h3>
-                        {% if dna.most_positive_review %}
-                            <p class="mt-2 font-bold">{{ dna.most_positive_review.Title }}</p>
-                            <blockquote class="border-brand-text shadow-neo-sm mt-2 border-2 bg-gray-100 p-3">
-                                "{{ dna.most_positive_review.my_review }}"
-                            </blockquote>
+                            <!-- Layer 2: SVG for Text (Not clipped, sits on top) -->
+                            <svg class="absolute top-0 left-0 h-64 w-64 z-10" viewBox="0 0 256 256" overflow="visible">
+                                <defs>
+                                    <path id="semicircle" d="M 12,128 A 116,116 0 0,1 244,128" fill="none"/>
+                                </defs>
+                                <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
+                                    <textPath href="#semicircle" startOffset="15%" text-anchor="middle">not very</textPath>
+                                </text>
+                                <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
+                                    <textPath href="#semicircle" startOffset="50%" text-anchor="middle">kinda</textPath>
+                                </text>
+                                <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
+                                    <textPath href="#semicircle" startOffset="85%" text-anchor="middle">extremely</textPath>
+                                </text>
+                            </svg>
+
+
+                            <div class="absolute -bottom-4 border-brand-text border-4 left-0 w-full h-4 bg-gray-600 z-[15]"></div>
+
+                            <!-- Note: Increased width to w-3 to make the taper more visible -->
+                            <div class="absolute bottom-0 left-1/2 h-24 w-3 origin-bottom transition-transform duration-500 z-20"
+                                 :style="`transform: translateX(-50%) rotate(${rotation}deg);`">
+
+                                <!-- The SVG element defines the shape and its appearance -->
+                                <svg width="100%" height="100%" viewBox="0 0 12 96" preserveAspectRatio="none"
+                                     xmlns="http://www.w3.org/2000/svg">
+
+                                    <!-- The polygon's points are calculated based on the 12x96 viewBox -->
+                                    <polygon points="0,96 12,96 6,0"
+                                             class="fill-gray-200 stroke-brand-text"
+                                             stroke-width="2"
+                                             stroke-linejoin="miter" />
+                                </svg>
+                            </div>
+
+                            <!-- Layer 4: The Pivot Point (Not clipped, sits on the very top) -->
+
+                            <div class="absolute bottom-0 left-1/2 h-7 w-7 -translate-x-1/2 translate-y-1/2 rounded-full border-2 border-brand-text bg-gray-200 z-29"></div>
+                            <div class="absolute -bottom-1 left-1/2 h-4 w-4 -translate-x-1/2 translate-y-1/2 rounded-full  bg-brand-text z-30"></div>
+
+
+                        </div>
+
+                        <!-- The descriptive text below the meter -->
+                        <p class="mt-6 text-center text-lg">
+                            <strong x-text="score + '%'"></strong> of the books in your library are considered
+                            "mainstream," based on author and publisher popularity.
+                        </p>
+                    </div>
+                </div>
+                    {# djlint:on #}
+                </div>
+                <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+                    <h2 class="mb-4 text-2xl font-bold uppercase">Books Read Per Year</h2>
+                    <canvas id="booksByYearChart"></canvas>
+                </div>
+                <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+                    <!-- REVISED: Top Genres section -->
+                    <div x-data="{ colors: ['#ffb4dd', '#40e7aa', '#ffa75e', '#8bbfff', '#FFE9CE', '#ff647c', '#ffe56c', '#A1CDF1', '#9af6d4', '#fe9393']  }"
+                         class="border-brand-text shadow-neo relative overflow-hidden border-2 bg-white p-6">
+                        <h2 class="mb-4 text-2xl font-bold uppercase">Top Genres</h2>
+                        {% if dna.top_genres %}
+                            <ol class="space-y-2 text-lg">
+                                {% for genre, count in dna.top_genres %}
+                                    <li class="capitalize">
+                                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2"
+                                              :style="{ 'background-color': colors[{{ forloop.counter0 }}] }">
+                                            {{ genre }}
+                                        </span>
+                                        ({{ count }} books)
+                                    </li>
+                                {% endfor %}
+                            </ol>
+                            <div class="absolute top-2 right-2 h-28 w-28 md:h-32 md:w-32">
+                                <canvas id="topGenresChart"></canvas>
+                            </div>
                         {% else %}
-                            <p class="mt-2">No reviews found.</p>
+                            <p class="text-lg">Not enough genre data to display.</p>
                         {% endif %}
                     </div>
-                    <div>
-                        <h3 class="text-xl font-bold uppercase">Most Negative Review</h3>
-                        {% if dna.most_negative_review %}
-                            <p class="mt-2 font-bold">{{ dna.most_negative_review.Title }}</p>
-                            <blockquote class="border-brand-text shadow-neo-sm mt-2 border-2 bg-gray-100 p-3">
-                                "{{ dna.most_negative_review.my_review }}"
-                            </blockquote>
+                    <!-- REVISED: Top Authors section -->
+                    <div x-data="{ colors: ['#ffb4dd', '#40e7aa', '#ffa75e', '#8bbfff', '#FFE9CE', '#ff647c', '#ffe56c', '#A1CDF1', '#9af6d4', '#fe9393']  }"
+                         class="border-brand-text shadow-neo relative overflow-hidden border-2 bg-white p-6">
+                        <h2 class="mb-4 text-2xl font-bold uppercase">Top Authors</h2>
+                        {% if dna.top_authors %}
+                            <ol class="space-y-2 text-lg">
+                                {% for author, count in dna.top_authors %}
+                                    <li>
+                                        <span class="bg-brand-cyan border-brand-text border-2 px-2 py-1 font-bold mr-2"
+                                              :style="{ 'background-color': colors[{{ forloop.counter0 }}] }">
+                                            {{ author }}
+                                        </span>
+                                        ({{ count }} books)
+                                    </li>
+                                {% endfor %}
+                            </ol>
+                            <div class="absolute top-2 right-2 h-28 w-28 md:h-32 md:w-32">
+                                <canvas id="topAuthorsChart"></canvas>
+                            </div>
                         {% else %}
-                            <p class="mt-2">No reviews found.</p>
+                            <p class="text-lg">Not enough author data to display.</p>
                         {% endif %}
                     </div>
                 </div>
-            </div>
-
-            <div class="border-brand-text shadow-neo border-2 bg-white p-6">
-                <h2 class="mb-4 text-2xl font-bold uppercase">Most "Controversial" Ratings 🤯</h2>
-                <p class="mb-4 text-lg">Books where your rating differs most from the Goodreads average.</p>
-                <div class="space-y-4 text-lg">
-                    {% for book in dna.top_controversial_books %}
-                        <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
-                            <p class="font-bold">{{ book.Title }}</p>
-                            <div class="mt-1 flex items-center justify-between text-base">
-                                <span
-                                    >Your Rating:
-                                    <span class="text-xl font-bold">{{ book.my_rating|floatformat:1 }}★</span></span
-                                >
-                                <span
-                                    >Goodreads Avg:
-                                    <span class="text-xl font-bold"
-                                        >{{ book.average_rating|floatformat:1 }}★</span
-                                    ></span
-                                >
-                                <span
-                                    class="bg-brand-purple text-brand-text border-brand-text border-2 px-2 py-1 font-bold"
-                                    >Diff: {{ book.rating_difference|floatformat:1 }}</span
-                                >
+                <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+                    <h2 class="mb-4 text-2xl font-bold uppercase">Review Analysis</h2>
+                    <div class="grid grid-cols-1 gap-6 text-lg md:grid-cols-2">
+                        <div>
+                            <h3 class="text-xl font-bold uppercase">Most Positive Review</h3>
+                            {% if dna.most_positive_review %}
+                                <p class="mt-2 font-bold">{{ dna.most_positive_review.Title }}</p>
+                                <blockquote class="border-brand-text shadow-neo-sm mt-2 border-2 bg-gray-100 p-3">
+                                    "{{ dna.most_positive_review.my_review }}"
+                                </blockquote>
+                            {% else %}
+                                <p class="mt-2">No reviews found.</p>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold uppercase">Most Negative Review</h3>
+                            {% if dna.most_negative_review %}
+                                <p class="mt-2 font-bold">{{ dna.most_negative_review.Title }}</p>
+                                <blockquote class="border-brand-text shadow-neo-sm mt-2 border-2 bg-gray-100 p-3">
+                                    "{{ dna.most_negative_review.my_review }}"
+                                </blockquote>
+                            {% else %}
+                                <p class="mt-2">No reviews found.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+                    <h2 class="mb-4 text-2xl font-bold uppercase">Most "Controversial" Ratings 🤯</h2>
+                    <p class="mb-4 text-lg">Books where your rating differs most from the Goodreads average.</p>
+                    <div class="space-y-4 text-lg">
+                        {% for book in dna.top_controversial_books %}
+                            <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
+                                <p class="font-bold">{{ book.Title }}</p>
+                                <div class="mt-1 flex items-center justify-between text-base">
+                                    <span>Your Rating:
+                                        <span class="text-xl font-bold">{{ book.my_rating|floatformat:1 }}★</span></span>
+                                        <span>Goodreads Avg:
+                                            <span class="text-xl font-bold">{{ book.average_rating|floatformat:1 }}★</span></span>
+                                            <span class="bg-brand-purple text-brand-text border-brand-text border-2 px-2 py-1 font-bold">Diff: {{ book.rating_difference|floatformat:1 }}</span>
+                                        </div>
+                                    </div>
+                                {% empty %}
+                                    <p>Not enough data to calculate controversial ratings.</p>
+                                {% endfor %}
                             </div>
                         </div>
-                        {% empty %}
-                        <p>Not enough data to calculate controversial ratings.</p>
-                    {% endfor %}
-                </div>
-            </div>
-
-            {% if user.is_authenticated %}
-                <div class="grid grid-cols-1 items-center gap-6 md:grid-cols-3">
-                    <div
-                        class="border-brand-text shadow-neo flex h-full items-center border-2 bg-white p-4 md:col-span-2"
-                    >
-                        <div class="flex-grow">
-                            {% if user_profile.is_public %}
-                                <h3 class="text-xl font-bold uppercase">
-                                    Your profile is
-                                    <span class="bg-brand-green border-brand-text border-2 px-2 py-1 font-bold"
-                                        >Public</span
-                                    >.
-                                    <a
-                                        href="{% url 'core:public_profile' username=user.username %}"
-                                        class="hover:bg-brand-yellow ml-2 underline"
-                                        target="_blank"
-                                        >/u/{{ user.username }}</a
-                                    >
-                                </h3>
-                            {% else %}
-                                <h3 class="text-xl font-bold uppercase">
-                                    Your profile is
-                                    <span class="bg-brand-pink border-brand-text border-2 px-2 py-1 font-bold"
-                                        >Private</span
-                                    >.
-                                </h3>
-                            {% endif %}
-                        </div>
-                        <form action="{% url 'core:update_privacy' %}" method="post" class="ml-4">
-                            {% csrf_token %}
-                            {% if user_profile.is_public %}
-                                <input type="hidden" name="is_public" value="false" />
-                                <button
-                                    type="submit"
-                                    class="bg-brand-pink text-brand-text border-brand-text shadow-neo-sm hover:bg-brand-yellow border-2 px-4 py-2 font-bold"
-                                >
-                                    Make Private
-                                </button>
-                            {% else %}
-                                <input type="hidden" name="is_public" value="true" />
-                                <button
-                                    type="submit"
-                                    class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm hover:bg-brand-yellow border-2 px-4 py-2 font-bold"
-                                >
-                                    Make Public
-                                </button>
-                            {% endif %}
-                        </form>
-                    </div>
-                    <div
-                        class="border-brand-text shadow-neo flex h-full items-center justify-center border-2 bg-white p-4"
-                    >
-                        <a
-                            href="{% url 'core:home' %}"
-                            class="bg-brand-purple border-brand-text shadow-neo-sm hover:bg-opacity-90 block w-full border-2 px-4 py-2 text-center font-bold"
-                            >Update Bibliotype</a
-                        >
-                    </div>
-                </div>
-            {% else %}
-                <div class="bg-brand-purple border-brand-text shadow-neo border-2 p-6 text-center">
-                    <h2 class="text-2xl font-bold uppercase">Enjoying Your Bibliotype?</h2>
-                    <p class="mt-2 text-lg">
-                        <a href="{% url 'core:signup' %}" class="hover:bg-brand-yellow underline"
-                            >Create a free account</a
-                        >
-                        to save your DNA, track your history, and share it with friends.
-                    </p>
-                </div>
-            {% endif %}
-
-            <script>
+                        {% if user.is_authenticated %}
+                            <div class="grid grid-cols-1 items-center gap-6 md:grid-cols-3">
+                                <div class="border-brand-text shadow-neo flex h-full items-center border-2 bg-white p-4 md:col-span-2">
+                                    <div class="flex-grow">
+                                        {% if user_profile.is_public %}
+                                            <h3 class="text-xl font-bold uppercase">
+                                                Your profile is
+                                                <span class="bg-brand-green border-brand-text border-2 px-2 py-1 font-bold">Public</span>.
+                                                <a href="{% url 'core:public_profile' username=user.username %}"
+                                                   class="hover:bg-brand-yellow ml-2 underline"
+                                                   target="_blank">/u/{{ user.username }}</a>
+                                            </h3>
+                                        {% else %}
+                                            <h3 class="text-xl font-bold uppercase">
+                                                Your profile is
+                                                <span class="bg-brand-pink border-brand-text border-2 px-2 py-1 font-bold">Private</span>.
+                                            </h3>
+                                        {% endif %}
+                                    </div>
+                                    <form action="{% url 'core:update_privacy' %}" method="post" class="ml-4">
+                                        {% csrf_token %}
+                                        {% if user_profile.is_public %}
+                                            <input type="hidden" name="is_public" value="false" />
+                                            <button type="submit"
+                                                    class="bg-brand-pink cursor-pointer text-brand-text border-brand-text shadow-neo-sm hover:bg-brand-yellow border-2 px-4 py-2 font-bold">
+                                                Make Private
+                                            </button>
+                                        {% else %}
+                                            <input type="hidden" name="is_public" value="true" />
+                                            <button type="submit"
+                                                    class="bg-brand-green cursor-pointer text-brand-text border-brand-text shadow-neo-sm hover:bg-brand-yellow border-2 px-4 py-2 font-bold">
+                                                Make Public
+                                            </button>
+                                        {% endif %}
+                                    </form>
+                                </div>
+                                <div class="border-brand-text shadow-neo flex h-full items-center justify-center border-2 bg-white p-4">
+                                    <a href="{% url 'core:home' %}"
+                                       class="bg-brand-purple border-brand-text shadow-neo-sm hover:bg-opacity-90 block w-full border-2 px-4 py-2 text-center font-bold">Update Bibliotype</a>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="bg-brand-purple border-brand-text shadow-neo border-2 p-6 text-center">
+                                <h2 class="text-2xl font-bold uppercase">Enjoying Your Bibliotype?</h2>
+                                <p class="mt-2 text-lg">
+                                    <a href="{% url 'core:signup' %}"
+                                       class="hover:bg-brand-yellow underline">Create a free account</a>
+                                    to save your DNA, track your history, and share it with friends.
+                                </p>
+                            </div>
+                        {% endif %}
+                        <script>
                 function updateVibeSeparators() {
                     const vibeContainer = document.getElementById("vibe-container");
                     if (!vibeContainer) return;
@@ -718,133 +684,81 @@
                     });
                 });
                 window.addEventListener("resize", updateVibeSeparators);
-            </script>
-
-            {# =================================================================== #}
-            {# --- STATE 3: LOGGED IN USER, NO DNA, NOT PROCESSING (WELCOME) --- #}
-            {# =================================================================== #}
-        {% else %}
-            <div class="flex h-full flex-col p-4">
-                <div class="w-full">
-                    <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
-                        <span class="relative z-10">
-                            <div
-                                x-data="{
-                        editing: false,
-                        newName: '{{ user.username|escapejs }}',
-                        originalName: '{{ user.username|escapejs }}',
-                        errorMessage: '',
-                        
-                        updateUsername: function() {
-                            this.errorMessage = '';
-                            fetch('{% url "core:api_update_username" %}', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': '{{ csrf_token }}'
-                                },
-                                body: JSON.stringify({ username: this.newName })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.status === 'success') {
-                                    window.location.reload();
-                                } else {
-                                    this.errorMessage = data.message;
-                                }
-                            })
-                            .catch(() => {
-                                this.errorMessage = 'Could not connect to the server.';
-                            });
-                        }
-                    }"
-                                class="inline-block"
-                            >
-                                <!-- VIEW STATE (FIXED) -->
-                                <div
-                                    x-show="!editing"
-                                    class="flex flex-col items-center justify-center gap-y-2 text-4xl sm:text-5xl md:flex-row md:gap-x-3"
-                                >
-                                    <!-- [ANYA]'S -->
-                                    <div class="inline-flex items-center">
-                                        <!-- Clickable username area -->
-                                        <div
-                                            @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
-                                            class="group relative cursor-pointer"
-                                        >
-                                            <!-- Yellow background -->
-                                            <span
-                                                class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"
-                                            ></span>
-                                            <!-- Username text -->
-                                            <span class="relative z-20 px-2" x-text="originalName"></span>
-                                            <!-- Pencil Icon -->
-                                            <div class="text-brand-text absolute -right-2 -bottom-2 z-30">
-                                                <svg
-                                                    class="h-7 w-7"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 16 16"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        d="M14 0l2 2-2 2-2-2 2-2zM12 2l2 2-8 8H4v-2l8-8zM2 12v2h2l-l-2-2z"
-                                                    />
-                                                </svg>
+                        </script>
+                        {# =================================================================== #}
+                        {# --- STATE 3: LOGGED IN USER, NO DNA, NOT PROCESSING (WELCOME) --- #}
+                        {# =================================================================== #}
+                    {% else %}
+                        <div class="flex h-full flex-col p-4">
+                            <div class="w-full">
+                                <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
+                                    <span class="relative z-10">
+                                        <div x-data="{ editing: false, newName: '{{ user.username|escapejs }}', originalName: '{{ user.username|escapejs }}', errorMessage: '',  updateUsername: function() { this.errorMessage = ''; fetch('{% url "core:api_update_username" %}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }, body: JSON.stringify({ username: this.newName }) }) .then(response => response.json()) .then(data => { if (data.status === 'success') { window.location.reload(); } else { this.errorMessage = data.message; } }) .catch(() => { this.errorMessage = 'Could not connect to the server.'; }); } }"
+                                             class="inline-block">
+                                            <!-- VIEW STATE (FIXED) -->
+                                            <div x-show="!editing"
+                                                 class="flex flex-col items-center justify-center gap-y-2 text-4xl sm:text-5xl md:flex-row md:gap-x-3">
+                                                <!-- [ANYA]'S -->
+                                                <div class="inline-flex items-center">
+                                                    <!-- Clickable username area -->
+                                                    <div @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
+                                                         class="group relative cursor-pointer">
+                                                        <!-- Yellow background -->
+                                                        <span class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"></span>
+                                                        <!-- Username text -->
+                                                        <span class="relative z-20 px-2" x-text="originalName"></span>
+                                                        <!-- Pencil Icon -->
+                                                        <div class="text-brand-text absolute -right-2 -bottom-2 z-30">
+                                                            <svg class="h-7 w-7"
+                                                                 xmlns="http://www.w3.org/2000/svg"
+                                                                 viewBox="0 0 16 16"
+                                                                 fill="currentColor">
+                                                                <path d="M14 0l2 2-2 2-2-2 2-2zM12 2l2 2-8 8H4v-2l8-8zM2 12v2h2l-l-2-2z" />
+                                                            </svg>
+                                                        </div>
+                                                    </div>
+                                                    <!-- Possessive 's -->
+                                                    <span x-text="originalName.toLowerCase().endsWith('s') ? `'` : `'s`"></span>
+                                                </div>
+                                                <!-- READING DNA -->
+                                                <span>Reading DNA</span>
                                             </div>
+                                            <!-- EDIT STATE -->
+                                            <form x-show="editing"
+                                                  x-cloak
+                                                  @submit.prevent="updateUsername"
+                                                  @keydown.escape.window="editing = false; newName = originalName"
+                                                  class="inline-flex items-stretch gap-4">
+                                                <input type="text"
+                                                       x-ref="usernameInput"
+                                                       x-model="newName"
+                                                       class="border-brand-text focus:border-brand-purple w-full border-2 bg-white p-1 text-5xl font-bold tracking-widest uppercase focus:outline-none" />
+                                                <button type="submit"
+                                                        class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm cursor-pointer border-2 px-4 py-2 text-xl font-bold hover:shadow-none active:translate-x-0.5 active:translate-y-0.5">
+                                                    Save
+                                                </button>
+                                            </form>
+                                            <div x-show="editing && errorMessage"
+                                                 x-text="errorMessage"
+                                                 class="mt-2 text-lg font-bold text-red-600"></div>
                                         </div>
-                                        <!-- Possessive 's -->
-                                        <span x-text="originalName.toLowerCase().endsWith('s') ? `'` : `'s`"></span>
-                                    </div>
-
-                                    <!-- READING DNA -->
-                                    <span>Reading DNA</span>
-                                </div>
-                                <!-- EDIT STATE -->
-                                <form
-                                    x-show="editing"
-                                    x-cloak
-                                    @submit.prevent="updateUsername"
-                                    @keydown.escape.window="editing = false; newName = originalName"
-                                    class="inline-flex items-stretch gap-4"
-                                >
-                                    <input
-                                        type="text"
-                                        x-ref="usernameInput"
-                                        x-model="newName"
-                                        class="border-brand-text focus:border-brand-purple w-full border-2 bg-white p-1 text-5xl font-bold tracking-widest uppercase focus:outline-none"
-                                    />
-                                    <button
-                                        type="submit"
-                                        class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm cursor-pointer border-2 px-4 py-2 text-xl font-bold hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                                    >
-                                        Save
-                                    </button>
-                                </form>
-                                <div
-                                    x-show="editing && errorMessage"
-                                    x-text="errorMessage"
-                                    class="mt-2 text-lg font-bold text-red-600"
-                                ></div>
+                                    </span>
+                                </h1>
                             </div>
-                        </span>
-                    </h1>
+                            <div class="flex flex-grow items-center justify-center">
+                                <div class="w-full text-center">
+                                    <h2 class="mb-4 text-4xl font-bold uppercase">uh oh</h2>
+                                    <p class="text-brand-text text-xl italic">
+                                        Your account is ready but you haven't uploaded your data yet! To generate your Reading DNA,
+                                        please go to the homepage and upload your library export.
+                                    </p>
+                                    <a href="{% url 'core:home' %}"
+                                       class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm hover:bg-opacity-90 mt-8 inline-block border-2 px-3 py-3 text-center font-bold uppercase">
+                                        Upload Your Library File
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
-                <div class="flex flex-grow items-center justify-center">
-                    <div class="w-full text-center">
-                        <h2 class="mb-4 text-4xl font-bold uppercase">uh oh</h2>
-                        <p class="text-brand-text text-xl italic">
-                            Your account is ready but you haven't uploaded your data yet! To generate your Reading DNA,
-                            please go to the homepage and upload your library export.
-                        </p>
-                        <a
-                            href="{% url 'core:home' %}"
-                            class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm hover:bg-opacity-90 mt-8 inline-block border-2 px-3 py-3 text-center font-bold uppercase"
-                        >
-                            Upload Your Library File
-                        </a>
-                    </div>
-                </div>
-            </div>
-        {% endif %}
-    </div>
-{% endblock %}
+            {% endblock %}
