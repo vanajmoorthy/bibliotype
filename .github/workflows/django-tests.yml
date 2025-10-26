@@ -37,21 +37,39 @@ jobs:
               run: |
                 # Start db and redis first
                 docker compose -f docker-compose.local.yml up -d db redis
+                # Wait for database to be healthy
+                timeout 60 bash -c 'until docker compose -f docker-compose.local.yml exec -T db pg_isready -U testuser -d testdb; do sleep 2; done'
                 # Build the web service
                 docker compose -f docker-compose.local.yml build web
-                # Start web service with a keep-alive command for testing
-                # Note: We need to run the entrypoint (migrations) and then sleep
-                docker compose -f docker-compose.local.yml run -d --name bibliotype_web_test --service-ports web sh -c "./wait-for-postgres.sh db && poetry run python manage.py migrate && exec sleep infinity"
+                # Start web service - the entrypoint will handle migrations, then we keep it alive
+                docker compose -f docker-compose.local.yml run -d --name bibliotype_web_test --service-ports --rm=false web sleep infinity
 
-            # A crucial step. Even after 'up' completes, the database might need a few seconds
-            # to initialize fully. This pause prevents tests from failing by trying to connect too early.
-            - name: Wait for database to be ready
-              run: sleep 10
-
-            # Check that the container is running
-            - name: Verify web container is running
+            # Wait for the container to be ready and migrations to complete
+            - name: Wait for web container to be ready
               run: |
-                docker ps | grep bibliotype_web_test || docker ps -a | grep bibliotype_web_test
+                # Wait for container to be running
+                for i in {1..30}; do
+                  if docker ps --format '{{.Names}}' | grep -q bibliotype_web_test; then
+                    echo "Container is running"
+                    break
+                  fi
+                  echo "Waiting for container to start... ($i/30)"
+                  sleep 2
+                done
+                
+                # Wait for migrations to complete by checking logs
+                echo "Waiting for migrations to complete..."
+                sleep 5
+                
+                # Show container status
+                docker ps -a | grep bibliotype_web_test || true
+                
+                # Show logs if container is not running
+                if ! docker ps --format '{{.Names}}' | grep -q bibliotype_web_test; then
+                  echo "Container exited, showing logs:"
+                  docker logs bibliotype_web_test || true
+                  exit 1
+                fi
             
             # Run the test suite using the exact command that works locally
             - name: Run tests
