@@ -1,15 +1,11 @@
-# In check_models.py
-
 import logging
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
-# Load the API key from your .env file
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
 
@@ -24,7 +20,6 @@ else:
 
         found_models = []
         for m in genai.list_models():
-            # This is the crucial check: we only want models that can generate text
             if "generateContent" in m.supported_generation_methods:
                 found_models.append(m.name)
 
