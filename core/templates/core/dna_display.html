@@ -2,9 +2,6 @@
 {% load humanize %}
 {% block content %}
     <div class="mx-auto h-full max-w-4xl space-y-8 p-2">
-        {# =================================================================== #}
-        {# --- STATE 1: USER IS LOGGED IN AND ACTIVELY PROCESSING --- #}
-        {# =================================================================== #}
         {% if is_processing %}
             <div class="flex h-full flex-col p-0">
                 <div class="w-full">
@@ -53,15 +50,11 @@
                     checkStatus();
                 });
             </script>
-            {# =================================================================== #}
-            {# --- STATE 2: USER (LOGGED IN OR ANON) HAS DNA TO DISPLAY --- #}
-            {# =================================================================== #}
         {% elif dna %}
             {{ dna|json_script:"dna-data" }}
             <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
                 <span class="relative z-10">
                     {% if user.is_authenticated %}
-                        {# djlint:off #}
                         <div
                             x-data="{
                         editing: false,
@@ -96,28 +89,22 @@
                                 this.errorMessage = 'Could not connect to the server.';
                             });
                         }
-                    }"
+                        }"
                             class="inline-block"
                         >
-                            <!-- VIEW STATE (FIXED) -->
                             <div
                                 x-show="!editing"
                                 class="flex flex-col items-center justify-center gap-y-2 text-4xl sm:text-5xl md:flex-row md:gap-x-3"
                             >
-                                <!-- [ANYA]'S -->
                                 <div class="inline-flex items-center">
-                                    <!-- Clickable username area -->
                                     <div
                                         @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
                                         class="group relative cursor-pointer"
                                     >
-                                        <!-- Yellow background -->
                                         <span
                                             class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"
                                         ></span>
-                                        <!-- Username text -->
                                         <span class="relative z-20 px-2" x-text="originalName"></span>
-                                        <!-- Pencil Icon -->
                                         <div class="text-brand-text absolute -right-2 -bottom-2 z-30">
                                             <svg
                                                 class="h-7 w-7"
@@ -131,15 +118,12 @@
                                             </svg>
                                         </div>
                                     </div>
-                                    <!-- Possessive 's -->
                                     <span x-text="originalName.toLowerCase().endsWith('s') ? `'` : `'s`"></span>
                                 </div>
 
-                                <!-- READING DNA -->
                                 <span>Reading DNA</span>
                             </div>
 
-                            <!-- EDIT STATE -->
                             <div x-show="editing" x-cloak class="flex justify-center">
                                 <form
                                     @submit.prevent="updateUsername"
@@ -172,7 +156,6 @@
                                 class="mt-2 text-lg font-bold text-red-600"
                             ></div>
                         </div>
-                        {# djlint:on #}
                     {% else %}
                         Your Reading DNA
                     {% endif %}
@@ -744,9 +727,6 @@
                 });
                 window.addEventListener("resize", updateVibeSeparators);
                         </script>
-                        {# =================================================================== #}
-                        {# --- STATE 3: LOGGED IN USER, NO DNA, NOT PROCESSING (WELCOME) --- #}
-                        {# =================================================================== #}
                     {% else %}
                         <div class="flex h-full flex-col p-4">
                             <div class="w-full">
@@ -774,15 +754,12 @@
                                                                  fill="currentColor">
                                                                 <path d="M14 0l2 2-2 2-2-2 2-2zM12 2l2 2-8 8H4v-2l8-8zM2 12v2h2l-l-2-2z" />
                                                             </svg>
-                                                        </div>
-                                                    </div>
-                                                    <!-- Possessive 's -->
-                                                    <span x-text="originalName.toLowerCase().endsWith('s') ? `'` : `'s`"></span>
-                                                </div>
-                                                <!-- READING DNA -->
-                                                <span>Reading DNA</span>
-                                            </div>
-                                            <!-- EDIT STATE -->
+                                        </div>
+                                    </div>
+                                    <span x-text="originalName.toLowerCase().endsWith('s') ? `'` : `'s`"></span>
+                                </div>
+                                <span>Reading DNA                                </span>
+                            </div>
                                             <form x-show="editing"
                                                   x-cloak
                                                   @submit.prevent="updateUsername"

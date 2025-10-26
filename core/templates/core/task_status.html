@@ -2,22 +2,19 @@
 {% load static %}
 
 {% block content %}
-    {# This new outer div's only job is to center its child vertically and horizontally. #}
     <div class="flex h-full flex-col items-center justify-center p-4">
-        {# This is your original content block, now perfectly centered. #}
         <div
             class="w-full max-w-2xl text-center"
             x-data="taskPoller('{% url 'core:get_task_result' task_id %}')"
             x-init="startPolling()"
         >
-            <h1 class="title-underline relative mb-4 inline-block text-4xl font-bold">Building Your Bibliotype...</h1>
+            <h1 class="title-underline relative mb-4 inline-block text-4xl font-bold">                Building Your Bibliotype...</h1>
 
             <p class="mb-8 text-lg text-gray-600">
                 We're analyzing your library and fetching details from the archives. This can take a minute or two.
                 Please keep this page open — we'll redirect you as soon as it's ready!
             </p>
 
-            <!-- Loading Spinner and Status Message -->
             <div class="shadow-neo border-brand-text border-2 bg-white p-8">
                 <div class="flex justify-center">
                     <svg
@@ -56,7 +53,6 @@
                 </a>
             </div>
 
-            <!-- Error message display (hidden by default) -->
             <div
                 x-show="status === 'FAILURE'"
                 class="border-brand-text shadow-neo mt-8 border-2 bg-red-500 p-4 font-bold text-white"
@@ -67,7 +63,6 @@
         </div>
     </div>
 
-    {# The script can remain outside the main content div #}
     <script>
         document.addEventListener("alpine:init", () => {
             Alpine.data("taskPoller", (url) => ({

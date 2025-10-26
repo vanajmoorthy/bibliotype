@@ -3,11 +3,11 @@ import logging
 
 import google.generativeai as genai
 from celery import shared_task
-from celery.exceptions import Ignore
 from celery.result import AsyncResult
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from dotenv import load_dotenv
+from collections import Counter
 
 from .dna_constants import (
     EXCLUDED_GENRES,
@@ -16,11 +16,9 @@ from .services.dna_analyser import calculate_full_dna, _save_dna_to_profile
 import requests
 from django.utils import timezone
 
-# Make sure to import your service and model
 from .services.author_service import check_author_mainstream_status
-from .models import Author, UserProfile  # Add Author here
+from .models import Author
 
-# All of your helper functions can live inside this file as well
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -35,10 +33,6 @@ else:
 
 @shared_task
 def check_author_mainstream_status_task(author_id: int):
-    """
-    A dedicated background task to check and update the mainstream status
-    for a single author.
-    """
     try:
         author = Author.objects.get(pk=author_id)
         logger.info(f"Running mainstream status check for new author: {author.name}")
@@ -57,33 +51,26 @@ def check_author_mainstream_status_task(author_id: int):
                         f"Status updated to: {author.is_mainstream}. Reason: {status_data.get('reason', 'N/A')}"
                     )
 
-                # Always update the last_checked timestamp
                 author.mainstream_last_checked = timezone.now()
                 author.save()
 
     except Author.DoesNotExist:
         logger.error(f"Author Status Task Error: Author with ID {author_id} not found")
     except Exception as e:
-        logger.error(f"Critical error in check_author_mainstream_status_task for author_id {author_id}: {e}", exc_info=True)
-        raise  # Re-raise to let Celery know the task failed
+        logger.error(
+            f"Critical error in check_author_mainstream_status_task for author_id {author_id}: {e}", exc_info=True
+        )
+        raise
 
 
 @shared_task(bind=True, max_retries=5)
 def claim_anonymous_dna_task(self, user_id: int, task_id: str):
-    """
-    Claims the DNA result from a previously-run anonymous task and saves it
-    to a newly registered user's profile.
-
-    This task checks both the cache and the Celery result backend to handle
-    both eager mode (testing) and production scenarios.
-    """
     try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
         logger.error(f"User with id {user_id} not found. Cannot claim task")
         return
 
-    # FIRST: Check the cache (this is where eager mode stores results)
     cached_dna = cache.get(f"dna_result_{task_id}")
 
     if cached_dna:
@@ -94,7 +81,6 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str):
         logger.info(f"Successfully claimed and saved DNA for user {user_id} from task {task_id}")
         return
 
-    # SECOND: Check the Celery result backend (for production)
     result = AsyncResult(task_id)
 
     if result.ready():
@@ -109,7 +95,6 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str):
             user.userprofile.pending_dna_task_id = None
             user.userprofile.save()
     else:
-        # Task is not ready yet, retry
         logger.info(f"Task {task_id} not ready yet. Retrying claim for user {user_id} in 10s")
         raise self.retry(countdown=10, exc=Exception(f"Task {task_id} not ready"))
 
@@ -173,10 +158,6 @@ def analyze_and_print_genres(all_raw_genres, canonical_map):
 
 @shared_task(bind=True)
 def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None):
-    """
-    Celery task wrapper for generating Reading DNA.
-    It fetches the user and calls the main analysis engine.
-    """
     logger.info("Running the latest (refactored) version of the Celery task")
     user = None
     try:
@@ -184,27 +165,19 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None):
             user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
         logger.error(f"Could not run task. User with id {user_id} not found")
-        raise  # Fail the task if the user is invalid
+        raise
 
-    # Call the main analysis function from our service
-    # The `calculate_full_dna` function now contains all the heavy logic.
-    # We re-wrap it in a try/except block to handle task-specific outcomes.
     try:
         result_data = calculate_full_dna(csv_file_content, user)
 
         if not user:
-            # For anonymous users, the result_data is the DNA dict.
-            # We must save it to the cache for the 'claim' task or the polling view.
             if self.request.id:
                 cache.set(f"dna_result_{self.request.id}", result_data, timeout=3600)
                 logger.info(f"DNA result for task {self.request.id} saved to cache")
             return result_data
         else:
-            # For logged-in users, the data is already saved. The function returns a success message.
             return result_data
 
     except Exception as e:
-        # If calculate_full_dna raises an error, this block catches it
-        # and ensures the Celery task is marked as FAILED.
         logger.error(f"Task failed due to an error in the analysis engine: {e}", exc_info=True)
-        raise  # Re-raise to mark the task as failed
+        raise

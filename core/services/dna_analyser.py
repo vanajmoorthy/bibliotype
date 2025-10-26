@@ -111,11 +111,6 @@ def assign_reader_type(read_df, enriched_data, all_genres):
 
 
 def _save_dna_to_profile(profile, dna_data):
-    """
-    A reusable helper to correctly save all parts of the DNA dictionary
-    to the user's profile, populating both the main JSON blob and the
-    optimized, separate fields.
-    """
     logger.debug(f"Saving DNA to profile for user: {profile.user.username}")
     logger.debug(f"DNA data keys: {list(dna_data.keys()) if dna_data else 'None'}")
 
@@ -135,22 +130,17 @@ def _save_dna_to_profile(profile, dna_data):
 
 def calculate_full_dna(csv_file_content: str, user=None):
     try:
-
-        # (The first part of the function with all the analysis logic is unchanged)
-        # ...
         df = pd.read_csv(StringIO(csv_file_content))
         read_df = df[df["Exclusive Shelf"] == "read"].copy()
 
         if read_df.empty:
             raise ValueError("No books found on the 'read' shelf in your CSV.")
 
-        # Create the hash from the user's book list
         book_fingerprint_list = sorted([f"{row['Title']}{row['Author']}" for _, row in read_df.iterrows()])
         fingerprint_string = "".join(book_fingerprint_list)
         new_data_hash = hashlib.sha256(fingerprint_string.encode()).hexdigest()
 
         logger.info(f"Found {len(read_df)} books marked as 'read' for statistical analysis")
-        # --- Data cleaning ---
         for temp_df in [df, read_df]:
             temp_df["My Rating"] = pd.to_numeric(temp_df["My Rating"], errors="coerce")
             temp_df["Number of Pages"] = pd.to_numeric(temp_df["Number of Pages"], errors="coerce")
@@ -165,13 +155,11 @@ def calculate_full_dna(csv_file_content: str, user=None):
                 temp_df["Original Publication Year"] = None
             temp_df.loc[:, "My Review"] = temp_df["My Review"].fillna("")
 
-        # --- Phase 1 & 2: API and DB Sync ---
         logger.info("Syncing book data with the database...")
 
         all_raw_genres, user_book_objects = [], []
         with requests.Session() as session:
 
-            # This is the "worker" function that will be executed in each thread.
             def process_book_row(original_row):
                 author_name_from_csv = original_row.get("Author", "").strip()
                 title_from_csv = original_row.get("Title", "").strip()
@@ -184,7 +172,6 @@ def calculate_full_dna(csv_file_content: str, user=None):
                     normalized_name=normalized_author_name, defaults={"name": author_name_from_csv}
                 )
 
-                # If a new author was created, dispatch the background task to check them.
                 if created:
                     from ..tasks import check_author_mainstream_status_task
 
@@ -220,26 +207,17 @@ def calculate_full_dna(csv_file_content: str, user=None):
                 else:
                     logger.debug(f"Book '{book.title}' already exists with genres. Skipping enrichment.")
 
-                # Important: Update the read count for this user
                 Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
 
-                # --- THE FIX ---
-                # Discard the potentially stale 'book' object and fetch a fresh one
-                # from the database to guarantee we get the latest genre relationships.
                 fresh_book_instance = Book.objects.get(pk=book.pk)
 
-                # Return the processed book object and its now-current genres
                 return fresh_book_instance, [g.name for g in fresh_book_instance.genres.all()]
 
-            # Use the ThreadPoolExecutor to process all rows from the dataframe
-            # max_workers=5 is a safe number to avoid overwhelming APIs. You can tune this.
             with ThreadPoolExecutor(max_workers=5) as executor:
-                # executor.map runs `process_book_row` for each item in the list
                 results = list(executor.map(process_book_row, read_df.to_dict("records")))
 
-        # --- Collect the results from all threads ---
         for book, genres in results:
-            if book:  # Ensure we don't process invalid rows
+            if book:
                 user_book_objects.append(book)
                 all_raw_genres.extend(genres)
 
@@ -252,14 +230,12 @@ def calculate_full_dna(csv_file_content: str, user=None):
             if book.title
         }
 
-        # --- Personal DNA Calculation ---
         reader_type, reader_type_scores = assign_reader_type(read_df, enriched_data_for_scoring, all_raw_genres)
         explanation = random.choice(READER_TYPE_DESCRIPTIONS.get(reader_type, [""]))
         top_types_list = [{"type": t, "score": s} for t, s in reader_type_scores.most_common(3) if s > 0]
         mapped_genres = [CANONICAL_GENRE_MAP.get(g, g) for g in all_raw_genres]
         top_genres = Counter(mapped_genres).most_common(10)
 
-        # --- Community Analytics Calculation ---
         logger.info("Calculating base user statistics...")
 
         user_base_stats = {
@@ -284,7 +260,6 @@ def calculate_full_dna(csv_file_content: str, user=None):
 
         percentiles = calculate_percentiles_from_aggregates(user_base_stats)
 
-        # --- Other Personal Stats Calculations ---
         most_niche_book = None
 
         if user_book_objects:
@@ -434,7 +409,6 @@ def calculate_full_dna(csv_file_content: str, user=None):
         dna["reading_vibe"] = reading_vibe
         dna["vibe_data_hash"] = new_data_hash
 
-        # --- Final cleanup (remains the same) ---
         def clean_dict(d):
             if not isinstance(d, dict):
                 return d
@@ -444,39 +418,28 @@ def calculate_full_dna(csv_file_content: str, user=None):
         dna["most_positive_review"] = clean_dict(dna.get("most_positive_review"))
         dna["most_negative_review"] = clean_dict(dna.get("most_negative_review"))
 
-        # --- MODIFIED: Final save/return logic ---
         if user:
-            # For logged-in users, save to the profile and return a success message.
             _save_dna_to_profile(user.userprofile, dna)
             logger.info(f"Saved DNA for user: {user.username}")
             return f"DNA saved for user {user.id}"
         else:
-            # For anonymous users, simply return the generated DNA dictionary.
-            # The calling Celery task will handle caching it.
             logger.info("DNA generated for an anonymous user. Returning result for display")
             return dna
 
     except Exception as e:
-        # FIX: Use the `user` object for logging, not the non-existent user_id.
         user_identifier = user.id if user else "Anonymous"
         logger.error(f"A critical error occurred in DNA calculation for user_id {user_identifier}: {e}", exc_info=True)
         raise
 
 
 def normalize_and_filter_genres(subjects):
-    """
-    Cleans the raw subject list from the API, using the master EXCLUDED_GENRES set.
-    """
     plausible_genres = []
     for s in subjects:
         s_lower = s.lower().strip()
-        # Check against the imported exclusion set
         if s_lower in EXCLUDED_GENRES:
             continue
-        # Check for junk patterns (e.g., call numbers, NYT lists)
         if "ps35" in s_lower or "nyt:" in s_lower or "b485" in s_lower:
             continue
-        # Filter out overly long or non-genre-like subjects
         if len(s.split()) < 4 and "history" not in s_lower and "accessible" not in s_lower:
             plausible_genres.append(s_lower)
 
@@ -484,10 +447,6 @@ def normalize_and_filter_genres(subjects):
 
 
 def analyze_and_print_genres(all_raw_genres, canonical_map):
-    """
-    A helper function to analyze and log the frequency of raw genres,
-    separating them into unmapped and already-mapped categories.
-    """
     logger.info("=" * 50)
     logger.info("RUNNING GENRE ANALYSIS")
     logger.info("=" * 50)
@@ -503,7 +462,6 @@ def analyze_and_print_genres(all_raw_genres, canonical_map):
         if genre not in canonical_map:
             unmapped_genres[genre] = count
 
-    # Sort the unmapped genres by frequency (most common first)
     sorted_unmapped = sorted(unmapped_genres.items(), key=lambda item: item[1], reverse=True)
 
     logger.info(f"Found {len(raw_genre_counts)} unique raw genre strings in total")
