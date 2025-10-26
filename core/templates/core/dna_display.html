@@ -318,7 +318,7 @@
                 </div>
         
         <div class="border-brand-text shadow-neo border-2 bg-white p-6">
-    <h2 class="mb-4 text-center text-2xl font-bold uppercase">Mainstream Meter</h2>
+    <h2 class="mb-4 text-center text-2xl font-bold uppercase">How Mainstream Your Taste Is</h2>
 
     <!-- Alpine.js component for the gauge logic -->
     <div x-data="{
@@ -343,6 +343,22 @@
                     #ff8c42 60% 80%,     /* Leaning Mainstream */
                     #ff5c5c 80% 100%      /* Mainstream */
                  );">
+            </div>
+
+            <!-- Curved text labels above the gauge -->
+            <div class="absolute top-0 left-0 h-64 w-64 z-15">
+                <!-- "not very" label (left side) -->
+                <div class="absolute top-8 left-8 text-sm font-bold text-brand-text transform -rotate-45 origin-center">
+                    not very
+                </div>
+                <!-- "kinda" label (center) -->
+                <div class="absolute top-4 left-1/2 transform -translate-x-1/2 text-sm font-bold text-brand-text">
+                    kinda
+                </div>
+                <!-- "super mainstream" label (right side) -->
+                <div class="absolute top-8 right-8 text-sm font-bold text-brand-text transform rotate-45 origin-center">
+                    super mainstream
+                </div>
             </div>
 
             <!-- The needle, with a higher z-index to ensure it's on top of the gradient -->

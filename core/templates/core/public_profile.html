@@ -139,7 +139,7 @@
                     {% endif %}
                 </div>
          <div class="border-brand-text shadow-neo border-2 bg-white p-6">
-    <h2 class="mb-4 text-center text-2xl font-bold uppercase">Mainstream Meter</h2>
+    <h2 class="mb-4 text-center text-2xl font-bold uppercase">How Mainstream Their Taste Is</h2>
 
     <!-- Alpine.js component for the gauge logic -->
     <div x-data="{
@@ -166,6 +166,22 @@
                  );">
             </div>
 
+            <!-- Curved text labels above the gauge -->
+            <div class="absolute top-0 left-0 h-64 w-64 z-15">
+                <!-- "not very" label (left side) -->
+                <div class="absolute top-8 left-8 text-sm font-bold text-brand-text transform -rotate-45 origin-center">
+                    not very
+                </div>
+                <!-- "kinda" label (center) -->
+                <div class="absolute top-4 left-1/2 transform -translate-x-1/2 text-sm font-bold text-brand-text">
+                    kinda
+                </div>
+                <!-- "super mainstream" label (right side) -->
+                <div class="absolute top-8 right-8 text-sm font-bold text-brand-text transform rotate-45 origin-center">
+                    super mainstream
+                </div>
+            </div>
+
             <!-- The needle, with a higher z-index to ensure it's on top of the gradient -->
             <div class="absolute bottom-0 left-1/2 h-28 w-2 origin-bottom bg-brand-text transition-transform duration-500 z-20"
                  :style="`transform: translateX(-50%) rotate(${rotation}deg)`">
@@ -177,7 +193,7 @@
 
         <!-- The descriptive text below the meter -->
         <p class="mt-4 text-center text-lg">
-            <strong x-text="score + '%'"></strong> of the books in your library are considered
+            <strong x-text="score + '%'"></strong> of the books in their library are considered
             "mainstream," based on author and publisher popularity.
         </p>
     </div>

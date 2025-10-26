@@ -2,8 +2,8 @@
     "name": "bibliotype",
     "version": "1.0.0",
     "scripts": {
-        "dev": "npx @tailwindcss/cli -i ./static/src/input.css -o ./static/dist/output.css --watch",
-        "build": "npx @tailwindcss/cli -c ./tailwind.config.js -i ./static/src/input.css -o ./static/dist/output.css --minify"
+        "dev": "pnpm tailwindcss -i ./static/src/input.css -o ./static/dist/output.css --watch",
+        "build": "pnpm tailwindcss -c ./tailwind.config.js -i ./static/src/input.css -o ./static/dist/output.css --minify"
     },
     "dependencies": {
         "@tailwindcss/cli": "^4.1.11",

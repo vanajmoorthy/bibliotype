@@ -84,12 +84,12 @@ You can now access the application at **`http://127.0.0.1:8000`**.
 
 ### Local Python Environment
 
-This project requires both Python (for Django) and Node.js/npm (for Tailwind CSS).
+This project requires both Python (for Django) and Node.js/pnpm (for Tailwind CSS).
 
 **1. Prerequisites**
 
 *   Python 3.11+
-*   Node.js and npm
+*   Node.js and pnpm
 
 **2. Setup Instructions**
 
@@ -117,7 +117,7 @@ This project requires both Python (for Django) and Node.js/npm (for Tailwind CSS
 3.  **Frontend (Tailwind CSS) Setup:**
     *   **Install Node.js dependencies:**
         ```bash
-        npm install
+        pnpm install
         ```
 
 **3. Running the Application**
@@ -131,7 +131,7 @@ To run the full application, you need to start both the Django development serve
 
 2.  **In a separate terminal, start the Tailwind CSS watcher:**
     ```bash
-    npm run dev
+    pnpm run dev
     ```
 
 Alternatively, if `Honcho` or `Foreman` is installed, you can use the `Procfile` to run both processes concurrently:
