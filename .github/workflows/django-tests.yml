@@ -34,18 +34,33 @@ jobs:
 
             # Build and start all the services (web, worker, db, redis) in the background
             - name: Build and start the Docker containers
-              run: docker compose -f docker-compose.local.yml up -d
+              run: |
+                # Start db and redis first
+                docker compose -f docker-compose.local.yml up -d db redis
+                # Build the web service
+                docker compose -f docker-compose.local.yml build web
+                # Start web service with a keep-alive command for testing
+                # Note: We need to run the entrypoint (migrations) and then sleep
+                docker compose -f docker-compose.local.yml run -d --name bibliotype_web_test --service-ports web sh -c "./wait-for-postgres.sh db && poetry run python manage.py migrate && exec sleep infinity"
 
             # A crucial step. Even after 'up' completes, the database might need a few seconds
             # to initialize fully. This pause prevents tests from failing by trying to connect too early.
             - name: Wait for database to be ready
               run: sleep 10
 
+            # Check that the container is running
+            - name: Verify web container is running
+              run: |
+                docker ps | grep bibliotype_web_test || docker ps -a | grep bibliotype_web_test
+            
             # Run the test suite using the exact command that works locally
             - name: Run tests
-              run: docker compose -f docker-compose.local.yml exec web poetry run python manage.py test
+              run: docker exec bibliotype_web_test poetry run python manage.py test
 
             # Optional but good practice: This step will run even if the tests fail.
             - name: Tear down containers
               if: always()
-              run: docker compose -f docker-compose.local.yml down
+              run: |
+                docker stop bibliotype_web_test || true
+                docker rm bibliotype_web_test || true
+                docker compose -f docker-compose.local.yml down
