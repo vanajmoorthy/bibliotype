@@ -1,5 +1,5 @@
 import os
-
+import logging
 
 import google.generativeai as genai
 from celery import shared_task
@@ -23,12 +23,14 @@ from .models import Author, UserProfile  # Add Author here
 # All of your helper functions can live inside this file as well
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 api_key = os.getenv("GEMINI_API_KEY")
 
 if api_key:
     genai.configure(api_key=api_key)
 else:
-    print("⚠️ WARNING: GEMINI_API_KEY environment variable not found. Vibe generation will be disabled.")
+    logger.warning("GEMINI_API_KEY environment variable not found. Vibe generation will be disabled.")
 
 
 @shared_task
@@ -39,7 +41,7 @@ def check_author_mainstream_status_task(author_id: int):
     """
     try:
         author = Author.objects.get(pk=author_id)
-        print(f"-> Running mainstream status check for new author: {author.name}...")
+        logger.info(f"Running mainstream status check for new author: {author.name}")
 
         with requests.Session() as session:
             headers = {"User-Agent": "BibliotypeApp/1.0 (contact@yourdomain.com)"}
@@ -47,12 +49,12 @@ def check_author_mainstream_status_task(author_id: int):
             status_data = check_author_mainstream_status(author.name, session)
 
             if status_data["error"]:
-                print(f"    -> API Error for {author.name}: {status_data['error']}")
+                logger.warning(f"API Error for {author.name}: {status_data['error']}")
             else:
                 if author.is_mainstream != status_data["is_mainstream"]:
                     author.is_mainstream = status_data["is_mainstream"]
-                    print(
-                        f"    -> Status updated to: {author.is_mainstream}. Reason: {status_data.get('reason', 'N/A')}"
+                    logger.info(
+                        f"Status updated to: {author.is_mainstream}. Reason: {status_data.get('reason', 'N/A')}"
                     )
 
                 # Always update the last_checked timestamp
@@ -60,9 +62,9 @@ def check_author_mainstream_status_task(author_id: int):
                 author.save()
 
     except Author.DoesNotExist:
-        print(f"❌ Author Status Task Error: Author with ID {author_id} not found.")
+        logger.error(f"Author Status Task Error: Author with ID {author_id} not found")
     except Exception as e:
-        print(f"❌❌❌ Critical error in check_author_mainstream_status_task for author_id {author_id}: {e}")
+        logger.error(f"Critical error in check_author_mainstream_status_task for author_id {author_id}: {e}", exc_info=True)
         raise  # Re-raise to let Celery know the task failed
 
 
@@ -78,18 +80,18 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str):
     try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
-        print(f"❌ User with id {user_id} not found. Cannot claim task.")
+        logger.error(f"User with id {user_id} not found. Cannot claim task")
         return
 
     # FIRST: Check the cache (this is where eager mode stores results)
     cached_dna = cache.get(f"dna_result_{task_id}")
 
     if cached_dna:
-        print(f"✅ Found cached DNA for task {task_id}. Saving to user {user_id}.")
+        logger.info(f"Found cached DNA for task {task_id}. Saving to user {user_id}")
         _save_dna_to_profile(user.userprofile, cached_dna)
         user.userprofile.pending_dna_task_id = None
         user.userprofile.save()
-        print(f"✅ Successfully claimed and saved DNA for user {user_id} from task {task_id}.")
+        logger.info(f"Successfully claimed and saved DNA for user {user_id} from task {task_id}")
         return
 
     # SECOND: Check the Celery result backend (for production)
@@ -101,14 +103,14 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str):
             _save_dna_to_profile(user.userprofile, dna_data)
             user.userprofile.pending_dna_task_id = None
             user.userprofile.save()
-            print(f"✅ Successfully claimed and saved DNA for user {user_id} from task {task_id}.")
+            logger.info(f"Successfully claimed and saved DNA for user {user_id} from task {task_id}")
         else:
-            print(f"❌ Task {task_id} failed. Cannot claim DNA for user {user_id}.")
+            logger.error(f"Task {task_id} failed. Cannot claim DNA for user {user_id}")
             user.userprofile.pending_dna_task_id = None
             user.userprofile.save()
     else:
         # Task is not ready yet, retry
-        print(f"Task {task_id} not ready yet. Retrying claim for user {user_id} in 10s...")
+        logger.info(f"Task {task_id} not ready yet. Retrying claim for user {user_id} in 10s")
         raise self.retry(countdown=10, exc=Exception(f"Task {task_id} not ready"))
 
 
@@ -134,15 +136,15 @@ def normalize_and_filter_genres(subjects):
 
 def analyze_and_print_genres(all_raw_genres, canonical_map):
     """
-    A helper function to analyze and print the frequency of raw genres,
+    A helper function to analyze and log the frequency of raw genres,
     separating them into unmapped and already-mapped categories.
     """
-    print("\n" + "=" * 50)
-    print("🔬 RUNNING GENRE ANALYSIS 🔬")
-    print("=" * 50)
+    logger.info("=" * 50)
+    logger.info("RUNNING GENRE ANALYSIS")
+    logger.info("=" * 50)
 
     if not all_raw_genres:
-        print("No genres were found to analyze.")
+        logger.info("No genres were found to analyze.")
         return
 
     raw_genre_counts = Counter(all_raw_genres)
@@ -155,18 +157,18 @@ def analyze_and_print_genres(all_raw_genres, canonical_map):
     # Sort the unmapped genres by frequency (most common first)
     sorted_unmapped = sorted(unmapped_genres.items(), key=lambda item: item[1], reverse=True)
 
-    print(f"\nFound {len(raw_genre_counts)} unique raw genre strings in total.")
-    print(f"Of those, {len(unmapped_genres)} are currently UNMAPPED.")
+    logger.info(f"Found {len(raw_genre_counts)} unique raw genre strings in total")
+    logger.info(f"Of those, {len(unmapped_genres)} are currently UNMAPPED")
 
-    print("\n--- UNMAPPED GENRES (Most Common First) ---")
+    logger.info("--- UNMAPPED GENRES (Most Common First) ---")
 
     if not sorted_unmapped:
-        print("✅ Great news! All genres are already mapped!")
+        logger.info("Great news! All genres are already mapped!")
     else:
         for genre, count in sorted_unmapped:
-            print(f"  - '{genre}' (appears {count} times)")
+            logger.info(f"  - '{genre}' (appears {count} times)")
 
-    print("\n" + "=" * 50 + "\n")
+    logger.info("=" * 50)
 
 
 @shared_task(bind=True)
@@ -175,13 +177,13 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None):
     Celery task wrapper for generating Reading DNA.
     It fetches the user and calls the main analysis engine.
     """
-    print("✅✅✅ RUNNING THE LATEST (REFACTORED) VERSION OF THE CELERY TASK ✅✅✅")
+    logger.info("Running the latest (refactored) version of the Celery task")
     user = None
     try:
         if user_id is not None:
             user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
-        print(f"❌ Error: Could not run task. User with id {user_id} not found.")
+        logger.error(f"Could not run task. User with id {user_id} not found")
         raise  # Fail the task if the user is invalid
 
     # Call the main analysis function from our service
@@ -195,7 +197,7 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None):
             # We must save it to the cache for the 'claim' task or the polling view.
             if self.request.id:
                 cache.set(f"dna_result_{self.request.id}", result_data, timeout=3600)
-                print(f"🧬 DNA result for task {self.request.id} saved to cache.")
+                logger.info(f"DNA result for task {self.request.id} saved to cache")
             return result_data
         else:
             # For logged-in users, the data is already saved. The function returns a success message.
@@ -204,5 +206,5 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None):
     except Exception as e:
         # If calculate_full_dna raises an error, this block catches it
         # and ensures the Celery task is marked as FAILED.
-        print(f"❌ Task failed due to an error in the analysis engine: {e}")
+        logger.error(f"Task failed due to an error in the analysis engine: {e}", exc_info=True)
         raise  # Re-raise to mark the task as failed
