@@ -17,7 +17,7 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 logger = logging.getLogger(__name__)
 
-from ..models import Author, Book
+from ..models import Author, Book, Genre
 from ..percentile_engine import (
     calculate_percentiles_from_aggregates,
     update_analytics_from_stats,
@@ -189,10 +189,23 @@ def calculate_full_dna(csv_file_content: str, user=None):
                     },
                 )
 
-                if created or not book.genres.exists():
-                    logger.debug(f"Enriching '{book.title}'...")
+                # Check if the book already has genres by querying the database directly
+                # This ensures we get the actual current state, not cached relationship data
+                # If created=True, we know it's new and needs enrichment, so skip the DB check
+                if created:
+                    has_genres = False
+                else:
+                    # Use a direct database query that bypasses any instance caching
+                    # Query from the Genre side of the relationship to ensure fresh data
+                    has_genres = Genre.objects.filter(books__id=book.pk).exists()
+                
+                # If the book was new OR has no genres, enrich it.
+                if created or not has_genres:
+                    logger.debug(f"Enriching '{book.title}' (created={created}, has_genres={has_genres})...")
                     enrich_book_from_apis(book, session)
                     time.sleep(1)
+                else:
+                    logger.debug(f"Book '{book.title}' already exists with genres. Skipping enrichment.")
 
                 Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
 
