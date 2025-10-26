@@ -1103,6 +1103,12 @@ EXCLUDED_GENRES = {
     "imaginary wars and battles",
     "reference",
     "life on other planets",
+    # Comics/graphic novel compound terms from Open Library that are too specific
+    "comics & graphic novels, fantasy",
+    "comics & graphic novels, general",
+    "comics & graphic novels, literary",
+    "comics & graphic novels, adaptations",
+    "comic books, strips",
     "migrant agricultural laborers--california--fiction",
     "labor camps--california--fiction",
     "migrant agricultural laborers--fiction",
