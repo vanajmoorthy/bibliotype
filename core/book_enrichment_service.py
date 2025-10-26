@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import time
@@ -8,6 +9,8 @@ from django.utils import timezone
 
 from .dna_constants import CANONICAL_GENRE_MAP, EXCLUDED_GENRES
 from .models import Author, Book, Genre, Publisher
+
+logger = logging.getLogger(__name__)
 
 # A central place for the API key for cleanliness
 GOOGLE_BOOKS_API_KEY = os.getenv("GOOGLE_BOOKS_API_KEY")
@@ -97,7 +100,7 @@ def get_book_details_for_seeder(title: str, author: str, session: requests.Sessi
                     details["publisher_name"] = pubs[0]  # Return the first publisher
 
     except requests.RequestException as e:
-        print(f"    -> API Error for '{title}': {e}")
+        logger.warning(f"API Error for '{title}': {e}")
         return {}
 
     return details
@@ -108,7 +111,7 @@ def _fetch_from_open_library(book, session, slow_down=False):
     Fetches metadata by first searching, then querying the specific Work and Edition
     endpoints, mirroring the original reliable logic.
     """
-    print("     - Querying Open Library...")
+    logger.debug(f"Querying Open Library for '{book.title}'")
 
     # --- Step 1: Search for the book to get its keys ---
     search_url = "https://openlibrary.org/search.json"
@@ -129,7 +132,7 @@ def _fetch_from_open_library(book, session, slow_down=False):
         search_data = res.json()
 
         if not search_data.get("docs"):
-            print("     - Open Library: Not found in search.")
+            logger.debug(f"Open Library: Not found in search for '{book.title}'")
             return {}, 1
 
         search_result = search_data["docs"][0]
@@ -151,9 +154,9 @@ def _fetch_from_open_library(book, session, slow_down=False):
             if work_response.status_code == 200:
                 work_data = work_response.json()
                 raw_subjects = work_data.get("subjects", [])
-                print(f"       -> Raw Subjects from API: {raw_subjects}")
+                logger.debug(f"Raw Subjects from API for '{book.title}': {raw_subjects}")
                 final_genres = list(_clean_and_canonicalize_genres(raw_subjects))
-                print(f"       -> Canonicalized Genres: {final_genres}")
+                logger.debug(f"Canonicalized Genres for '{book.title}': {final_genres}")
 
                 book_details["genres"] = final_genres
 
@@ -186,7 +189,7 @@ def _fetch_from_open_library(book, session, slow_down=False):
         return book_details, api_calls
 
     except requests.RequestException as e:
-        print(f"     - Open Library API Error: {e}")
+        logger.error(f"Open Library API Error for '{book.title}': {e}")
         # Even if it fails, we count the initial attempt as one call
         return {}, 1
 
@@ -200,7 +203,7 @@ def _fetch_ratings_from_google_books(book, session, slow_down=False):
     if not GOOGLE_BOOKS_API_KEY:
         return {}, 0  # No API key, so no call is made
 
-    print("     - Querying Google Books for ratings...")
+    logger.debug(f"Querying Google Books for ratings for '{book.title}'")
     if book.isbn13:
         query = f"isbn:{book.isbn13}"
     else:
@@ -220,7 +223,7 @@ def _fetch_ratings_from_google_books(book, session, slow_down=False):
         data = res.json()
 
         if data.get("totalItems", 0) == 0:
-            print("     - Google Books: Not found.")
+            logger.debug(f"Google Books: Not found for '{book.title}'")
             return {}, 1
 
         volume_info = data["items"][0].get("volumeInfo", {})
@@ -230,7 +233,7 @@ def _fetch_ratings_from_google_books(book, session, slow_down=False):
         }, 1
 
     except requests.RequestException as e:
-        print(f"     - Google Books API Error: {e}")
+        logger.error(f"Google Books API Error for '{book.title}': {e}")
         return {}, 1
 
 
@@ -273,7 +276,7 @@ def enrich_book_from_apis(book, session, slow_down=False):
                 current_genre_names = set(book.genres.values_list("name", flat=True))
                 genres_to_add = [g_name for g_name in new_genres if g_name not in current_genre_names]
                 if genres_to_add:
-                    print(f"     - Adding new genres: {genres_to_add}")
+                    logger.debug(f"Adding new genres for '{book.title}': {genres_to_add}")
                     genre_objs = [Genre.objects.get_or_create(name=g_name)[0] for g_name in genres_to_add]
                     book.genres.add(*genre_objs)
                     is_updated = True
@@ -300,13 +303,10 @@ def enrich_book_from_apis(book, session, slow_down=False):
     if is_updated:
         try:
             book.save()
-            print(f"     - SUCCESS: Enriched and saved '{book.title}'")
+            logger.info(f"Successfully enriched and saved '{book.title}'")
         except IntegrityError as e:
-            print(
-                f"     - ⚠️ WARNING: Could not save '{book.title}'. An integrity error occurred (e.g., duplicate ISBN)."
-            )
-            print(f"     -          Error: {e}")
+            logger.warning(f"Could not save '{book.title}'. An integrity error occurred (e.g., duplicate ISBN). Error: {e}")
     else:
-        print(f"     - No new data found to update for '{book.title}'.")
+        logger.debug(f"No new data found to update for '{book.title}'")
 
     return book, ol_api_calls, gb_api_calls

@@ -1,7 +1,10 @@
 import json
+import logging
 
 
 import posthog
+
+logger = logging.getLogger(__name__)
 from django.core.cache import cache
 from celery.result import AsyncResult
 from django.contrib import messages
@@ -55,7 +58,6 @@ def display_dna_view(request):
         "user_profile": user_profile,
         "is_processing": False,  # Explicitly set to false unless handled above
     }
-    print(dna_data)
 
     return render(request, "core/dna_display.html", context)
 
@@ -99,7 +101,7 @@ def upload_view(request):
             return redirect("core:task_status", task_id=task_id)
 
     except Exception as e:
-        print(f"UNEXPECTED ERROR in upload_view: {e}")
+        logger.error(f"Unexpected error in upload_view: {e}", exc_info=True)
         messages.error(request, "An unexpected error occurred. Please try again.")
         return redirect("core:home")
 
@@ -283,7 +285,7 @@ def update_username_api(request):
             return JsonResponse({"status": "error", "message": error_message}, status=400)
 
     except Exception as e:
-        print(f"Error in update_username_api: {e}")
+        logger.error(f"Error in update_username_api: {e}", exc_info=True)
 
         return JsonResponse({"status": "error", "message": "An unexpected server error occurred."}, status=500)
 

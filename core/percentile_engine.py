@@ -1,6 +1,10 @@
+import logging
+
 from django.db.models import F
 
 from .models import AggregateAnalytics
+
+logger = logging.getLogger(__name__)
 
 
 def get_bucket(value, bucket_size):
@@ -38,7 +42,7 @@ def update_analytics_from_stats(user_stats):
             setattr(analytics, dist_field, current_dist)
 
     analytics.save()
-    print("   [Analytics] Updated global aggregate statistics.")
+    logger.debug("Updated global aggregate statistics")
 
 
 def calculate_percentiles_from_aggregates(user_stats):
@@ -51,7 +55,7 @@ def calculate_percentiles_from_aggregates(user_stats):
     total_other_users = max(0, analytics.total_profiles_counted - 1)
 
     if total_other_users < 10:
-        print("   [Analytics] Not enough data for percentiles. Skipping.")
+        logger.debug("Not enough data for percentiles. Skipping.")
         return {}
 
     percentiles = {}
@@ -107,5 +111,5 @@ def calculate_percentiles_from_aggregates(user_stats):
     percentile_books = (better_than_count_books / total_other_users) * 100
     percentiles["total_books_read"] = min(100.0, percentile_books)
 
-    print("   [Analytics] Calculated percentiles against global data.")
+    logger.debug("Calculated percentiles against global data")
     return percentiles
