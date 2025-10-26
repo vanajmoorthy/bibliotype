@@ -31,6 +31,7 @@ services:
             - CELERY_BROKER_URL=redis://redis:6379/0
             - CELERY_RESULT_BACKEND=redis://redis:6379/0
             - SECRET_KEY=${SECRET_KEY}
+            - POSTHOG_API_KEY=${POSTHOG_API_KEY}
             - GEMINI_API_KEY=${GEMINI_API_KEY}
             - DEBUG=${DEBUG}
             - ALLOWED_HOSTS=${ALLOWED_HOSTS}

@@ -22,6 +22,7 @@ from ..percentile_engine import (
     calculate_percentiles_from_aggregates,
     update_analytics_from_stats,
 )
+from ..services.top_books_service import calculate_and_store_top_books
 
 
 from ..book_enrichment_service import enrich_book_from_apis
@@ -128,7 +129,63 @@ def _save_dna_to_profile(profile, dna_data):
         raise
 
 
-def calculate_full_dna(csv_file_content: str, user=None):
+def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_df):
+    """Save anonymous user data to temporary session storage"""
+    from ..models import AnonymousUserSession
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    # Extract books
+    books_data = [book.id for book in user_book_objects if book]
+    
+    # Calculate top books for anonymous users based on ratings and reviews
+    book_scores = []
+    analyzer = SentimentIntensityAnalyzer()
+    
+    for idx, row_dict in enumerate(read_df.to_dict('records')):
+        if idx < len(user_book_objects) and user_book_objects[idx]:
+            book = user_book_objects[idx]
+            score = 0
+            
+            rating = row_dict.get('My Rating')
+            if pd.notna(rating) and rating > 0:
+                score += rating * 20
+            
+            review = str(row_dict.get('My Review', '')).strip()
+            if review and len(review) > 15:
+                sentiment = analyzer.polarity_scores(review)["compound"]
+                score += sentiment * 30
+            
+            book_scores.append((book.id, score))
+    
+    book_scores.sort(key=lambda x: x[1], reverse=True)
+    top_books_data = [book_id for book_id, score in book_scores[:5]]
+    
+    # Extract distributions from DNA
+    genre_dist = {}
+    for genre, count in dna_data.get('top_genres', []):
+        genre_dist[genre] = count
+    
+    author_dist = {}
+    for author, count in dna_data.get('top_authors', [])[:20]:
+        normalized = Author._normalize(author)
+        author_dist[normalized] = count
+    
+    # Save or update session
+    AnonymousUserSession.objects.update_or_create(
+        session_key=session_key,
+        defaults={
+            'dna_data': dna_data,
+            'books_data': books_data,
+            'top_books_data': top_books_data,
+            'genre_distribution': genre_dist,
+            'author_distribution': author_dist,
+            'expires_at': timezone.now() + timedelta(days=7),
+        }
+    )
+
+
+def calculate_full_dna(csv_file_content: str, user=None, session_key=None):
     try:
         df = pd.read_csv(StringIO(csv_file_content))
         read_df = df[df["Exclusive Shelf"] == "read"].copy()
@@ -165,7 +222,7 @@ def calculate_full_dna(csv_file_content: str, user=None):
                 title_from_csv = original_row.get("Title", "").strip()
 
                 if not author_name_from_csv or not title_from_csv:
-                    return None, []
+                    return None, [], original_row
 
                 normalized_author_name = Author._normalize(author_name_from_csv)
                 author, created = Author.objects.get_or_create(
@@ -199,27 +256,70 @@ def calculate_full_dna(csv_file_content: str, user=None):
                     # Query from the Genre side of the relationship to ensure fresh data
                     has_genres = Genre.objects.filter(books__id=book.pk).exists()
                 
-                # If the book was new OR has no genres, enrich it.
+                # Skip enrichment during upload to avoid database locks
+                # Enrichment should be done in a separate background task
+                # if created or not has_genres:
+                #     logger.debug(f"Enriching '{book.title}' (created={created}, has_genres={has_genres})...")
+                #     enrich_book_from_apis(book, session)
+                # else:
+                #     logger.debug(f"Book '{book.title}' already exists with genres. Skipping enrichment.")
+                
+                # Just log the enrichment status
                 if created or not has_genres:
-                    logger.debug(f"Enriching '{book.title}' (created={created}, has_genres={has_genres})...")
-                    enrich_book_from_apis(book, session)
-                    time.sleep(1)
+                    logger.debug(f"Book '{book.title}' will be enriched later (created={created}, has_genres={has_genres})")
                 else:
-                    logger.debug(f"Book '{book.title}' already exists with genres. Skipping enrichment.")
+                    logger.debug(f"Book '{book.title}' already exists with genres.")
 
                 Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
 
                 fresh_book_instance = Book.objects.get(pk=book.pk)
 
-                return fresh_book_instance, [g.name for g in fresh_book_instance.genres.all()]
+                return fresh_book_instance, [g.name for g in fresh_book_instance.genres.all()], original_row
 
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            # Use single worker to avoid SQLite database lock issues
+            with ThreadPoolExecutor(max_workers=1) as executor:
                 results = list(executor.map(process_book_row, read_df.to_dict("records")))
 
-        for book, genres in results:
+        for book, genres, original_row in results:
             if book:
                 user_book_objects.append(book)
                 all_raw_genres.extend(genres)
+        
+        # Store UserBook entries for registered users
+        if user and results:
+            from ..models import UserBook
+            
+            # Store book data with ratings and reviews - now we have the original row
+            for book, genres, original_row in results:
+                if book:
+                    rating_value = None
+                    review_value = ''
+                    
+                    if pd.notna(original_row.get('My Rating')) and original_row['My Rating'] > 0:
+                        try:
+                            rating_value = int(original_row['My Rating'])
+                        except (ValueError, TypeError):
+                            rating_value = None
+                    
+                    if pd.notna(original_row.get('My Review')):
+                        review_value = str(original_row['My Review']).strip()
+                    
+                    date_read_value = None
+                    if pd.notna(original_row.get('Date Read')):
+                        date_read_value = pd.to_datetime(original_row['Date Read'], errors='coerce')
+                        if pd.isna(date_read_value):
+                            date_read_value = None
+                    
+                    # Use update_or_create to handle duplicates better
+                    UserBook.objects.update_or_create(
+                        user=user,
+                        book=book,
+                        defaults={
+                            'user_rating': rating_value,
+                            'user_review': review_value,
+                            'date_read': date_read_value,
+                        }
+                    )
 
         enriched_data_for_scoring = {
             book.title: {
@@ -419,10 +519,17 @@ def calculate_full_dna(csv_file_content: str, user=None):
         dna["most_negative_review"] = clean_dict(dna.get("most_negative_review"))
 
         if user:
+            # Calculate and store top books
+            calculate_and_store_top_books(user, limit=5)
+            
             _save_dna_to_profile(user.userprofile, dna)
             logger.info(f"Saved DNA for user: {user.username}")
             return f"DNA saved for user {user.id}"
         else:
+            # Save anonymous session data
+            if session_key:
+                save_anonymous_session_data(session_key, dna, user_book_objects, read_df)
+                logger.info(f"Saved anonymous session data for session: {session_key}")
             logger.info("DNA generated for an anonymous user. Returning result for display")
             return dna
 

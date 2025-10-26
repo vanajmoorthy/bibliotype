@@ -2,7 +2,9 @@ from django.contrib import admin
 from django import forms
 from django.forms import ModelMultipleChoiceField
 
-from .models import AggregateAnalytics, Author, Book, Genre, Publisher, UserProfile
+from .models import (
+    AggregateAnalytics, AnonymizedReadingProfile, AnonymousUserSession, Author, Book, Genre, Publisher, UserBook, UserProfile
+)
 
 
 class BookAdminForm(forms.ModelForm):
@@ -74,6 +76,27 @@ class GenreAdmin(admin.ModelAdmin):
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ("user", "reader_type", "total_books_read", "last_updated")
     search_fields = ("user__username",)
+
+
+@admin.register(UserBook)
+class UserBookAdmin(admin.ModelAdmin):
+    list_display = ('user', 'book', 'user_rating', 'is_top_book', 'top_book_position')
+    list_filter = ('is_top_book', 'user_rating')
+    search_fields = ('user__username', 'book__title', 'book__author__name')
+
+
+@admin.register(AnonymousUserSession)
+class AnonymousUserSessionAdmin(admin.ModelAdmin):
+    list_display = ('session_key', 'created_at', 'expires_at', 'anonymized')
+    list_filter = ('anonymized', 'expires_at')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(AnonymizedReadingProfile)
+class AnonymizedReadingProfileAdmin(admin.ModelAdmin):
+    list_display = ('reader_type', 'total_books_read', 'genre_diversity_count', 'source', 'created_at')
+    list_filter = ('reader_type', 'source', 'created_at')
+    readonly_fields = ('created_at',)
 
 
 @admin.register(AggregateAnalytics)
