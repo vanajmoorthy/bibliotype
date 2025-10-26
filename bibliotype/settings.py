@@ -212,3 +212,13 @@ LOGGING = {
         },
     },
 }
+
+# Celery Configuration
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'anonymize-expired-sessions': {
+        'task': 'core.tasks.anonymize_expired_sessions_task',
+        'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
+    },
+}
