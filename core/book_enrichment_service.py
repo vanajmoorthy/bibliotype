@@ -22,26 +22,92 @@ def _clean_title_for_api(title):
 
 
 def _clean_and_canonicalize_genres(subjects):
+    """
+    Canonicalize Open Library subjects into our genre taxonomy.
+    
+    This function is more strict about matching to prevent false positives where
+    books get random genres that don't match their actual content.
+    """
     if not subjects:
         return set()
 
     canonical_genres = set()
 
+    # Sort aliases by length (longest first) to match most specific terms first
+    # This prevents "science" from matching before "science fiction"
     sorted_aliases = sorted(CANONICAL_GENRE_MAP.keys(), key=len, reverse=True)
 
     for subject in subjects:
         s_lower = subject.lower().strip()
 
+        # Skip if this entire subject is in our exclusion list
         if s_lower in EXCLUDED_GENRES:
             continue
 
+        matched = False
         for alias in sorted_aliases:
+            # Use word boundaries to ensure we match whole phrases
+            # This helps avoid matching partial words (e.g., "science" in "social science")
             pattern = r"\b" + re.escape(alias) + r"\b"
+            
             if re.search(pattern, s_lower):
                 canonical_name = CANONICAL_GENRE_MAP[alias]
+                
+                # Double-check canonical name isn't excluded
                 if canonical_name not in EXCLUDED_GENRES:
                     canonical_genres.add(canonical_name)
+                    matched = True
+                    logger.debug(f"Matched '{subject}' to genre '{canonical_name}'")
                     break
+
+        # Debug logging for unmatched subjects (helps identify missing aliases or needed exclusions)
+        if not matched and s_lower:
+            logger.debug(f"Could not match subject: '{subject}'")
+
+    return canonical_genres
+
+
+def _canonicalize_google_books_categories(categories):
+    """
+    Canonicalize Google Books categories into our genre taxonomy.
+    
+    Google Books categories are often more accurate than Open Library subjects.
+    They come formatted like: "Fiction / Literary" or "History / Ancient / Rome"
+    """
+    if not categories:
+        return set()
+
+    canonical_genres = set()
+    sorted_aliases = sorted(CANONICAL_GENRE_MAP.keys(), key=len, reverse=True)
+
+    for category in categories:
+        # Google Books categories often have separators like "Fiction / Literary Fiction"
+        # We want to check each part
+        parts = category.split('/')
+        
+        for part in parts:
+            part_lower = part.strip().lower()
+            
+            # Skip if excluded
+            if part_lower in EXCLUDED_GENRES:
+                continue
+            
+            matched = False
+            for alias in sorted_aliases:
+                pattern = r"\b" + re.escape(alias) + r"\b"
+                
+                if re.search(pattern, part_lower):
+                    canonical_name = CANONICAL_GENRE_MAP[alias]
+                    
+                    if canonical_name not in EXCLUDED_GENRES:
+                        canonical_genres.add(canonical_name)
+                        matched = True
+                        logger.debug(f"Matched Google Books category '{part}' to genre '{canonical_name}'")
+                        break
+            
+            # Debug unmatched parts
+            if not matched:
+                logger.debug(f"Could not match Google Books category part: '{part.strip()}'")
 
     return canonical_genres
 
@@ -172,16 +238,16 @@ def _fetch_from_open_library(book, session, slow_down=False):
         return {}, 1
 
 
-def _fetch_ratings_from_google_books(book, session, slow_down=False):
+def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=False):
     """
-    Fetches only ratingsCount and averageRating from Google Books.
-    This is our secondary, specialized data source.
+    Fetches ratings AND categories (genres) from Google Books.
+    Google Books categories are often more accurate than Open Library subjects.
     Returns a dictionary of data and the number of API calls made (always 1 or 0).
     """
     if not GOOGLE_BOOKS_API_KEY:
         return {}, 0  # No API key, so no call is made
 
-    logger.debug(f"Querying Google Books for ratings for '{book.title}'")
+    logger.debug(f"Querying Google Books for ratings and categories for '{book.title}'")
     if book.isbn13:
         query = f"isbn:{book.isbn13}"
     else:
@@ -205,10 +271,28 @@ def _fetch_ratings_from_google_books(book, session, slow_down=False):
             return {}, 1
 
         volume_info = data["items"][0].get("volumeInfo", {})
-        return {
+        
+        result = {
             "ratings_count": volume_info.get("ratingsCount"),
             "average_rating": volume_info.get("averageRating"),
-        }, 1
+        }
+        
+        # Also fetch categories (Google Books' genre equivalent)
+        if categories := volume_info.get("categories"):
+            # Google Books categories are often prefixed with something like "Fiction / Literary"
+            # We want to canonicalize these
+            logger.debug(f"Google Books categories for '{book.title}': {categories}")
+            
+            # Filter out generic "Fiction" category - not useful for genre classification
+            filtered_categories = [cat for cat in categories if cat.lower() not in ['fiction', 'general']]
+            
+            if filtered_categories:
+                result["categories"] = filtered_categories
+                logger.debug(f"Filtered Google Books categories: {filtered_categories}")
+            else:
+                logger.debug(f"All Google Books categories filtered out (too generic)")
+        
+        return result, 1
 
     except requests.RequestException as e:
         logger.error(f"Google Books API Error for '{book.title}': {e}")
@@ -225,44 +309,75 @@ def enrich_book_from_apis(book, session, slow_down=False):
     gb_api_calls = 0
     is_updated = False
 
-    # --- Step 1: Get general data from Open Library if needed ---
-    # Only run if we are missing key data like publisher, page count, or genres.
-    if not book.publisher or not book.page_count or not book.genres.exists():
-        ol_data, calls_made = _fetch_from_open_library(book, session, slow_down)
-        ol_api_calls += calls_made
+    # --- Step 1: Always fetch genres from Open Library for re-enrichment ---
+    # We want to refresh genres even if other data exists
+    ol_data, calls_made = _fetch_from_open_library(book, session, slow_down)
+    ol_api_calls += calls_made
 
-        if ol_data:
-            if not book.isbn13 and ol_data.get("isbn_13"):
-                book.isbn13 = ol_data["isbn_13"]
+    if ol_data:
+        if not book.isbn13 and ol_data.get("isbn_13"):
+            book.isbn13 = ol_data["isbn_13"]
+            is_updated = True
+        if not book.page_count and ol_data.get("page_count"):
+            book.page_count = ol_data["page_count"]
+            is_updated = True
+        if not book.publish_year and ol_data.get("publish_year"):
+            book.publish_year = ol_data["publish_year"]
+            is_updated = True
+
+        if publisher_name := ol_data.get("publisher"):
+            if not book.publisher:
+                publisher_obj, _ = Publisher.objects.get_or_create(
+                    normalized_name=Author._normalize(publisher_name), defaults={"name": publisher_name}
+                )
+                book.publisher = publisher_obj
                 is_updated = True
-            if not book.page_count and ol_data.get("page_count"):
-                book.page_count = ol_data["page_count"]
+
+        if new_genres := ol_data.get("genres"):
+            # Always clear and replace existing genres with fresh API data
+            book.genres.clear()
+            # No need to save here - ManyToMany changes are persisted immediately
+            
+            logger.debug(f"Adding genres for '{book.title}': {new_genres}")
+            
+            # Limit to top 5-6 genres max - prioritize specific over generic
+            genre_priority = [
+                # Fiction genres (most specific to generic)
+                'fantasy', 'science fiction', 'thriller', 'horror', 'historical fiction', 
+                'romance', 'humorous fiction', 'young adult', 'short stories',
+                # Non-fiction genres  
+                'biography', 'philosophy', 'psychology', 'history', 'social science', 
+                'non-fiction', 'science', 'nature', 'art & music', 'travel',
+                # Generic/classics
+                'classics', 'plays & drama', 'children\'s literature'
+            ]
+            
+            # Sort genres by priority (most specific first)
+            prioritized_genres = sorted(new_genres, key=lambda g: genre_priority.index(g) if g in genre_priority else 999)
+            
+            # Take top 5-6 genres (aim for 5, allow up to 6 if they're all highly specific)
+            if len(prioritized_genres) <= 6:
+                genres_to_add_limited = prioritized_genres
+            elif len(prioritized_genres) >= 6 and prioritized_genres[5] in ['fantasy', 'science fiction', 'thriller', 'horror', 'historical fiction', 'romance']:
+                # If we have 6+ specific fiction genres, take all 6
+                genres_to_add_limited = prioritized_genres[:6]
+            else:
+                # Otherwise, take top 5
+                genres_to_add_limited = prioritized_genres[:5]
+            
+            # Add the limited genres
+            if genres_to_add_limited:
+                genre_objs = [Genre.objects.get_or_create(name=g_name)[0] for g_name in genres_to_add_limited]
+                book.genres.add(*genre_objs)
                 is_updated = True
-            if not book.publish_year and ol_data.get("publish_year"):
-                book.publish_year = ol_data["publish_year"]
-                is_updated = True
+                logger.debug(f"Added {len(genres_to_add_limited)} genres (limited from {len(new_genres)}): {genres_to_add_limited}")
+            else:
+                logger.debug(f"No genres to add after limiting")
 
-            if publisher_name := ol_data.get("publisher"):
-                if not book.publisher:
-                    publisher_obj, _ = Publisher.objects.get_or_create(
-                        normalized_name=Author._normalize(publisher_name), defaults={"name": publisher_name}
-                    )
-                    book.publisher = publisher_obj
-                    is_updated = True
-
-            if new_genres := ol_data.get("genres"):
-                current_genre_names = set(book.genres.values_list("name", flat=True))
-                genres_to_add = [g_name for g_name in new_genres if g_name not in current_genre_names]
-                if genres_to_add:
-                    logger.debug(f"Adding new genres for '{book.title}': {genres_to_add}")
-                    genre_objs = [Genre.objects.get_or_create(name=g_name)[0] for g_name in genres_to_add]
-                    book.genres.add(*genre_objs)
-                    is_updated = True
-
-    # --- Step 2: Get ratings data from Google Books if needed ---
-    # Only run if the book has never been checked with Google Books before.
+    # --- Step 2: Get ratings AND categories (genres) from Google Books if needed ---
+    # Google Books often has more accurate genres than Open Library
     if book.google_books_last_checked is None:
-        gb_data, calls_made = _fetch_ratings_from_google_books(book, session, slow_down)
+        gb_data, calls_made = _fetch_ratings_and_categories_from_google_books(book, session, slow_down)
         gb_api_calls += calls_made
 
         if gb_data:
@@ -272,6 +387,35 @@ def enrich_book_from_apis(book, session, slow_down=False):
             if gb_data.get("average_rating") is not None:
                 book.google_books_average_rating = gb_data["average_rating"]
                 is_updated = True
+            
+            # Use Google Books categories as primary source for genres if available
+            if google_genres := gb_data.get("categories"):
+                canonical_google_genres = list(_canonicalize_google_books_categories(google_genres))
+                
+                # Only use Google Books genres if we got good results
+                if canonical_google_genres:
+                    logger.debug(f"Using Google Books categories for '{book.title}': {canonical_google_genres}")
+                    
+                    # Clear ALL existing genres and replace with Google Books (more accurate)
+                    book.genres.clear()
+                    
+                    genre_priority = [
+                        'fantasy', 'science fiction', 'thriller', 'horror', 'historical fiction', 
+                        'romance', 'humorous fiction', 'young adult', 'short stories',
+                        'biography', 'philosophy', 'psychology', 'history', 'social science', 
+                        'non-fiction', 'science', 'nature', 'art & music', 'travel',
+                        'classics', 'plays & drama', "children's literature"
+                    ]
+                    prioritized_genres = sorted(canonical_google_genres, key=lambda g: genre_priority.index(g) if g in genre_priority else 999)
+                    
+                    # Take top 5 (Google Books categories are usually more accurate)
+                    genres_to_add_limited = prioritized_genres[:5]
+                    
+                    if genres_to_add_limited:
+                        genre_objs = [Genre.objects.get_or_create(name=g_name)[0] for g_name in genres_to_add_limited]
+                        book.genres.add(*genre_objs)
+                        is_updated = True
+                        logger.debug(f"Added Google Books genres for '{book.title}': {genres_to_add_limited}")
         
         # Mark as checked *after* the API call is attempted.
         book.google_books_last_checked = timezone.now()
@@ -286,5 +430,8 @@ def enrich_book_from_apis(book, session, slow_down=False):
             logger.warning(f"Could not save '{book.title}'. An integrity error occurred (e.g., duplicate ISBN). Error: {e}")
     else:
         logger.debug(f"No new data found to update for '{book.title}'")
+    
+    # Always refresh from DB to get the current state of genres
+    book.refresh_from_db()
 
     return book, ol_api_calls, gb_api_calls
