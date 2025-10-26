@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 import google.generativeai as genai
@@ -7,12 +8,14 @@ from dotenv import load_dotenv
 # --- All LLM-related code is now isolated here ---
 
 load_dotenv()
+logger = logging.getLogger(__name__)
+
 api_key = os.getenv("GEMINI_API_KEY")
 
 if api_key:
     genai.configure(api_key=api_key)
 else:
-    print("⚠️ WARNING: GEMINI_API_KEY environment variable not found. Vibe generation will be disabled.")
+    logger.warning("GEMINI_API_KEY environment variable not found. Vibe generation will be disabled.")
 
 
 def create_vibe_prompt(dna: dict) -> str:
@@ -76,7 +79,7 @@ def generate_vibe_with_llm(dna: dict) -> list:
     Uses the Gemini API to generate a creative "vibe" for the user's DNA.
     """
     if not api_key:
-        print("⚠️ Vibe generation skipped because API key is not configured.")
+        logger.warning("Vibe generation skipped because API key is not configured")
         return ["vibe generation disabled", "please configure api key"]
 
     prompt = create_vibe_prompt(dna)
@@ -94,9 +97,9 @@ def generate_vibe_with_llm(dna: dict) -> list:
         else:
             return ["error parsing vibe", "unexpected format received"]
 
-    except json.JSONDecodeError:
-        print(f"❌ LLM Error: Failed to decode JSON from response: {response.text}")
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to decode JSON from response: {response.text}", exc_info=True)
         return ["error generating vibe", "invalid json response"]
     except Exception as e:
-        print(f"❌ LLM Error: An unexpected error occurred: {e}")
+        logger.error(f"An unexpected error occurred: {e}", exc_info=True)
         return ["error generating vibe", "api call failed"]

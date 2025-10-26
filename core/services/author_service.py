@@ -1,8 +1,11 @@
 # In core/services/author_service.py
 
+import logging
 import requests
 from datetime import datetime, timedelta
 from urllib.parse import quote
+
+logger = logging.getLogger(__name__)
 
 # --- Heuristic Thresholds (Now with a new "icon" level) ---
 WORK_COUNT_THRESHOLD = 10
@@ -59,8 +62,8 @@ def check_author_mainstream_status(author_name: str, session: requests.Session) 
                 total_views = sum(item["views"] for item in items)
                 findings["average_monthly_views"] = round(total_views / 3)
 
-        # --- NEW: Print the page views for visibility ---
-        print(f"    -> Work Count: {findings['work_count']}, Avg Monthly Views: {findings['average_monthly_views']}")
+        # --- NEW: Log the page views for visibility ---
+        logger.debug(f"Work Count: {findings['work_count']}, Avg Monthly Views: {findings['average_monthly_views']}")
 
         # --- NEW: Final Decision Logic with two paths ---
 

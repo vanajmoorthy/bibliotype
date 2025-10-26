@@ -1,5 +1,5 @@
 import hashlib
-
+import logging
 
 from django.db.models import F
 from django.core.cache import cache
@@ -14,6 +14,8 @@ import pandas as pd
 import requests
 from django.db.models import F
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
+logger = logging.getLogger(__name__)
 
 from ..models import Author, Book
 from ..percentile_engine import (
@@ -61,7 +63,7 @@ def assign_reader_type(read_df, enriched_data, all_genres):
     # Use the CANONICAL_GENRE_MAP to group aliases into their canonical form
     mapped_genres = [CANONICAL_GENRE_MAP.get(g, g) for g in all_genres]
     genre_counts = Counter(mapped_genres)
-    print(genre_counts)
+    logger.debug(f"Genre counts: {genre_counts}")
 
     # These scores are now based on CLEAN, CANONICAL genre counts
     scores["Fantasy Fanatic"] += genre_counts.get("fantasy", 0) + genre_counts.get("science fiction", 0)
@@ -86,14 +88,14 @@ def assign_reader_type(read_df, enriched_data, all_genres):
 
         if publisher:
             if not publisher.is_mainstream:
-                print(f"   ℹ️ Found non-major publisher: {publisher}")
+                logger.debug(f"Found non-major publisher: {publisher}")
                 scores["Small Press Supporter"] += 1
 
     DIVERSITY_THRESHOLD = 10
     DIVERSITY_BONUS = 15
     unique_canonical_genres = len(genre_counts)
 
-    print(f"   ℹ️ Found {unique_canonical_genres} unique CANONICAL genres.")
+    logger.debug(f"Found {unique_canonical_genres} unique CANONICAL genres")
 
     if unique_canonical_genres >= DIVERSITY_THRESHOLD:
         scores["Versatile Valedictorian"] += DIVERSITY_BONUS
@@ -114,8 +116,8 @@ def _save_dna_to_profile(profile, dna_data):
     to the user's profile, populating both the main JSON blob and the
     optimized, separate fields.
     """
-    print(f"🔍 DEBUG: Saving DNA to profile for user: {profile.user.username}")
-    print(f"🔍 DEBUG: DNA data keys: {list(dna_data.keys()) if dna_data else 'None'}")
+    logger.debug(f"Saving DNA to profile for user: {profile.user.username}")
+    logger.debug(f"DNA data keys: {list(dna_data.keys()) if dna_data else 'None'}")
 
     profile.dna_data = dna_data
     profile.reader_type = dna_data.get("reader_type")
@@ -125,10 +127,9 @@ def _save_dna_to_profile(profile, dna_data):
 
     try:
         profile.save()
-        print(f"✅ [DB] Successfully saved DNA data for user: {profile.user.username}")
-        print(f"🔍 DEBUG: Profile.dna_data is now: {profile.dna_data is not None}")
+        logger.info(f"Successfully saved DNA data for user: {profile.user.username}")
     except Exception as e:
-        print(f"❌ [DB] Error saving profile: {e}")
+        logger.error(f"Error saving profile for user {profile.user.username}: {e}")
         raise
 
 
@@ -148,7 +149,7 @@ def calculate_full_dna(csv_file_content: str, user=None):
         fingerprint_string = "".join(book_fingerprint_list)
         new_data_hash = hashlib.sha256(fingerprint_string.encode()).hexdigest()
 
-        print(f"📖 Found {len(read_df)} books marked as 'read' for statistical analysis.")
+        logger.info(f"Found {len(read_df)} books marked as 'read' for statistical analysis")
         # --- Data cleaning ---
         for temp_df in [df, read_df]:
             temp_df["My Rating"] = pd.to_numeric(temp_df["My Rating"], errors="coerce")
@@ -165,7 +166,7 @@ def calculate_full_dna(csv_file_content: str, user=None):
             temp_df.loc[:, "My Review"] = temp_df["My Review"].fillna("")
 
         # --- Phase 1 & 2: API and DB Sync ---
-        print("💾 Syncing book data with the database...")
+        logger.info("Syncing book data with the database...")
 
         all_raw_genres, user_book_objects = [], []
         with requests.Session() as session:
@@ -187,7 +188,7 @@ def calculate_full_dna(csv_file_content: str, user=None):
                 if created:
                     from ..tasks import check_author_mainstream_status_task
 
-                    print(f"   -> New author found: '{author.name}'. Dispatching background check.")
+                    logger.info(f"New author found: '{author.name}'. Dispatching background check.")
                     check_author_mainstream_status_task.delay(author.id)
 
                 normalized_book_title = Book._normalize_title(title_from_csv)
@@ -203,7 +204,7 @@ def calculate_full_dna(csv_file_content: str, user=None):
 
                 # If the book was new OR has no genres, enrich it.
                 if created or not book.genres.exists():
-                    print(f"   -> Enriching '{book.title}'...")
+                    logger.debug(f"Enriching '{book.title}'...")
                     enrich_book_from_apis(book, session)
                     time.sleep(1)
 
@@ -247,7 +248,7 @@ def calculate_full_dna(csv_file_content: str, user=None):
         top_genres = Counter(mapped_genres).most_common(10)
 
         # --- Community Analytics Calculation ---
-        print("📈 Calculating base user statistics...")
+        logger.info("Calculating base user statistics...")
 
         user_base_stats = {
             "total_books_read": int(len(read_df)),
@@ -265,7 +266,7 @@ def calculate_full_dna(csv_file_content: str, user=None):
             ),
         }
 
-        print("🌍 Calculating community stats...")
+        logger.info("Calculating community stats...")
 
         update_analytics_from_stats(user_base_stats)
 
@@ -401,21 +402,21 @@ def calculate_full_dna(csv_file_content: str, user=None):
             "stats_by_year": stats_by_year_list,
             "mainstream_score_percent": mainstream_score,
         }
-        print(dna)
+        logger.debug(f"DNA data generated")
 
         reading_vibe = []
         if user:
             profile = user.userprofile
             if profile.vibe_data_hash == new_data_hash and profile.reading_vibe:
-                print("✅ Vibe data is unchanged. Using cached vibe from database.")
+                logger.debug("Vibe data is unchanged. Using cached vibe from database")
                 reading_vibe = profile.reading_vibe
             else:
-                print("✨ Vibe data has changed. Generating a new vibe with LLM...")
+                logger.info("Vibe data has changed. Generating a new vibe with LLM...")
                 reading_vibe = generate_vibe_with_llm(dna)
                 profile.reading_vibe = reading_vibe
                 profile.vibe_data_hash = new_data_hash
         else:
-            print("✨ Anonymous user. Generating a new vibe with LLM...")
+            logger.info("Anonymous user. Generating a new vibe with LLM...")
             reading_vibe = generate_vibe_with_llm(dna)
 
         dna["reading_vibe"] = reading_vibe
@@ -435,18 +436,18 @@ def calculate_full_dna(csv_file_content: str, user=None):
         if user:
             # For logged-in users, save to the profile and return a success message.
             _save_dna_to_profile(user.userprofile, dna)
-            print(f"✅ Saved DNA for user: {user.username}")
+            logger.info(f"Saved DNA for user: {user.username}")
             return f"DNA saved for user {user.id}"
         else:
             # For anonymous users, simply return the generated DNA dictionary.
             # The calling Celery task will handle caching it.
-            print("🧬 DNA generated for an anonymous user. Returning result for display.")
+            logger.info("DNA generated for an anonymous user. Returning result for display")
             return dna
 
     except Exception as e:
         # FIX: Use the `user` object for logging, not the non-existent user_id.
         user_identifier = user.id if user else "Anonymous"
-        print(f"❌❌❌ A critical error occurred in DNA calculation for user_id {user_identifier}: {e}")
+        logger.error(f"A critical error occurred in DNA calculation for user_id {user_identifier}: {e}", exc_info=True)
         raise
 
 
@@ -472,15 +473,15 @@ def normalize_and_filter_genres(subjects):
 
 def analyze_and_print_genres(all_raw_genres, canonical_map):
     """
-    A helper function to analyze and print the frequency of raw genres,
+    A helper function to analyze and log the frequency of raw genres,
     separating them into unmapped and already-mapped categories.
     """
-    print("\n" + "=" * 50)
-    print("🔬 RUNNING GENRE ANALYSIS 🔬")
-    print("=" * 50)
+    logger.info("=" * 50)
+    logger.info("RUNNING GENRE ANALYSIS")
+    logger.info("=" * 50)
 
     if not all_raw_genres:
-        print("No genres were found to analyze.")
+        logger.info("No genres were found to analyze.")
         return
 
     raw_genre_counts = Counter(all_raw_genres)
@@ -493,15 +494,15 @@ def analyze_and_print_genres(all_raw_genres, canonical_map):
     # Sort the unmapped genres by frequency (most common first)
     sorted_unmapped = sorted(unmapped_genres.items(), key=lambda item: item[1], reverse=True)
 
-    print(f"\nFound {len(raw_genre_counts)} unique raw genre strings in total.")
-    print(f"Of those, {len(unmapped_genres)} are currently UNMAPPED.")
+    logger.info(f"Found {len(raw_genre_counts)} unique raw genre strings in total")
+    logger.info(f"Of those, {len(unmapped_genres)} are currently UNMAPPED")
 
-    print("\n--- UNMAPPED GENRES (Most Common First) ---")
+    logger.info("--- UNMAPPED GENRES (Most Common First) ---")
 
     if not sorted_unmapped:
-        print("✅ Great news! All genres are already mapped!")
+        logger.info("Great news! All genres are already mapped!")
     else:
         for genre, count in sorted_unmapped:
-            print(f"  - '{genre}' (appears {count} times)")
+            logger.info(f"  - '{genre}' (appears {count} times)")
 
-    print("\n" + "=" * 50 + "\n")
+    logger.info("=" * 50)
