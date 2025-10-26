@@ -12,65 +12,43 @@ from .models import Author, Book, Genre, Publisher
 
 logger = logging.getLogger(__name__)
 
-# A central place for the API key for cleanliness
 GOOGLE_BOOKS_API_KEY = os.getenv("GOOGLE_BOOKS_API_KEY")
 
 
 def _clean_title_for_api(title):
-    """A less aggressive cleaner specifically for API queries."""
-    # 1. Remove content in parentheses/brackets
     clean_title = re.sub(r"[\(\[].*?[\)\]]", "", title)
-    # 2. Remove subtitles after a colon
     clean_title = clean_title.split(":")[0]
     return clean_title.strip()
 
 
 def _clean_and_canonicalize_genres(subjects):
-    """
-    Finds the best, most specific genre match for each subject using
-    word boundary regular expressions for precision.
-    """
     if not subjects:
         return set()
 
     canonical_genres = set()
 
-    # Sort aliases by length (desc) to match "science fiction" before "fiction"
     sorted_aliases = sorted(CANONICAL_GENRE_MAP.keys(), key=len, reverse=True)
 
     for subject in subjects:
         s_lower = subject.lower().strip()
 
-        # Skip if the whole subject is in the exclusion list
         if s_lower in EXCLUDED_GENRES:
             continue
 
-        # --- THIS IS THE CRITICAL CHANGE ---
-        # Find all aliases that match as whole words/phrases within the subject
         for alias in sorted_aliases:
-            # Create a regex pattern with word boundaries.
-            # re.escape handles special characters in aliases like "self-help".
             pattern = r"\b" + re.escape(alias) + r"\b"
             if re.search(pattern, s_lower):
                 canonical_name = CANONICAL_GENRE_MAP[alias]
-                # Final check to ensure the canonical name itself isn't excluded
                 if canonical_name not in EXCLUDED_GENRES:
                     canonical_genres.add(canonical_name)
-                    # We break here because we found the most specific match first
-                    # due to the list being sorted by length.
                     break
 
     return canonical_genres
 
 
 def get_book_details_for_seeder(title: str, author: str, session: requests.Session) -> dict:
-    """
-    A robust fetcher for the seed_books command that uses a two-step API call
-    to reliably get the publisher.
-    """
     details = {}
     try:
-        # --- Step 1: Search for the book to get its keys ---
         search_url = "https://openlibrary.org/search.json"
         search_params = {"title": _clean_title_for_api(title), "author": author}
         res_search = session.get(search_url, params=search_params, timeout=10)

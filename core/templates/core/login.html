@@ -1,17 +1,12 @@
 {% extends 'core/base.html' %}
 {% block content %}
     <div class="flex h-full flex-col justify-center">
-        <!-- Your original content block, now being centered by the wrapper above -->
         <div class="mx-auto w-full max-w-2xl p-2 text-center">
-            <!-- Main container with the retro styling (no changes here) -->
             <div class="border-brand-text shadow-neo border-2 bg-white px-4 py-8 md:px-8">
-                <!-- Header section -->
                 <h1 class="text-3xl font-bold tracking-widest uppercase sm:text-4xl">Welcome Back</h1>
                 <p class="text-brand-text mt-2 text-lg">Log in to view your saved Bibliotype.</p>
-                <!-- The Form -->
                 <form method="post" class="mt-8 space-y-6 text-left">
                     {% csrf_token %}
-                    <!-- Error message display (no changes here) -->
                     {% if form.non_field_errors %}
                         <div class="bg-brand-pink border-brand-text text-brand-text border-2 p-3">
                             {% for error in form.non_field_errors %}
@@ -19,7 +14,6 @@
                             {% endfor %}
                         </div>
                     {% endif %}
-                    <!-- Form field loop (no changes here) -->
                     {% for field in form %}
                         <div>
                             <label for="{{ field.id_for_label }}" class="mb-1 block text-xl font-bold uppercase">
@@ -41,7 +35,6 @@
                             {% endfor %}
                         </div>
                     {% endfor %}
-                    <!-- MODIFIED: Changed bg-brand-cyan to bg-brand-green and added `cursor-pointer` -->
                     <button
                         type="submit"
                         class="bg-brand-green text-brand-text border-brand-text shadow-neo mt-6 w-full cursor-pointer border-2 px-4 py-3 text-2xl font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1"
@@ -50,7 +43,6 @@
                     </button>
                 </form>
             </div>
-            <!-- "Don't have an account?" link (no changes here) -->
             <div class="mt-8">
                 <p class="text-lg">
                     Don't have an account?

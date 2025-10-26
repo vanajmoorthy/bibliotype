@@ -1,17 +1,12 @@
 {% extends 'core/base.html' %}
 {% load static %}
 {% block content %}
-    <!--
-    The main x-data is initialized on the container.
-    'instructionsOpen' will control the modal's visibility.
-    -->
     <div
         x-data="{ isUploading: false, instructionsOpen: false }"
         @keydown.escape.window="instructionsOpen = false"
         class="flex h-full flex-col justify-center"
     >
         <div class="mx-auto w-full max-w-2xl p-2 text-center">
-            <!-- Main Heading -->
             <h1 class="flex flex-wrap justify-center gap-2 text-4xl font-bold tracking-widest uppercase md:text-5xl">
                 Discover Your
                 <span class="bg-[var(--color-brand-yellow)] px-2">Reading DNA</span>
@@ -20,7 +15,6 @@
                 Upload your Goodreads or StoryGraph data to learn your literary personality type.
             </p>
 
-            <!-- Instructions Button -->
             <div class="mt-6">
                 <button
                     @click="instructionsOpen = true"
@@ -30,9 +24,7 @@
                 </button>
             </div>
 
-            <!-- The Upload Form Section -->
             <div x-data="{ isDragging: false, fileName: '' }" class="mt-12">
-                <!-- The Form (visible when not loading) -->
                 <form
                     x-show="!isUploading"
                     x-transition
@@ -77,17 +69,16 @@
                                     d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
                                 ></path>
                             </svg>
-                            <p class="text-brand-text text-xl font-bold uppercase" x-show="!fileName">
-                                <span class="border-brand-text bg-brand-cyan border-2 px-2">Browse</span> or drag your
-                                file here
-                            </p>
+                                    <p class="text-brand-text text-xl font-bold uppercase" x-show="!fileName">
+                                        <span class="border-brand-text bg-brand-cyan border-2 px-2">Browse</span> or drag your
+                                        file here
+                                    </p>
                             
                             <div x-show="fileName" x-transition class="relative  max-w-md">
                                 <div class="shadow-neo border-brand-text border-2 bg-brand-yellow text-sm md:text-md px-6 py-2">
                                     <p class="text-brand-text truncate text-xl font-bold" x-text="fileName"></p>
                                 </div>
 
-                                <!-- The 'x' button is positioned relative to the container above -->
                                 <button
                                     type="button"
                                     @click.prevent.stop="fileName = ''; $refs.fileInput.value = null;"
@@ -117,7 +108,6 @@
                 </form>
             </div>
 
-            <!-- The "Uploading..." State -->
             <div
                 x-show="isUploading"
                 x-cloak
@@ -155,16 +145,7 @@
 
         <p class="mt-10 text-center text-lg">Your data is processed ephemerally. Create an account to save & share!</p>
 
-        <!--
-        ======================================================================
-        CORRECTED Instructions Modal Overlay
-        This entire block is placed at the end of the main container.
-        Its fixed position will make it appear on top of everything.
-        ======================================================================
-        -->
-        <!-- Instructions Modal Overlay -->
         <div x-show="instructionsOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <!-- Modal Backdrop -->
             <div
                 x-show="instructionsOpen"
                 x-transition:enter="ease-out duration-300"
@@ -177,7 +158,6 @@
                 class="absolute inset-0 bg-black/50"
             ></div>
 
-            <!-- Modal Content - UPDATED -->
             <div
                 x-show="instructionsOpen"
                 x-transition:enter="ease-out duration-300"
@@ -188,7 +168,6 @@
                 x-transition:leave-end="opacity-0 scale-95"
                 class="shadow-neo border-brand-text relative w-full max-w-2xl border-2 bg-white p-6 text-left"
             >
-                <!-- Close Button -->
                 <button
                     @click="instructionsOpen = false"
                     class="shadow-neo-sm bg-brand-pink border-brand-text absolute -top-3 -right-3 cursor-pointer border-2 p-2 transition-all hover:shadow-none"
@@ -203,7 +182,6 @@
                     </svg>
                 </button>
 
-                <!-- Instructions Content -->
                 <h2 class="mb-4 text-2xl font-bold uppercase">How to Get Your File</h2>
                 <div class="space-y-6 text-lg">
                     <div>

@@ -15,14 +15,12 @@
     <body class="bg-brand-background text-brand-text grid-background flex h-full flex-col font-sans antialiased">
         <nav class="p-4">
             <div class="container mx-auto flex items-center justify-between">
-                <!-- Logo: Reduced font size on smaller screens -->
                 <a
                     href="{% url 'core:home' %}"
                     class="text-brand-text text-2xl font-bold tracking-widest uppercase md:text-3xl"
                 >
                     🧬<span class="border-brand-text border-b-2 lg:px-1">Bibliotype</span>
                 </a>
-                <!-- Button Group: Reduced spacing and font size on smaller screens -->
                 <div class="flex items-center space-x-2 text-base font-bold uppercase md:space-x-4 md:text-lg">
                     {% if user.is_authenticated %}
                         <a
@@ -41,7 +39,6 @@
                             class="hover:bg-brand-yellow border-brand-text shadow-neo-sm border-2 bg-white px-2 whitespace-nowrap transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
                             >Login</a
                         >
-                        <!-- Sign Up Button: Reduced padding on smaller screens -->
                         <a
                             href="{% url 'core:signup' %}"
                             class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm border-2 px-2 py-1 whitespace-nowrap transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 md:px-4"
