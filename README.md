@@ -10,7 +10,6 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 ## TODO
 
 - ✅ distribution of length of books 
-- improve mainstream meter
 - improve community stats look
 - hover states for all buttons
 - long author names and genre names cutting of count when hovering on chart
@@ -28,7 +27,7 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - SEO stuff
 - favicon ⚠️
 - adjust copy ⚠️
-- ⚠️ make "instructions" button and modal on home page ✅
+- make instructions modal better and detail app and web pathways
 - posthog integration
 - check ui on loading pages for logged in and non logged in
 - ui elements for community stats
