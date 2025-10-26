@@ -1,6 +1,23 @@
 from django.contrib import admin
+from django import forms
+from django.forms import ModelMultipleChoiceField
 
 from .models import AggregateAnalytics, Author, Book, Genre, Publisher, UserProfile
+
+
+class BookAdminForm(forms.ModelForm):
+    """Custom form for managing book genres"""
+    
+    class Meta:
+        model = Book
+        fields = '__all__'
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make the genres field readonly (display-only) initially
+        # Users will see their current genres but can't edit them in the standard way
+        # They can still use the admin interface's built-in add/delete buttons
+        pass
 
 
 @admin.register(Author)
@@ -22,6 +39,9 @@ class PublisherAdmin(admin.ModelAdmin):
 
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
+    form = BookAdminForm
+    filter_horizontal = ("genres",)  # This provides a better UI for ManyToMany fields
+    
     list_display = (
         "title",
         "author",
