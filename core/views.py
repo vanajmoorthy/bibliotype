@@ -39,7 +39,8 @@ def display_dna_view(request):
         user_profile = request.user.userprofile
         user_profile.refresh_from_db()
 
-        if is_processing and not user_profile.dna_data:
+        # Show processing screen for authenticated users when flagged, regardless of existing data
+        if is_processing:
             return render(request, "core/dna_display.html", {"is_processing": True})
 
         if dna_data is None and user_profile.dna_data:
@@ -85,7 +86,13 @@ def upload_view(request):
         csv_content = csv_file.read().decode("utf-8")
 
         if request.user.is_authenticated:
-            generate_reading_dna_task.delay(csv_content, request.user.id)
+            # Clear old session data so the view will use the updated profile data
+            request.session.pop("dna_data", None)
+            result = generate_reading_dna_task.delay(csv_content, request.user.id)
+            
+            # Save the pending task ID to track regeneration progress
+            request.user.userprofile.pending_dna_task_id = result.id
+            request.user.userprofile.save()
 
             messages.success(
                 request,
@@ -269,9 +276,19 @@ def update_recommendation_visibility(request):
     return redirect("core:display_dna")
 
 
-@login_required
 def check_dna_status_view(request):
+    # For anonymous users, they don't have pending task tracking
+    if not request.user.is_authenticated:
+        return JsonResponse({"status": "PENDING"})
+    
     profile = request.user.userprofile
+    profile.refresh_from_db()  # Ensure we get the latest data from the database
+    
+    # If there's a pending task ID, DNA is still being generated
+    if profile.pending_dna_task_id:
+        return JsonResponse({"status": "PENDING"})
+    
+    # Otherwise, check if DNA data exists
     if profile.dna_data:
         return JsonResponse({"status": "SUCCESS"})
     else:
