@@ -31,7 +31,12 @@
             <script>
                 function checkStatus() {
                     fetch("{% url 'core:api_check_dna_status' %}")
-                        .then((response) => response.json())
+                        .then((response) => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
                         .then((data) => {
                             if (data.status === "SUCCESS") {
                                 window.location.href = "{% url 'core:display_dna' %}";
@@ -47,6 +52,7 @@
                 }
 
                 document.addEventListener("DOMContentLoaded", function () {
+                    console.log("Page loaded, starting DNA status polling...");
                     checkStatus();
                 });
             </script>
