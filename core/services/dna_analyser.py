@@ -112,18 +112,18 @@ def assign_reader_type(read_df, enriched_data, all_genres):
 
 
 def _save_dna_to_profile(profile, dna_data):
-    logger.debug(f"Saving DNA to profile for user: {profile.user.username}")
-    logger.debug(f"DNA data keys: {list(dna_data.keys()) if dna_data else 'None'}")
-
     profile.dna_data = dna_data
     profile.reader_type = dna_data.get("reader_type")
     profile.total_books_read = dna_data.get("user_stats", {}).get("total_books_read")
     profile.reading_vibe = dna_data.get("reading_vibe")
     profile.vibe_data_hash = dna_data.get("vibe_data_hash")
+    
+    # Clear the pending task ID since we've completed the regeneration
+    profile.pending_dna_task_id = None
 
     try:
-        profile.save()
-        logger.info(f"Successfully saved DNA data for user: {profile.user.username}")
+        # Explicitly save all fields including pending_dna_task_id
+        profile.save(update_fields=['dna_data', 'reader_type', 'total_books_read', 'reading_vibe', 'vibe_data_hash', 'pending_dna_task_id'])
     except Exception as e:
         logger.error(f"Error saving profile for user {profile.user.username}: {e}")
         raise
