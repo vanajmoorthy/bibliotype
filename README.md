@@ -8,8 +8,12 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 
 
 ## TODO
-
+- ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 - investigate broken dna generation on prod (probably need to restart worker or something)
+- investigate issue where logged in user when they update their dna it takes them to their old one
+- add progress bar
+- get rid of loading on the home page
+- ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 - ✅ distribution of length of books 
 - improve community stats look
 - hover states for all buttons
