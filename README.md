@@ -9,6 +9,7 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 
 ## TODO
 
+- investigate broken dna generation on prod (probably need to restart worker or something)
 - ✅ distribution of length of books 
 - improve community stats look
 - hover states for all buttons
