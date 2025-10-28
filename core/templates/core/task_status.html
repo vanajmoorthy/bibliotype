@@ -1,77 +1,82 @@
 {% extends "core/base.html" %}
 {% load static %}
-
 {% block content %}
     <div class="flex h-full flex-col items-center justify-center p-4">
-        <div
-            class="w-full max-w-2xl text-center"
-            x-data="taskPoller('{% url 'core:get_task_result' task_id %}')"
-            x-init="startPolling()"
-        >
-            <h1 class="title-underline relative mb-4 inline-block text-4xl font-bold">                Building Your Bibliotype...</h1>
-
+        <div class="w-full max-w-2xl text-center"
+             x-data="taskPoller('{% url 'core:get_task_result' task_id %}')"
+             x-init="startPolling()">
+            <h1 class="title-underline relative mb-4 inline-block text-4xl font-bold">Building Your Bibliotype...</h1>
             <p class="mb-8 text-lg text-gray-600">
                 We're analyzing your library and fetching details from the archives. This can take a minute or two.
                 Please keep this page open — we'll redirect you as soon as it's ready!
             </p>
-
             <div class="shadow-neo border-brand-text border-2 bg-white p-8">
                 <div class="flex justify-center">
-                    <svg
-                        class="text-brand-text h-16 w-16 animate-spin"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                    >
-                        <circle
-                            class="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            stroke-width="4"
-                        ></circle>
-                        <path
-                            class="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
+                    <svg class="text-brand-text h-16 w-16 animate-spin"
+                         xmlns="http://www.w3.org/2000/svg"
+                         fill="none"
+                         viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
                     </svg>
                 </div>
                 <p class="mt-4 text-xl font-bold tracking-widest uppercase">Processing...</p>
+                {% include 'core/partials/progress_bar.html' %}
             </div>
-
             <div class="mt-8 border-t-2 border-dashed border-gray-300 pt-6">
-                <p class="text-gray-700">
-                    Don't want to wait? Create a free account to save your Bibliotype automatically.
-                </p>
-                <a
-                    href="{% url 'core:signup' %}?task_id={{ task_id }}"
-                    class="shadow-neo hover:shadow-neo-inset border-brand-text bg-brand-green mt-4 inline-block border-2 px-3 py-2 font-bold transition-shadow"
-                >
+                <p class="text-gray-700">Don't want to wait? Create a free account to save your Bibliotype automatically.</p>
+                <a href="{% url 'core:signup' %}?task_id={{ task_id }}"
+                   class="shadow-neo hover:shadow-neo-inset border-brand-text bg-brand-green mt-4 inline-block border-2 px-3 py-2 font-bold transition-shadow">
                     Sign Up & Save My DNA
                 </a>
             </div>
-
-            <div
-                x-show="status === 'FAILURE'"
-                class="border-brand-text shadow-neo mt-8 border-2 bg-red-500 p-4 font-bold text-white"
-                style="display: none;"
-            >
+            <div x-show="status === 'FAILURE'"
+                 class="border-brand-text shadow-neo mt-8 border-2 bg-red-500 p-4 font-bold text-white"
+                 style="display: none">
                 Sorry, something went wrong while processing your file. Please try uploading it again.
             </div>
         </div>
     </div>
-
     <script>
         document.addEventListener("alpine:init", () => {
             Alpine.data("taskPoller", (url) => ({
                 status: "PENDING",
                 interval: null,
+                anim: null,
+                displayPct: 0,
+                targetPct: 0,
+                setStage(text) {
+                    const stage = document.getElementById("progress-stage");
+                    if (stage) stage.textContent = text || 'Processing';
+                },
+                setLabel() {
+                    const label = document.getElementById("progress-label");
+                    if (label) label.textContent = `${Math.round(this.displayPct)}%`;
+                },
+                setBar() {
+                    const bar = document.getElementById("progress-bar");
+                    if (bar) bar.style.width = Math.round(this.displayPct) + '%';
+                },
+                animate() {
+                    if (this.anim) clearInterval(this.anim);
+                    this.anim = setInterval(() => {
+                        const step = Math.max(0.5, (this.targetPct - this.displayPct) * 0.2);
+                        if (this.displayPct < this.targetPct) {
+                            this.displayPct = Math.min(this.targetPct, this.displayPct + step);
+                            this.setBar();
+                            this.setLabel();
+                        }
+                    }, 300);
+                },
                 startPolling() {
                     if (this.interval) {
                         clearInterval(this.interval);
                     }
+                    this.setStage('Processing');
+                    this.setLabel();
+                    this.setBar();
+                    this.animate();
                     this.interval = setInterval(async () => {
                         try {
                             const response = await fetch(url);
@@ -82,7 +87,28 @@
                             }
                             const data = await response.json();
                             this.status = data.status;
+                            if (data.progress) {
+                                const pct = typeof data.progress.percent === 'number' ? data.progress.percent : null;
+                                const stageText = data.progress.stage || 'Processing';
+                                this.setStage(stageText);
+                                if (pct !== null) {
+                                    this.targetPct = Math.max(this.targetPct, Math.max(0, Math.min(100, pct)));
+                                    const label = document.getElementById("progress-label");
+                                    if (label && data.progress.current != null && data.progress.total != null) {
+                                        label.textContent = `${Math.round(this.displayPct)}% (${data.progress.current}/${data.progress.total})`;
+                                    }
+                                } else {
+                                    let cap = 60;
+                                    if (stageText.toLowerCase().includes('syncing')) cap = 70;
+                                    if (stageText.toLowerCase().includes('crunching')) cap = 90;
+                                    if (stageText.toLowerCase().includes('finishing')) cap = 98;
+                                    this.targetPct = Math.max(this.targetPct, cap);
+                                }
+                            } else {
+                                this.targetPct = Math.max(this.targetPct, 50);
+                            }
                             if (this.status === "SUCCESS") {
+                                this.targetPct = 100;
                                 clearInterval(this.interval);
                                 window.location.href = data.redirect_url;
                             } else if (this.status === "FAILURE") {

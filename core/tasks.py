@@ -168,7 +168,15 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
         raise
 
     try:
-        result_data = calculate_full_dna(csv_file_content, user, session_key)
+        # Define a progress callback that reports progress to Celery result backend
+        def progress_cb(current: int, total: int, stage: str):
+            try:
+                self.update_state(state="PROGRESS", meta={"current": current, "total": total, "stage": stage})
+            except Exception:
+                # If result backend is unavailable, ignore progress updates gracefully
+                pass
+
+        result_data = calculate_full_dna(csv_file_content, user, session_key, progress_cb=progress_cb)
 
         if not user:
             if self.request.id:
@@ -187,7 +195,7 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
 def anonymize_expired_sessions_task():
     """Periodic task to convert expired anonymous sessions to anonymized profiles"""
     from .services.anonymization_service import batch_anonymize_expired_sessions
-    
+
     count = batch_anonymize_expired_sessions()
     logger.info(f"Anonymized {count} expired sessions")
     return count
