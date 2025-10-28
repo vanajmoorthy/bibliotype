@@ -13,22 +13,62 @@
                     <div class="w-full">
                         <div class="shadow-neo border-2 border-[var(--color-brand-text)] bg-white p-8">
                             <div class="flex flex-col items-center justify-center space-y-4">
-                                <svg class="h-10 w-10 animate-spin text-[var(--color-brand-text)]"
-                                     xmlns="http://www.w3.org/2000/svg"
-                                     fill="none"
-                                     viewBox="0 0 24 24">
+                                <svg class="h-10 w-10 animate-spin text-[var(--color-brand-text)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                    </path>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                                 <p class="text-center text-2xl font-bold text-[var(--color-brand-text)] uppercase">Analyzing Your Library</p>
                                 <p class="text-center text-lg">This page will refresh automatically when it's ready!</p>
+
+                                {% include 'core/partials/progress_bar.html' %}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             <script>
+                let displayPct = 0;
+                let targetPct = 0;
+                const progressBar = () => document.getElementById("progress-bar");
+                const progressLabel = () => document.getElementById("progress-label");
+                const progressStage = () => document.getElementById("progress-stage");
+
+                function tweenProgress() {
+                    const step = Math.max(0.5, (targetPct - displayPct) * 0.2);
+                    if (displayPct < targetPct) {
+                        displayPct = Math.min(targetPct, displayPct + step);
+                        progressBar().style.width = Math.round(displayPct) + '%';
+                        progressLabel().textContent = `${Math.round(displayPct)}%`;
+                    }
+                }
+
+                setInterval(tweenProgress, 300);
+
+                function updateTargetsFromServer(data) {
+                    if (data.progress) {
+                        const pct = typeof data.progress.percent === 'number' ? data.progress.percent : null;
+                        const stage = data.progress.stage || 'Processing';
+                        progressStage().textContent = stage;
+
+                        if (pct !== null) {
+                            targetPct = Math.max(targetPct, Math.max(0, Math.min(100, pct)));
+                            if (data.progress.current != null && data.progress.total != null) {
+                                progressLabel().textContent = `${Math.round(displayPct)}% (${data.progress.current}/${data.progress.total})`;
+                            }
+                        } else {
+                            // Stage-based optimistic targets
+                            let cap = 60;
+                            if (stage.toLowerCase().includes('syncing')) cap = 70;
+                            if (stage.toLowerCase().includes('crunching')) cap = 90;
+                            if (stage.toLowerCase().includes('finishing')) cap = 98;
+                            targetPct = Math.max(targetPct, cap);
+                        }
+                    } else {
+                        // No progress data yet, drift towards 50%
+                        targetPct = Math.max(targetPct, 50);
+                    }
+                }
+
                 function checkStatus() {
                     fetch("{% url 'core:api_check_dna_status' %}")
                         .then((response) => {
@@ -39,20 +79,23 @@
                         })
                         .then((data) => {
                             if (data.status === "SUCCESS") {
-                                window.location.href = "{% url 'core:display_dna' %}";
-                            } else {
-                                setTimeout(checkStatus, 5000);
+                                targetPct = 100;
+                                setTimeout(() => {
+                                    window.location.href = "{% url 'core:display_dna' %}";
+                                }, 200);
+                                return;
                             }
+                            updateTargetsFromServer(data);
+                            setTimeout(checkStatus, 3000);
                         })
-                        .catch((error) => {
-                            console.error("Error polling for DNA status:", error);
-                            // In case of network error, keep trying.
-                            setTimeout(checkStatus, 5000);
+                        .catch(() => {
+                            setTimeout(checkStatus, 3000);
                         });
                 }
 
                 document.addEventListener("DOMContentLoaded", function () {
-                    console.log("Page loaded, starting DNA status polling...");
+                    progressStage().textContent = 'Processing';
+                    progressLabel().textContent = '0%';
                     checkStatus();
                 });
             </script>

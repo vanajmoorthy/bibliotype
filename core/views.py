@@ -286,7 +286,21 @@ def check_dna_status_view(request):
     
     # If there's a pending task ID, DNA is still being generated
     if profile.pending_dna_task_id:
-        return JsonResponse({"status": "PENDING"})
+        try:
+            result = AsyncResult(profile.pending_dna_task_id)
+            info = result.info or {}
+            current = info.get("current")
+            total = info.get("total")
+            stage = info.get("stage", "")
+            progress = None
+            if current is not None or total is not None or stage:
+                percent = None
+                if isinstance(current, int) and isinstance(total, int) and total > 0:
+                    percent = round((current * 100) / total)
+                progress = {"current": current, "total": total, "percent": percent, "stage": stage}
+            return JsonResponse({"status": "PENDING", "progress": progress})
+        except Exception:
+            return JsonResponse({"status": "PENDING"})
     
     # Otherwise, check if DNA data exists
     if profile.dna_data:
@@ -362,6 +376,16 @@ def get_task_result_view(request, task_id):
                 "redirect_url": reverse("core:display_dna"),
             }
         )
+    elif result.state == "PROGRESS":
+        info = result.info or {}
+        current = info.get("current")
+        total = info.get("total")
+        stage = info.get("stage", "")
+        percent = None
+        if isinstance(current, int) and isinstance(total, int) and total > 0:
+            percent = round((current * 100) / total)
+        progress = {"current": current, "total": total, "percent": percent, "stage": stage}
+        return JsonResponse({"status": "PENDING", "progress": progress})
     elif result.state == "FAILURE":
         return JsonResponse({"status": "FAILURE", "error": "An error occurred during processing."})
     else:
