@@ -185,10 +185,14 @@ def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_d
     )
 
 
-def calculate_full_dna(csv_file_content: str, user=None, session_key=None):
+def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progress_cb=None):
     try:
         df = pd.read_csv(StringIO(csv_file_content))
         read_df = df[df["Exclusive Shelf"] == "read"].copy()
+
+        total_books = int(len(read_df))
+        if progress_cb:
+            progress_cb(0, total_books, "Parsing your library")
 
         if read_df.empty:
             raise ValueError("No books found on the 'read' shelf in your CSV.")
@@ -278,7 +282,13 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None):
 
             # Use single worker to avoid SQLite database lock issues
             with ThreadPoolExecutor(max_workers=1) as executor:
-                results = list(executor.map(process_book_row, read_df.to_dict("records")))
+                results = []
+                processed = 0
+                for res in executor.map(process_book_row, read_df.to_dict("records")):
+                    results.append(res)
+                    processed += 1
+                    if progress_cb:
+                        progress_cb(processed, total_books, "Syncing books")
 
         for book, genres, original_row in results:
             if book:
@@ -336,6 +346,8 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None):
         mapped_genres = [CANONICAL_GENRE_MAP.get(g, g) for g in all_raw_genres]
         top_genres = Counter(mapped_genres).most_common(10)
 
+        if progress_cb:
+            progress_cb(total_books, total_books, "Crunching stats")
         logger.info("Calculating base user statistics...")
 
         user_base_stats = {
@@ -517,6 +529,10 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None):
         dna["top_controversial_books"] = [clean_dict(b) for b in dna.get("top_controversial_books", [])]
         dna["most_positive_review"] = clean_dict(dna.get("most_positive_review"))
         dna["most_negative_review"] = clean_dict(dna.get("most_negative_review"))
+
+        if progress_cb:
+            # Final update to help smooth the last jump in the UI
+            progress_cb(total_books, total_books, "Finishing up")
 
         if user:
             # Calculate and store top books
