@@ -108,3 +108,129 @@ class ViewE2E_Tests(TransactionTestCase):
         new_user.userprofile.refresh_from_db()
         self.assertIsNotNone(new_user.userprofile.dna_data)
         self.assertIn("an e2e vibe", new_user.userprofile.reading_vibe)
+
+    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna_analyser.enrich_book_from_apis")
+    @patch("core.tasks.check_author_mainstream_status_task")
+    def test_authenticated_user_dna_regeneration_flow(self, mock_author_check, mock_enrich_book, mock_generate_vibe):
+        """
+        Test complete DNA regeneration flow for authenticated users:
+        1. Create user with initial DNA
+        2. Simulate regeneration by directly calling DNA save logic
+        3. Verify pending_dna_task_id is cleared after save
+        4. Verify new DNA data is saved correctly
+        """
+        mock_enrich_book.return_value = (None, 0, 0)
+        mock_generate_vibe.return_value = ["new regenerated vibe"]
+        mock_author_check.delay = MagicMock()
+
+        # Create user with initial DNA
+        user = User.objects.create_user(username="dnatestuser", password="testpass123")
+        user.userprofile.dna_data = {
+            "reader_type": "Original Reader",
+            "user_stats": {"total_books_read": 5},
+            "reading_vibe": ["old vibe"],
+        }
+        user.userprofile.pending_dna_task_id = "fake-regeneration-task-id"
+        user.userprofile.save()
+        
+        # Verify initial state
+        user.userprofile.refresh_from_db()
+        self.assertIsNotNone(user.userprofile.pending_dna_task_id)
+        self.assertEqual(user.userprofile.pending_dna_task_id, "fake-regeneration-task-id")
+        
+        # Simulate DNA save after task completes
+        new_dna_data = {
+            "reader_type": "New Reader",
+            "user_stats": {"total_books_read": 10},
+            "reading_vibe": ["new regenerated vibe"],
+            "vibe_data_hash": "newhash",
+        }
+        
+        from core.services.dna_analyser import _save_dna_to_profile
+        _save_dna_to_profile(user.userprofile, new_dna_data)
+        
+        # Verify pending_dna_task_id is cleared and new DNA is saved
+        user.userprofile.refresh_from_db()
+        self.assertIsNone(user.userprofile.pending_dna_task_id)
+        self.assertIsNotNone(user.userprofile.dna_data)
+        self.assertEqual(user.userprofile.reader_type, "New Reader")
+        self.assertEqual(user.userprofile.total_books_read, 10)
+        
+    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna_analyser.enrich_book_from_apis")
+    def test_pending_dna_task_id_cleared_on_save(self, mock_enrich_book, mock_generate_vibe):
+        """
+        Test that pending_dna_task_id is properly cleared when DNA is saved to profile.
+        This is critical for the status polling mechanism to work correctly.
+        """
+        mock_enrich_book.return_value = (None, 0, 0)
+        mock_generate_vibe.return_value = ["test vibe"]
+
+        # Create user with pending task
+        user = User.objects.create_user(username="testuser2", password="password")
+        user.userprofile.pending_dna_task_id = "fake-task-id-12345"
+        user.userprofile.save()
+        
+        # Verify it's set
+        user.userprofile.refresh_from_db()
+        self.assertEqual(user.userprofile.pending_dna_task_id, "fake-task-id-12345")
+        
+        # Save new DNA data
+        dna_data = {
+            "reader_type": "Test Reader",
+            "user_stats": {"total_books_read": 10},
+            "reading_vibe": ["test vibe"],
+            "vibe_data_hash": "testhash",
+        }
+        
+        from core.services.dna_analyser import _save_dna_to_profile
+        _save_dna_to_profile(user.userprofile, dna_data)
+        
+        # Verify pending_dna_task_id is cleared
+        user.userprofile.refresh_from_db()
+        self.assertIsNone(user.userprofile.pending_dna_task_id)
+        self.assertIsNotNone(user.userprofile.dna_data)
+        self.assertEqual(user.userprofile.reader_type, "Test Reader")
+        
+    def test_status_check_returns_pending_while_task_running(self):
+        """
+        Test that status check returns PENDING when pending_dna_task_id is set.
+        """
+        user = User.objects.create_user(username="testuser3", password="password")
+        user.userprofile.pending_dna_task_id = "in-progress-task-id"
+        user.userprofile.dna_data = {"reader_type": "Old Data"}
+        user.userprofile.save()
+        
+        self.client.login(username="testuser3", password="password")
+        
+        response = self.client.get(reverse("core:api_check_dna_status"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "PENDING")
+        
+    def test_status_check_returns_success_when_no_pending_task(self):
+        """
+        Test that status check returns SUCCESS when no pending task and DNA exists.
+        """
+        user = User.objects.create_user(username="testuser4", password="password")
+        user.userprofile.dna_data = {"reader_type": "Completed Reader"}
+        user.userprofile.save()
+        
+        self.client.login(username="testuser4", password="password")
+        
+        response = self.client.get(reverse("core:api_check_dna_status"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "SUCCESS")
+        
+    def test_status_check_returns_pending_when_no_data(self):
+        """
+        Test that status check returns PENDING when there's no DNA data.
+        """
+        user = User.objects.create_user(username="testuser5", password="password")
+        user.userprofile.save()
+        
+        self.client.login(username="testuser5", password="password")
+        
+        response = self.client.get(reverse("core:api_check_dna_status"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "PENDING")
