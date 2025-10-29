@@ -144,7 +144,9 @@ def signup_view(request):
 
             messages.success(request, "Account created! Now, let's generate your Bibliotype.")
 
-            posthog.capture("user_signed_up_not_after_generating", properties={"example_property": "with_some_value"})
+            # Only capture event if PostHog is properly configured
+            if posthog.api_key:
+                posthog.capture("user_signed_up_not_after_generating", properties={"example_property": "with_some_value"})
             return redirect("core:home")
 
     else:

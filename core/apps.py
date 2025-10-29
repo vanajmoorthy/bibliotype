@@ -1,3 +1,4 @@
+import os
 import posthog
 from django.apps import AppConfig
 
@@ -7,5 +8,5 @@ class CoreConfig(AppConfig):
     name = "core"
 
     def ready(self):
-        posthog.api_key = ""
+        posthog.api_key = os.environ.get("POSTHOG_API_KEY", "")
         posthog.host = "https://eu.i.posthog.com"
