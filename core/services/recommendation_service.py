@@ -1,220 +1,749 @@
-from collections import Counter
+from collections import Counter, defaultdict
 from django.utils import timezone
-from .user_similarity_service import (
-    find_similar_users, 
-    calculate_anonymous_similarity,
-    calculate_similarity_with_anonymized
-)
-from ..models import UserBook, Book, User, AnonymousUserSession, AnonymizedReadingProfile
+from django.db.models import Q, Avg, Count
+from django.core.cache import cache
+import math
 
+from .user_similarity_service import (
+    find_similar_users,
+    calculate_anonymous_similarity,
+    calculate_similarity_with_anonymized,
+    get_match_quality_label,
+)
+from ..models import UserBook, Book, User, AnonymousUserSession, AnonymizedReadingProfile, Genre, Author
+
+
+class RecommendationEngine:
+    """
+    Enhanced recommendation engine with diversity, quality filtering, and smart scoring.
+    """
+
+    def __init__(self, min_similarity=0.15, diversity_factor=0.3, quality_threshold=3.5):
+        self.min_similarity = min_similarity
+        self.diversity_factor = diversity_factor  # How much to promote genre diversity
+        self.quality_threshold = quality_threshold  # Minimum average rating
+
+    def get_recommendations_for_user(self, user, limit=10, include_explanations=True):
+        """
+        Get personalized recommendations for a registered user.
+
+        Returns list of dicts with: book, score, confidence, explanation, sources
+        """
+        # Get user's reading history and preferences
+        user_context = self._build_user_context(user)
+
+        # Collect candidate books from multiple sources
+        candidates = self._collect_candidates_for_user(user, user_context, limit)
+
+        # Score and rank candidates
+        ranked = self._score_and_rank_candidates(candidates, user_context)
+
+        # Apply diversity and filtering
+        final_recommendations = self._apply_diversity_filter(ranked, user_context, limit)
+
+        # Add explanations if requested
+        if include_explanations:
+            final_recommendations = self._add_explanations(final_recommendations, user_context)
+
+        return final_recommendations[:limit]
+
+    def get_recommendations_for_anonymous(self, session_key, limit=10, include_explanations=True):
+        """
+        Get recommendations for an anonymous user.
+        """
+        try:
+            anon_session = AnonymousUserSession.objects.get(session_key=session_key)
+        except AnonymousUserSession.DoesNotExist:
+            return []
+
+        # Build anonymous context
+        anon_context = self._build_anonymous_context(anon_session)
+
+        # Collect candidates
+        candidates = self._collect_candidates_for_anonymous(anon_session, anon_context)
+
+        # Score and rank
+        ranked = self._score_and_rank_candidates(candidates, anon_context)
+
+        # Apply diversity
+        final_recommendations = self._apply_diversity_filter(ranked, anon_context, limit)
+
+        # Add explanations
+        if include_explanations:
+            final_recommendations = self._add_explanations(final_recommendations, anon_context)
+
+        return final_recommendations[:limit]
+
+    def _build_user_context(self, user):
+        """Build comprehensive user context for filtering and scoring"""
+        user_books_qs = (
+            UserBook.objects.filter(user=user).select_related("book", "book__author").prefetch_related("book__genres")
+        )
+
+        # Books already read
+        read_book_ids = set(user_books_qs.values_list("book_id", flat=True))
+
+        # Books user disliked (rated 1-2 stars)
+        disliked_book_ids = set(user_books_qs.filter(user_rating__lte=2).values_list("book_id", flat=True))
+
+        # Top rated books
+        top_books = set(user_books_qs.filter(is_top_book=True).values_list("book_id", flat=True))
+
+        # Extract series information (books with same title prefix)
+        series_counter = self._extract_series_info(user_books_qs)
+        oversaturated_series = {
+            series for series, count in series_counter.items() if count >= 3  # Read 3+ books from same series
+        }
+
+        # Genre preferences (weighted by rating)
+        genre_weights = Counter()
+        for ub in user_books_qs:
+            # Prioritize 'is_top_book' as a strong positive signal (5),
+            # otherwise use the explicit rating, or default to a neutral 3.
+            weight = 3
+            if ub.user_rating:
+                weight = ub.user_rating
+            if ub.is_top_book:
+                weight = 5  # Treat a "top book" like a 5-star rating
+
+            for genre in ub.book.genres.all():
+                genre_weights[genre.name] += weight
+
+        # Normalize genre weights
+        total_weight = sum(genre_weights.values())
+        genre_preferences = (
+            {genre: weight / total_weight for genre, weight in genre_weights.items()} if total_weight > 0 else {}
+        )
+
+        # Author preferences (weighted by rating and top book status)
+        author_weights = Counter()
+        for ub in user_books_qs:
+            # Apply the same weighting logic for authors
+            weight = 3
+            if ub.user_rating:
+                weight = ub.user_rating
+            if ub.is_top_book:
+                weight = 5
+
+            author_weights[ub.book.author.id] += weight
+
+        # Authors user has read extensively (3+ books)
+        author_saturation = {
+            author_id: count
+            for author_id, count in Counter(ub.book.author.id for ub in user_books_qs).items()
+            if count >= 3
+        }
+
+        # Get DNA data for additional context
+        dna = user.userprofile.dna_data if hasattr(user, "userprofile") else {}
+
+        return {
+            "user": user,
+            "read_book_ids": read_book_ids,
+            "disliked_book_ids": disliked_book_ids,
+            "top_books": top_books,
+            "oversaturated_series": oversaturated_series,
+            "genre_preferences": genre_preferences,
+            "author_weights": author_weights,
+            "author_saturation": author_saturation,
+            "dna": dna,
+            "total_books_read": len(read_book_ids),
+        }
+
+    def _build_anonymous_context(self, anon_session):
+        """Build context for anonymous user"""
+        read_book_ids = set(anon_session.books_data or [])
+        top_books = set(anon_session.top_books_data or [])
+
+        # Get genre preferences from stored distribution
+        genre_distribution = anon_session.genre_distribution or {}
+        total_genre_weight = sum(genre_distribution.values())
+        genre_preferences = (
+            {genre: weight / total_genre_weight for genre, weight in genre_distribution.items()}
+            if total_genre_weight > 0
+            else {}
+        )
+
+        # Get series info from read books
+        read_books = Book.objects.filter(id__in=read_book_ids).select_related("author")
+        series_counter = self._extract_series_info(read_books, is_queryset=False)
+        oversaturated_series = {series for series, count in series_counter.items() if count >= 3}
+
+        return {
+            "session": anon_session,
+            "read_book_ids": read_book_ids,
+            "disliked_book_ids": set(),  # No rating data for anonymous
+            "top_books": top_books,
+            "oversaturated_series": oversaturated_series,
+            "genre_preferences": genre_preferences,
+            "author_weights": Counter(anon_session.author_distribution or {}),
+            "author_saturation": {},  # Could compute from books if needed
+            "dna": {},
+            "total_books_read": len(read_book_ids),
+        }
+
+    def _extract_series_info(self, books_data, is_queryset=True):
+        """
+        Extract series information from book titles.
+        Books with similar title prefixes are likely part of a series.
+        """
+        series_counter = Counter()
+
+        if is_queryset:
+            # UserBook queryset
+            for ub in books_data:
+                series_key = self._get_series_key(ub.book.title)
+                if series_key:
+                    series_counter[series_key] += 1
+        else:
+            # List of Book objects
+            for book in books_data:
+                series_key = self._get_series_key(book.title)
+                if series_key:
+                    series_counter[series_key] += 1
+
+        return series_counter
+
+    def _get_series_key(self, title):
+        """
+        Extract series identifier from book title.
+        E.g., "Harry Potter and the..." -> "harry potter"
+        """
+        if not title:
+            return None
+
+        # Clean title
+        title_lower = title.lower()
+
+        # Remove common series indicators
+        for indicator in [" book ", " vol ", " volume ", "#", ":", " - "]:
+            if indicator in title_lower:
+                title_lower = title_lower.split(indicator)[0]
+                break
+
+        # Get first 2-3 significant words
+        words = [w for w in title_lower.split() if len(w) > 3]
+        if len(words) >= 2:
+            return " ".join(words[:2])
+        elif len(words) == 1:
+            return words[0]
+
+        return None
+
+    def _collect_candidates_for_user(self, user, user_context, limit=10):
+        """
+        Collect candidate books from multiple sources with metadata.
+        Returns: dict of {book_id: candidate_data}
+        """
+        candidates = {}
+
+        # Source 1: Similar registered users (highest quality)
+        similar_users = find_similar_users(user, top_n=30, min_similarity=self.min_similarity)
+
+        for similar_user, similarity_data in similar_users:
+            # Get their top books and highly rated books
+            similar_user_books = (
+                UserBook.objects.filter(
+                    Q(user=similar_user, is_top_book=True) | Q(user=similar_user, user_rating__gte=4)
+                )
+                .select_related("book", "book__author")
+                .prefetch_related("book__genres")
+            )
+
+            for ub in similar_user_books:
+                book_id = ub.book.id
+
+                if book_id not in user_context["read_book_ids"]:
+                    if book_id not in candidates:
+                        candidates[book_id] = {
+                            "book": ub.book,
+                            "sources": [],
+                            "max_similarity": 0,
+                            "recommender_count": 0,
+                            "total_weight": 0,
+                        }
+
+                    # Track source with rich metadata
+                    candidates[book_id]["sources"].append(
+                        {
+                            "type": "similar_user",
+                            "username": similar_user.username,
+                            "user_id": similar_user.id,
+                            "similarity_score": similarity_data["similarity_score"],
+                            "is_top_book": ub.is_top_book,
+                            "user_rating": ub.user_rating,
+                            "match_quality": get_match_quality_label(similarity_data["similarity_score"]),
+                            "shared_books": similarity_data["shared_books_count"],
+                        }
+                    )
+
+                    candidates[book_id]["max_similarity"] = max(
+                        candidates[book_id]["max_similarity"], similarity_data["similarity_score"]
+                    )
+                    candidates[book_id]["recommender_count"] += 1
+
+                    # Weighted contribution (diminishing returns)
+                    weight = similarity_data["similarity_score"] * (1.5 if ub.is_top_book else 1.0)
+                    candidates[book_id]["total_weight"] += weight
+
+        # Source 2: Anonymized profiles (medium quality)
+        cache_key = f"anon_profiles_sample_{user.id}"
+        anonymized_profiles = cache.get(cache_key)
+
+        if anonymized_profiles is None:
+            # Sample relevant anonymized profiles (not all 200)
+            anonymized_profiles = list(AnonymizedReadingProfile.objects.all()[:100])
+            cache.set(cache_key, anonymized_profiles, 3600)  # Cache 1 hour
+
+        for anon_profile in anonymized_profiles:
+            similarity_data = calculate_similarity_with_anonymized(user, anon_profile)
+
+            if similarity_data["similarity_score"] >= self.min_similarity:
+                for book_id in anon_profile.top_book_ids[:5]:
+                    if book_id not in user_context["read_book_ids"]:
+                        try:
+                            book = Book.objects.select_related("author").prefetch_related("genres").get(pk=book_id)
+
+                            if book_id not in candidates:
+                                candidates[book_id] = {
+                                    "book": book,
+                                    "sources": [],
+                                    "max_similarity": 0,
+                                    "recommender_count": 0,
+                                    "total_weight": 0,
+                                }
+
+                            candidates[book_id]["sources"].append(
+                                {
+                                    "type": "anonymized_profile",
+                                    "similarity_score": similarity_data["similarity_score"],
+                                }
+                            )
+
+                            candidates[book_id]["max_similarity"] = max(
+                                candidates[book_id]["max_similarity"], similarity_data["similarity_score"]
+                            )
+                            candidates[book_id]["recommender_count"] += 1
+
+                            # Lower weight for anonymized sources
+                            weight = similarity_data["similarity_score"] * 0.8
+                            candidates[book_id]["total_weight"] += weight
+
+                        except Book.DoesNotExist:
+                            continue
+
+        # Strategy 3: Always add some fallback candidates for discovery and to
+        # prevent zero-recommendation scenarios.
+
+        # Get fallback candidates based on favorite authors and genres
+        fallback_candidates = self._get_fallback_candidates(user_context, limit=10)  # Get up to 10 diverse options
+
+        # Add them to the main candidate pool, but don't overwrite higher-quality
+        # matches that might already be there from similar users.
+        for book_id, candidate_data in fallback_candidates.items():
+            if book_id not in candidates and book_id not in user_context["read_book_ids"]:
+                candidates[book_id] = candidate_data
+
+        return candidates
+
+    def _collect_candidates_for_anonymous(self, anon_session, anon_context):
+        """Collect candidates for anonymous user"""
+        candidates = {}
+
+        # Source 1: Compare against public registered users
+        cache_key = f"all_users_for_recs_sample"
+        users = cache.get(cache_key)
+
+        if users is None:
+            users = list(
+                User.objects.select_related("userprofile").filter(
+                    userprofile__dna_data__isnull=False,
+                )[
+                    :100
+                ]  # Limit for performance
+            )
+            cache.set(cache_key, users, 1800)  # Cache 30 min
+
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.info(f"Found {len(users)} public users to compare against")
+        logger.info(f"Anonymous session has {len(anon_context['read_book_ids'])} books")
+        logger.info(f"Genre preferences: {anon_context['genre_preferences']}")
+
+        for user in users:
+            similarity_data = calculate_anonymous_similarity(anon_session, user)
+
+            if similarity_data["similarity_score"] >= self.min_similarity:
+                similar_user_books = (
+                    UserBook.objects.filter(Q(user=user, is_top_book=True) | Q(user=user, user_rating__gte=4))
+                    .select_related("book", "book__author")
+                    .prefetch_related("book__genres")
+                )
+
+                for ub in similar_user_books:
+                    book_id = ub.book.id
+
+                    if book_id not in anon_context["read_book_ids"]:
+                        if book_id not in candidates:
+                            candidates[book_id] = {
+                                "book": ub.book,
+                                "sources": [],
+                                "max_similarity": 0,
+                                "recommender_count": 0,
+                                "total_weight": 0,
+                            }
+
+                        candidates[book_id]["sources"].append(
+                            {
+                                "type": "similar_user",
+                                "username": user.username,
+                                "user_id": user.id,
+                                "similarity_score": similarity_data["similarity_score"],
+                                "is_top_book": ub.is_top_book,
+                            }
+                        )
+
+                        candidates[book_id]["max_similarity"] = max(
+                            candidates[book_id]["max_similarity"], similarity_data["similarity_score"]
+                        )
+                        candidates[book_id]["recommender_count"] += 1
+
+                        weight = similarity_data["similarity_score"] * (1.5 if ub.is_top_book else 1.0)
+                        candidates[book_id]["total_weight"] += weight
+
+        # Source 2: Anonymized profiles
+        anonymized_profiles = AnonymizedReadingProfile.objects.all()[:100]
+
+        for anon_profile in anonymized_profiles:
+            similarity_data = calculate_similarity_with_anonymized(anon_session, anon_profile)
+
+            if similarity_data["similarity_score"] >= self.min_similarity:
+                for book_id in anon_profile.top_book_ids[:5]:
+                    if book_id not in anon_context["read_book_ids"]:
+                        try:
+                            book = Book.objects.select_related("author").prefetch_related("genres").get(pk=book_id)
+
+                            if book_id not in candidates:
+                                candidates[book_id] = {
+                                    "book": book,
+                                    "sources": [],
+                                    "max_similarity": 0,
+                                    "recommender_count": 0,
+                                    "total_weight": 0,
+                                }
+
+                            candidates[book_id]["sources"].append(
+                                {
+                                    "type": "anonymized_profile",
+                                    "similarity_score": similarity_data["similarity_score"],
+                                }
+                            )
+
+                            candidates[book_id]["max_similarity"] = max(
+                                candidates[book_id]["max_similarity"], similarity_data["similarity_score"]
+                            )
+                            candidates[book_id]["recommender_count"] += 1
+                            candidates[book_id]["total_weight"] += similarity_data["similarity_score"] * 0.8
+
+                        except Book.DoesNotExist:
+                            continue
+
+        # Fallback for anonymous users
+        if len(candidates) < 20:
+            fallback_candidates = self._get_fallback_candidates(anon_context, limit=20)
+            for book_id, candidate_data in fallback_candidates.items():
+                if book_id not in candidates and book_id not in anon_context["read_book_ids"]:
+                    candidates[book_id] = candidate_data
+
+        return candidates
+
+    def _score_and_rank_candidates(self, candidates, context):
+        """
+        Score candidates using improved algorithm with diminishing returns.
+        """
+        scored_candidates = []
+
+        for book_id, candidate_data in candidates.items():
+            book = candidate_data["book"]
+
+            # Skip if book fails quality checks
+            if not self._passes_quality_filters(book, context):
+                continue
+
+            # Base score: Use square root to handle diminishing returns
+            # Instead of linear accumulation, use: sqrt(sum of squared similarities)
+            base_score = math.sqrt(candidate_data["total_weight"])
+
+            # Popularity factor: More recommenders = more confidence (but diminishing)
+            recommender_count = candidate_data["recommender_count"]
+            popularity_boost = math.log(recommender_count + 1) * 0.1
+
+            # Quality factor: Book's average rating
+            quality_score = 0
+            if book.average_rating and book.average_rating >= self.quality_threshold:
+                quality_score = (book.average_rating - self.quality_threshold) * 0.15
+
+            # Genre alignment: How well does this book match user's preferences?
+            genre_alignment = self._calculate_genre_alignment(book, context)
+
+            # Recency penalty: Slightly prefer newer books
+            recency_factor = self._calculate_recency_factor(book)
+
+            # Final score calculation
+            final_score = (
+                base_score * 1.0 + popularity_boost + quality_score + genre_alignment * 0.3 + recency_factor * 0.1
+            )
+
+            base_confidence = candidate_data["max_similarity"]
+
+            # Add a small, diminishing boost for each additional recommender.
+            # math.log provides this diminishing return (2 recommenders is a good boost, 10 is not much more than 9).
+            recommender_boost = math.log(candidate_data["recommender_count"] + 1) * 0.1
+
+            # Combine and cap at 100%
+            confidence = min(base_confidence + recommender_boost, 1.0)
+
+            scored_candidates.append(
+                {
+                    "book": book,
+                    "score": final_score,
+                    "confidence": confidence,
+                    "max_similarity": candidate_data["max_similarity"],
+                    "recommender_count": recommender_count,
+                    "sources": candidate_data["sources"],
+                    "genre_alignment": genre_alignment,
+                }
+            )
+
+        # Sort by score descending
+        scored_candidates.sort(key=lambda x: x["score"], reverse=True)
+        print(scored_candidates[:10])
+
+        return scored_candidates
+
+    def _passes_quality_filters(self, book, context):
+        """Check if book passes various quality filters"""
+
+        # Already read
+        if book.id in context["read_book_ids"]:
+            return False
+
+        # User disliked similar books
+        if book.id in context["disliked_book_ids"]:
+            return False
+
+        # Series saturation check
+        series_key = self._get_series_key(book.title)
+        if series_key and series_key in context["oversaturated_series"]:
+            return False
+
+        # Author saturation check (read 3+ books from this author)
+        if book.author.id in context["author_saturation"]:
+            if context["author_saturation"][book.author.id] >= 4:
+                # Only recommend if it's really highly rated
+                if not book.average_rating or book.average_rating < 4.3:
+                    return False
+
+        # Quality threshold
+        if book.average_rating and book.average_rating < self.quality_threshold:
+            return False
+
+        return True
+
+    def _calculate_genre_alignment(self, book, context):
+        """
+        Calculate how well book's genres align with user preferences.
+        Returns score 0-1.
+        """
+        if not context["genre_preferences"]:
+            return 0.5  # Neutral if no preferences known
+
+        book_genres = set(genre.name for genre in book.genres.all())
+
+        if not book_genres:
+            return 0.3  # Slight penalty for books without genre data
+
+        # Calculate weighted overlap
+        alignment = sum(context["genre_preferences"].get(genre, 0) for genre in book_genres)
+
+        # Normalize
+        return min(alignment * 2, 1.0)  # Cap at 1.0
+
+    def _calculate_recency_factor(self, book):
+        """
+        Slight boost for newer books to promote discovery.
+        Returns score 0-0.2
+        """
+        if not book.publish_year:
+            return 0
+
+        current_year = timezone.now().year
+        years_old = current_year - book.publish_year
+
+        if years_old < 0:  # Future publication
+            return 0.15
+        elif years_old <= 3:
+            return 0.15
+        elif years_old <= 10:
+            return 0.1
+        elif years_old <= 20:
+            return 0.05
+        else:
+            return 0
+
+    def _apply_diversity_filter(self, ranked_candidates, context, limit):
+        """
+        Apply diversity filtering to avoid recommending too many books from same genre/author.
+        """
+        final_recommendations = []
+        genre_counts = Counter()
+        author_counts = Counter()
+
+        for candidate in ranked_candidates:
+            if len(final_recommendations) >= limit:
+                break
+
+            book = candidate["book"]
+            book_genres = set(genre.name for genre in book.genres.all())
+
+            # Check diversity constraints
+            # Don't recommend more than 3 books from same primary genre
+            primary_genre_violation = any(genre_counts[genre] >= 3 for genre in book_genres)
+
+            # Don't recommend more than 2 books from same author
+            author_violation = author_counts[book.author.id] >= 2
+
+            # Apply diversity factor: skip if violates constraints
+            # BUT allow if it's a very high score (top candidates bypass diversity)
+            if len(final_recommendations) >= limit * 0.5:  # After first half
+                if primary_genre_violation or author_violation:
+                    # Skip unless score is exceptional
+                    if candidate["score"] < ranked_candidates[0]["score"] * 0.8:
+                        continue
+
+            # Add to recommendations
+            final_recommendations.append(candidate)
+
+            # Update counters
+            for genre in book_genres:
+                genre_counts[genre] += 1
+            author_counts[book.author.id] += 1
+
+        return final_recommendations
+
+    def _add_explanations(self, recommendations, context):
+        """Add human-readable explanation components for why each book was recommended"""
+
+        for rec in recommendations:
+            # Use a dictionary to hold the separate parts of the explanation
+            rec["explanation_components"] = {}
+            sources = rec["sources"]
+
+            # Find the best source to attribute the recommendation to
+            best_source = max(sources, key=lambda s: s.get("similarity_score", 0))
+
+            # --- Component 1: Shared Books ---
+            if best_source["type"] == "similar_user":
+                shared_count = best_source.get("shared_books", 0)
+                if shared_count > 1:  # Only show if there's a meaningful overlap
+                    rec["explanation_components"]["shared"] = f"You share {shared_count} books in common"
+
+            # --- Component 2: Genre Match ---
+            if rec.get("genre_alignment", 0) > 0.6:
+                book_genres = [genre.name for genre in rec["book"].genres.all()[:2]]
+                if book_genres:
+                    rec["explanation_components"]["genre"] = f"Matches your interest in {', '.join(book_genres)}"
+
+            # --- Component 3: Popularity among similar readers ---
+            if rec["recommender_count"] >= 3:
+                rec["explanation_components"]["popularity"] = f"Loved by {rec['recommender_count']} similar readers"
+
+            # --- Component 4: Quality indicator ---
+            if rec["book"].average_rating and rec["book"].average_rating >= 4.2:
+                rec["explanation_components"]["rating"] = f"Highly rated ({rec['book'].average_rating:.1f}★)"
+
+            # We no longer create a single "explanation" string.
+            # The template will now build the UI from these components.
+
+        return recommendations
+
+    def _get_fallback_candidates(self, context, limit=20):
+        """
+        Get fallback candidates when not enough recommendations from similar users.
+        Uses smart filtering based on user preferences.
+        """
+        candidates = {}
+
+        # Strategy 1: Books by favorite authors (that aren't oversaturated)
+        if context.get("author_weights"):
+            top_authors = [
+                author_id
+                for author_id, weight in context["author_weights"].most_common(10)
+                if context.get("author_saturation", {}).get(author_id, 0) < 3
+            ]
+
+            for author_id in top_authors[:5]:
+                books = (
+                    Book.objects.filter(author_id=author_id, average_rating__gte=self.quality_threshold)
+                    .exclude(id__in=context["read_book_ids"])
+                    .select_related("author")
+                    .prefetch_related("genres")[:3]
+                )
+
+                for book in books:
+                    if len(candidates) >= limit:
+                        break
+
+                    candidates[book.id] = {
+                        "book": book,
+                        "sources": [{"type": "fallback_author", "reason": f"From favorite author {book.author.name}"}],
+                        "max_similarity": 0.4,  # Lower base similarity
+                        "recommender_count": 1,
+                        "total_weight": 0.4,
+                    }
+
+        # Strategy 2: Highly-rated books in favorite genres
+        if len(candidates) < limit and context.get("genre_preferences"):
+            top_genres = sorted(context["genre_preferences"].items(), key=lambda x: x[1], reverse=True)[:3]
+
+            for genre_name, weight in top_genres:
+                try:
+                    genre = Genre.objects.get(name=genre_name)
+                    books = (
+                        Book.objects.filter(genres=genre, average_rating__gte=4.0)
+                        .exclude(id__in=context["read_book_ids"])
+                        .order_by("-average_rating")
+                        .select_related("author")
+                        .prefetch_related("genres")[:5]
+                    )
+
+                    for book in books:
+                        if len(candidates) >= limit:
+                            break
+
+                        if book.id not in candidates:
+                            candidates[book.id] = {
+                                "book": book,
+                                "sources": [{"type": "fallback_genre", "reason": f"Popular {genre_name} book"}],
+                                "max_similarity": 0.3,
+                                "recommender_count": 1,
+                                "total_weight": 0.3,
+                            }
+                except Genre.DoesNotExist:
+                    continue
+
+        return candidates
+
+
+# Convenience functions for backward compatibility
 def get_recommendations_for_user(user, limit=10):
     """Get recommendations for a registered user"""
-    
-    # Get books user has already read
-    user_books = set(UserBook.objects.filter(user=user).values_list('book_id', flat=True))
-    
-    recommendation_scores = Counter()
-    source_info = {}  # Track where recommendations come from
-    
-    # 1. Compare against similar registered users
-    similar_users = find_similar_users(user, top_n=20, min_similarity=0.2)
-    
-    for similar_user, similarity_data in similar_users:
-        top_books = UserBook.objects.filter(
-            user=similar_user,
-            is_top_book=True
-        ).values_list('book_id', flat=True)
-        
-        for book_id in top_books:
-            if book_id not in user_books:
-                score = similarity_data['similarity_score'] * 1.2  # Boost registered users
-                recommendation_scores[book_id] += score
-                
-                if book_id not in source_info:
-                    source_info[book_id] = []
-                source_info[book_id].append({
-                    'type': 'registered_user',
-                    'username': similar_user.username,
-                    'user_id': similar_user.id,
-                    'similarity': similarity_data['similarity_score']
-                })
-    
-    # 2. Compare against active anonymous sessions
-    active_sessions = AnonymousUserSession.objects.filter(
-        expires_at__gt=timezone.now()
-    )
-    
-    for session in active_sessions:
-        similarity_data = calculate_anonymous_similarity(session, user)
-        
-        if similarity_data['similarity_score'] >= 0.2:
-            for book_id in session.top_books_data[:5]:
-                if book_id not in user_books:
-                    recommendation_scores[book_id] += similarity_data['similarity_score']
-    
-    # 3. Compare against anonymized corpus
-    anonymized_profiles = AnonymizedReadingProfile.objects.all()[:200]  # Limit for performance
-    
-    for anon_profile in anonymized_profiles:
-        similarity_data = calculate_similarity_with_anonymized(user, anon_profile)
-        
-        if similarity_data['similarity_score'] >= 0.2:
-            for book_id in anon_profile.top_book_ids[:5]:
-                if book_id not in user_books:
-                    recommendation_scores[book_id] += similarity_data['similarity_score']
-    
-    # Build final recommendations
-    top_book_ids = [book_id for book_id, score in recommendation_scores.most_common(limit)]
-    
-    recommendations = []
-    for book_id in top_book_ids:
-        try:
-            book = Book.objects.select_related('author').get(pk=book_id)
-            # Convert score to percentage (similarity scores are typically 0-1 range)
-            score_percent = recommendation_scores[book_id] * 100
-            recommendations.append({
-                'book': book,
-                'score': score_percent,
-                'sources': source_info.get(book_id, [])
-            })
-        except Book.DoesNotExist:
-            continue
-    
-    # If we don't have enough recommendations, use fallback logic
-    if len(recommendations) < limit:
-        recommendations.extend(_get_fallback_recommendations(user, user_books, limit - len(recommendations)))
-    
-    return recommendations[:limit]
-
-
-def _get_fallback_recommendations(user, user_books, needed):
-    """Get fallback recommendations based on user's favorite authors/genres"""
-    from ..models import Genre
-    
-    # Get user's DNA to understand their preferences
-    if not hasattr(user, 'userprofile') or not user.userprofile.dna_data:
-        return []
-    
-    dna = user.userprofile.dna_data
-    recommendations = []
-    
-    # Strategy 1: Favorite authors they haven't read
-    favorite_authors = []
-    for author_name, count in dna.get('top_authors', [])[:5]:
-        from ..models import Author
-        try:
-            author = Author.objects.get(normalized_name=Author._normalize(author_name))
-            favorite_authors.append(author)
-        except:
-            continue
-    
-    for author in favorite_authors:
-        books = Book.objects.filter(author=author).exclude(id__in=user_books)[:needed]
-        for book in books:
-            if len(recommendations) >= needed:
-                break
-            recommendations.append({
-                'book': book,
-                'score': 50,  # Lower score for fallback (percentage)
-                'sources': [{'type': 'favorite_author', 'reason': f'From {author.name}'}]
-            })
-        if len(recommendations) >= needed:
-            break
-    
-    # Strategy 2: Favorite genres they haven't explored
-    if len(recommendations) < needed:
-        favorite_genres = [genre_name for genre_name, count in dna.get('top_genres', [])[:3]]
-        
-        for genre_name in favorite_genres:
-            try:
-                genre = Genre.objects.get(name=genre_name)
-                books = Book.objects.filter(genres=genre).exclude(id__in=user_books).distinct()[:needed]
-                for book in books:
-                    if len(recommendations) >= needed:
-                        break
-                    if not any(r['book'].id == book.id for r in recommendations):  # Avoid dupes
-                        recommendations.append({
-                            'book': book,
-                            'score': 30,  # Lower score for genre-based (percentage)
-                            'sources': [{'type': 'favorite_genre', 'reason': f'{genre_name} genre'}]
-                        })
-                if len(recommendations) >= needed:
-                    break
-            except:
-                continue
-    
-    return recommendations
+    engine = RecommendationEngine()
+    return engine.get_recommendations_for_user(user, limit=limit)
 
 
 def get_recommendations_for_anonymous(session_key, limit=10):
     """Get recommendations for an anonymous user"""
-    
-    try:
-        anon_session = AnonymousUserSession.objects.get(session_key=session_key)
-    except AnonymousUserSession.DoesNotExist:
-        return []
-    
-    anon_books = set(anon_session.books_data or [])
-    recommendation_scores = Counter()
-    source_info = {}
-    
-    # 1. Compare against registered users
-    all_users = User.objects.select_related('userprofile').filter(
-        userprofile__dna_data__isnull=False,
-        userprofile__is_public=True
-    )
-    
-    for user in all_users:
-        similarity_data = calculate_anonymous_similarity(anon_session, user)
-        
-        if similarity_data['similarity_score'] >= 0.2:
-            top_books = UserBook.objects.filter(
-                user=user,
-                is_top_book=True
-            ).values_list('book_id', flat=True)
-            
-            for book_id in top_books:
-                if book_id not in anon_books:
-                    score = similarity_data['similarity_score'] * 1.2
-                    recommendation_scores[book_id] += score
-                    
-                    if book_id not in source_info:
-                        source_info[book_id] = []
-                    source_info[book_id].append({
-                        'type': 'registered_user',
-                        'username': user.username,
-                        'user_id': user.id,
-                        'similarity': similarity_data['similarity_score']
-                    })
-    
-    # 2. Compare against anonymized corpus
-    anonymized_profiles = AnonymizedReadingProfile.objects.all()[:200]
-    
-    for anon_profile in anonymized_profiles:
-        similarity_data = calculate_similarity_with_anonymized(anon_session, anon_profile)
-        
-        if similarity_data['similarity_score'] >= 0.2:
-            for book_id in anon_profile.top_book_ids[:5]:
-                if book_id not in anon_books:
-                    recommendation_scores[book_id] += similarity_data['similarity_score']
-    
-    # Build recommendations
-    top_book_ids = [book_id for book_id, score in recommendation_scores.most_common(limit)]
-    
-    recommendations = []
-    for book_id in top_book_ids:
-        try:
-            book = Book.objects.select_related('author').get(pk=book_id)
-            # Convert score to percentage
-            score_percent = recommendation_scores[book_id] * 100
-            recommendations.append({
-                'book': book,
-                'score': score_percent,
-                'sources': source_info.get(book_id, [])
-            })
-        except Book.DoesNotExist:
-            continue
-    
-    return recommendations
-
-
+    engine = RecommendationEngine()
+    return engine.get_recommendations_for_anonymous(session_key, limit=limit)

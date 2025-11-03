@@ -13,6 +13,23 @@
     --color-brand-green: #86efac;
     --color-brand-purple: #c4b5fd;
 
+    --color-badge-5: #86efac; /* Strongest Match (brand-green) */
+    --color-badge-4: #a7f3d0; /* Strong Match */
+    --color-badge-3: #d1fae5; /* Medium Match */
+    --color-badge-2: #ecfdf5; /* Weak Match */
+
+    --color-match-100: #f472b6; /* Hot Pink - Perfect Match */
+    --color-match-90: #fb923c; /* Bright Orange */
+    --color-match-80: #facc15; /* Vibrant Yellow */
+    --color-match-70: #a3e635; /* Bright Green */
+    --color-match-low: #67e8f9; /* Cyan for anything lower */
+
+    /* --- NEW: Quality Badge Border/Text Colors --- */
+    --color-quality-twin: #e879f9; /* Fuchsia for Literary Twin */
+    --color-quality-kindred: #22c55e; /* Green for Kindred Reader */
+    --color-quality-tastes: #3b82f6; /* Blue for Shared Tastes */
+    --color-quality-overlap: #f97316; /* Orange for Some Overlap */
+
     --shadow-neo: 4px 4px 0px 0px var(--color-brand-text);
     --shadow-neo-sm: 2px 2px 0px 0px var(--color-brand-text);
 
