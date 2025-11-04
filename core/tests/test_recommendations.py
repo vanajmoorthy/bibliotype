@@ -10,7 +10,6 @@ from core.services.user_similarity_service import (
 )
 from core.services.recommendation_service import (
     get_recommendations_for_user,
-    _get_fallback_recommendations
 )
 from core.services.top_books_service import calculate_and_store_top_books
 
@@ -217,11 +216,16 @@ class RecommendationTestCase(TestCase):
         UserBook.objects.create(user=self.user1, book=self.book2, user_rating=4)
         
         # No similar users exist, so fallback should kick in
-        user_books = set(UserBook.objects.filter(user=self.user1).values_list('book_id', flat=True))
-        fallback_recs = _get_fallback_recommendations(self.user1, user_books, needed=3)
+        # The recommendation engine will use fallback candidates internally
+        fallback_recs = get_recommendations_for_user(self.user1, limit=3)
         
-        # Should get recommendations from favorite authors
+        # Should get recommendations from favorite authors/genres
         self.assertGreater(len(fallback_recs), 0)
+        
+        # Verify that recommended books are not books user1 has read
+        user_books = set(UserBook.objects.filter(user=self.user1).values_list('book_id', flat=True))
+        for rec in fallback_recs:
+            self.assertNotIn(rec['book'].id, user_books)
     
     def test_recommendations_exclude_read_books(self):
         """Test that books already read are excluded from recommendations"""

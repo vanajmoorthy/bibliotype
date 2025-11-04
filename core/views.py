@@ -34,6 +34,36 @@ def display_dna_view(request):
     dna_data = request.session.get("dna_data")
     user_profile = None
     recommendations = []
+    rec_error = None
+
+    def get_match_badge_class(confidence_pct):
+        if confidence_pct >= 95:
+            return "bg-match-100"
+        if confidence_pct >= 85:
+            return "bg-match-90"
+        if confidence_pct >= 75:
+            return "bg-match-80"
+        if confidence_pct >= 60:
+            return "bg-match-70"
+        return "bg-match-low"
+
+    # --- NEW: Maps quality label to a tuple of (border_class, text_class) ---
+    quality_badge_class_map = {
+        "Extremely Similar - Literary Twin": ("border-quality-twin", "text-quality-twin", "LITERARY TWIN"),
+        "Very Similar - Kindred Reader": ("border-quality-kindred", "text-quality-kindred", "KINDRED READER"),
+        "Moderately Similar - Shared Tastes": ("border-quality-tastes", "text-quality-tastes", "SHARED TASTES"),
+        "Somewhat Similar - Some Overlap": ("border-quality-overlap", "text-quality-overlap", "SOME OVERLAP"),
+    }
+
+    badge_color_map = {
+        "Literary twin": "bg-badge-5",
+        "Kindred reader": "bg-badge-4",
+        "Some shared tastes": "bg-badge-3",
+        "Some overlap": "bg-badge-2",
+        # We use a neutral background for weaker matches for better visual distinction
+        "Different preferences": "bg-gray-200",
+        "Opposite tastes": "bg-gray-200",
+    }
 
     if request.user.is_authenticated:
         user_profile = request.user.userprofile
@@ -45,16 +75,64 @@ def display_dna_view(request):
 
         if dna_data is None and user_profile.dna_data:
             dna_data = user_profile.dna_data
-        
+
         # Get recommendations for registered user
         if user_profile.dna_data:
-            from .services.recommendation_service import get_recommendations_for_user
-            recommendations = get_recommendations_for_user(request.user, limit=6)
+            try:
+                from .services.recommendation_service import get_recommendations_for_user
+
+                recommendations = get_recommendations_for_user(request.user, limit=6)
+
+                for rec in recommendations:
+                    # 1. Add a ready-to-use percentage for the match score
+                    rec["confidence_pct"] = int(rec.get("confidence", 0) * 100)
+
+                    # 2. Find the best "similar_user" to link to
+                    rec["primary_source_user"] = None
+                    best_similarity = 0
+
+                    for source in rec.get("sources", []):
+                        # We only want to link to actual, registered users
+                        if source.get("type") == "similar_user":
+                            # Find the user with the highest similarity score for this specific book
+                            if source.get("similarity_score", 0) > best_similarity:
+                                best_similarity = source.get("similarity_score", 0)
+                                rec["primary_source_user"] = source
+
+                    if rec["primary_source_user"]:
+                        match_quality = rec["primary_source_user"].get("match_quality", "")
+                        # Assign a badge class based on the map, with a default
+                        rec["primary_source_user"]["badge_class"] = badge_color_map.get(
+                            match_quality, "bg-brand-purple"
+                        )
+
+                logger.info(f"Generated {len(recommendations)} recommendations for user {request.user.id}")
+            except Exception as e:
+                logger.error(f"Error generating recommendations for user {request.user.id}: {e}", exc_info=True)
+                rec_error = "Unable to load recommendations at this time."
     else:
         # Anonymous user recommendations
         if dna_data and request.session.session_key:
-            from .services.recommendation_service import get_recommendations_for_anonymous
-            recommendations = get_recommendations_for_anonymous(request.session.session_key, limit=6)
+            try:
+                from .services.recommendation_service import get_recommendations_for_anonymous
+
+                recommendations = get_recommendations_for_anonymous(request.session.session_key, limit=6)
+
+                for rec in recommendations:
+                    rec["confidence_pct"] = int(rec.get("confidence", 0) * 100)
+                    rec["primary_source_user"] = None
+                    best_similarity = 0
+
+                    for source in rec.get("sources", []):
+                        if source.get("type") == "similar_user":
+                            if source.get("similarity_score", 0) > best_similarity:
+                                best_similarity = source.get("similarity_score", 0)
+                                rec["primary_source_user"] = source
+
+                logger.info(f"Generated {len(recommendations)} recommendations for anonymous session")
+            except Exception as e:
+                logger.error(f"Error generating recommendations for anonymous user: {e}", exc_info=True)
+                rec_error = "Unable to load recommendations at this time."
 
     if not request.user.is_authenticated and dna_data is None:
         messages.info(request, "First, upload your library file to generate your Bibliotype!")
@@ -65,6 +143,7 @@ def display_dna_view(request):
         "user_profile": user_profile,
         "is_processing": False,
         "recommendations": recommendations,
+        "rec_error": rec_error,
     }
 
     return render(request, "core/dna_display.html", context)
@@ -89,7 +168,7 @@ def upload_view(request):
             # Clear old session data so the view will use the updated profile data
             request.session.pop("dna_data", None)
             result = generate_reading_dna_task.delay(csv_content, request.user.id)
-            
+
             # Save the pending task ID to track regeneration progress
             request.user.userprofile.pending_dna_task_id = result.id
             request.user.userprofile.save()
@@ -146,7 +225,9 @@ def signup_view(request):
 
             # Only capture event if PostHog is properly configured
             if posthog.api_key:
-                posthog.capture("user_signed_up_not_after_generating", properties={"example_property": "with_some_value"})
+                posthog.capture(
+                    "user_signed_up_not_after_generating", properties={"example_property": "with_some_value"}
+                )
             return redirect("core:home")
 
     else:
@@ -269,12 +350,12 @@ def update_recommendation_visibility(request):
     profile = request.user.userprofile
     profile.visible_in_recommendations = is_visible
     profile.save()
-    
+
     if is_visible:
         messages.success(request, "You are now visible as a recommendation source to similar readers!")
     else:
         messages.success(request, "You've opted out of being shown as a recommendation source.")
-    
+
     return redirect("core:display_dna")
 
 
@@ -282,10 +363,10 @@ def check_dna_status_view(request):
     # For anonymous users, they don't have pending task tracking
     if not request.user.is_authenticated:
         return JsonResponse({"status": "PENDING"})
-    
+
     profile = request.user.userprofile
     profile.refresh_from_db()  # Ensure we get the latest data from the database
-    
+
     # If there's a pending task ID, DNA is still being generated
     if profile.pending_dna_task_id:
         try:
@@ -303,7 +384,7 @@ def check_dna_status_view(request):
             return JsonResponse({"status": "PENDING", "progress": progress})
         except Exception:
             return JsonResponse({"status": "PENDING"})
-    
+
     # Otherwise, check if DNA data exists
     if profile.dna_data:
         return JsonResponse({"status": "SUCCESS"})
@@ -331,6 +412,7 @@ def public_profile_view(request, username):
         recommendations = []
         if profile.dna_data:
             from .services.recommendation_service import get_recommendations_for_user
+
             recommendations = get_recommendations_for_user(profile_user, limit=6)
 
         context = {
