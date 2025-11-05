@@ -14,24 +14,24 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - make vibe look better with bg colours and fix dot separators and check mobile
 - add 404 page
 - add favicon!!
+- put dev data into prod using fixtures
 - ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
-- ✅ distribution of length of books 
+- change loading statements copy
 - improve community stats look
+  - timelines/graphs for all community stats
+  - same for controversial ratings
 - hover states for all buttons
 - long author names and genre names cutting of count when hovering on chart
 - allow user to delete profile
 - ✅ ~get rid of books per year~ 
 - ^ make this like more granular month by month and scrollable and show genres in every month
 - ~ai text explanation of most controversial ratings and possible explanations~ 
-- make most controversial ratings tab look better
 - different colours for different reader types
 - pixel square background for banner
-- make upload modal icon better and pixel art
-- support StoryGraph
+- change instruction for goodreads desktop/mobile, remove storygraph
 - upload to instagram story
 - ai moodboard/collage. different options of things to upload to instagram 
 - SEO stuff
-- favicon ⚠️
 - adjust copy ⚠️
 - make instructions modal better and detail app and web pathways
 - posthog integration
@@ -42,17 +42,13 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - check lighthouse scores 
 - add privacy statement? ToS
 - add posthog tracking
-- fix prod db
 - add silk?
-- add little loading text phrases when generating bibliotype for anonymous and logged in
-- <img width="150"  alt="71354" src="https://github.com/user-attachments/assets/d6f95eea-2c09-460f-a184-f7406dfbc11b" />
 - average "contrarian" score under most controversial ratings with phrases like "my, you're contrarian"
 - sign up form validate password and all on blur
-- store all books for a user and do similarity score set up for recommendations
-- "books you may like"/"books similar readers enjoyed"
-- use ai to explain why they might like them and summarise them 
 - how similar are you/similarity percentage for 2 or more people
-- add "input your csv" link
+  - add page for this
+  - allow similarity comparison with multiple users (only public)
+- add "input your csv" link?
 - make pixelated dna strand logo
 - add emojis in some places
 - think about more animation
