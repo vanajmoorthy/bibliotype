@@ -75,7 +75,8 @@
                             class="bg-brand-green text-brand-text shadow-neo border-brand-text mt-6 w-full border-2 px-4 py-3 text-2xl font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1"
                             :disabled="!fileName"
                             :class="{ 'opacity-50 !shadow-none cursor-not-allowed': !fileName, 'cursor-pointer': fileName }">
-                        Generate My Bibliotype
+                        <span x-show="isUploading">Loading...</span>
+                        <span x-show="!isUploading">Generate My Bibliotype</span>
                     </button>
                 </form>
             </div>
