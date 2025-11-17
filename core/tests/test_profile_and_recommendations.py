@@ -237,17 +237,20 @@ class RecommendationsTestCase(TestCase):
         # The template should render the recommendations section
         self.assertIn('recommendations', response.context)
     
+    @patch("core.tasks.check_author_mainstream_status_task")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
     @patch("core.services.dna_analyser.enrich_book_from_apis")
-    def test_anonymous_user_gets_recommendations(self, mock_enrich_book, mock_generate_vibe):
+    def test_anonymous_user_gets_recommendations(self, mock_enrich_book, mock_generate_vibe, mock_author_check):
         """Test that anonymous users get recommendations"""
         mock_enrich_book.return_value = (None, 0, 0)
         mock_generate_vibe.return_value = ["test vibe"]
+        # Mock the task to avoid any async operations
+        mock_author_check.delay = lambda *args, **kwargs: None
         
-        # Create CSV content
+        # Use unique book titles that don't exist in setUp to avoid conflicts
         csv_header = "Title,Author,Exclusive Shelf,My Rating,Number of Pages,Original Publication Year,Date Read,Average Rating,My Review,ISBN13"
-        csv_row1 = "The Fellowship of the Ring,J.R.R. Tolkien,read,5,423,1954,2023/01/15,4.40,Great book,9780000000001"
-        csv_row2 = "A Game of Thrones,George R.R. Martin,read,4,694,1996,2023/02/15,4.45,Good book,9780000000002"
+        csv_row1 = "Test Book Alpha,Test Author Alpha,read,5,300,2020,2023/01/15,4.5,Great,9781111111111"
+        csv_row2 = "Test Book Beta,Test Author Beta,read,4,400,2021,2023/02/15,4.3,Good,9782222222222"
         csv_content = f"{csv_header}\n{csv_row1}\n{csv_row2}"
         
         # Upload CSV as anonymous user
@@ -264,7 +267,7 @@ class RecommendationsTestCase(TestCase):
         # Get task ID from redirect
         task_id = response.url.split("/")[-2]
         
-        # Poll for result
+        # Poll for result - with CELERY_TASK_ALWAYS_EAGER=True, this should complete immediately
         response = self.client.get(reverse("core:get_task_result", kwargs={"task_id": task_id}))
         self.assertEqual(response.status_code, 200)
         json_response = response.json()
@@ -274,13 +277,8 @@ class RecommendationsTestCase(TestCase):
         response = self.client.get(reverse("core:display_dna"))
         self.assertEqual(response.status_code, 200)
         
-        # Should have recommendations in context
+        # Should have recommendations in context (may be empty but should exist)
         self.assertIn('recommendations', response.context)
-        recommendations = response.context['recommendations']
-        
-        # Should get some recommendations (either from similar users or fallback)
-        # Note: May be empty if no similar users, but fallback should provide some
-        # The important thing is that the code path executes without error
         
         # Verify AnonymousUserSession was created
         session_key = self.client.session.session_key
