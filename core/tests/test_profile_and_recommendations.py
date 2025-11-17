@@ -84,10 +84,12 @@ class ProfilePrivacyTestCase(TestCase):
     def test_nonexistent_user_shows_404_page(self):
         """Test that nonexistent user shows user_not_found page"""
         response = self.client.get(reverse("core:public_profile", kwargs={"username": "nonexistent_user"}))
+        # The view returns 404 status but renders a template
         self.assertEqual(response.status_code, 404)
-        self.assertContains(response, "User Not Found")
-        self.assertContains(response, "nonexistent_user")
-        self.assertContains(response, "Return Home")
+        # Check that the custom 404 template is rendered
+        self.assertContains(response, "User Not Found", status_code=404)
+        self.assertContains(response, "nonexistent_user", status_code=404)
+        self.assertContains(response, "Return Home", status_code=404)
 
 
 @override_settings(
