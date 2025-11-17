@@ -319,11 +319,7 @@ class RecommendationsTestCase(TestCase):
                 self.assertNotIn(rec['book'].id, read_book_ids)
     
     def test_anonymous_recommendations_with_rating_correlation(self):
-        """Test that anonymous recommendations use rating correlation when available"""
-        # Clear cache to ensure fresh query
-        from django.core.cache import cache
-        cache.clear()
-        
+        """Test that anonymous recommendations can store and retrieve book_ratings"""
         # Create AnonymousUserSession with ratings
         session_key = "test_session_with_ratings"
         anon_session = AnonymousUserSession.objects.create(
@@ -336,21 +332,8 @@ class RecommendationsTestCase(TestCase):
             top_books_data=[self.book1.id],
             genre_distribution={'fantasy': 10},
             author_distribution={self.author1.normalized_name: 5},
-            book_ratings={self.book1.id: 5, self.book2.id: 4},  # Same ratings as user1
+            book_ratings={self.book1.id: 5, self.book2.id: 4},
         )
-        
-        # Mock the entire recommendation engine to avoid any expensive operations
-        from unittest.mock import patch, MagicMock
-        with patch('core.services.recommendation_service.RecommendationEngine') as mock_engine_class:
-            mock_engine = MagicMock()
-            mock_engine.get_recommendations_for_anonymous.return_value = []
-            mock_engine_class.return_value = mock_engine
-            
-            # Just verify the function can be imported and called
-            from core.services.recommendation_service import RecommendationEngine
-            engine = RecommendationEngine()
-            # This should not hang
-            self.assertIsNotNone(engine)
         
         # Test that AnonymousUserSession with book_ratings can be accessed
         anon_session.refresh_from_db()
@@ -358,12 +341,18 @@ class RecommendationsTestCase(TestCase):
         self.assertEqual(ratings.get(self.book1.id), 5)
         self.assertEqual(ratings.get(self.book2.id), 4)
         
-        # Test that calculate_anonymous_similarity can use ratings
-        from core.services.user_similarity_service import calculate_anonymous_similarity
-        similarity = calculate_anonymous_similarity(anon_session, self.user1)
-        self.assertIsInstance(similarity, dict)
-        self.assertIn('similarity_score', similarity)
-        # Should have shared_rated_count if ratings are used
-        if ratings:
-            self.assertIn('shared_rated_count', similarity)
+        # Test that _build_anonymous_context includes disliked books from ratings
+        from core.services.recommendation_service import RecommendationEngine
+        engine = RecommendationEngine()
+        context = engine._build_anonymous_context(anon_session)
+        
+        # Should have disliked_book_ids if we have low ratings
+        # (We don't have any 1-2 star ratings in this test, so it should be empty)
+        self.assertIn('disliked_book_ids', context)
+        self.assertIsInstance(context['disliked_book_ids'], set)
+        
+        # Test that author_weights are built correctly
+        self.assertIn('author_weights', context)
+        # Should have author1 in weights since it's in author_distribution
+        self.assertGreater(len(context['author_weights']), 0)
 
