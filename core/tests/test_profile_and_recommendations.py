@@ -312,8 +312,8 @@ class RecommendationsTestCase(TestCase):
         self.assertIsNotNone(field)
         self.assertEqual(field.__class__.__name__, 'JSONField')
         
-        # Verify default value
-        self.assertEqual(field.default, {})
+        # Verify default value (default is a callable dict class)
+        self.assertEqual(field.default, dict)
         
         # Test that we can create an instance in memory (no DB save)
         from django.utils import timezone
