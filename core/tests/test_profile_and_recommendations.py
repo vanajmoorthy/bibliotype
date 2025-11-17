@@ -320,6 +320,10 @@ class RecommendationsTestCase(TestCase):
     
     def test_anonymous_recommendations_with_rating_correlation(self):
         """Test that anonymous recommendations use rating correlation when available"""
+        # Clear cache to ensure fresh query
+        from django.core.cache import cache
+        cache.clear()
+        
         # Create AnonymousUserSession with ratings
         session_key = "test_session_with_ratings"
         anon_session = AnonymousUserSession.objects.create(
@@ -335,7 +339,7 @@ class RecommendationsTestCase(TestCase):
             book_ratings={self.book1.id: 5, self.book2.id: 4},  # Same ratings as user1
         )
         
-        # Get recommendations
+        # Get recommendations - should complete quickly with the 500 user limit
         recommendations = get_recommendations_for_anonymous(session_key, limit=6)
         
         # Should work without error
@@ -343,7 +347,6 @@ class RecommendationsTestCase(TestCase):
         
         # Verify book_ratings are being used (check that similarity calculation works)
         # The recommendations should prioritize user1 since they have similar ratings
-        if recommendations:
-            # Check that we got recommendations (either from similar users or fallback)
-            self.assertGreater(len(recommendations), 0)
+        # Note: May be empty if no similar users found, but should not hang
+        self.assertIsNotNone(recommendations)
 

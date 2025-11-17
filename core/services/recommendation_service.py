@@ -407,7 +407,7 @@ class RecommendationEngine:
                     userprofile__dna_data__isnull=False,
                     userprofile__is_public=True,
                     userprofile__visible_in_recommendations=True,
-                )
+                )[:500]  # Limit to 500 users for performance
             )
             cache.set(cache_key, all_users, 1800)  # Cache 30 min
 
