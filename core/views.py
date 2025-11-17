@@ -485,9 +485,19 @@ def task_status_view(request, task_id):
 
 
 def get_task_result_view(request, task_id):
+    from ..models import AnonymousUserSession
+    
     cached_result = cache.get(f"dna_result_{task_id}")
     if cached_result is not None:
         request.session["dna_data"] = cached_result
+        # Also store book IDs from AnonymousUserSession if it exists
+        if request.session.session_key:
+            try:
+                anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
+                request.session["book_ids"] = anon_session.books_data or []
+                request.session["top_book_ids"] = anon_session.top_books_data or []
+            except AnonymousUserSession.DoesNotExist:
+                pass
         request.session.save()
 
         return JsonResponse(
@@ -503,6 +513,14 @@ def get_task_result_view(request, task_id):
         dna_data = result.get()
 
         request.session["dna_data"] = dna_data
+        # Also store book IDs from AnonymousUserSession if it exists
+        if request.session.session_key:
+            try:
+                anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
+                request.session["book_ids"] = anon_session.books_data or []
+                request.session["top_book_ids"] = anon_session.top_books_data or []
+            except AnonymousUserSession.DoesNotExist:
+                pass
         request.session.save()
 
         return JsonResponse(

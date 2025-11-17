@@ -72,10 +72,16 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str):
         return
 
     cached_dna = cache.get(f"dna_result_{task_id}")
+    cached_session_key = cache.get(f"session_key_{task_id}")
 
     if cached_dna:
         logger.info(f"Found cached DNA for task {task_id}. Saving to user {user_id}")
         _save_dna_to_profile(user.userprofile, cached_dna)
+        
+        # Try to create UserBooks from AnonymousUserSession if it exists
+        if cached_session_key:
+            _create_userbooks_from_anonymous_session(user, cached_session_key)
+        
         user.userprofile.pending_dna_task_id = None
         user.userprofile.save()
         logger.info(f"Successfully claimed and saved DNA for user {user_id} from task {task_id}")
@@ -87,6 +93,11 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str):
         if result.successful():
             dna_data = result.get()
             _save_dna_to_profile(user.userprofile, dna_data)
+            
+            # Try to create UserBooks from AnonymousUserSession if session_key was cached
+            if cached_session_key:
+                _create_userbooks_from_anonymous_session(user, cached_session_key)
+            
             user.userprofile.pending_dna_task_id = None
             user.userprofile.save()
             logger.info(f"Successfully claimed and saved DNA for user {user_id} from task {task_id}")
@@ -97,6 +108,58 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str):
     else:
         logger.info(f"Task {task_id} not ready yet. Retrying claim for user {user_id} in 10s")
         raise self.retry(countdown=10, exc=Exception(f"Task {task_id} not ready"))
+
+
+def _create_userbooks_from_anonymous_session(user, session_key):
+    """Create UserBook records from AnonymousUserSession when claiming anonymous DNA"""
+    from ..models import AnonymousUserSession, UserBook, Book
+    from ..services.top_books_service import calculate_and_store_top_books
+    
+    try:
+        anon_session = AnonymousUserSession.objects.get(session_key=session_key)
+        book_ids = anon_session.books_data or []
+        top_book_ids = anon_session.top_books_data or []
+        
+        if not book_ids:
+            logger.warning(f"No book IDs found in AnonymousUserSession {session_key}")
+            return
+        
+        # Create UserBook records for all books
+        books_created = 0
+        for book_id in book_ids:
+            try:
+                book = Book.objects.get(pk=book_id)
+                UserBook.objects.get_or_create(
+                    user=user,
+                    book=book,
+                    defaults={}
+                )
+                books_created += 1
+            except Book.DoesNotExist:
+                logger.warning(f"Book with id {book_id} not found when creating UserBooks")
+                continue
+        
+        logger.info(f"Created {books_created} UserBook records for user {user.username} from anonymous session")
+        
+        # Calculate and store top books
+        if books_created > 0:
+            calculate_and_store_top_books(user, limit=5)
+            # Also mark the top books from the anonymous session if they exist
+            for position, book_id in enumerate(top_book_ids[:5], 1):
+                try:
+                    book = Book.objects.get(pk=book_id)
+                    user_book = UserBook.objects.filter(user=user, book=book).first()
+                    if user_book:
+                        user_book.is_top_book = True
+                        user_book.top_book_position = position
+                        user_book.save()
+                except Book.DoesNotExist:
+                    continue
+        
+    except AnonymousUserSession.DoesNotExist:
+        logger.warning(f"AnonymousUserSession {session_key} not found when claiming DNA for user {user.username}")
+    except Exception as e:
+        logger.error(f"Error creating UserBooks from anonymous session: {e}", exc_info=True)
 
 
 def normalize_and_filter_genres(subjects):
@@ -181,6 +244,9 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
         if not user:
             if self.request.id:
                 cache.set(f"dna_result_{self.request.id}", result_data, timeout=3600)
+                # Also cache the session_key so we can find AnonymousUserSession when claiming
+                if session_key:
+                    cache.set(f"session_key_{self.request.id}", session_key, timeout=3600)
                 logger.info(f"DNA result for task {self.request.id} saved to cache")
             return result_data
         else:
