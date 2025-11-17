@@ -244,6 +244,8 @@ class RecommendationsTestCase(TestCase):
         # and the full upload flow is tested in test_views_e2e.py
         
         # Create AnonymousUserSession directly (simulating what happens after DNA generation)
+        from django.utils import timezone
+        from datetime import timedelta
         session_key = self.client.session.session_key or "test_session_123"
         anon_session = AnonymousUserSession.objects.create(
             session_key=session_key,
@@ -256,6 +258,7 @@ class RecommendationsTestCase(TestCase):
             genre_distribution={'fantasy': 10},
             author_distribution={self.author1.normalized_name: 5},
             book_ratings={self.book1.id: 5, self.book2.id: 4},
+            expires_at=timezone.now() + timedelta(days=7),
         )
         
         # Verify AnonymousUserSession exists and has all data
@@ -268,6 +271,8 @@ class RecommendationsTestCase(TestCase):
     def test_anonymous_user_recommendations_via_service(self):
         """Test anonymous recommendations service can be called (mocked to avoid hangs)"""
         # Create AnonymousUserSession
+        from django.utils import timezone
+        from datetime import timedelta
         session_key = "test_session_key_123"
         anon_session = AnonymousUserSession.objects.create(
             session_key=session_key,
@@ -280,6 +285,7 @@ class RecommendationsTestCase(TestCase):
             genre_distribution={'fantasy': 10},
             author_distribution={self.author1.normalized_name: 5},
             book_ratings={self.book1.id: 5, self.book2.id: 4},
+            expires_at=timezone.now() + timedelta(days=7),
         )
         
         # Mock the recommendation engine to avoid expensive queries
