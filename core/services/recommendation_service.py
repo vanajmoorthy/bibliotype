@@ -51,22 +51,39 @@ class RecommendationEngine:
         """
         Get recommendations for an anonymous user.
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
             anon_session = AnonymousUserSession.objects.get(session_key=session_key)
         except AnonymousUserSession.DoesNotExist:
+            logger.warning(f"AnonymousUserSession not found for session_key: {session_key}")
             return []
 
         # Build anonymous context
         anon_context = self._build_anonymous_context(anon_session)
+        logger.info(f"Anonymous context: {len(anon_context.get('read_book_ids', []))} books, {len(anon_context.get('genre_preferences', {}))} genres")
 
         # Collect candidates
         candidates = self._collect_candidates_for_anonymous(anon_session, anon_context)
+        logger.info(f"Collected {len(candidates)} candidate books for anonymous user")
+
+        # If we don't have enough candidates, always use fallback
+        if len(candidates) < limit:
+            logger.info(f"Only {len(candidates)} candidates found, adding fallback candidates")
+            fallback_candidates = self._get_fallback_candidates(anon_context, limit=limit * 2)
+            for book_id, candidate_data in fallback_candidates.items():
+                if book_id not in candidates and book_id not in anon_context["read_book_ids"]:
+                    candidates[book_id] = candidate_data
+            logger.info(f"After fallback: {len(candidates)} total candidates")
 
         # Score and rank
         ranked = self._score_and_rank_candidates(candidates, anon_context)
+        logger.info(f"Ranked {len(ranked)} recommendations")
 
         # Apply diversity
         final_recommendations = self._apply_diversity_filter(ranked, anon_context, limit)
+        logger.info(f"Final recommendations after diversity filter: {len(final_recommendations)}")
 
         # Add explanations
         if include_explanations:
@@ -152,8 +169,21 @@ class RecommendationEngine:
 
     def _build_anonymous_context(self, anon_session):
         """Build context for anonymous user"""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("_build_anonymous_context: Starting")
+        
         read_book_ids = set(anon_session.books_data or [])
         top_books = set(anon_session.top_books_data or [])
+        logger.info(f"_build_anonymous_context: Got {len(read_book_ids)} read books")
+        
+        # Use getattr for backwards compatibility if migration hasn't run yet
+        book_ratings = getattr(anon_session, 'book_ratings', None) or {}
+        logger.info(f"_build_anonymous_context: Got {len(book_ratings)} ratings")
+
+        # Get disliked books (rated 1-2 stars) - NEW!
+        disliked_book_ids = {book_id for book_id, rating in book_ratings.items() if rating <= 2}
+        logger.info(f"_build_anonymous_context: Found {len(disliked_book_ids)} disliked books")
 
         # Get genre preferences from stored distribution
         genre_distribution = anon_session.genre_distribution or {}
@@ -163,24 +193,82 @@ class RecommendationEngine:
             if total_genre_weight > 0
             else {}
         )
+        logger.info(f"_build_anonymous_context: Built genre preferences for {len(genre_preferences)} genres")
 
         # Get series info from read books
-        read_books = Book.objects.filter(id__in=read_book_ids).select_related("author")
-        series_counter = self._extract_series_info(read_books, is_queryset=False)
-        oversaturated_series = {series for series, count in series_counter.items() if count >= 3}
+        logger.info("_build_anonymous_context: Querying books for series info")
+        if read_book_ids:
+            read_books = list(Book.objects.filter(id__in=read_book_ids).select_related("author"))
+            logger.info(f"_build_anonymous_context: Got {len(read_books)} books")
+            series_counter = self._extract_series_info(read_books, is_queryset=False)
+            oversaturated_series = {series for series, count in series_counter.items() if count >= 3}
+            logger.info(f"_build_anonymous_context: Found {len(oversaturated_series)} oversaturated series")
+        else:
+            read_books = []
+            oversaturated_series = set()
+            logger.info("_build_anonymous_context: No books to query")
 
-        return {
+        # Build author_weights from author_distribution (needed for fallback)
+        # Weight by ratings if available
+        author_dist = anon_session.author_distribution or {}
+        author_weights = Counter()
+        logger.info(f"_build_anonymous_context: Building author weights from {len(author_dist)} authors")
+        
+        # Convert normalized author names to author IDs for fallback
+        from ..models import Author
+        # Optimize: get all authors in one query
+        normalized_names = list(author_dist.keys())
+        logger.info(f"_build_anonymous_context: Querying {len(normalized_names)} authors")
+        authors_dict = {author.normalized_name: author for author in 
+                       Author.objects.filter(normalized_name__in=normalized_names)}
+        logger.info(f"_build_anonymous_context: Found {len(authors_dict)} authors")
+        
+        # Get all read books with authors in one query (reuse read_books if available)
+        logger.info("_build_anonymous_context: Getting read books with authors")
+        if read_book_ids:
+            if read_books:  # Reuse if we already fetched them
+                read_books_with_authors = {book.id: book.author_id for book in read_books}
+            else:
+                read_books_with_authors = {book.id: book.author_id for book in 
+                                           Book.objects.filter(id__in=read_book_ids).select_related('author')}
+            logger.info(f"_build_anonymous_context: Got {len(read_books_with_authors)} books with authors")
+        else:
+            read_books_with_authors = {}
+            logger.info("_build_anonymous_context: No books to get authors for")
+        
+        for normalized_name, count in author_dist.items():
+            author = authors_dict.get(normalized_name)
+            if not author:
+                continue
+            # If we have ratings, weight by average rating for this author
+            author_book_ids = [book_id for book_id, author_id in read_books_with_authors.items() 
+                             if author_id == author.id]
+            if author_book_ids and book_ratings:
+                author_ratings = [book_ratings.get(bid, 3) for bid in author_book_ids if bid in book_ratings]
+                if author_ratings:
+                    avg_rating = sum(author_ratings) / len(author_ratings)
+                    author_weights[author.id] = count * (avg_rating / 5.0)  # Weight by rating
+                else:
+                    author_weights[author.id] = count
+            else:
+                author_weights[author.id] = count
+        logger.info(f"_build_anonymous_context: Built weights for {len(author_weights)} authors")
+
+        logger.info("_build_anonymous_context: Building return dict")
+        context = {
             "session": anon_session,
             "read_book_ids": read_book_ids,
-            "disliked_book_ids": set(),  # No rating data for anonymous
+            "disliked_book_ids": disliked_book_ids,  # Now includes disliked books
             "top_books": top_books,
             "oversaturated_series": oversaturated_series,
             "genre_preferences": genre_preferences,
-            "author_weights": Counter(anon_session.author_distribution or {}),
+            "author_weights": author_weights,
             "author_saturation": {},  # Could compute from books if needed
             "dna": {},
             "total_books_read": len(read_book_ids),
         }
+        logger.info("_build_anonymous_context: Completed successfully")
+        return context
 
     def _extract_series_info(self, books_data, is_queryset=True):
         """
@@ -347,70 +435,86 @@ class RecommendationEngine:
         return candidates
 
     def _collect_candidates_for_anonymous(self, anon_session, anon_context):
-        """Collect candidates for anonymous user"""
+        """Collect candidates for anonymous user - similar to _collect_candidates_for_user"""
         candidates = {}
 
-        # Source 1: Compare against public registered users
-        cache_key = f"all_users_for_recs_sample"
-        users = cache.get(cache_key)
+        # Source 1: Find similar users (similar to find_similar_users approach)
+        # Get all public users who are visible in recommendations
+        cache_key = f"public_users_for_recs_sample"
+        all_users = cache.get(cache_key)
 
-        if users is None:
-            users = list(
+        if all_users is None:
+            all_users = list(
                 User.objects.select_related("userprofile").filter(
                     userprofile__dna_data__isnull=False,
-                )[
-                    :100
-                ]  # Limit for performance
+                    userprofile__is_public=True,
+                    userprofile__visible_in_recommendations=True,
+                )[:500]  # Limit to 500 users for performance
             )
-            cache.set(cache_key, users, 1800)  # Cache 30 min
+            cache.set(cache_key, all_users, 1800)  # Cache 30 min
+
+        # Calculate similarity for all users and get top N (similar to find_similar_users)
+        similarities = []
+        for user in all_users:
+            similarity_data = calculate_anonymous_similarity(anon_session, user)
+            if similarity_data["similarity_score"] >= self.min_similarity:
+                similarities.append((user, similarity_data))
+        
+        # Sort by similarity and take top 30 (same as logged-in users)
+        similarities.sort(key=lambda x: x[1]["similarity_score"], reverse=True)
+        similar_users = similarities[:30]
 
         import logging
-
         logger = logging.getLogger(__name__)
-        logger.info(f"Found {len(users)} public users to compare against")
+        logger.info(f"Found {len(similar_users)} similar users (from {len(all_users)} total) for anonymous session")
         logger.info(f"Anonymous session has {len(anon_context['read_book_ids'])} books")
-        logger.info(f"Genre preferences: {anon_context['genre_preferences']}")
 
-        for user in users:
-            similarity_data = calculate_anonymous_similarity(anon_session, user)
-
-            if similarity_data["similarity_score"] >= self.min_similarity:
-                similar_user_books = (
-                    UserBook.objects.filter(Q(user=user, is_top_book=True) | Q(user=user, user_rating__gte=4))
-                    .select_related("book", "book__author")
-                    .prefetch_related("book__genres")
+        # Get books from similar users (same logic as logged-in)
+        for similar_user, similarity_data in similar_users:
+            # Get their top books and highly rated books
+            similar_user_books = (
+                UserBook.objects.filter(
+                    Q(user=similar_user, is_top_book=True) | Q(user=similar_user, user_rating__gte=4)
                 )
+                .select_related("book", "book__author")
+                .prefetch_related("book__genres")
+            )
 
-                for ub in similar_user_books:
-                    book_id = ub.book.id
+            for ub in similar_user_books:
+                book_id = ub.book.id
 
-                    if book_id not in anon_context["read_book_ids"]:
-                        if book_id not in candidates:
-                            candidates[book_id] = {
-                                "book": ub.book,
-                                "sources": [],
-                                "max_similarity": 0,
-                                "recommender_count": 0,
-                                "total_weight": 0,
-                            }
+                if book_id not in anon_context["read_book_ids"]:
+                    if book_id not in candidates:
+                        candidates[book_id] = {
+                            "book": ub.book,
+                            "sources": [],
+                            "max_similarity": 0,
+                            "recommender_count": 0,
+                            "total_weight": 0,
+                        }
 
-                        candidates[book_id]["sources"].append(
-                            {
-                                "type": "similar_user",
-                                "username": user.username,
-                                "user_id": user.id,
-                                "similarity_score": similarity_data["similarity_score"],
-                                "is_top_book": ub.is_top_book,
-                            }
-                        )
+                    # Track source with rich metadata (same as logged-in)
+                    candidates[book_id]["sources"].append(
+                        {
+                            "type": "similar_user",
+                            "username": similar_user.username,
+                            "user_id": similar_user.id,
+                            "similarity_score": similarity_data["similarity_score"],
+                            "is_top_book": ub.is_top_book,
+                            "user_rating": ub.user_rating,
+                            "match_quality": get_match_quality_label(similarity_data["similarity_score"]),
+                            "shared_books": similarity_data.get("shared_books_count", 0),
+                        }
+                    )
 
-                        candidates[book_id]["max_similarity"] = max(
-                            candidates[book_id]["max_similarity"], similarity_data["similarity_score"]
-                        )
-                        candidates[book_id]["recommender_count"] += 1
+                    candidates[book_id]["max_similarity"] = max(
+                        candidates[book_id]["max_similarity"], similarity_data["similarity_score"]
+                    )
+                    candidates[book_id]["recommender_count"] += 1
 
-                        weight = similarity_data["similarity_score"] * (1.5 if ub.is_top_book else 1.0)
-                        candidates[book_id]["total_weight"] += weight
+                    # Weighted contribution (diminishing returns) - same as logged-in
+                    weight = similarity_data["similarity_score"] * (1.5 if ub.is_top_book else 1.0)
+                    candidates[book_id]["total_weight"] += weight
 
         # Source 2: Anonymized profiles
         anonymized_profiles = AnonymizedReadingProfile.objects.all()[:100]
@@ -449,13 +553,8 @@ class RecommendationEngine:
                         except Book.DoesNotExist:
                             continue
 
-        # Fallback for anonymous users
-        if len(candidates) < 20:
-            fallback_candidates = self._get_fallback_candidates(anon_context, limit=20)
-            for book_id, candidate_data in fallback_candidates.items():
-                if book_id not in candidates and book_id not in anon_context["read_book_ids"]:
-                    candidates[book_id] = candidate_data
-
+        # Note: Fallback is now handled in get_recommendations_for_anonymous after candidate collection
+        # This ensures we always have enough recommendations even if no similar users found
         return candidates
 
     def _score_and_rank_candidates(self, candidates, context):

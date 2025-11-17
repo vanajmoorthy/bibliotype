@@ -115,21 +115,71 @@ def display_dna_view(request):
         if dna_data and request.session.session_key:
             try:
                 from .services.recommendation_service import get_recommendations_for_anonymous
+                from .models import AnonymousUserSession, Author
+                from django.utils import timezone
+                from datetime import timedelta
+                from collections import Counter
+                
+                # Check if AnonymousUserSession exists, if not try to recreate it
+                try:
+                    anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
+                    # Session exists, get recommendations normally
+                    recommendations = get_recommendations_for_anonymous(request.session.session_key, limit=6)
+                except AnonymousUserSession.DoesNotExist:
+                    # Session record doesn't exist - try to recreate from session dna_data
+                    # This can happen if the session expired but session data still exists
+                    logger.warning(f"AnonymousUserSession not found for session {request.session.session_key}, attempting to recreate from dna_data...")
+                    try:
+                        
+                        # Extract distributions from dna_data
+                        genre_dist = {}
+                        for genre, count in dna_data.get('top_genres', []):
+                            genre_dist[genre] = count
+                        
+                        author_dist = {}
+                        for author, count in dna_data.get('top_authors', [])[:20]:
+                            normalized = Author._normalize(author)
+                            author_dist[normalized] = count
+                        
+                        # Try to get book IDs from session if stored, otherwise use empty list
+                        books_data = request.session.get('book_ids', [])
+                        top_books_data = request.session.get('top_book_ids', [])
+                        book_ratings = request.session.get('book_ratings', {})  # Get ratings if stored
+                        
+                        # Create a minimal AnonymousUserSession from dna_data
+                        anon_session = AnonymousUserSession.objects.create(
+                            session_key=request.session.session_key,
+                            dna_data=dna_data,
+                            books_data=books_data,
+                            top_books_data=top_books_data,
+                            genre_distribution=genre_dist,
+                            author_distribution=author_dist,
+                            book_ratings=book_ratings,  # Store ratings if available
+                            expires_at=timezone.now() + timedelta(days=7),
+                        )
+                        
+                        # Now try to get recommendations
+                        recommendations = get_recommendations_for_anonymous(request.session.session_key, limit=6)
+                        logger.info(f"Recreated AnonymousUserSession and generated {len(recommendations)} recommendations")
+                    except Exception as recreate_error:
+                        logger.error(f"Error recreating anonymous session: {recreate_error}", exc_info=True)
+                        recommendations = []
+                        rec_error = "Unable to load recommendations. Session may have expired. Please upload your file again."
+                
+                # Process recommendations if we got any
+                if recommendations:
+                    for rec in recommendations:
+                        rec["confidence_pct"] = int(rec.get("confidence", 0) * 100)
+                        rec["primary_source_user"] = None
+                        best_similarity = 0
 
-                recommendations = get_recommendations_for_anonymous(request.session.session_key, limit=6)
+                        for source in rec.get("sources", []):
+                            if source.get("type") == "similar_user":
+                                if source.get("similarity_score", 0) > best_similarity:
+                                    best_similarity = source.get("similarity_score", 0)
+                                    rec["primary_source_user"] = source
 
-                for rec in recommendations:
-                    rec["confidence_pct"] = int(rec.get("confidence", 0) * 100)
-                    rec["primary_source_user"] = None
-                    best_similarity = 0
-
-                    for source in rec.get("sources", []):
-                        if source.get("type") == "similar_user":
-                            if source.get("similarity_score", 0) > best_similarity:
-                                best_similarity = source.get("similarity_score", 0)
-                                rec["primary_source_user"] = source
-
-                logger.info(f"Generated {len(recommendations)} recommendations for anonymous session")
+                    logger.info(f"Generated {len(recommendations)} recommendations for anonymous session")
             except Exception as e:
                 logger.error(f"Error generating recommendations for anonymous user: {e}", exc_info=True)
                 rec_error = "Unable to load recommendations at this time."
@@ -397,8 +447,11 @@ def public_profile_view(request, username):
     try:
         profile_user = User.objects.get(username=username)
         profile = profile_user.userprofile
+        # Refresh from database to ensure we have the latest is_public value
+        profile.refresh_from_db()
 
-        if not profile.is_public and request.user != profile_user:
+        # Check privacy: only show if public OR if user is viewing their own profile
+        if not profile.is_public and (not request.user.is_authenticated or request.user != profile_user):
             return render(request, "core/profile_private.html")
 
         display_name = profile_user.first_name if profile_user.first_name else profile_user.username
@@ -424,9 +477,8 @@ def public_profile_view(request, username):
         }
         return render(request, "core/public_profile.html", context)
     except User.DoesNotExist:
-        from django.http import Http404
-
-        raise Http404("User does not exist.")
+        # Show a nicer 404 page instead of the default Django 404
+        return render(request, "core/user_not_found.html", {"username": username}, status=404)
 
 
 def task_status_view(request, task_id):
@@ -434,9 +486,21 @@ def task_status_view(request, task_id):
 
 
 def get_task_result_view(request, task_id):
+    from .models import AnonymousUserSession
+    
     cached_result = cache.get(f"dna_result_{task_id}")
     if cached_result is not None:
         request.session["dna_data"] = cached_result
+        # Also store book IDs and ratings from AnonymousUserSession if it exists
+        if request.session.session_key:
+            try:
+                anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
+                request.session["book_ids"] = anon_session.books_data or []
+                request.session["top_book_ids"] = anon_session.top_books_data or []
+                # Use getattr for backwards compatibility if migration hasn't run yet
+                request.session["book_ratings"] = getattr(anon_session, 'book_ratings', None) or {}
+            except AnonymousUserSession.DoesNotExist:
+                pass
         request.session.save()
 
         return JsonResponse(
@@ -452,6 +516,16 @@ def get_task_result_view(request, task_id):
         dna_data = result.get()
 
         request.session["dna_data"] = dna_data
+        # Also store book IDs and ratings from AnonymousUserSession if it exists
+        if request.session.session_key:
+            try:
+                anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
+                request.session["book_ids"] = anon_session.books_data or []
+                request.session["top_book_ids"] = anon_session.top_books_data or []
+                # Use getattr for backwards compatibility if migration hasn't run yet
+                request.session["book_ratings"] = getattr(anon_session, 'book_ratings', None) or {}
+            except AnonymousUserSession.DoesNotExist:
+                pass
         request.session.save()
 
         return JsonResponse(

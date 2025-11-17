@@ -262,12 +262,15 @@ def calculate_anonymous_similarity(anonymous_session, user):
     """
     Calculate similarity between anonymous session and registered user.
     Uses stored distribution data from anonymous session.
+    Enhanced to match calculate_user_similarity when rating data is available.
     """
 
     anon_books = set(anonymous_session.books_data or [])
     anon_top_books = set(anonymous_session.top_books_data or [])
     anon_genres = Counter(anonymous_session.genre_distribution or {})
     anon_authors = Counter(anonymous_session.author_distribution or {})
+    # Use getattr for backwards compatibility if migration hasn't run yet
+    anon_ratings = getattr(anonymous_session, 'book_ratings', None) or {}  # Get stored ratings
 
     # Get user data with optimized queries
     user_books_qs = (
@@ -276,52 +279,94 @@ def calculate_anonymous_similarity(anonymous_session, user):
 
     user_books = set(user_books_qs.values_list("book_id", flat=True))
 
-    # 1. Jaccard similarity on books
+    # Initialize components and weights (similar to calculate_user_similarity)
+    components = {}
+    weights = {}
+
+    # 1. Shared book correlation (MOST IMPORTANT when available) - NEW!
+    if anon_ratings:
+        user_ratings_dict = {ub.book_id: ub.user_rating for ub in user_books_qs.filter(user_rating__isnull=False)}
+        shared_rated_books = set(anon_ratings.keys()) & set(user_ratings_dict.keys())
+        
+        if len(shared_rated_books) >= 3:  # Need minimum overlap for correlation
+            anon_ratings_list = [anon_ratings[book_id] for book_id in shared_rated_books]
+            user_ratings_list = [user_ratings_dict[book_id] for book_id in shared_rated_books]
+            
+            # Calculate Pearson correlation
+            mean_anon = np.mean(anon_ratings_list)
+            mean_user = np.mean(user_ratings_list)
+            
+            numerator = sum((r1 - mean_anon) * (r2 - mean_user) for r1, r2 in zip(anon_ratings_list, user_ratings_list))
+            denom_anon = sum((r1 - mean_anon) ** 2 for r1 in anon_ratings_list) ** 0.5
+            denom_user = sum((r2 - mean_user) ** 2 for r2 in user_ratings_list) ** 0.5
+            
+            if denom_anon > 0 and denom_user > 0:
+                correlation = numerator / (denom_anon * denom_user)
+                # Convert from -1,1 to 0,1 range
+                normalized_correlation = (correlation + 1) / 2
+                components["shared_correlation"] = normalized_correlation
+                confidence = min(len(shared_rated_books) / 20, 1.0)
+                weights["shared_correlation"] = 0.35 * confidence
+            else:
+                weights["shared_correlation"] = 0
+        else:
+            weights["shared_correlation"] = 0
+            shared_rated_books = set()
+    else:
+        weights["shared_correlation"] = 0
+        shared_rated_books = set()
+
+    # 2. Jaccard similarity on books
     intersection = anon_books & user_books
     union = anon_books | user_books
-    jaccard = len(intersection) / len(union) if union else 0
+    components["jaccard"] = len(intersection) / len(union) if union else 0
+    weights["jaccard"] = 0.15 if weights.get("shared_correlation", 0) > 0 else 0.25
 
-    # 2. Top books overlap
+    # 3. Top books overlap
     user_top = set(UserBook.objects.filter(user=user, is_top_book=True).values_list("book_id", flat=True))
-    top_overlap = (
+    components["top_overlap"] = (
         len(anon_top_books & user_top) / max(len(anon_top_books), len(user_top), 1)
         if (anon_top_books or user_top)
         else 0
     )
+    weights["top_overlap"] = 0.20
 
-    # 3. Genre similarity
+    # 4. Genre similarity
     user_genres = Counter()
     for ub in user_books_qs:
         weight = ub.user_rating if ub.user_rating else 3
         for genre in ub.book.genres.all():
             user_genres[genre.name] += weight
 
-    genre_similarity = _calculate_cosine_similarity(anon_genres, user_genres)
+    components["genre_similarity"] = _calculate_cosine_similarity(anon_genres, user_genres)
+    weights["genre_similarity"] = 0.15
 
-    # 4. Author similarity
+    # 5. Author similarity
     user_authors = Counter()
     for ub in user_books_qs:
         weight = ub.user_rating if ub.user_rating else 3
         user_authors[ub.book.author.normalized_name] += weight
 
-    author_similarity = _calculate_cosine_similarity(anon_authors, user_authors)
+    components["author_similarity"] = _calculate_cosine_similarity(anon_authors, user_authors)
+    weights["author_similarity"] = 0.15
 
-    # Weighted combination
-    final_similarity = (
-        jaccard * 0.30
-        + top_overlap * 0.25
-        + genre_similarity * 0.20
-        + author_similarity * 0.20
-        + 0.05  # Small baseline for having any data
-    )
+    # Weighted combination (similar to calculate_user_similarity)
+    final_similarity = sum(components.get(key, 0) * weights.get(key, 0) for key in set(components.keys()) | set(weights.keys()))
+    
+    # Normalize if weights don't sum to 1
+    total_weight = sum(weights.values())
+    if total_weight > 0:
+        final_similarity = final_similarity / total_weight
 
     return {
         "similarity_score": final_similarity,
-        "jaccard": jaccard,
-        "top_overlap": top_overlap,
-        "genre_similarity": genre_similarity,
-        "author_similarity": author_similarity,
+        "jaccard": components.get("jaccard", 0),
+        "top_overlap": components.get("top_overlap", 0),
+        "genre_similarity": components.get("genre_similarity", 0),
+        "author_similarity": components.get("author_similarity", 0),
+        "shared_correlation": components.get("shared_correlation"),
         "shared_books_count": len(intersection),
+        "shared_rated_count": len(shared_rated_books),
     }
 
 
