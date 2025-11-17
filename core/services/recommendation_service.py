@@ -197,11 +197,16 @@ class RecommendationEngine:
 
         # Get series info from read books
         logger.info("_build_anonymous_context: Querying books for series info")
-        read_books = Book.objects.filter(id__in=read_book_ids).select_related("author")
-        logger.info(f"_build_anonymous_context: Got {read_books.count()} books")
-        series_counter = self._extract_series_info(read_books, is_queryset=False)
-        oversaturated_series = {series for series, count in series_counter.items() if count >= 3}
-        logger.info(f"_build_anonymous_context: Found {len(oversaturated_series)} oversaturated series")
+        if read_book_ids:
+            read_books = list(Book.objects.filter(id__in=read_book_ids).select_related("author"))
+            logger.info(f"_build_anonymous_context: Got {len(read_books)} books")
+            series_counter = self._extract_series_info(read_books, is_queryset=False)
+            oversaturated_series = {series for series, count in series_counter.items() if count >= 3}
+            logger.info(f"_build_anonymous_context: Found {len(oversaturated_series)} oversaturated series")
+        else:
+            read_books = []
+            oversaturated_series = set()
+            logger.info("_build_anonymous_context: No books to query")
 
         # Build author_weights from author_distribution (needed for fallback)
         # Weight by ratings if available
@@ -218,11 +223,18 @@ class RecommendationEngine:
                        Author.objects.filter(normalized_name__in=normalized_names)}
         logger.info(f"_build_anonymous_context: Found {len(authors_dict)} authors")
         
-        # Get all read books with authors in one query
-        logger.info("_build_anonymous_context: Querying read books with authors")
-        read_books_with_authors = {book.id: book.author_id for book in 
-                                   Book.objects.filter(id__in=read_book_ids).select_related('author')}
-        logger.info(f"_build_anonymous_context: Got {len(read_books_with_authors)} books with authors")
+        # Get all read books with authors in one query (reuse read_books if available)
+        logger.info("_build_anonymous_context: Getting read books with authors")
+        if read_book_ids:
+            if read_books:  # Reuse if we already fetched them
+                read_books_with_authors = {book.id: book.author_id for book in read_books}
+            else:
+                read_books_with_authors = {book.id: book.author_id for book in 
+                                           Book.objects.filter(id__in=read_book_ids).select_related('author')}
+            logger.info(f"_build_anonymous_context: Got {len(read_books_with_authors)} books with authors")
+        else:
+            read_books_with_authors = {}
+            logger.info("_build_anonymous_context: No books to get authors for")
         
         for normalized_name, count in author_dist.items():
             author = authors_dict.get(normalized_name)
