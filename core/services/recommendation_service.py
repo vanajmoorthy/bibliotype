@@ -51,22 +51,39 @@ class RecommendationEngine:
         """
         Get recommendations for an anonymous user.
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
             anon_session = AnonymousUserSession.objects.get(session_key=session_key)
         except AnonymousUserSession.DoesNotExist:
+            logger.warning(f"AnonymousUserSession not found for session_key: {session_key}")
             return []
 
         # Build anonymous context
         anon_context = self._build_anonymous_context(anon_session)
+        logger.info(f"Anonymous context: {len(anon_context.get('read_book_ids', []))} books, {len(anon_context.get('genre_preferences', {}))} genres")
 
         # Collect candidates
         candidates = self._collect_candidates_for_anonymous(anon_session, anon_context)
+        logger.info(f"Collected {len(candidates)} candidate books for anonymous user")
+
+        # If we don't have enough candidates, always use fallback
+        if len(candidates) < limit:
+            logger.info(f"Only {len(candidates)} candidates found, adding fallback candidates")
+            fallback_candidates = self._get_fallback_candidates(anon_context, limit=limit * 2)
+            for book_id, candidate_data in fallback_candidates.items():
+                if book_id not in candidates and book_id not in anon_context["read_book_ids"]:
+                    candidates[book_id] = candidate_data
+            logger.info(f"After fallback: {len(candidates)} total candidates")
 
         # Score and rank
         ranked = self._score_and_rank_candidates(candidates, anon_context)
+        logger.info(f"Ranked {len(ranked)} recommendations")
 
         # Apply diversity
         final_recommendations = self._apply_diversity_filter(ranked, anon_context, limit)
+        logger.info(f"Final recommendations after diversity filter: {len(final_recommendations)}")
 
         # Add explanations
         if include_explanations:
@@ -169,6 +186,18 @@ class RecommendationEngine:
         series_counter = self._extract_series_info(read_books, is_queryset=False)
         oversaturated_series = {series for series, count in series_counter.items() if count >= 3}
 
+        # Build author_weights from author_distribution (needed for fallback)
+        author_dist = anon_session.author_distribution or {}
+        author_weights = Counter()
+        # Convert normalized author names to author IDs for fallback
+        from ..models import Author
+        for normalized_name, count in author_dist.items():
+            try:
+                author = Author.objects.get(normalized_name=normalized_name)
+                author_weights[author.id] = count
+            except Author.DoesNotExist:
+                continue
+
         return {
             "session": anon_session,
             "read_book_ids": read_book_ids,
@@ -176,7 +205,7 @@ class RecommendationEngine:
             "top_books": top_books,
             "oversaturated_series": oversaturated_series,
             "genre_preferences": genre_preferences,
-            "author_weights": Counter(anon_session.author_distribution or {}),
+            "author_weights": author_weights,
             "author_saturation": {},  # Could compute from books if needed
             "dna": {},
             "total_books_read": len(read_book_ids),
@@ -451,13 +480,8 @@ class RecommendationEngine:
                         except Book.DoesNotExist:
                             continue
 
-        # Fallback for anonymous users
-        if len(candidates) < 20:
-            fallback_candidates = self._get_fallback_candidates(anon_context, limit=20)
-            for book_id, candidate_data in fallback_candidates.items():
-                if book_id not in candidates and book_id not in anon_context["read_book_ids"]:
-                    candidates[book_id] = candidate_data
-
+        # Note: Fallback is now handled in get_recommendations_for_anonymous after candidate collection
+        # This ensures we always have enough recommendations even if no similar users found
         return candidates
 
     def _score_and_rank_candidates(self, candidates, context):
