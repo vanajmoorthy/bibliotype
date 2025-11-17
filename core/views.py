@@ -115,21 +115,70 @@ def display_dna_view(request):
         if dna_data and request.session.session_key:
             try:
                 from .services.recommendation_service import get_recommendations_for_anonymous
+                from ..models import AnonymousUserSession
+                from django.utils import timezone
+                from datetime import timedelta
+                from collections import Counter
+                
+                # Check if AnonymousUserSession exists, if not try to recreate it
+                try:
+                    anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
+                    # Session exists, get recommendations normally
+                    recommendations = get_recommendations_for_anonymous(request.session.session_key, limit=6)
+                except AnonymousUserSession.DoesNotExist:
+                    # Session record doesn't exist - try to recreate from session dna_data
+                    # This can happen if the session expired but session data still exists
+                    logger.warning(f"AnonymousUserSession not found for session {request.session.session_key}, attempting to recreate from dna_data...")
+                    try:
+                        from ..models import Author
+                        
+                        # Extract distributions from dna_data
+                        genre_dist = {}
+                        for genre, count in dna_data.get('top_genres', []):
+                            genre_dist[genre] = count
+                        
+                        author_dist = {}
+                        for author, count in dna_data.get('top_authors', [])[:20]:
+                            normalized = Author._normalize(author)
+                            author_dist[normalized] = count
+                        
+                        # Try to get book IDs from session if stored, otherwise use empty list
+                        books_data = request.session.get('book_ids', [])
+                        top_books_data = request.session.get('top_book_ids', [])
+                        
+                        # Create a minimal AnonymousUserSession from dna_data
+                        anon_session = AnonymousUserSession.objects.create(
+                            session_key=request.session.session_key,
+                            dna_data=dna_data,
+                            books_data=books_data,
+                            top_books_data=top_books_data,
+                            genre_distribution=genre_dist,
+                            author_distribution=author_dist,
+                            expires_at=timezone.now() + timedelta(days=7),
+                        )
+                        
+                        # Now try to get recommendations
+                        recommendations = get_recommendations_for_anonymous(request.session.session_key, limit=6)
+                        logger.info(f"Recreated AnonymousUserSession and generated {len(recommendations)} recommendations")
+                    except Exception as recreate_error:
+                        logger.error(f"Error recreating anonymous session: {recreate_error}", exc_info=True)
+                        recommendations = []
+                        rec_error = "Unable to load recommendations. Session may have expired. Please upload your file again."
+                
+                # Process recommendations if we got any
+                if recommendations:
+                    for rec in recommendations:
+                        rec["confidence_pct"] = int(rec.get("confidence", 0) * 100)
+                        rec["primary_source_user"] = None
+                        best_similarity = 0
 
-                recommendations = get_recommendations_for_anonymous(request.session.session_key, limit=6)
+                        for source in rec.get("sources", []):
+                            if source.get("type") == "similar_user":
+                                if source.get("similarity_score", 0) > best_similarity:
+                                    best_similarity = source.get("similarity_score", 0)
+                                    rec["primary_source_user"] = source
 
-                for rec in recommendations:
-                    rec["confidence_pct"] = int(rec.get("confidence", 0) * 100)
-                    rec["primary_source_user"] = None
-                    best_similarity = 0
-
-                    for source in rec.get("sources", []):
-                        if source.get("type") == "similar_user":
-                            if source.get("similarity_score", 0) > best_similarity:
-                                best_similarity = source.get("similarity_score", 0)
-                                rec["primary_source_user"] = source
-
-                logger.info(f"Generated {len(recommendations)} recommendations for anonymous session")
+                    logger.info(f"Generated {len(recommendations)} recommendations for anonymous session")
             except Exception as e:
                 logger.error(f"Error generating recommendations for anonymous user: {e}", exc_info=True)
                 rec_error = "Unable to load recommendations at this time."
