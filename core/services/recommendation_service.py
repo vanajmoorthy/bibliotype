@@ -197,23 +197,30 @@ class RecommendationEngine:
         author_weights = Counter()
         # Convert normalized author names to author IDs for fallback
         from ..models import Author
+        # Optimize: get all authors in one query
+        normalized_names = list(author_dist.keys())
+        authors_dict = {author.normalized_name: author for author in 
+                       Author.objects.filter(normalized_name__in=normalized_names)}
+        # Get all read books with authors in one query
+        read_books_with_authors = {book.id: book.author_id for book in 
+                                   Book.objects.filter(id__in=read_book_ids).select_related('author')}
+        
         for normalized_name, count in author_dist.items():
-            try:
-                author = Author.objects.get(normalized_name=normalized_name)
-                # If we have ratings, weight by average rating for this author
-                author_book_ids = [book_id for book_id in read_book_ids 
-                                 if Book.objects.filter(id=book_id, author=author).exists()]
-                if author_book_ids and book_ratings:
-                    author_ratings = [book_ratings.get(bid, 3) for bid in author_book_ids if bid in book_ratings]
-                    if author_ratings:
-                        avg_rating = sum(author_ratings) / len(author_ratings)
-                        author_weights[author.id] = count * (avg_rating / 5.0)  # Weight by rating
-                    else:
-                        author_weights[author.id] = count
+            author = authors_dict.get(normalized_name)
+            if not author:
+                continue
+            # If we have ratings, weight by average rating for this author
+            author_book_ids = [book_id for book_id, author_id in read_books_with_authors.items() 
+                             if author_id == author.id]
+            if author_book_ids and book_ratings:
+                author_ratings = [book_ratings.get(bid, 3) for bid in author_book_ids if bid in book_ratings]
+                if author_ratings:
+                    avg_rating = sum(author_ratings) / len(author_ratings)
+                    author_weights[author.id] = count * (avg_rating / 5.0)  # Weight by rating
                 else:
                     author_weights[author.id] = count
-            except Author.DoesNotExist:
-                continue
+            else:
+                author_weights[author.id] = count
 
         return {
             "session": anon_session,
