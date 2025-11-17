@@ -320,7 +320,12 @@ class RecommendationsTestCase(TestCase):
     
     def test_anonymous_recommendations_with_rating_correlation(self):
         """Test that anonymous recommendations can store and retrieve book_ratings"""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("TEST: Starting test_anonymous_recommendations_with_rating_correlation")
+        
         # Create AnonymousUserSession with ratings
+        logger.info("TEST: Creating AnonymousUserSession")
         session_key = "test_session_with_ratings"
         anon_session = AnonymousUserSession.objects.create(
             session_key=session_key,
@@ -334,25 +339,36 @@ class RecommendationsTestCase(TestCase):
             author_distribution={self.author1.normalized_name: 5},
             book_ratings={self.book1.id: 5, self.book2.id: 4},
         )
+        logger.info("TEST: AnonymousUserSession created")
         
         # Test that AnonymousUserSession with book_ratings can be accessed
+        logger.info("TEST: Refreshing from DB")
         anon_session.refresh_from_db()
+        logger.info("TEST: Getting book_ratings")
         ratings = getattr(anon_session, 'book_ratings', None) or {}
+        logger.info(f"TEST: Ratings retrieved: {ratings}")
         self.assertEqual(ratings.get(self.book1.id), 5)
         self.assertEqual(ratings.get(self.book2.id), 4)
+        logger.info("TEST: Ratings verified")
         
         # Test that _build_anonymous_context includes disliked books from ratings
+        logger.info("TEST: Creating RecommendationEngine")
         from core.services.recommendation_service import RecommendationEngine
         engine = RecommendationEngine()
+        logger.info("TEST: RecommendationEngine created, calling _build_anonymous_context")
         context = engine._build_anonymous_context(anon_session)
+        logger.info("TEST: _build_anonymous_context completed")
         
         # Should have disliked_book_ids if we have low ratings
         # (We don't have any 1-2 star ratings in this test, so it should be empty)
+        logger.info("TEST: Checking context keys")
         self.assertIn('disliked_book_ids', context)
         self.assertIsInstance(context['disliked_book_ids'], set)
+        logger.info("TEST: Context verified")
         
         # Test that author_weights are built correctly
         self.assertIn('author_weights', context)
         # Should have author1 in weights since it's in author_distribution
         self.assertGreater(len(context['author_weights']), 0)
+        logger.info("TEST: Test completed successfully")
 

@@ -169,13 +169,21 @@ class RecommendationEngine:
 
     def _build_anonymous_context(self, anon_session):
         """Build context for anonymous user"""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("_build_anonymous_context: Starting")
+        
         read_book_ids = set(anon_session.books_data or [])
         top_books = set(anon_session.top_books_data or [])
+        logger.info(f"_build_anonymous_context: Got {len(read_book_ids)} read books")
+        
         # Use getattr for backwards compatibility if migration hasn't run yet
         book_ratings = getattr(anon_session, 'book_ratings', None) or {}
+        logger.info(f"_build_anonymous_context: Got {len(book_ratings)} ratings")
 
         # Get disliked books (rated 1-2 stars) - NEW!
         disliked_book_ids = {book_id for book_id, rating in book_ratings.items() if rating <= 2}
+        logger.info(f"_build_anonymous_context: Found {len(disliked_book_ids)} disliked books")
 
         # Get genre preferences from stored distribution
         genre_distribution = anon_session.genre_distribution or {}
@@ -185,25 +193,36 @@ class RecommendationEngine:
             if total_genre_weight > 0
             else {}
         )
+        logger.info(f"_build_anonymous_context: Built genre preferences for {len(genre_preferences)} genres")
 
         # Get series info from read books
+        logger.info("_build_anonymous_context: Querying books for series info")
         read_books = Book.objects.filter(id__in=read_book_ids).select_related("author")
+        logger.info(f"_build_anonymous_context: Got {read_books.count()} books")
         series_counter = self._extract_series_info(read_books, is_queryset=False)
         oversaturated_series = {series for series, count in series_counter.items() if count >= 3}
+        logger.info(f"_build_anonymous_context: Found {len(oversaturated_series)} oversaturated series")
 
         # Build author_weights from author_distribution (needed for fallback)
         # Weight by ratings if available
         author_dist = anon_session.author_distribution or {}
         author_weights = Counter()
+        logger.info(f"_build_anonymous_context: Building author weights from {len(author_dist)} authors")
+        
         # Convert normalized author names to author IDs for fallback
         from ..models import Author
         # Optimize: get all authors in one query
         normalized_names = list(author_dist.keys())
+        logger.info(f"_build_anonymous_context: Querying {len(normalized_names)} authors")
         authors_dict = {author.normalized_name: author for author in 
                        Author.objects.filter(normalized_name__in=normalized_names)}
+        logger.info(f"_build_anonymous_context: Found {len(authors_dict)} authors")
+        
         # Get all read books with authors in one query
+        logger.info("_build_anonymous_context: Querying read books with authors")
         read_books_with_authors = {book.id: book.author_id for book in 
                                    Book.objects.filter(id__in=read_book_ids).select_related('author')}
+        logger.info(f"_build_anonymous_context: Got {len(read_books_with_authors)} books with authors")
         
         for normalized_name, count in author_dist.items():
             author = authors_dict.get(normalized_name)
@@ -221,8 +240,10 @@ class RecommendationEngine:
                     author_weights[author.id] = count
             else:
                 author_weights[author.id] = count
+        logger.info(f"_build_anonymous_context: Built weights for {len(author_weights)} authors")
 
-        return {
+        logger.info("_build_anonymous_context: Building return dict")
+        context = {
             "session": anon_session,
             "read_book_ids": read_book_ids,
             "disliked_book_ids": disliked_book_ids,  # Now includes disliked books
@@ -234,6 +255,8 @@ class RecommendationEngine:
             "dna": {},
             "total_books_read": len(read_book_ids),
         }
+        logger.info("_build_anonymous_context: Completed successfully")
+        return context
 
     def _extract_series_info(self, books_data, is_queryset=True):
         """
