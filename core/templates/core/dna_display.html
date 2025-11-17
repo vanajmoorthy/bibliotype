@@ -20,7 +20,7 @@
                                 setInterval(() => {
                                     index = (index + 1) % this.messages.length;
                                     this.currentMessage = this.messages[index];
-                                }, 2000); 
+                                }, 4000); 
                             }
                         }"
                         x-text="currentMessage"
@@ -549,7 +549,8 @@
                             </div>
                         </div>
                         {% if recommendations %}
-                            <div x-data="{ recColors: ['#ffb4dd', '#ffe56c', '#ffa75e', '#8bbfff', '#FFE9CE', '#ff647c'] }"
+
+                            <div x-data="{ recColors: ['#ffb4dd', '#40e7aa', '#ffa75e', '#8bbfff', '#ff647c',  '#ffe56c' ] }"
                                  class="border-brand-text shadow-neo border-2 bg-white p-6">
                                 <h2 class="mb-4 text-2xl font-bold uppercase">Recommended for You</h2>
                                 <p class="mb-4 text-lg">Based on readers with similar taste</p>
@@ -576,7 +577,7 @@
                                                             <span> Recommended by
                                                                 <a href="{% url 'core:public_profile' rec.primary_source_user.username %}"
                                                                    target="_blank"
-                                                                   class="font-bold hover:bg-yellow-300">
+                                                                   class="font-bold hover:underline">
                                                                     {{ rec.primary_source_user.username }}
                                                                 </a>
                                                             </span>
