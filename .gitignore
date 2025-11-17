@@ -45,6 +45,7 @@ htmlcov/
 node_modules/
 *.lock
 dist/
+.pnpm-store/
 
 # Build
 build/
