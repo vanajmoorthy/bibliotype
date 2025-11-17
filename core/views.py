@@ -446,8 +446,11 @@ def public_profile_view(request, username):
     try:
         profile_user = User.objects.get(username=username)
         profile = profile_user.userprofile
+        # Refresh from database to ensure we have the latest is_public value
+        profile.refresh_from_db()
 
-        if not profile.is_public and request.user != profile_user:
+        # Check privacy: only show if public OR if user is viewing their own profile
+        if not profile.is_public and (not request.user.is_authenticated or request.user != profile_user):
             return render(request, "core/profile_private.html")
 
         display_name = profile_user.first_name if profile_user.first_name else profile_user.username
@@ -473,9 +476,8 @@ def public_profile_view(request, username):
         }
         return render(request, "core/public_profile.html", context)
     except User.DoesNotExist:
-        from django.http import Http404
-
-        raise Http404("User does not exist.")
+        # Show a nicer 404 page instead of the default Django 404
+        return render(request, "core/user_not_found.html", {"username": username}, status=404)
 
 
 def task_status_view(request, task_id):
