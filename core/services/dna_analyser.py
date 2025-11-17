@@ -135,8 +135,9 @@ def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_d
     from django.utils import timezone
     from datetime import timedelta
     
-    # Extract books
+    # Extract books and ratings
     books_data = [book.id for book in user_book_objects if book]
+    book_ratings = {}  # Store ratings for rating correlation
     
     # Calculate top books for anonymous users based on ratings and reviews
     book_scores = []
@@ -149,7 +150,12 @@ def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_d
             
             rating = row_dict.get('My Rating')
             if pd.notna(rating) and rating > 0:
-                score += rating * 20
+                try:
+                    rating_int = int(rating)
+                    book_ratings[book.id] = rating_int  # Store rating for correlation
+                    score += rating_int * 20
+                except (ValueError, TypeError):
+                    pass
             
             review = str(row_dict.get('My Review', '')).strip()
             if review and len(review) > 15:
@@ -180,6 +186,7 @@ def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_d
             'top_books_data': top_books_data,
             'genre_distribution': genre_dist,
             'author_distribution': author_dist,
+            'book_ratings': book_ratings,  # Store ratings for correlation
             'expires_at': timezone.now() + timedelta(days=7),
         }
     )

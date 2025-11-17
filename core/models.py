@@ -157,6 +157,7 @@ class AnonymousUserSession(models.Model):
     top_books_data = models.JSONField(default=list)  # Top 5 book IDs
     genre_distribution = models.JSONField(default=dict)  # {"genre": count}
     author_distribution = models.JSONField(default=dict)  # {"normalized_author": count}
+    book_ratings = models.JSONField(default=dict)  # {"book_id": rating} for rating correlation
     
     # Metadata
     anonymized = models.BooleanField(default=False)

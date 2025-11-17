@@ -144,6 +144,7 @@ def display_dna_view(request):
                         # Try to get book IDs from session if stored, otherwise use empty list
                         books_data = request.session.get('book_ids', [])
                         top_books_data = request.session.get('top_book_ids', [])
+                        book_ratings = request.session.get('book_ratings', {})  # Get ratings if stored
                         
                         # Create a minimal AnonymousUserSession from dna_data
                         anon_session = AnonymousUserSession.objects.create(
@@ -153,6 +154,7 @@ def display_dna_view(request):
                             top_books_data=top_books_data,
                             genre_distribution=genre_dist,
                             author_distribution=author_dist,
+                            book_ratings=book_ratings,  # Store ratings if available
                             expires_at=timezone.now() + timedelta(days=7),
                         )
                         
@@ -489,12 +491,13 @@ def get_task_result_view(request, task_id):
     cached_result = cache.get(f"dna_result_{task_id}")
     if cached_result is not None:
         request.session["dna_data"] = cached_result
-        # Also store book IDs from AnonymousUserSession if it exists
+        # Also store book IDs and ratings from AnonymousUserSession if it exists
         if request.session.session_key:
             try:
                 anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
                 request.session["book_ids"] = anon_session.books_data or []
                 request.session["top_book_ids"] = anon_session.top_books_data or []
+                request.session["book_ratings"] = anon_session.book_ratings or {}
             except AnonymousUserSession.DoesNotExist:
                 pass
         request.session.save()
@@ -512,12 +515,13 @@ def get_task_result_view(request, task_id):
         dna_data = result.get()
 
         request.session["dna_data"] = dna_data
-        # Also store book IDs from AnonymousUserSession if it exists
+        # Also store book IDs and ratings from AnonymousUserSession if it exists
         if request.session.session_key:
             try:
                 anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
                 request.session["book_ids"] = anon_session.books_data or []
                 request.session["top_book_ids"] = anon_session.top_books_data or []
+                request.session["book_ratings"] = anon_session.book_ratings or {}
             except AnonymousUserSession.DoesNotExist:
                 pass
         request.session.save()
