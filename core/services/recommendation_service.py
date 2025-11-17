@@ -350,14 +350,16 @@ class RecommendationEngine:
         """Collect candidates for anonymous user"""
         candidates = {}
 
-        # Source 1: Compare against public registered users
-        cache_key = f"all_users_for_recs_sample"
+        # Source 1: Compare against public registered users who are visible in recommendations
+        cache_key = f"public_users_for_recs_sample"
         users = cache.get(cache_key)
 
         if users is None:
             users = list(
                 User.objects.select_related("userprofile").filter(
                     userprofile__dna_data__isnull=False,
+                    userprofile__is_public=True,
+                    userprofile__visible_in_recommendations=True,
                 )[
                     :100
                 ]  # Limit for performance

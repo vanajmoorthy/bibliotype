@@ -115,7 +115,7 @@ def display_dna_view(request):
         if dna_data and request.session.session_key:
             try:
                 from .services.recommendation_service import get_recommendations_for_anonymous
-                from ..models import AnonymousUserSession
+                from .models import AnonymousUserSession, Author
                 from django.utils import timezone
                 from datetime import timedelta
                 from collections import Counter
@@ -130,7 +130,6 @@ def display_dna_view(request):
                     # This can happen if the session expired but session data still exists
                     logger.warning(f"AnonymousUserSession not found for session {request.session.session_key}, attempting to recreate from dna_data...")
                     try:
-                        from ..models import Author
                         
                         # Extract distributions from dna_data
                         genre_dist = {}
@@ -485,7 +484,7 @@ def task_status_view(request, task_id):
 
 
 def get_task_result_view(request, task_id):
-    from ..models import AnonymousUserSession
+    from .models import AnonymousUserSession
     
     cached_result = cache.get(f"dna_result_{task_id}")
     if cached_result is not None:
