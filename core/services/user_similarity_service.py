@@ -269,7 +269,8 @@ def calculate_anonymous_similarity(anonymous_session, user):
     anon_top_books = set(anonymous_session.top_books_data or [])
     anon_genres = Counter(anonymous_session.genre_distribution or {})
     anon_authors = Counter(anonymous_session.author_distribution or {})
-    anon_ratings = anonymous_session.book_ratings or {}  # Get stored ratings
+    # Use getattr for backwards compatibility if migration hasn't run yet
+    anon_ratings = getattr(anonymous_session, 'book_ratings', None) or {}  # Get stored ratings
 
     # Get user data with optimized queries
     user_books_qs = (

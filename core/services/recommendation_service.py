@@ -171,7 +171,8 @@ class RecommendationEngine:
         """Build context for anonymous user"""
         read_book_ids = set(anon_session.books_data or [])
         top_books = set(anon_session.top_books_data or [])
-        book_ratings = anon_session.book_ratings or {}
+        # Use getattr for backwards compatibility if migration hasn't run yet
+        book_ratings = getattr(anon_session, 'book_ratings', None) or {}
 
         # Get disliked books (rated 1-2 stars) - NEW!
         disliked_book_ids = {book_id for book_id, rating in book_ratings.items() if rating <= 2}

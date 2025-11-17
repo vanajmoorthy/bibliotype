@@ -497,7 +497,8 @@ def get_task_result_view(request, task_id):
                 anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
                 request.session["book_ids"] = anon_session.books_data or []
                 request.session["top_book_ids"] = anon_session.top_books_data or []
-                request.session["book_ratings"] = anon_session.book_ratings or {}
+                # Use getattr for backwards compatibility if migration hasn't run yet
+                request.session["book_ratings"] = getattr(anon_session, 'book_ratings', None) or {}
             except AnonymousUserSession.DoesNotExist:
                 pass
         request.session.save()
@@ -521,7 +522,8 @@ def get_task_result_view(request, task_id):
                 anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
                 request.session["book_ids"] = anon_session.books_data or []
                 request.session["top_book_ids"] = anon_session.top_books_data or []
-                request.session["book_ratings"] = anon_session.book_ratings or {}
+                # Use getattr for backwards compatibility if migration hasn't run yet
+                request.session["book_ratings"] = getattr(anon_session, 'book_ratings', None) or {}
             except AnonymousUserSession.DoesNotExist:
                 pass
         request.session.save()
