@@ -478,7 +478,7 @@ def public_profile_view(request, username):
         return render(request, "core/public_profile.html", context)
     except User.DoesNotExist:
         # Show a nicer 404 page instead of the default Django 404
-        return render(request, "core/user_not_found.html", {"username": username}, status=404)
+        return render(request, "core/404.html", {"username": username}, status=404)
 
 
 def task_status_view(request, task_id):
@@ -548,3 +548,13 @@ def get_task_result_view(request, task_id):
         return JsonResponse({"status": "FAILURE", "error": "An error occurred during processing."})
     else:
         return JsonResponse({"status": "PENDING"})
+
+
+def handler404(request, exception=None):
+    """Custom 404 handler that renders our fun 404 page."""
+    return render(request, "core/404.html", status=404)
+
+
+def catch_all_404_view(request, unused_path):
+    """Catch-all view for unmatched URLs that shows our custom 404 page."""
+    return handler404(request)
