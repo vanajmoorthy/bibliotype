@@ -222,3 +222,6 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
     },
 }
+
+# Custom 404 handler
+handler404 = 'core.views.handler404'
