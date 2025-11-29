@@ -82,11 +82,15 @@ WSGI_APPLICATION = "bibliotype.wsgi.application"
 
 DATABASES = {"default": dj_database_url.config(default=f'sqlite:///{os.path.join(BASE_DIR, "db.sqlite3")}')}
 
-# ADD THIS CACHE CONFIGURATION
+# Cache configuration
+# Uses localhost:6379 by default, which works for:
+# - Local Redis server running on localhost
+# - Docker Redis container exposed on port 6379 (via docker-compose port mapping)
+# Override with REDIS_CACHE_URL environment variable if needed
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://redis:6379/1",
+        "LOCATION": os.environ.get("REDIS_CACHE_URL", "redis://localhost:6379/1"),
     }
 }
 
@@ -152,14 +156,23 @@ else:
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Note: We are using redis://redis:6379/0
-# 'redis' is the hostname of our Redis container on the Docker network.
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
-CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
+# Celery configuration
+# Defaults to localhost:6379, which works for:
+# - Local Redis server running on localhost
+# - Docker Redis container exposed on port 6379 (via docker-compose port mapping)
+# When running inside Docker containers, docker-compose sets these to redis://redis:6379/0
+# Override with CELERY_BROKER_URL and CELERY_RESULT_BACKEND environment variables if needed
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
+# Prevent Celery from connecting to broker during Django startup
+# This avoids hanging when Redis is temporarily unavailable
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = False
+CELERY_BROKER_CONNECTION_RETRY = False
+CELERY_BROKER_CONNECTION_TIMEOUT = 5
 
 # Logging configuration
 # Create logs directory if it doesn't exist
