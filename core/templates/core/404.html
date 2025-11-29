@@ -4,11 +4,10 @@
         <div class="w-full max-w-2xl text-center">
             <div class="border-brand-text shadow-neo border-2 bg-white p-8 md:p-12">
                 <!-- Large 404 with DNA twist -->
-                <div class="mb-6">
-                    <h1 class="text-8xl md:text-9xl font-bold uppercase tracking-tighter" style="font-family: 'VT323', monospace;">
-                        4<span class="text-brand-pink">🧬</span>4
+                    <h1 class="text-brand-text md:text-9xl text-4xl font-bold uppercase tracking-tighter" >
+                        404
                     </h1>
-                </div>
+
                 
                 <!-- Main message -->
                 <h2 class="mb-4 text-3xl md:text-4xl font-bold uppercase">{% if username %}User Not Found{% else %}Page Not Found{% endif %}</h2>
@@ -16,23 +15,22 @@
                     <p class="mb-2 text-xl md:text-2xl font-bold text-brand-text">
                         User <span class="text-brand-pink">"{{ username }}"</span> not found!
                     </p>
-                    <p class="mb-8 text-lg text-gray-700">
-                        This user's Reading DNA sequence is missing from our catalog. 
-                        They may have changed their username or the profile may have been deleted.
+                    <p class="mb-10 text-lg text-gray-700">
+                        This reader hasn't joined our library, or may never have existed.
                     </p>
                 {% else %}
                     <p class="mb-2 text-xl md:text-2xl font-bold text-brand-text">
                         Oh no, the page you're looking for doesn't exist!
                     </p>
-                    <p class="mb-8 text-lg text-gray-700">
+                    <p class="mb-10 text-lg text-gray-700">
                         Looks like we can't find it in our library anyway, try somewhere else.
                     </p>
                 {% endif %}
                 
                 <!-- Fun book-themed message -->
-                <div class="border-brand-text shadow-neo-sm border-2 bg-brand-cyan p-4 mb-6">
+                <div class="border-brand-text shadow-neo-sm border-2 bg-brand-pink p-4 mb-6">
                     <p class="text-lg font-bold uppercase">
-                        📚 "This chapter was never written"
+                        {% if username %}📖 "This reader hasn't joined our library"{% else %}📚 "This chapter was never written"{% endif %}
                     </p>
                 </div>
                 
@@ -44,12 +42,12 @@
                     </a>
                     {% if user.is_authenticated %}
                         <a href="{% url 'core:display_dna' %}"
-                           class="shadow-neo hover:shadow-neo-inset border-brand-text bg-brand-pink inline-block border-2 px-6 py-3 font-bold uppercase transition-shadow">
+                           class="shadow-neo hover:shadow-neo-inset border-brand-text bg-brand-cyan inline-block border-2 px-6 py-3 font-bold uppercase transition-shadow">
                             View Your DNA
                         </a>
                     {% else %}
                         <a href="{% url 'core:signup' %}"
-                           class="shadow-neo hover:shadow-neo-inset border-brand-text bg-brand-yellow inline-block border-2 px-6 py-3 font-bold uppercase transition-shadow">
+                           class="shadow-neo hover:shadow-neo-inset border-brand-text bg-brand-cyan inline-block border-2 px-6 py-3 font-bold uppercase transition-shadow">
                             Discover Your DNA
                         </a>
                     {% endif %}
@@ -58,8 +56,9 @@
                 <!-- Fun footer message -->
                 <div class="mt-8 pt-6 border-t-2 border-brand-text">
                     <p class="text-sm text-gray-600 italic">
-                        Error Code: BOOK_NOT_FOUND_404<br>
-                        Genre: Mystery | Status: Unsolved
+                        {% if username %}Error Code: PROFILE_NOT_FOUND_404<br>
+                        Genre: Mystery | Status: Missing Reader{% else %}Error Code: PAGE_NOT_FOUND_404<br>
+                        Genre: Mystery | Status: Unsolved{% endif %}
                     </p>
                 </div>
             </div>
