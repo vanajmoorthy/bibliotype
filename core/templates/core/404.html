@@ -15,9 +15,8 @@
                     <p class="mb-2 text-xl md:text-2xl font-bold text-brand-text">
                         User <span class="text-brand-pink">"{{ username }}"</span> not found!
                     </p>
-                    <p class="mb-8 text-lg text-gray-700">
-                        This user's Reading DNA sequence is missing from our catalog. 
-                        They may have changed their username or the profile may have been deleted.
+                    <p class="mb-10 text-lg text-gray-700">
+                        This reader hasn't joined our library, or may never have existed.
                     </p>
                 {% else %}
                     <p class="mb-2 text-xl md:text-2xl font-bold text-brand-text">
@@ -31,7 +30,7 @@
                 <!-- Fun book-themed message -->
                 <div class="border-brand-text shadow-neo-sm border-2 bg-brand-pink p-4 mb-6">
                     <p class="text-lg font-bold uppercase">
-                        📚 "This chapter was never written"
+                        {% if username %}📖 "This reader hasn't joined our library"{% else %}📚 "This chapter was never written"{% endif %}
                     </p>
                 </div>
                 
@@ -57,8 +56,9 @@
                 <!-- Fun footer message -->
                 <div class="mt-8 pt-6 border-t-2 border-brand-text">
                     <p class="text-sm text-gray-600 italic">
-                        Error Code: PAGE_NOT_FOUND_404<br>
-                        Genre: Mystery | Status: Unsolved
+                        {% if username %}Error Code: PROFILE_NOT_FOUND_404<br>
+                        Genre: Mystery | Status: Missing Reader{% else %}Error Code: PAGE_NOT_FOUND_404<br>
+                        Genre: Mystery | Status: Unsolved{% endif %}
                     </p>
                 </div>
             </div>
