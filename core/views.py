@@ -552,9 +552,27 @@ def get_task_result_view(request, task_id):
 
 def handler404(request, exception=None):
     """Custom 404 handler that renders our fun 404 page."""
-    return render(request, "core/404.html", status=404)
+    # Check if this is a user profile path to show user-not-found message
+    path = request.path.strip('/')
+    username = None
+    if path.startswith('u/') and len(path.split('/')) >= 2:
+        # Extract username from path like "u/username" or "u/username/"
+        parts = path.split('/')
+        if parts[0] == 'u' and len(parts) > 1:
+            username = parts[1]
+    
+    return render(request, "core/404.html", {"username": username}, status=404)
 
 
 def catch_all_404_view(request, unused_path):
     """Catch-all view for unmatched URLs that shows our custom 404 page."""
-    return handler404(request)
+    # Check if this is a user profile path to show user-not-found message
+    path = request.path.strip('/')
+    username = None
+    if path.startswith('u/') and len(path.split('/')) >= 2:
+        # Extract username from path like "u/username" or "u/username/"
+        parts = path.split('/')
+        if parts[0] == 'u' and len(parts) > 1:
+            username = parts[1]
+    
+    return render(request, "core/404.html", {"username": username}, status=404)
