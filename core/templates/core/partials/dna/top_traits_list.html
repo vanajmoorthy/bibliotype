@@ -1,0 +1,23 @@
+{% if dna.top_reader_types %}
+    <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+        <h2 class="mb-4 text-2xl font-bold uppercase">Top Reader Traits</h2>
+        <ol class="space-y-2 text-lg">
+            {% for item in dna.top_reader_types %}
+                {% if forloop.first %}
+                    {% with bgcolor='bg-yellow-300' bordercolor='border-yellow-500' %}
+                        {% include 'core/partials/dna/leaderboard_item.html' %}
+                    {% endwith %}
+                {% elif forloop.counter == 2 %}
+                    {% with bgcolor='bg-gray-300' bordercolor='border-gray-500' %}
+                        {% include 'core/partials/dna/leaderboard_item.html' %}
+                    {% endwith %}
+                {% elif forloop.counter == 3 %}
+                    {% with bgcolor='bg-amber-500' bordercolor='border-amber-700' %}
+                        {% include 'core/partials/dna/leaderboard_item.html' %}
+                    {% endwith %}
+                {% endif %}
+            {% endfor %}
+        </ol>
+    </div>
+{% endif %}
+

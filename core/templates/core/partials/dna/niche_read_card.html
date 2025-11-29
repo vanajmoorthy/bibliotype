@@ -1,0 +1,17 @@
+<div class="border-brand-text shadow-neo border-2 bg-white p-6">
+    <h2 class="mb-4 text-2xl font-bold uppercase">Most Niche Read</h2>
+    {% if dna.most_niche_book %}
+        <p class="text-xl font-bold">{{ dna.most_niche_book.title }}</p>
+        <p class="text-lg">by {{ dna.most_niche_book.author }}</p>
+        <p class="bg-brand-cyan border-brand-text mt-2 inline-block border-2 px-2 py-1 text-base">
+            {% if niche_caption %}
+                {{ niche_caption }}
+            {% else %}
+                Only {{ dna.most_niche_book.read_count }} Bibliotype user(s) have read this!
+            {% endif %}
+        </p>
+    {% else %}
+        <p class="text-lg">Not enough data to determine {{ pronoun_pos|lower|default:"your" }} niche reads yet.</p>
+    {% endif %}
+</div>
+
