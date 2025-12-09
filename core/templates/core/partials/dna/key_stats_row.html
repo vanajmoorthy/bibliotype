@@ -1,0 +1,16 @@
+{% load humanize %}
+<div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+    <div class="bg-brand-yellow border-brand-text shadow-neo border-2 p-6 text-center">
+        <div class="text-5xl font-bold">{{ dna.user_stats.total_books_read }}</div>
+        <div class="mt-2 text-lg uppercase">Total Books Read</div>
+    </div>
+    <div class="bg-brand-pink border-brand-text shadow-neo border-2 p-6 text-center">
+        <div class="text-5xl font-bold">{{ dna.user_stats.total_pages_read|intcomma }}</div>
+        <div class="mt-2 text-lg uppercase">Total Pages Read</div>
+    </div>
+    <div class="bg-brand-cyan border-brand-text shadow-neo border-2 p-6 text-center">
+        <div class="text-5xl font-bold">{{ dna.average_rating_overall }}</div>
+        <div class="mt-2 text-lg uppercase">Overall Rating</div>
+    </div>
+</div>
+

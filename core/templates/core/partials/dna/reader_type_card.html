@@ -1,0 +1,10 @@
+{% if dna.reader_type %}
+    <div class="bg-brand-purple border-brand-text shadow-neo border-2 p-6 text-center">
+        <div class="text-lg uppercase">{{ owner_pos|default:"Your" }} Reader Type is...</div>
+        <div class="mt-1 text-5xl font-bold tracking-widest uppercase">{{ dna.reader_type }}</div>
+        {% if dna.reader_type_explanation %}
+            <p class="mx-auto mt-4 max-w-2xl text-lg">{{ dna.reader_type_explanation }}</p>
+        {% endif %}
+    </div>
+{% endif %}
+

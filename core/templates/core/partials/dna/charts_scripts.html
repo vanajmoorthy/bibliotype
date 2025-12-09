@@ -1,0 +1,175 @@
+<script>
+    function updateVibeSeparators() {
+        const vibeContainer = document.getElementById("vibe-container");
+        if (!vibeContainer) return;
+
+        const items = vibeContainer.querySelectorAll(".vibe-item");
+        const separators = vibeContainer.querySelectorAll(".vibe-separator");
+
+        if (items.length < 2) return;
+
+        // 1. First, show all separators
+        separators.forEach((sep) => (sep.style.display = "inline"));
+
+        // 2. Loop through items to find line breaks
+        for (let i = 0; i < items.length - 1; i++) {
+            const currentItem = items[i];
+            const nextItem = items[i + 1];
+
+            // If the next item is on a new line, hide the separator after the current one
+            if (nextItem.offsetTop > currentItem.offsetTop) {
+                const separatorToHide = separators[i];
+                if (separatorToHide) {
+                    separatorToHide.style.display = "none";
+                }
+            }
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        updateVibeSeparators();
+        
+        const dnaDataScript = document.getElementById("dna-data");
+        if (!dnaDataScript) return;
+        
+        const dnaData = JSON.parse(dnaDataScript.textContent);
+
+        Chart.defaults.font.family = "VT323";
+        Chart.defaults.font.size = 16;
+        Chart.defaults.color = "#1f2937";
+
+        // --- Books By Year Chart ---
+        const booksByYearCtx = document.getElementById("booksByYearChart")?.getContext("2d");
+        if (booksByYearCtx && dnaData.stats_by_year) {
+            new Chart(booksByYearCtx, {
+                type: "bar",
+                data: {
+                    labels: dnaData.stats_by_year.map((d) => d.year),
+                    datasets: [
+                        {
+                            label: "# of Books",
+                            data: dnaData.stats_by_year.map((d) => d.count),
+                            backgroundColor: "#fde047",
+                            borderColor: "#1f2937",
+                            borderWidth: 2,
+                        },
+                    ],
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: "#e5e7eb" }, ticks: { stepSize: 1 } },
+                        x: { grid: { display: false } },
+                    },
+                },
+            });
+        }
+
+        const chartColors = ['#ffb4dd', '#40e7aa', '#ffa75e', '#8bbfff', '#FFE9CE', '#ff647c', '#ffe56c', '#A1CDF1', '#9af6d4', '#fe9393'];
+
+        // --- Helper to parse data (Array of tuples vs Object) ---
+        function parseChartData(data) {
+            if (Array.isArray(data)) {
+                return {
+                    labels: data.map(item => item[0]),
+                    values: data.map(item => item[1])
+                };
+            } else if (typeof data === 'object' && data !== null) {
+                return {
+                    labels: Object.keys(data),
+                    values: Object.values(data)
+                };
+            }
+            return { labels: [], values: [] };
+        }
+
+        // --- Top Genres Chart ---
+        const topGenresCtx = document.getElementById("topGenresChart")?.getContext("2d");
+        if (topGenresCtx && dnaData.top_genres) {
+            const { labels: genreLabels, values: genreValues } = parseChartData(dnaData.top_genres);
+            
+            new Chart(topGenresCtx, {
+                type: "doughnut",
+                data: {
+                    labels: genreLabels,
+                    datasets: [
+                        {
+                            label: "Genres",
+                            data: genreValues,
+                            backgroundColor: chartColors,
+                            borderColor: '#1f2937', 
+                            borderWidth: 2,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.label || "";
+                                    if (label) {
+                                        label += ": ";
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed;
+                                    }
+                                    return label;
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+        }
+
+        // --- Top Authors Chart ---
+        const topAuthorsCtx = document.getElementById("topAuthorsChart")?.getContext("2d");
+        if (topAuthorsCtx && dnaData.top_authors) {
+            const { labels: authorLabels, values: authorValues } = parseChartData(dnaData.top_authors);
+
+            new Chart(topAuthorsCtx, {
+                type: "doughnut",
+                data: {
+                    labels: authorLabels,
+                    datasets: [
+                        {
+                            label: "Authors",
+                            data: authorValues,
+                            backgroundColor: chartColors,
+                            borderColor: '#1f2937',
+                            borderWidth: 2,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.label || "";
+                                    if (label) {
+                                        label += ": ";
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed;
+                                    }
+                                    return label;
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+        }
+    });
+
+    window.addEventListener("resize", updateVibeSeparators);
+</script>
+

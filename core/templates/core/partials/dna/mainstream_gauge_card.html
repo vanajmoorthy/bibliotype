@@ -1,0 +1,153 @@
+<div class="border-brand-text shadow-neo border-2 bg-white p-6">
+    <h2 class="mb-4 text-center text-2xl font-bold uppercase">How Mainstream Is Your Taste?</h2>
+    <!-- Alpine.js component for the gauge logic -->
+    {# djlint:off #}
+    <div x-data="{
+        // --- STATE ---
+        score: {{ dna.mainstream_score_percent }},
+        animatedScore: 0,
+        displayedScore: 0,
+        hasAnimated: false,
+
+        // --- GETTERS ---
+        get rotation() {
+            const clampedScore = Math.max(-5, Math.min(105, this.animatedScore));
+            return (clampedScore / 100) * 180 - 90;
+        },
+
+        // --- METHODS ---
+        // The animate method now handles both the main animation AND the continuous wiggle.
+        animate() {
+            const duration = 1000; // Main animation duration
+            let startTimestamp = null;
+
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const elapsed = timestamp - startTimestamp;
+
+                // 1. Calculate the main progress of the animation (caps at 1)
+                const mainProgress = Math.min(elapsed / duration, 1);
+                const easedMainProgress = 0.5 - Math.cos(mainProgress * Math.PI) / 2;
+
+                // 2. Calculate the continuous wiggle value based on the current time
+                const wiggle1 = Math.sin(timestamp / 280) * 0.4; // Slower wiggle
+                const wiggle2 = Math.sin(timestamp / 110) * 0.25; // Faster wiggle
+                const totalWiggle = wiggle1 + wiggle2;
+
+                // 3. Scale the wiggle's intensity by the main animation's progress.
+                // This makes the wiggle start small and grow to full strength.
+                const scaledWiggle = totalWiggle * easedMainProgress;
+
+                // 4. Set the final needle position.
+                // It's the main eased position plus the scaled, continuous wiggle.
+                this.animatedScore = (this.score * easedMainProgress) + scaledWiggle;
+
+                // 5. Update the displayed score text, but only during the main animation.
+                // After it's done, lock it to the final score so the text doesn't wiggle.
+                if (mainProgress < 1) {
+                    this.displayedScore = Math.round(this.score * easedMainProgress);
+                } else {
+                    this.displayedScore = Math.round(this.score);
+                }
+                
+                // 6. Keep the animation loop running forever to maintain the wiggle.
+                window.requestAnimationFrame(step);
+            };
+
+            // Start the single, continuous animation loop.
+            window.requestAnimationFrame(step);
+        },
+
+        init() {
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting && !this.hasAnimated) {
+                    this.hasAnimated = true;
+                    this.animate(); // This one call now handles everything.
+                    observer.unobserve(this.$el);
+                }
+            }, { threshold: 0.5 });
+            observer.observe(this.$el);
+        }
+    }" x-init="init()">
+        <div class="relative mx-auto h-32 w-64">
+
+            <!-- Layer 1: The Semicircle Container (with the necessary clipping) -->
+            <div class="absolute top-0 left-0 h-full w-full overflow-hidden">
+                <!-- The actual gradient circle that gets clipped -->
+                <div class="absolute top-0 left-0 h-64 w-64 rounded-full border-4 border-brand-text"
+                    style="background-image: conic-gradient(
+                        from 180deg,
+                        #00c27a 0% 20%,      /* Niche */
+                        #66d19e 20% 40%,     /* Leaning Niche */
+                        #ffc107 40% 60%,     /* Balanced */
+                        #ff8c42 60% 80%,     /* Leaning Mainstream */
+                        #ff5c5c 80% 100%      /* Mainstream */
+                        );">
+                </div>
+            </div>
+
+         <!-- Border at 20% mark -->
+            <div class="absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2 bg-brand-text"
+                 style="transform: rotate(36deg);"></div>
+
+
+        
+         <!-- Border at 20% mark -->
+            <div class="absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2 bg-brand-text"
+                 style="transform: rotate(-36deg);"></div>
+
+
+  
+
+            <!-- Layer 2: SVG for Text (Not clipped, sits on top) -->
+            <svg class="absolute top-0 left-0 h-64 w-64 z-10" viewBox="0 0 256 256" overflow="visible">
+                <defs>
+                    <path id="semicircle" d="M 12,128 A 116,116 0 0,1 244,128" fill="none"/>
+                </defs>
+                <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
+                    <textPath href="#semicircle" startOffset="15%" text-anchor="middle">not very</textPath>
+                </text>
+                <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
+                    <textPath href="#semicircle" startOffset="50%" text-anchor="middle">kinda</textPath>
+                </text>
+                <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
+                    <textPath href="#semicircle" startOffset="85%" text-anchor="middle">extremely</textPath>
+                </text>
+            </svg>
+
+
+            <div class="absolute -bottom-4 border-brand-text border-4 left-0 w-full h-4 bg-gray-600 z-[15]"></div>
+
+            <!-- Note: Increased width to w-3 to make the taper more visible -->
+            <div class="absolute bottom-0 left-1/2 h-24 w-3 origin-bottom  z-20"
+                 :style="`transform: translateX(-50%) rotate(${rotation}deg);`">
+
+                <!-- The SVG element defines the shape and its appearance -->
+                <svg width="100%" height="100%" viewBox="0 0 12 96" preserveAspectRatio="none"
+                     xmlns="http://www.w3.org/2000/svg">
+
+                    <!-- The polygon's points are calculated based on the 12x96 viewBox -->
+                    <polygon points="0,96 12,96 6,0"
+                             class="fill-gray-200 stroke-brand-text"
+                             stroke-width="2"
+                             stroke-linejoin="miter" />
+                </svg>
+            </div>
+
+            <!-- Layer 4: The Pivot Point (Not clipped, sits on the very top) -->
+
+            <div class="absolute bottom-0 left-1/2 h-7 w-7 -translate-x-1/2 translate-y-1/2 rounded-full border-2 border-brand-text bg-gray-200 z-29"></div>
+            <div class="absolute bottom-0 left-1/2 h-4 w-4 -translate-x-1/2 translate-y-1/2 rounded-full  bg-brand-text z-30"></div>
+
+
+        </div>
+
+        <!-- The descriptive text below the meter -->
+        <p class="mt-6 text-center text-lg">
+            <strong x-text="displayedScore + '%'"></strong> of the books in {{ pronoun_pos|lower|default:"your" }} library are considered
+            "mainstream," based on author and publisher popularity.
+        </p>
+    </div>
+</div>
+{# djlint:on #}
+
