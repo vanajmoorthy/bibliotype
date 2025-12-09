@@ -1,0 +1,75 @@
+<div x-data="{ recColors: {{ rec_colors_js|default:'[\'#ffb4dd\', \'#40e7aa\', \'#ffa75e\', \'#8bbfff\', \'#FFE9CE\', \'#ff647c\']' }} }"
+     class="border-brand-text shadow-neo border-2 bg-white p-6">
+    <h2 class="mb-4 text-2xl font-bold uppercase">{{ rec_title|default:"Recommended for You" }}</h2>
+    <p class="mb-4 text-lg">Based on readers with similar taste</p>
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {% for rec in recommendations %}
+            <div class="border-brand-text shadow-neo-sm {% if not is_public_view %}flex h-full flex-col{% endif %} border-2 p-4"
+                 :style="{ 'background-color': recColors[{{ forloop.counter0 }} % 6] }">
+                
+                {% if is_public_view %}
+                    {# --- PUBLIC PROFILE LAYOUT --- #}
+                    <div class="mb-2">
+                        <span class="bg-brand-green text-brand-text border-brand-text border-2 px-2 py-1 font-bold">
+                            {{ rec.score|floatformat:0 }}% Match
+                        </span>
+                    </div>
+                    <p class="font-bold text-lg">{{ rec.book.title }}</p>
+                    <p class="text-base">by {{ rec.book.author.name }}</p>
+                    {% if rec.sources %}
+                        {% for source in rec.sources %}
+                            {% if forloop.first and source.type == 'registered_user' %}
+                                <div class="mt-2 text-sm text-gray-600">
+                                    Similar to: <a href="{% url 'core:public_profile' source.username %}" 
+                                                     target="_blank"
+                                                     class="text-blue-600 hover:underline">
+                                        {{ source.username }}
+                                    </a>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+
+                {% else %}
+                    {# --- PRIVATE DNA LAYOUT --- #}
+                    {# --- TOP SECTION --- #}
+                    <div class="flex justify-between flex-grow flex-col">
+                        <div class="flex justify-between align-top">
+                            <div class="max-w-[70%]">
+                                <p class="text-xl font-bold">{{ rec.book.title }}</p>
+                                <p class="text-lg">by {{ rec.book.author.name }}</p>
+                            </div>
+                            <div>
+                                <span class="text-brand-text font-bold w-8">{{ rec.confidence_pct }}% Match</span>
+                            </div>
+                        </div>
+                        {# --- MIDDLE: EXPLANATION SECTION --- #}
+                        <div class="mt-3 space-y-1 text-base text-gray-800 border-t-2 pt-2 border-dashed border-gray-700">
+                            {# First line: The recommender and their match quality badge #}
+                            {% if rec.primary_source_user %}
+                                <div class="flex justify-between flex-wrap gap-x-2">
+                                    <span> Recommended by
+                                        <a href="{% url 'core:public_profile' rec.primary_source_user.username %}"
+                                           target="_blank"
+                                           class="font-bold hover:underline">
+                                            {{ rec.primary_source_user.username }}
+                                        </a>
+                                    </span>
+                                    <span class="border-brand-text border-2 px-1.5 py-0.5 text-xs font-bold uppercase text-brand-text w-max {{ rec.primary_source_user.badge_class }}">
+                                        {{ rec.primary_source_user.match_quality }}
+                                    </span>
+                                </div>
+                            {% endif %}
+                            {# Subsequent lines: Other reasons for the match #}
+                            {% if rec.explanation_components.shared %}<p>• {{ rec.explanation_components.shared }}</p>{% endif %}
+                            {% if rec.explanation_components.genre %}<p>• {{ rec.explanation_components.genre }}</p>{% endif %}
+                            {% if rec.explanation_components.popularity %}<p>• {{ rec.explanation_components.popularity }}</p>{% endif %}
+                            {% if rec.explanation_components.rating %}<p>• {{ rec.explanation_components.rating }}</p>{% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
