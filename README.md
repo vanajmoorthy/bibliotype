@@ -14,6 +14,7 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - add favicon!!
 - put dev data into prod using fixtures? don't need
 - ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+- improve profile private page
 - improve community stats look
   - timelines/graphs for all community stats
   - same for controversial ratings
