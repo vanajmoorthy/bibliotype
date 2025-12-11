@@ -27,3 +27,7 @@ urlpatterns = [
     # Catch-all for 404s - must be last
     path("<path:unused_path>", views.catch_all_404_view),
 ]
+
+# Django Silk URLs for profiling - only available in local development (DEBUG=True)
+if settings.DEBUG:
+    urlpatterns.insert(0, path("silk/", include("silk.urls", namespace="silk")))

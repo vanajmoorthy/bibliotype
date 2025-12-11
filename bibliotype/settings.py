@@ -45,6 +45,10 @@ INSTALLED_APPS = [
     "django_celery_results",
 ]
 
+# Django Silk for profiling - only enabled in local development (DEBUG=True)
+if DEBUG:
+    INSTALLED_APPS.insert(0, "silk")  # Insert at beginning to ensure it's loaded first
+
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -55,6 +59,10 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+# Django Silk middleware for profiling - only enabled in local development (DEBUG=True)
+if DEBUG:
+    MIDDLEWARE.insert(0, "silk.middleware.SilkyMiddleware")
 
 
 ROOT_URLCONF = "bibliotype.urls"
@@ -238,3 +246,13 @@ CELERY_BEAT_SCHEDULE = {
 
 # Custom 404 handler
 handler404 = 'core.views.handler404'
+
+# Django Silk configuration - only used when DEBUG=True (local development)
+if DEBUG:
+    SILKY_PYTHON_PROFILER = True
+    SILKY_PYTHON_PROFILER_BINARY = True
+    SILKY_META = True
+    # Limit the number of requests to store (prevents database bloat)
+    SILKY_MAX_RECORDED_REQUESTS = 1000
+    # Profile all requests when enabled locally
+    SILKY_INTERCEPT_PERCENT = 100
