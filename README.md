@@ -19,7 +19,6 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - improve community stats look
   - timelines/graphs for all community stats
   - same for controversial ratings
-- hover states for all buttons (double check, button partials)
 - long author names and genre names cutting of count when hovering on chart
 - allow user to delete profile
 - ✅ ~get rid of books per year~ 
