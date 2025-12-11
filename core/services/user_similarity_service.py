@@ -248,7 +248,6 @@ def find_similar_users(user, top_n=20, min_similarity=0.2):
     similarities = []
     for other_user in all_users:
         similarity_data = calculate_user_similarity(user, other_user)
-        print(similarity_data)
 
         if similarity_data["similarity_score"] >= min_similarity:
             similarities.append((other_user, similarity_data))

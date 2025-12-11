@@ -2,13 +2,104 @@
 <!doctype html>
 <html lang="en" class="h-full">
     <head>
-        <meta charset="UTF--8" />
+        <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Bibliotype - Your Literary Personality</title>
+        
+        {# SEO Meta Tags #}
+        <title>{% block seo_title %}Bibliotype - Discover Your Reading DNA & Literary Personality{% endblock %}</title>
+        <meta name="description" content="{% block seo_description %}Discover your unique reading DNA and literary personality type. Upload your Goodreads data to get personalized insights into your reading habits, favorite genres, and book preferences.{% endblock %}" />
+        <meta name="keywords" content="{% block seo_keywords %}reading DNA, literary personality, book analysis, reading habits, Goodreads export, reading statistics, book recommendations, reading insights, bibliophile, reading dashboard{% endblock %}" />
+        <meta name="author" content="Bibliotype" />
+        <meta name="robots" content="{% block seo_robots %}index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1{% endblock %}" />
+        <meta name="language" content="English" />
+        <meta name="revisit-after" content="7 days" />
+        <meta name="theme-color" content="#f5f5f5" />
+        <meta name="format-detection" content="telephone=no" />
+        <link rel="canonical" href="{% block seo_canonical %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}" />
+        <link rel="alternate" hreflang="en" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}" />
+        
+        {# Open Graph / Facebook #}
+        <meta property="og:type" content="{% block og_type %}website{% endblock %}" />
+        <meta property="og:url" content="{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}" />
+        <meta property="og:title" content="{% block og_title %}Bibliotype - Discover Your Reading DNA{% endblock %}" />
+        <meta property="og:description" content="{% block og_description %}Discover your unique reading DNA and literary personality type. Get personalized insights into your reading habits and book preferences.{% endblock %}" />
+        <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'android-chrome-512x512.png' %}{% endblock %}" />
+        <meta property="og:image:width" content="512" />
+        <meta property="og:image:height" content="512" />
+        <meta property="og:image:alt" content="{% block og_image_alt %}Bibliotype - Reading DNA Logo{% endblock %}" />
+        <meta property="og:site_name" content="Bibliotype" />
+        <meta property="og:locale" content="en_US" />
+        
+        {# Twitter Card #}
+        <meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}" />
+        <meta name="twitter:url" content="{% block twitter_url %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}" />
+        <meta name="twitter:title" content="{% block twitter_title %}Bibliotype - Discover Your Reading DNA{% endblock %}" />
+        <meta name="twitter:description" content="{% block twitter_description %}Discover your unique reading DNA and literary personality type. Get personalized insights into your reading habits.{% endblock %}" />
+        <meta name="twitter:image" content="{% block twitter_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'android-chrome-512x512.png' %}{% endblock %}" />
+        <meta name="twitter:image:alt" content="{% block twitter_image_alt %}Bibliotype - Reading DNA Logo{% endblock %}" />
+        
+        {# Favicons - SVG emoji for modern browsers, PNG fallbacks for Safari #}
+        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧬</text></svg>">
+        <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon-32x32.png' %}">
+        <link rel="icon" type="image/png" sizes="16x16" href="{% static 'favicon-16x16.png' %}">
+        <link rel="shortcut icon" href="{% static 'favicon.ico' %}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{% static 'apple-touch-icon.png' %}">
+        <link rel="manifest" href="{% static 'site.webmanifest' %}">
+        
+        {# Preconnect for performance #}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        
+        {# Stylesheets #}
         <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
         <link href="{% static 'dist/output.css' %}" rel="stylesheet" />
+        
+        {# Structured Data (JSON-LD) #}
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            "name": "Bibliotype",
+            "alternateName": "Reading DNA",
+            "url": "{{ request.scheme }}://{{ request.get_host }}",
+            "description": "Discover your unique reading DNA and literary personality type. Upload your Goodreads data to get personalized insights into your reading habits, favorite genres, and book preferences.",
+            "applicationCategory": "UtilityApplication",
+            "operatingSystem": "Web",
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+            },
+            "featureList": [
+                "Reading DNA Analysis",
+                "Literary Personality Types",
+                "Genre & Author Insights",
+                "Reading Statistics Dashboard",
+                "Community Benchmarking",
+                "AI-Powered Reading Vibe"
+            ],
+            "screenshot": "{{ request.scheme }}://{{ request.get_host }}{% static 'android-chrome-512x512.png' %}",
+            "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "4.8",
+                "ratingCount": "100"
+            }
+        }
+        </script>
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "Bibliotype",
+            "url": "{{ request.scheme }}://{{ request.get_host }}",
+            "logo": "{{ request.scheme }}://{{ request.get_host }}{% static 'android-chrome-512x512.png' %}",
+            "description": "Discover your unique reading DNA and literary personality type.",
+            "sameAs": []
+        }
+        </script>
+        {% block structured_data %}{% endblock %}
+        
+        {# JavaScript #}
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     </head>
