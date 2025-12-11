@@ -23,27 +23,23 @@
                 </a>
                 <div class="flex items-center space-x-2 text-base font-bold uppercase md:space-x-4 md:text-lg">
                     {% if user.is_authenticated %}
-                        <a
-                            href="{% url 'core:display_dna' %}"
-                            class="hover:bg-brand-pink border-brand-text shadow-neo-sm border-2 bg-white px-2 whitespace-nowrap transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                            >Dashboard</a
-                        >
-                        <a
-                            href="{% url 'core:logout' %}"
-                            class="hover:bg-brand-cyan border-brand-text shadow-neo-sm border-2 bg-white px-2 whitespace-nowrap transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                            >Logout</a
-                        >
+                        {% url 'core:display_dna' as display_dna_url %}
+                        {% url 'core:logout' as logout_url %}
+                        {% if display_dna_url %}
+                            {% include 'core/partials/buttons/nav_button.html' with href=display_dna_url text="Dashboard" hover_color="pink" %}
+                        {% endif %}
+                        {% if logout_url %}
+                            {% include 'core/partials/buttons/nav_button.html' with href=logout_url text="Logout" hover_color="cyan" %}
+                        {% endif %}
                     {% else %}
-                        <a
-                            href="{% url 'core:login' %}"
-                            class="hover:bg-brand-yellow border-brand-text shadow-neo-sm border-2 bg-white px-2 whitespace-nowrap transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                            >Login</a
-                        >
-                        <a
-                            href="{% url 'core:signup' %}"
-                            class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm border-2 px-2 py-1 whitespace-nowrap transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 md:px-4"
-                            >Sign Up</a
-                        >
+                        {% url 'core:login' as login_url %}
+                        {% url 'core:signup' as signup_url %}
+                        {% if login_url %}
+                            {% include 'core/partials/buttons/nav_button.html' with href=login_url text="Login" hover_color="yellow" %}
+                        {% endif %}
+                        {% if signup_url %}
+                            {% include 'core/partials/buttons/nav_button.html' with href=signup_url text="Sign Up" is_signup=True %}
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -65,12 +61,7 @@
                         role="alert"
                     >
                         <span>{{ message|safe }}</span>
-                        <button
-                            @click="show = false"
-                            class="border-brand-text text-brand-text shadow-neo-sm absolute top-2 right-3 cursor-pointer border-2 bg-white px-2 text-2xl leading-none font-bold hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                        >
-                            &times;
-                        </button>
+                        {% include 'core/partials/buttons/close_button.html' with extra_classes="absolute top-2 right-3 cursor-pointer" extra_attrs='@click="show = false"' %}
                     </div>
                 {% endfor %}
             {% endif %}

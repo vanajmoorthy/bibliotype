@@ -13,10 +13,7 @@
                 Upload your Goodreads or StoryGraph data to learn your literary personality type.
             </p>
             <div class="mt-6">
-                <button @click="instructionsOpen = true"
-                        class="bg-brand-pink text-brand-text border-brand-text shadow-neo cursor-pointer border-2 px-1 text-lg font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1">
-                    Instructions
-                </button>
+                {% include 'core/partials/buttons/secondary_button.html' with text="Instructions" color="pink" extra_attrs='@click="instructionsOpen = true"' %}
             </div>
             <div x-data="{ isDragging: false, fileName: '' }" class="mt-12">
                 <form x-transition
@@ -57,27 +54,13 @@
                                 <div class="shadow-neo border-brand-text border-2 bg-brand-yellow text-sm md:text-md px-6 py-2">
                                     <p class="text-brand-text truncate text-xl font-bold" x-text="fileName"></p>
                                 </div>
-                                <button type="button"
-                                        @click.prevent.stop="fileName = ''; $refs.fileInput.value = null;"
-                                        class="shadow-neo bg-brand-pink border-brand-text absolute -top-2 -right-2 z-10 flex h-8 w-8 cursor-pointer items-center justify-center border-2 p-1 transition-all hover:shadow-none active:translate-x-px active:translate-y-px"
-                                        aria-label="Remove selected file">
-                                    <svg class="h-5 w-5 text-black"
-                                         fill="none"
-                                         stroke="currentColor"
-                                         viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
-                                    </svg>
-                                </button>
+                                {% include 'core/partials/buttons/icon_button.html' with color="pink" extra_classes="absolute -top-2 -right-2 z-10 flex h-8 w-8 cursor-pointer items-center justify-center" extra_attrs='type="button" @click.prevent.stop="fileName = \'\'; $refs.fileInput.value = null;" aria-label="Remove selected file"' icon_svg='<svg class="h-5 w-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>' %}
                             </div>
                         </label>
                     </div>
-                    <button type="submit"
-                            class="bg-brand-green text-brand-text shadow-neo border-brand-text mt-6 w-full border-2 px-4 py-3 text-2xl font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1"
-                            :disabled="!fileName"
-                            :class="{ 'opacity-50 !shadow-none cursor-not-allowed': !fileName, 'cursor-pointer': fileName }">
-                        <span x-show="isUploading">Loading...</span>
-                        <span x-show="!isUploading">Generate My Bibliotype</span>
-                    </button>
+                    {% with button_text='<span x-show="isUploading">Loading...</span><span x-show="!isUploading">Generate My Bibliotype</span>'|safe %}
+                        {% include 'core/partials/buttons/primary_button.html' with text=button_text disabled_attr=':disabled="!fileName" :class="{ \'opacity-50 !shadow-none cursor-not-allowed\': !fileName, \'cursor-pointer\': fileName }"' %}
+                    {% endwith %}
                 </form>
             </div>
             <p class="mt-10 text-center text-lg">
@@ -103,15 +86,7 @@
                      x-transition:leave-start="opacity-100 scale-100"
                      x-transition:leave-end="opacity-0 scale-95"
                      class="shadow-neo border-brand-text relative w-full max-w-2xl border-2 bg-white p-6 text-left">
-                    <button @click="instructionsOpen = false"
-                            class="shadow-neo-sm bg-brand-pink border-brand-text absolute -top-3 -right-3 cursor-pointer border-2 p-2 transition-all hover:shadow-none">
-                        <svg class="text-brand-text h-6 w-6"
-                             fill="none"
-                             stroke="currentColor"
-                             viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
+                    {% include 'core/partials/buttons/icon_button.html' with color="pink" extra_classes="absolute -top-3 -right-3 cursor-pointer" extra_attrs='@click="instructionsOpen = false"' icon_svg='<svg class="text-brand-text h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>' %}
                     <h2 class="mb-4 text-2xl font-bold uppercase">How to Get Your File</h2>
                     <div class="space-y-6 text-lg">
                         <div>

@@ -1,0 +1,22 @@
+{% if color == 'green' %}
+    <a
+        href="{{ href }}"
+        class="shadow-neo border-brand-text bg-brand-green {{ extra_classes|default:'' }} inline-block cursor-pointer border-2 px-6 py-3 font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+    >
+        {{ text }}
+    </a>
+{% elif color == 'cyan' %}
+    <a
+        href="{{ href }}"
+        class="shadow-neo border-brand-text bg-brand-cyan {{ extra_classes|default:'' }} inline-block cursor-pointer border-2 px-6 py-3 font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+    >
+        {{ text }}
+    </a>
+{% else %}
+    <a
+        href="{{ href }}"
+        class="shadow-neo border-brand-text bg-brand-green {{ extra_classes|default:'' }} inline-block cursor-pointer border-2 px-6 py-3 font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+    >
+        {{ text }}
+    </a>
+{% endif %}

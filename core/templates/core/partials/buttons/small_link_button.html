@@ -1,0 +1,22 @@
+{% if color == 'green' %}
+    <a
+        href="{{ href }}"
+        class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm hover:bg-opacity-90 hover:shadow-none border-2 px-3 py-3 text-center font-bold uppercase transition-all duration-150 ease-in-out active:translate-x-0.5 active:translate-y-0.5 cursor-pointer {{ extra_classes|default:'' }}"
+        >
+        {{ text }}
+    </a>
+{% elif color == 'purple' %}
+    <a
+        href="{{ href }}"
+        class="bg-brand-purple border-brand-text shadow-neo-sm hover:bg-opacity-90 hover:shadow-none block w-full border-2 px-4 py-2 text-center font-bold transition-all duration-150 ease-in-out active:translate-x-0.5 active:translate-y-0.5 cursor-pointer {{ extra_classes|default:'' }}"
+        >
+        {{ text }}
+    </a>
+{% else %}
+    <a
+        href="{{ href }}"
+        class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm hover:bg-opacity-90 hover:shadow-none border-2 px-3 py-3 text-center font-bold uppercase transition-all duration-150 ease-in-out active:translate-x-0.5 active:translate-y-0.5 cursor-pointer {{ extra_classes|default:'' }}"
+        >
+        {{ text }}
+    </a>
+{% endif %}

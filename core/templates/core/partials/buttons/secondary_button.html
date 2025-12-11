@@ -1,0 +1,103 @@
+{% if size == 'md' %}
+    {% if color == 'pink' %}
+        <button
+            type="button"
+            class="bg-brand-pink text-brand-text border-brand-text shadow-neo cursor-pointer border-2 px-4 py-2 text-xl font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+            {{ extra_attrs|safe }}
+            >
+            {{ text }}
+        </button>
+    {% elif color == 'green' %}
+        <button
+            type="button"
+            class="bg-brand-green text-brand-text border-brand-text shadow-neo cursor-pointer border-2 px-4 py-2 text-xl font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+            {{ extra_attrs|safe }}
+            >
+            {{ text }}
+        </button>
+    {% elif color == 'cyan' %}
+        <button
+            type="button"
+            class="bg-brand-cyan text-brand-text border-brand-text shadow-neo cursor-pointer border-2 px-4 py-2 text-xl font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+            {{ extra_attrs|safe }}
+            >
+            {{ text }}
+        </button>
+    {% elif color == 'yellow' %}
+        <button
+            type="button"
+            class="bg-brand-yellow text-brand-text border-brand-text shadow-neo cursor-pointer border-2 px-4 py-2 text-xl font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+            {{ extra_attrs|safe }}
+            >
+            {{ text }}
+        </button>
+    {% elif color == 'purple' %}
+        <button
+            type="button"
+            class="bg-brand-purple text-brand-text border-brand-text shadow-neo cursor-pointer border-2 px-4 py-2 text-xl font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+            {{ extra_attrs|safe }}
+            >
+            {{ text }}
+        </button>
+    {% else %}
+        <button
+            type="button"
+            class="bg-brand-pink text-brand-text border-brand-text shadow-neo cursor-pointer border-2 px-4 py-2 text-xl font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+            {{ extra_attrs|safe }}
+            >
+            {{ text }}
+        </button>
+    {% endif %}
+{% elif size == 'sm' %}
+    {% if color == 'pink' %}
+        <button
+            type="button"
+            class="bg-brand-pink text-brand-text border-brand-text shadow-neo-sm cursor-pointer border-2 px-2 py-1 text-base font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+            {{ extra_attrs|safe }}
+            >
+            {{ text }}
+        </button>
+    {% elif color == 'green' %}
+        <button
+            type="button"
+            class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm cursor-pointer border-2 px-2 py-1 text-base font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+            {{ extra_attrs|safe }}
+            >
+            {{ text }}
+        </button>
+    {% else %}
+        <button
+            type="button"
+            class="bg-brand-pink text-brand-text border-brand-text shadow-neo-sm cursor-pointer border-2 px-2 py-1 text-base font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+            {{ extra_attrs|safe }}
+            >
+            {{ text }}
+        </button>
+    {% endif %}
+{% else %}
+    {% if color == 'pink' %}
+        <button
+            type="button"
+            class="bg-brand-pink text-brand-text border-brand-text shadow-neo cursor-pointer border-2 px-1 text-lg font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1"
+            {{ extra_attrs|safe }}
+            >
+            {{ text }}
+        </button>
+    {% elif color == 'green' %}
+        <button
+            type="button"
+            class="bg-brand-green text-brand-text border-brand-text shadow-neo cursor-pointer border-2 px-1 text-lg font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1"
+            {{ extra_attrs|safe }}
+            >
+            {{ text }}
+        </button>
+    {% else %}
+        <button
+            type="button"
+            class="bg-brand-pink text-brand-text border-brand-text shadow-neo cursor-pointer border-2 px-1 text-lg font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1"
+            {{ extra_attrs|safe }}
+            >
+            {{ text }}
+        </button>
+    {% endif %}
+{% endif %}

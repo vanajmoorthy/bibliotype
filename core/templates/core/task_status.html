@@ -51,10 +51,12 @@
             </div>
             <div class="mt-8 border-t-2 border-dashed border-gray-300 pt-6">
                 <p class="text-gray-700">Don't want to wait? Create a free account to save your Bibliotype automatically.</p>
-                <a href="{% url 'core:signup' %}?task_id={{ task_id }}"
-                   class="shadow-neo hover:shadow-neo-inset border-brand-text bg-brand-green mt-4 inline-block border-2 px-3 py-2 font-bold transition-shadow">
-                    Sign Up & Save My DNA
-                </a>
+                {% url 'core:signup' as signup_base_url %}
+                {% with query_string="?task_id="|add:task_id %}
+                    {% with full_signup_url=signup_base_url|add:query_string %}
+                        {% include 'core/partials/buttons/link_button.html' with href=full_signup_url text="Sign Up & Save My DNA" color="green" extra_classes="mt-4 px-3 py-2" %}
+                    {% endwith %}
+                {% endwith %}
             </div>
             <div x-show="status === 'FAILURE'"
                  class="border-brand-text shadow-neo mt-8 border-2 bg-red-500 p-4 font-bold text-white"
