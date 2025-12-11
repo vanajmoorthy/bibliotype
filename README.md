@@ -13,12 +13,13 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - make vibe look better with bg colours and fix dot separators and check mobile
 - add favicon!!
 - put dev data into prod using fixtures? don't need
+- forgot password email and email verification(?)
 - ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 - improve profile private page
 - improve community stats look
   - timelines/graphs for all community stats
   - same for controversial ratings
-- hover states for all buttons
+- hover states for all buttons (double check, button partials)
 - long author names and genre names cutting of count when hovering on chart
 - allow user to delete profile
 - ✅ ~get rid of books per year~ 
