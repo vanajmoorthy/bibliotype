@@ -11,7 +11,6 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 - edit mainstream meter text to "niche, normal, mainstream"
 - make vibe look better with bg colours and fix dot separators and check mobile
-- add favicon!!
 - put dev data into prod using fixtures? don't need
 - forgot password email and email verification(?)
 - ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
@@ -40,7 +39,6 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - check lighthouse scores 
 - add privacy statement? ToS
 - add posthog tracking
-- add silk?
 - average "contrarian" score under most controversial ratings with phrases like "my, you're contrarian"
 - sign up form validate password and all on blur
 - how similar are you/similarity percentage for 2 or more people
