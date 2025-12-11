@@ -22,6 +22,8 @@ db.sqlite3
 media/
 staticfiles/
 local_settings.py
+*.prof
+silk_profiles/
 
 django_cache
 

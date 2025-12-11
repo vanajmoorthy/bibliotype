@@ -1,5 +1,108 @@
 {% extends 'core/base.html' %}
 {% load static %}
+
+{% block seo_title %}Bibliotype - Discover Your Reading DNA & Literary Personality | Free Book Analysis Tool{% endblock %}
+
+{% block seo_description %}Upload your Goodreads export to discover your unique reading DNA. Get personalized insights into your literary personality, favorite genres, reading habits, and book preferences. Free book analysis tool powered by AI.{% endblock %}
+
+{% block seo_keywords %}reading DNA, literary personality test, book analysis tool, Goodreads export analyzer, reading statistics, reading habits analysis, book recommendations, reading insights, bibliophile tools, reading dashboard, free book analysis{% endblock %}
+
+{% block og_title %}Bibliotype - Discover Your Reading DNA{% endblock %}
+
+{% block og_description %}Upload your Goodreads data and discover your unique reading DNA. Get personalized insights into your literary personality, favorite genres, and reading habits.{% endblock %}
+
+{% block twitter_title %}Discover Your Reading DNA with Bibliotype{% endblock %}
+
+{% block twitter_description %}Upload your book data and discover your unique literary personality. Free reading analysis tool.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Bibliotype - Discover Your Reading DNA",
+    "description": "Upload your Goodreads export to discover your unique reading DNA and literary personality type.",
+    "url": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}",
+    "mainEntity": {
+        "@type": "SoftwareApplication",
+        "name": "Bibliotype",
+        "applicationCategory": "UtilityApplication",
+        "operatingSystem": "Web",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    },
+    "breadcrumb": {
+        "@type": "BreadcrumbList",
+        "itemListElement": [{
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "{{ request.scheme }}://{{ request.get_host }}/"
+        }]
+    }
+}
+</script>
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [{
+        "@type": "Question",
+        "name": "How do I get my reading DNA?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Upload your Goodreads export CSV file to Bibliotype. We'll analyze your reading data and generate your personalized Reading DNA dashboard with insights into your literary personality, favorite genres, and reading habits."
+        }
+    }, {
+        "@type": "Question",
+        "name": "How do I export my data from Goodreads?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Go to Goodreads.com/review/import, click 'Export Library' button, and download the CSV file. Then upload it to Bibliotype."
+        }
+    }, {
+        "@type": "Question",
+        "name": "Is Bibliotype free?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, Bibliotype is completely free to use. Upload your reading data and get instant insights into your literary personality."
+        }
+    }, {
+        "@type": "Question",
+        "name": "What is Reading DNA?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Reading DNA is your unique literary personality profile that analyzes your reading habits, favorite genres, authors, and book preferences to reveal insights about your reading style and preferences."
+        }
+    }]
+}
+</script>
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to Get Your Reading DNA",
+    "description": "Step-by-step guide to generating your personalized Reading DNA profile",
+    "step": [{
+        "@type": "HowToStep",
+        "name": "Export Your Reading Data",
+        "text": "Export your library from Goodreads by going to goodreads.com/review/import and clicking the 'Export Library' button"
+    }, {
+        "@type": "HowToStep",
+        "name": "Upload CSV File",
+        "text": "Upload your exported CSV file to Bibliotype using the upload form"
+    }, {
+        "@type": "HowToStep",
+        "name": "Get Your Results",
+        "text": "Wait for Bibliotype to analyze your data and generate your personalized Reading DNA dashboard"
+    }]
+}
+</script>
+{% endblock %}
+
 {% block content %}
     <div x-data="{ isUploading: false, instructionsOpen: false }"
          @keydown.escape.window="instructionsOpen = false"
@@ -10,7 +113,7 @@
                 <span class="bg-[var(--color-brand-yellow)] px-2">Reading DNA</span>
             </h1>
             <p class="mt-4 text-xl text-[var(--color-brand-text)]">
-                Upload your Goodreads or StoryGraph data to learn your literary personality type.
+                Upload your Goodreads data to learn your literary personality type.
             </p>
             <div class="mt-6">
                 {% include 'core/partials/buttons/secondary_button.html' with text="Instructions" color="pink" extra_attrs='@click="instructionsOpen = true"' %}
@@ -48,7 +151,7 @@
                             <p class="text-brand-text text-xl font-bold uppercase"
                                x-show="!fileName">
                                 <span class="border-brand-text bg-brand-cyan border-2 px-2">Browse</span> or drag your
-                                file here
+                                .csv file here
                             </p>
                             <div x-show="fileName" x-transition class="relative  max-w-md">
                                 <div class="shadow-neo border-brand-text border-2 bg-brand-yellow text-sm md:text-md px-6 py-2">
@@ -68,7 +171,7 @@
             </p>
             <div x-show="instructionsOpen"
                  x-cloak
-                 class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                 class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
                 <div x-show="instructionsOpen"
                      x-transition:enter="ease-out duration-300"
                      x-transition:enter-start="opacity-0"
@@ -77,7 +180,7 @@
                      x-transition:leave-start="opacity-100"
                      x-transition:leave-end="opacity-0"
                      @click="instructionsOpen = false"
-                     class="absolute inset-0 bg-black/50"></div>
+                     class="fixed inset-0 bg-black/50"></div>
                 <div x-show="instructionsOpen"
                      x-transition:enter="ease-out duration-300"
                      x-transition:enter-start="opacity-0 scale-95"
@@ -85,12 +188,12 @@
                      x-transition:leave="ease-in duration-200"
                      x-transition:leave-start="opacity-100 scale-100"
                      x-transition:leave-end="opacity-0 scale-95"
-                     class="shadow-neo border-brand-text relative w-full max-w-2xl border-2 bg-white p-6 text-left">
-                    {% include 'core/partials/buttons/icon_button.html' with color="pink" extra_classes="absolute -top-3 -right-3 cursor-pointer" extra_attrs='@click="instructionsOpen = false"' icon_svg='<svg class="text-brand-text h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>' %}
-                    <h2 class="mb-4 text-2xl font-bold uppercase">How to Get Your File</h2>
-                    <div class="space-y-6 text-lg">
+                     class="shadow-neo border-brand-text relative w-full max-w-2xl my-auto max-h-[calc(100vh-2rem)] border-2 bg-white p-4 sm:p-6 text-left flex flex-col">
+                    {% include 'core/partials/buttons/icon_button.html' with color="pink" extra_classes="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 cursor-pointer z-10" extra_attrs='@click="instructionsOpen = false"' icon_svg='<svg class="text-brand-text h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>' %}
+                    <h2 class="mb-4 text-xl sm:text-2xl font-bold uppercase flex-shrink-0">How to Get Your File</h2>
+                    <div class="space-y-6 text-base sm:text-lg overflow-y-auto flex-1 min-h-0 pr-2">
                         <div>
-                            <h3 class="bg-brand-yellow inline-block px-2 text-xl font-bold tracking-wider uppercase">Goodreads</h3>
+                            <h3 class="bg-brand-yellow inline-block px-2 text-xl font-bold tracking-wider uppercase">Desktop</h3>
                             <ol class="mt-2 list-outside list-decimal space-y-1 pl-6">
                                 <li>
                                     Go to
@@ -104,23 +207,41 @@
                                     Click the <span class="font-bold">"Export Library"</span> button and wait for the file
                                     to generate.
                                 </li>
-                                <li>Download the `goodreads_library_export.csv` file.</li>
+                                <li>Click the link to download the <span class="font-bold break-all">goodreads_library_export.csv</span> file.</li>
+                                <li>Drop the file in the upload box.</li>
                             </ol>
                         </div>
                         <div class="border-brand-text my-4 border-t"></div>
                         <div>
-                            <h3 class="bg-brand-cyan inline-block px-2 text-xl font-bold tracking-wider uppercase">StoryGraph</h3>
+                            <h3 class="bg-brand-cyan inline-block px-2 text-xl font-bold tracking-wider uppercase">Mobile</h3>
                             <ol class="mt-2 list-outside list-decimal space-y-1 pl-6">
-                                <li>Navigate to your main profile page.</li>
                                 <li>
-                                    Click <span class="font-bold">"Manage library"</span>, then choose
-                                    <span class="font-bold">"Import/Export"</span>.
+                                    Go to
+                                    <a href="https://www.goodreads.com/review/import?intent=web"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       onclick="event.preventDefault(); window.open(this.href, '_blank', 'noopener,noreferrer');"
+                                       class="hover:bg-brand-yellow underline">https://www.goodreads.com/review/import</a>.
                                 </li>
                                 <li>
-                                    Under the "Export Library" section, click the
-                                    <span class="font-bold">"Export"</span> button.
+                                    If it opens on web and you're already logged in, follow the instructions above.
                                 </li>
-                                <li>Download the `.csv` file (e.g., `storygraph-export.csv`).</li>
+                                <li>
+                                    If it opens in the app, click the <span class="font-bold">"Export Library"</span> button and wait for the file to generate.
+                                </li>
+                                <li>
+                                    Click the link, then click the share button (Android             
+                                    <span class="inline-flex items-center gap-2 ml-1">
+                                        <img src="{% static 'icons8-share-24.png' %}" alt="Android share button" class="h-4 w-4 inline" />
+                                    </span>, iOS 
+                                    <span class="inline-flex items-center gap-2 ml-1">
+                                        <img src="{% static 'icons8-ios-share-30.png' %}" alt="iOS share button" class="h-4 w-4 inline" />
+                                    </span>) in the bottom right
+                                    </span>
+                                </li>
+                                <li>Click copy, then go to your browser and paste in the link.</li>
+                                <li>You will need to log in to Goodreads again if you're not already.</li>
+                                <li>This will download the <span class="font-bold break-all">goodreads_library_export.csv</span> file, come back to Bibliotype and upload the file here.</li>
                             </ol>
                         </div>
                     </div>

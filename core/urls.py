@@ -6,6 +6,8 @@ from . import views
 app_name = "core"
 
 urlpatterns = [
+    path("robots.txt", views.robots_txt_view, name="robots_txt"),
+    path("sitemap.xml", views.sitemap_xml_view, name="sitemap_xml"),
     path("", views.home_view, name="home"),
     path("upload/", views.upload_view, name="upload"),
     path("dna/", views.display_dna_view, name="display_dna"),

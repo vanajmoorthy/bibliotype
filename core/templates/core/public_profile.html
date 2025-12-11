@@ -1,5 +1,37 @@
 {% extends 'core/base.html' %}
 {% load humanize %}
+
+{% block seo_title %}{{ profile_user.first_name|default:profile_user.username }}'s Reading DNA - Bibliotype{% endblock %}
+
+{% block seo_description %}{% if dna %}View {{ profile_user.first_name|default:profile_user.username }}'s reading DNA and literary personality. Discover their favorite genres, reading statistics, and book preferences.{% else %}{{ profile_user.first_name|default:profile_user.username }}'s Bibliotype profile.{% endif %}{% endblock %}
+
+{% block og_title %}{{ profile_user.first_name|default:profile_user.username }}'s Reading DNA{% endblock %}
+
+{% block og_description %}{% if dna %}Discover {{ profile_user.first_name|default:profile_user.username }}'s unique reading DNA, literary personality, favorite genres, and reading insights.{% else %}{{ profile_user.first_name|default:profile_user.username }}'s Bibliotype profile.{% endif %}{% endblock %}
+
+{% block twitter_title %}{{ profile_user.first_name|default:profile_user.username }}'s Reading DNA{% endblock %}
+
+{% block twitter_description %}{% if dna %}View {{ profile_user.first_name|default:profile_user.username }}'s reading DNA and discover their literary personality.{% else %}{{ profile_user.first_name|default:profile_user.username }}'s Bibliotype profile.{% endif %}{% endblock %}
+
+{% block structured_data %}
+{% if dna %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "ProfilePage",
+    "name": "{{ profile_user.first_name|default:profile_user.username }}'s Reading DNA",
+    "description": "{{ profile_user.first_name|default:profile_user.username }}'s personalized reading DNA and literary personality profile",
+    "url": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}",
+    "mainEntity": {
+        "@type": "Person",
+        "name": "{{ profile_user.first_name|default:profile_user.username }}",
+        "url": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}"
+    }
+}
+</script>
+{% endif %}
+{% endblock %}
+
 {% block content %}
     <div class="mx-auto max-w-4xl space-y-8 p-4">
         {# Check if DNA data exists for this user #}

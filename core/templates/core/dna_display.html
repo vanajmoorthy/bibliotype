@@ -1,5 +1,12 @@
 {% extends 'core/base.html' %}
 {% load humanize %}
+
+{% block seo_title %}My Reading DNA Dashboard - Bibliotype{% endblock %}
+
+{% block seo_description %}View your personalized reading DNA dashboard with insights into your literary personality, favorite genres, reading statistics, and book recommendations.{% endblock %}
+
+{% block seo_robots %}noindex, nofollow{% endblock %}
+
 {% block content %}
     <div class="mx-auto h-full max-w-4xl space-y-8 p-2">
         {% if is_processing %}

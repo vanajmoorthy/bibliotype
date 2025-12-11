@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /silk/
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /task/
+
+# Sitemap will be dynamically generated with correct domain
