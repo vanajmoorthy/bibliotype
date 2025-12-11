@@ -118,20 +118,7 @@
             <div class="mt-6">
                 {% include 'core/partials/buttons/secondary_button.html' with text="Instructions" color="pink" extra_attrs='@click="instructionsOpen = true"' %}
             </div>
-            <div x-data="{ 
-                isDragging: false, 
-                fileName: '',
-                get truncatedFileName() {
-                    if (!this.fileName) return '';
-                    const isMobile = window.innerWidth < 768;
-                    const maxLength = isMobile ? 18 : 37;
-                    return this.fileName.length > maxLength + 3 
-                        ? this.fileName.substring(0, maxLength) + '...' 
-                        : this.fileName;
-                }
-            }" 
-            @resize.window="() => {}" 
-            class="mt-12">
+            <div x-data="{ isDragging: false, fileName: '' }" class="mt-12">
                 <form x-transition
                       action="{% url 'core:upload' %}"
                       method="post"
@@ -166,9 +153,9 @@
                                 <span class="border-brand-text bg-brand-cyan border-2 px-2">Browse</span> or drag your
                                 .csv file here
                             </p>
-                            <div x-show="fileName" x-transition class="relative w-full md:flex md:justify-center">
-                                <div class="shadow-neo border-brand-text border-2 bg-brand-yellow text-sm md:text-md px-3 py-2 md:px-6 pr-12 md:pr-6 w-full md:w-fit md:inline-block">
-                                    <p class="text-brand-text text-xl font-bold whitespace-nowrap" x-text="truncatedFileName"></p>
+                            <div x-show="fileName" x-transition class="relative  max-w-md">
+                                <div class="shadow-neo border-brand-text border-2 bg-brand-yellow text-sm md:text-md px-6 py-2">
+                                    <p class="text-brand-text truncate text-xl font-bold" x-text="fileName"></p>
                                 </div>
                                 {% include 'core/partials/buttons/icon_button.html' with color="pink" extra_classes="absolute -top-2 -right-2 z-10 flex h-8 w-8 cursor-pointer items-center justify-center" extra_attrs='type="button" @click.prevent.stop="fileName = \'\'; $refs.fileInput.value = null;" aria-label="Remove selected file"' icon_svg='<svg class="h-5 w-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>' %}
                             </div>
