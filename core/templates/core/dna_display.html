@@ -248,16 +248,20 @@
                         <div class="flex-grow">
                             {% if user_profile.is_public %}
                                 <h3 class="text-xl font-bold uppercase">
-                                    Your profile is
-                                    <span class="bg-brand-green border-brand-text border-2 px-2 py-1 font-bold">Public</span>.
-                                    <a href="{% url 'core:public_profile' username=user.username %}"
-                                       class="hover:bg-brand-yellow ml-2 underline"
-                                       target="_blank">/u/{{ user.username }}</a>
+                                    <span class="flex flex-col md:flex-row md:items-center md:gap-2">
+                                        <span>
+                                            Your profile is
+                                            <span class="bg-brand-green border-brand-text border-2 px-2 py-1 font-bold">Public</span>
+                                        </span>
+                                        <a href="{% url 'core:public_profile' username=user.username %}"
+                                           class="hover:bg-brand-yellow ml-0 mt-2 sm:ml-4 sm:!mt-0 underline block md:inline-block"
+                                           target="_blank">/u/{{ user.username }}</a>
+                                    </span>
                                 </h3>
                             {% else %}
                                 <h3 class="text-xl font-bold uppercase">
                                     Your profile is
-                                    <span class="bg-brand-pink border-brand-text border-2 px-2 py-1 font-bold">Private</span>.
+                                    <span class="bg-brand-pink border-brand-text border-2 px-2 py-1 font-bold">Private</span>
                                 </h3>
                             {% endif %}
                         </div>

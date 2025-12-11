@@ -91,6 +91,7 @@ class RecommendationTestCase(TestCase):
         
         # Make user profiles public and add DNA data
         self.user1.userprofile.is_public = True
+        self.user1.userprofile.visible_in_recommendations = True
         self.user1.userprofile.dna_data = {
             'top_genres': [('fantasy', 10), ('science fiction', 5)],
             'top_authors': [(self.author1.normalized_name, 5), (self.author2.normalized_name, 3)]
@@ -98,6 +99,7 @@ class RecommendationTestCase(TestCase):
         self.user1.userprofile.save()
         
         self.user2.userprofile.is_public = True
+        self.user2.userprofile.visible_in_recommendations = True
         self.user2.userprofile.dna_data = {
             'top_genres': [('fantasy', 10), ('science fiction', 5)],
             'top_authors': [(self.author1.normalized_name, 5), (self.author2.normalized_name, 3)]
@@ -105,6 +107,7 @@ class RecommendationTestCase(TestCase):
         self.user2.userprofile.save()
         
         self.user3.userprofile.is_public = True
+        self.user3.userprofile.visible_in_recommendations = True
         self.user3.userprofile.dna_data = {
             'top_genres': [('fantasy', 10), ('science fiction', 5)],
             'top_authors': [(self.author1.normalized_name, 5), (self.author2.normalized_name, 3)]
@@ -305,31 +308,50 @@ class PrivacyTestCase(TestCase):
     
     def test_public_users_appear_in_recommendations(self):
         """Test that only public users are used for recommendations"""
-        from core.models import Author
+        from core.models import Author, Book, Genre, Publisher
         
         author1 = Author.objects.create(name="Test Author", normalized_name="author, test")
+        genre1 = Genre.objects.create(name="fantasy")
+        publisher1 = Publisher.objects.create(name="Test Publisher")
+        
+        # Create a shared book that both users will read
+        shared_book = Book.objects.create(
+            title="Shared Book",
+            author=author1,
+            publisher=publisher1,
+            average_rating=4.5
+        )
+        shared_book.genres.add(genre1)
         
         # Create another user with DNA data
         other_user = User.objects.create_user(username="other_user", password="test123")
         other_user.userprofile.is_public = True
+        other_user.userprofile.visible_in_recommendations = True
         other_user.userprofile.dna_data = {
             'top_genres': [('fantasy', 10), ('science fiction', 5)],
             'top_authors': [(author1.normalized_name, 5)]
         }
         other_user.userprofile.save()
         
+        # Add shared book to other_user
+        UserBook.objects.create(user=other_user, book=shared_book, user_rating=5)
+        
         # Make main user public with DNA data
         self.user.userprofile.is_public = True
+        self.user.userprofile.visible_in_recommendations = True
         self.user.userprofile.dna_data = {
             'top_genres': [('fantasy', 10), ('science fiction', 5)],
             'top_authors': [(author1.normalized_name, 5)]
         }
         self.user.userprofile.save()
         
+        # Add shared book to main user (required for find_similar_users to work)
+        UserBook.objects.create(user=self.user, book=shared_book, user_rating=5)
+        
         # Check that other_user appears in similar users
         similar_users = find_similar_users(self.user, top_n=10, min_similarity=0.0)
         
-        # Just check that we found similar users (since they have same DNA data)
+        # Should find similar users since they share books and have similar DNA data
         self.assertGreater(len(similar_users), 0)
 
 
