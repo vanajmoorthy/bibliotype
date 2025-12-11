@@ -1,6 +1,4 @@
 """
-URL configuration for bookprint project.
-
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.2/topics/http/urls/
 Examples:
@@ -19,13 +17,9 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
-from core import views
-
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("core.urls")),
-    # Catch-all for 404s - must be last
-    path("<path:unused_path>", views.catch_all_404_view),
 ]
 
 # Django Silk URLs for profiling - only available in local development (DEBUG=True)
