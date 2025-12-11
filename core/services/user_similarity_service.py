@@ -239,11 +239,51 @@ def find_similar_users(user, top_n=20, min_similarity=0.2):
     """
     Find registered users similar to the given user.
     Returns list of (user, similarity_data) tuples sorted by similarity.
+    Optimized to limit database queries and use bulk operations.
     """
+    from django.core.cache import cache
+    
+    # Cache key for this user's similar users
+    cache_key = f"similar_users_{user.id}_{top_n}_{min_similarity}"
+    cached_result = cache.get(cache_key)
+    if cached_result is not None:
+        return cached_result
 
-    all_users = (
-        User.objects.exclude(id=user.id).select_related("userprofile").filter(userprofile__dna_data__isnull=False)
+    # Get user's book IDs for filtering
+    user_book_ids = set(UserBook.objects.filter(user=user).values_list("book_id", flat=True))
+    
+    if not user_book_ids:
+        # User has no books, return empty
+        return []
+    
+    users_with_shared_books = (
+        User.objects
+        .exclude(id=user.id)
+        .select_related("userprofile")
+        .filter(
+            userprofile__dna_data__isnull=False,
+            userprofile__visible_in_recommendations=True,
+            user_books__book_id__in=user_book_ids
+        )
+        .distinct()[:500]
     )
+    
+    # If we don't have enough users with shared books, also consider users with similar genres/authors
+    # This is a fallback to ensure we have enough candidates
+    if users_with_shared_books.count() < top_n * 2:
+        additional_users = (
+            User.objects
+            .exclude(id=user.id)
+            .exclude(id__in=[u.id for u in users_with_shared_books])
+            .select_related("userprofile")
+            .filter(
+                userprofile__dna_data__isnull=False,
+                userprofile__visible_in_recommendations=True
+            )[:200]  # Get up to 200 more users
+        )
+        all_users = list(users_with_shared_books) + list(additional_users)
+    else:
+        all_users = list(users_with_shared_books)
 
     similarities = []
     for other_user in all_users:
@@ -254,7 +294,11 @@ def find_similar_users(user, top_n=20, min_similarity=0.2):
 
     # Sort by similarity score (highest first)
     similarities.sort(key=lambda x: x[1]["similarity_score"], reverse=True)
-    return similarities[:top_n]
+    result = similarities[:top_n]
+    
+    # Cache for 30 minutes
+    cache.set(cache_key, result, 1800)
+    return result
 
 
 def calculate_anonymous_similarity(anonymous_session, user):

@@ -91,6 +91,7 @@ class RecommendationTestCase(TestCase):
         
         # Make user profiles public and add DNA data
         self.user1.userprofile.is_public = True
+        self.user1.userprofile.visible_in_recommendations = True
         self.user1.userprofile.dna_data = {
             'top_genres': [('fantasy', 10), ('science fiction', 5)],
             'top_authors': [(self.author1.normalized_name, 5), (self.author2.normalized_name, 3)]
@@ -98,6 +99,7 @@ class RecommendationTestCase(TestCase):
         self.user1.userprofile.save()
         
         self.user2.userprofile.is_public = True
+        self.user2.userprofile.visible_in_recommendations = True
         self.user2.userprofile.dna_data = {
             'top_genres': [('fantasy', 10), ('science fiction', 5)],
             'top_authors': [(self.author1.normalized_name, 5), (self.author2.normalized_name, 3)]
@@ -105,6 +107,7 @@ class RecommendationTestCase(TestCase):
         self.user2.userprofile.save()
         
         self.user3.userprofile.is_public = True
+        self.user3.userprofile.visible_in_recommendations = True
         self.user3.userprofile.dna_data = {
             'top_genres': [('fantasy', 10), ('science fiction', 5)],
             'top_authors': [(self.author1.normalized_name, 5), (self.author2.normalized_name, 3)]
@@ -312,6 +315,7 @@ class PrivacyTestCase(TestCase):
         # Create another user with DNA data
         other_user = User.objects.create_user(username="other_user", password="test123")
         other_user.userprofile.is_public = True
+        other_user.userprofile.visible_in_recommendations = True
         other_user.userprofile.dna_data = {
             'top_genres': [('fantasy', 10), ('science fiction', 5)],
             'top_authors': [(author1.normalized_name, 5)]
@@ -320,6 +324,7 @@ class PrivacyTestCase(TestCase):
         
         # Make main user public with DNA data
         self.user.userprofile.is_public = True
+        self.user.userprofile.visible_in_recommendations = True
         self.user.userprofile.dna_data = {
             'top_genres': [('fantasy', 10), ('science fiction', 5)],
             'top_authors': [(author1.normalized_name, 5)]
