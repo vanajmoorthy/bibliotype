@@ -24,4 +24,4 @@ urlpatterns = [
 
 # Django Silk URLs for profiling - only available in local development (DEBUG=True)
 if settings.DEBUG:
-    urlpatterns.insert(0, path("silk/", include("silk.urls", namespace="silk")))
+    urlpatterns.insert(0, path("silk/", include("silk.urls")))
