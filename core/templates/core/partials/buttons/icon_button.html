@@ -1,0 +1,25 @@
+{% if color == 'pink' %}
+    <button
+        type="button"
+        class="shadow-neo bg-brand-pink border-brand-text border-2 p-1 transition-all hover:shadow-none active:translate-x-px active:translate-y-px {{ extra_classes|default:'' }}"
+        {{ extra_attrs|safe }}
+        >
+        {{ icon_svg|safe }}
+    </button>
+{% elif color == 'green' %}
+    <button
+        type="button"
+        class="shadow-neo bg-brand-green border-brand-text border-2 p-1 transition-all hover:shadow-none active:translate-x-px active:translate-y-px {{ extra_classes|default:'' }}"
+        {{ extra_attrs|safe }}
+        >
+        {{ icon_svg|safe }}
+    </button>
+{% else %}
+    <button
+        type="button"
+        class="shadow-neo bg-brand-pink border-brand-text border-2 p-1 transition-all hover:shadow-none active:translate-x-px active:translate-y-px {{ extra_classes|default:'' }}"
+        {{ extra_attrs|safe }}
+        >
+        {{ icon_svg|safe }}
+    </button>
+{% endif %}

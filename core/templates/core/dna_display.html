@@ -165,10 +165,7 @@
                                            x-model="newName"
                                            maxlength="15"
                                            class="border-brand-text focus:border-brand-purple w-full border-2 bg-white p-1 text-4xl font-bold tracking-widest uppercase focus:outline-none sm:text-5xl" />
-                                    <button type="submit"
-                                            class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm border-2 px-4 py-2 text-xl font-bold transition-colors hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                                            :disabled="!isNewNameValid"
-                                            :class="{ 'opacity-50 cursor-not-allowed': !isNewNameValid }">Save</button>
+                                    {% include 'core/partials/buttons/small_button.html' with text="Save" color="green" type="submit" extra_classes="text-xl" extra_attrs=':disabled="!isNewNameValid" :class="{ \'opacity-50 cursor-not-allowed\': !isNewNameValid }"' %}
                                 </form>
                             </div>
                             <div x-show="editing && newName.length > 15"
@@ -261,22 +258,16 @@
                             {% csrf_token %}
                             {% if user_profile.is_public %}
                                 <input type="hidden" name="is_public" value="false" />
-                                <button type="submit"
-                                        class="bg-brand-pink cursor-pointer text-brand-text border-brand-text shadow-neo-sm hover:bg-brand-yellow border-2 px-4 py-2 font-bold">
-                                    Make Private
-                                </button>
+                                {% include 'core/partials/buttons/small_button.html' with text="Make Private" color="pink" hover_color="yellow" %}
                             {% else %}
                                 <input type="hidden" name="is_public" value="true" />
-                                <button type="submit"
-                                        class="bg-brand-green cursor-pointer text-brand-text border-brand-text shadow-neo-sm hover:bg-brand-yellow border-2 px-4 py-2 font-bold">
-                                    Make Public
-                                </button>
+                                {% include 'core/partials/buttons/small_button.html' with text="Make Public" color="green" hover_color="yellow" %}
                             {% endif %}
                         </form>
                     </div>
                     <div class="border-brand-text shadow-neo flex h-full items-center justify-center border-2 bg-white p-4">
-                        <a href="{% url 'core:home' %}"
-                           class="bg-brand-purple border-brand-text shadow-neo-sm hover:bg-opacity-90 block w-full border-2 px-4 py-2 text-center font-bold">Update Bibliotype</a>
+                        {% url 'core:home' as home_url %}
+                        {% include 'core/partials/buttons/small_link_button.html' with href=home_url text="Update Bibliotype" color="purple" %}
                     </div>
                 </div>
             {% else %}
@@ -333,10 +324,7 @@
                                            x-ref="usernameInput"
                                            x-model="newName"
                                            class="border-brand-text focus:border-brand-purple w-full border-2 bg-white p-1 text-5xl font-bold tracking-widest uppercase focus:outline-none" />
-                                    <button type="submit"
-                                            class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm cursor-pointer border-2 px-4 py-2 text-xl font-bold hover:shadow-none active:translate-x-0.5 active:translate-y-0.5">
-                                        Save
-                                    </button>
+                                    {% include 'core/partials/buttons/small_button.html' with text="Save" color="green" type="submit" extra_classes="text-xl cursor-pointer" %}
                                 </form>
                                 <div x-show="editing && errorMessage"
                                      x-text="errorMessage"
@@ -352,10 +340,8 @@
                             Your account is ready but you haven't uploaded your data yet! To generate your Reading DNA,
                             please go to the homepage and upload your library export.
                         </p>
-                        <a href="{% url 'core:home' %}"
-                           class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm hover:bg-opacity-90 mt-8 inline-block border-2 px-3 py-3 text-center font-bold uppercase">
-                            Upload Your Library File
-                        </a>
+                        {% url 'core:home' as home_url %}
+                        {% include 'core/partials/buttons/small_link_button.html' with href=home_url text="Upload Your Library File" color="green" extra_classes="mt-8 inline-block" %}
                     </div>
                 </div>
             </div>
