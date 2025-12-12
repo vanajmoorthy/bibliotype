@@ -166,7 +166,7 @@ def display_dna_view(request):
 
         # Show processing screen for authenticated users when flagged, regardless of existing data
         if is_processing:
-            return render(request, "core/dna_display.html", {"is_processing": True})
+            return render(request, "core/dashboard.html", {"is_processing": True})
 
         if dna_data is None and user_profile.dna_data:
             dna_data = user_profile.dna_data
@@ -332,7 +332,7 @@ def display_dna_view(request):
         "title": title,
     }
 
-    return render(request, "core/dna_display.html", context)
+    return render(request, "core/dashboard.html", context)
 
 
 @require_POST
