@@ -18,6 +18,13 @@ services:
         image: redis:7-alpine
         ports:
             - "6379:6379"
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 3s
+            retries: 5
+            start_period: 5s
+        restart: unless-stopped
 
     web:
         build: .
@@ -45,7 +52,7 @@ services:
             db:
                 condition: service_healthy
             redis:
-                condition: service_started
+                condition: service_healthy
 
     worker:
         build: .
@@ -66,7 +73,9 @@ services:
             - POSTGRES_USER=${POSTGRES_USER}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
         depends_on:
-            - db
-            - redis
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
 volumes:
     postgres_data:

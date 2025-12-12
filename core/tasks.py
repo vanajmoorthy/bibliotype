@@ -79,8 +79,10 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str):
         logger.error(f"User with id {user_id} not found. Cannot claim task")
         return
 
-    cached_dna = cache.get(f"dna_result_{task_id}")
-    cached_session_key = cache.get(f"session_key_{task_id}")
+    from .services.recommendation_service import safe_cache_get
+    
+    cached_dna = safe_cache_get(f"dna_result_{task_id}")
+    cached_session_key = safe_cache_get(f"session_key_{task_id}")
 
     if cached_dna:
         logger.info(f"Found cached DNA for task {task_id}. Saving to user {user_id}")
@@ -303,10 +305,11 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
             )
             
             if self.request.id:
-                cache.set(f"dna_result_{self.request.id}", result_data, timeout=3600)
+                from .services.recommendation_service import safe_cache_set
+                safe_cache_set(f"dna_result_{self.request.id}", result_data, timeout=3600)
                 # Also cache the session_key so we can find AnonymousUserSession when claiming
                 if session_key:
-                    cache.set(f"session_key_{self.request.id}", session_key, timeout=3600)
+                    safe_cache_set(f"session_key_{self.request.id}", session_key, timeout=3600)
                 logger.info(f"DNA result for task {self.request.id} saved to cache")
             
             # Track completion

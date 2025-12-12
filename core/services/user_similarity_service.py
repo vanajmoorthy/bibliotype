@@ -241,11 +241,11 @@ def find_similar_users(user, top_n=20, min_similarity=0.2):
     Returns list of (user, similarity_data) tuples sorted by similarity.
     Optimized to limit database queries and use bulk operations.
     """
-    from django.core.cache import cache
+    from .recommendation_service import safe_cache_get, safe_cache_set
     
     # Cache key for this user's similar users
     cache_key = f"similar_users_{user.id}_{top_n}_{min_similarity}"
-    cached_result = cache.get(cache_key)
+    cached_result = safe_cache_get(cache_key)
     if cached_result is not None:
         return cached_result
 
@@ -297,7 +297,7 @@ def find_similar_users(user, top_n=20, min_similarity=0.2):
     result = similarities[:top_n]
     
     # Cache for 30 minutes
-    cache.set(cache_key, result, 1800)
+    safe_cache_set(cache_key, result, 1800)
     return result
 
 

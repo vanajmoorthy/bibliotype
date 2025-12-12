@@ -16,6 +16,13 @@ services:
         image: redis:7-alpine
         # No ports are exposed to the outside world in production.
         # The 'web' and 'worker' services can still access it via the internal Docker network.
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 3s
+            retries: 5
+            start_period: 5s
+        restart: unless-stopped
 
     web:
         build: .
@@ -43,7 +50,7 @@ services:
             db:
                 condition: service_healthy
             redis:
-                condition: service_started
+                condition: service_healthy
 
     worker:
         build: .
@@ -66,7 +73,7 @@ services:
             db:
                 condition: service_healthy
             redis:
-                condition: service_started
+                condition: service_healthy
 
 volumes:
     postgres_data:

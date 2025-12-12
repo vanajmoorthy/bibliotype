@@ -698,8 +698,9 @@ def task_status_view(request, task_id):
 
 def get_task_result_view(request, task_id):
     from .models import AnonymousUserSession
+    from .services.recommendation_service import safe_cache_get
 
-    cached_result = cache.get(f"dna_result_{task_id}")
+    cached_result = safe_cache_get(f"dna_result_{task_id}")
     if cached_result is not None:
         request.session["dna_data"] = cached_result
         # Also store book IDs and ratings from AnonymousUserSession if it exists
