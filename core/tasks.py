@@ -1,5 +1,6 @@
 import os
 import logging
+import time
 
 import google.generativeai as genai
 from celery import shared_task
@@ -18,6 +19,13 @@ from django.utils import timezone
 
 from .services.author_service import check_author_mainstream_status
 from .models import Author
+from .analytics.events import (
+    track_dna_generation_started,
+    track_dna_generation_completed,
+    track_anonymous_dna_generated,
+    track_dna_generation_failed,
+    track_anonymous_dna_claimed,
+)
 
 load_dotenv()
 
@@ -85,6 +93,13 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str):
         user.userprofile.pending_dna_task_id = None
         user.userprofile.save()
         logger.info(f"Successfully claimed and saved DNA for user {user_id} from task {task_id}")
+        
+        # Track anonymous DNA claimed
+        track_anonymous_dna_claimed(
+            user_id=user_id,
+            task_id=task_id,
+            session_key=cached_session_key,
+        )
         return
 
     result = AsyncResult(task_id)
@@ -101,6 +116,13 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str):
             user.userprofile.pending_dna_task_id = None
             user.userprofile.save()
             logger.info(f"Successfully claimed and saved DNA for user {user_id} from task {task_id}")
+            
+            # Track anonymous DNA claimed
+            track_anonymous_dna_claimed(
+                user_id=user_id,
+                task_id=task_id,
+                session_key=cached_session_key,
+            )
         else:
             logger.error(f"Task {task_id} failed. Cannot claim DNA for user {user_id}")
             user.userprofile.pending_dna_task_id = None
@@ -222,12 +244,33 @@ def analyze_and_print_genres(all_raw_genres, canonical_map):
 @shared_task(bind=True)
 def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, session_key: str = None):
     logger.info("Running the latest (refactored) version of the Celery task")
+    start_time = time.time()
+    task_id = self.request.id
     user = None
+    is_anonymous = user_id is None
+    
+    # Track DNA generation started
+    track_dna_generation_started(
+        task_id=task_id,
+        user_id=user_id,
+        session_key=session_key,
+        is_anonymous=is_anonymous,
+    )
+    
     try:
         if user_id is not None:
             user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
         logger.error(f"Could not run task. User with id {user_id} not found")
+        # Track failure
+        track_dna_generation_failed(
+            task_id=task_id,
+            user_id=user_id,
+            session_key=session_key,
+            is_anonymous=is_anonymous,
+            error_type="UserDoesNotExist",
+            error_message=f"User with id {user_id} not found",
+        )
         raise
 
     try:
@@ -240,19 +283,66 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
                 pass
 
         result_data = calculate_full_dna(csv_file_content, user, session_key, progress_cb=progress_cb)
+        
+        # Calculate processing time
+        processing_time = time.time() - start_time
+        
+        # Extract books count from result_data if available
+        books_count = None
+        if isinstance(result_data, dict):
+            user_stats = result_data.get("user_stats", {})
+            books_count = user_stats.get("total_books_read")
 
         if not user:
+            # Track anonymous DNA generated
+            track_anonymous_dna_generated(
+                task_id=task_id,
+                session_key=session_key,
+                books_count=books_count,
+                processing_time=processing_time,
+            )
+            
             if self.request.id:
                 cache.set(f"dna_result_{self.request.id}", result_data, timeout=3600)
                 # Also cache the session_key so we can find AnonymousUserSession when claiming
                 if session_key:
                     cache.set(f"session_key_{self.request.id}", session_key, timeout=3600)
                 logger.info(f"DNA result for task {self.request.id} saved to cache")
+            
+            # Track completion
+            track_dna_generation_completed(
+                task_id=task_id,
+                user_id=None,
+                session_key=session_key,
+                is_anonymous=True,
+                books_count=books_count,
+                processing_time=processing_time,
+            )
+            
             return result_data
         else:
+            # Track completion for authenticated user
+            track_dna_generation_completed(
+                task_id=task_id,
+                user_id=user_id,
+                session_key=None,
+                is_anonymous=False,
+                books_count=books_count,
+                processing_time=processing_time,
+            )
+            
             return result_data
 
     except Exception as e:
+        # Track failure
+        track_dna_generation_failed(
+            task_id=task_id,
+            user_id=user_id,
+            session_key=session_key,
+            is_anonymous=is_anonymous,
+            error_type=type(e).__name__,
+            error_message=str(e),
+        )
         logger.error(f"Task failed due to an error in the analysis engine: {e}", exc_info=True)
         raise
 

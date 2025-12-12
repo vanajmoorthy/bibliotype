@@ -7,3 +7,4 @@ Disallow: /dashboard/
 Disallow: /task/
 
 # Sitemap will be dynamically generated with correct domain
+
