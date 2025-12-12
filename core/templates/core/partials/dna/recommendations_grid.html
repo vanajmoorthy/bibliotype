@@ -11,7 +11,7 @@
                     {# --- PUBLIC PROFILE LAYOUT --- #}
                     <div class="mb-2">
                         <span class="bg-brand-green text-brand-text border-brand-text border-2 px-2 py-1 font-bold">
-                            {{ rec.score|floatformat:0 }}% Match
+                            {{ rec.confidence_pct }}% Match
                         </span>
                     </div>
                     <p class="font-bold text-lg">{{ rec.book.title }}</p>

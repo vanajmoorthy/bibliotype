@@ -551,6 +551,10 @@ def public_profile_view(request, username):
             logger = logging.getLogger(__name__)
             try:
                 recommendations = get_recommendations_for_user(profile_user, limit=6)
+                
+                # Process recommendations to add confidence_pct (same as display_dna_view)
+                for rec in recommendations:
+                    rec["confidence_pct"] = int(rec.get("confidence", 0) * 100)
             except Exception as e:
                 # Log the error but don't break the page if recommendations fail
                 logger.error(f"Failed to get recommendations for user {profile_user.username}: {e}", exc_info=True)
