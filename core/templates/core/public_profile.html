@@ -1,17 +1,17 @@
 {% extends 'core/base.html' %}
 {% load humanize %}
 
-{% block seo_title %}{{ profile_user.first_name|default:profile_user.username }}'s Reading DNA - Bibliotype{% endblock %}
+{% block seo_title %}{{ title }} - Bibliotype{% endblock %}
 
-{% block seo_description %}{% if dna %}View {{ profile_user.first_name|default:profile_user.username }}'s reading DNA and literary personality. Discover their favorite genres, reading statistics, and book preferences.{% else %}{{ profile_user.first_name|default:profile_user.username }}'s Bibliotype profile.{% endif %}{% endblock %}
+{% block seo_description %}{% if dna %}View {{ title }} and literary personality. Discover their favorite genres, reading statistics, and book preferences.{% else %}{{ title }} profile.{% endif %}{% endblock %}
 
-{% block og_title %}{{ profile_user.first_name|default:profile_user.username }}'s Reading DNA{% endblock %}
+{% block og_title %}{{ title }}{% endblock %}
 
-{% block og_description %}{% if dna %}Discover {{ profile_user.first_name|default:profile_user.username }}'s unique reading DNA, literary personality, favorite genres, and reading insights.{% else %}{{ profile_user.first_name|default:profile_user.username }}'s Bibliotype profile.{% endif %}{% endblock %}
+{% block og_description %}{% if dna %}Discover {{ title }} and their unique reading DNA, literary personality, favorite genres, and reading insights.{% else %}{{ title }} profile.{% endif %}{% endblock %}
 
-{% block twitter_title %}{{ profile_user.first_name|default:profile_user.username }}'s Reading DNA{% endblock %}
+{% block twitter_title %}{{ title }}{% endblock %}
 
-{% block twitter_description %}{% if dna %}View {{ profile_user.first_name|default:profile_user.username }}'s reading DNA and discover their literary personality.{% else %}{{ profile_user.first_name|default:profile_user.username }}'s Bibliotype profile.{% endif %}{% endblock %}
+{% block twitter_description %}{% if dna %}View {{ title }} and discover their literary personality.{% else %}{{ title }} profile.{% endif %}{% endblock %}
 
 {% block structured_data %}
 {% if dna %}
@@ -19,8 +19,8 @@
 {
     "@context": "https://schema.org",
     "@type": "ProfilePage",
-    "name": "{{ profile_user.first_name|default:profile_user.username }}'s Reading DNA",
-    "description": "{{ profile_user.first_name|default:profile_user.username }}'s personalized reading DNA and literary personality profile",
+    "name": "{{ title }}",
+    "description": "{{ title }} personalized reading DNA and literary personality profile",
     "url": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}",
     "mainEntity": {
         "@type": "Person",
@@ -40,7 +40,7 @@
             {{ dna|json_script:"dna-data" }}
             <!-- The main header, personalized with the profile owner's name -->
             <h1 class="mb-8 flex flex-col items-center justify-center gap-x-4 text-center text-4xl font-bold tracking-widest uppercase sm:text-5xl md:flex-row">
-                <span>{{ profile_user.first_name|default:profile_user.username }}'s</span>
+                <span>{{ heading_name }}</span>
                 <span class="whitespace-nowrap">Reading DNA</span>
             </h1>
             

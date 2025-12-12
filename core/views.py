@@ -23,6 +23,19 @@ import os
 
 from .forms import CustomUserCreationForm, UpdateDisplayNameForm
 from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
+from .analytics.events import (
+    track_file_upload_started,
+    track_dna_displayed,
+    track_anonymous_dna_displayed,
+    track_recommendations_generated,
+    track_user_signed_up,
+    track_anonymous_dna_claimed,
+    track_user_logged_in,
+    track_profile_made_public,
+    track_public_profile_viewed,
+    track_settings_updated,
+    track_recommendation_error,
+)
 
 
 def robots_txt_view(request):
@@ -47,18 +60,17 @@ def robots_txt_view(request):
 def sitemap_xml_view(request):
     """Generate and serve sitemap.xml."""
     from django.urls import reverse
-    
+
     base_url = f"{request.scheme}://{request.get_host()}"
-    
+
     # Get public profiles (limit to recent/public ones for performance)
     from django.contrib.auth.models import User
     from .models import UserProfile
-    
-    public_profiles = UserProfile.objects.filter(
-        is_public=True,
-        dna_data__isnull=False
-    ).select_related('user')[:1000]  # Limit to 1000 most recent public profiles
-    
+
+    public_profiles = UserProfile.objects.filter(is_public=True, dna_data__isnull=False).select_related("user")[
+        :1000
+    ]  # Limit to 1000 most recent public profiles
+
     urls = [
         {
             "loc": f"{base_url}/",
@@ -76,31 +88,33 @@ def sitemap_xml_view(request):
             "priority": "0.8",
         },
     ]
-    
+
     # Add public profile URLs
     for profile in public_profiles:
         try:
             profile_url = reverse("core:public_profile", kwargs={"username": profile.user.username})
-            urls.append({
-                "loc": f"{base_url}{profile_url}",
-                "changefreq": "weekly",
-                "priority": "0.7",
-            })
+            urls.append(
+                {
+                    "loc": f"{base_url}{profile_url}",
+                    "changefreq": "weekly",
+                    "priority": "0.7",
+                }
+            )
         except Exception:
             continue
-    
+
     sitemap_xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
     sitemap_xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-    
+
     for url_data in urls:
-        sitemap_xml += '  <url>\n'
+        sitemap_xml += "  <url>\n"
         sitemap_xml += f'    <loc>{url_data["loc"]}</loc>\n'
         sitemap_xml += f'    <changefreq>{url_data["changefreq"]}</changefreq>\n'
         sitemap_xml += f'    <priority>{url_data["priority"]}</priority>\n'
-        sitemap_xml += '  </url>\n'
-    
-    sitemap_xml += '</urlset>'
-    
+        sitemap_xml += "  </url>\n"
+
+    sitemap_xml += "</urlset>"
+
     return HttpResponse(sitemap_xml, content_type="application/xml")
 
 
@@ -188,6 +202,12 @@ def display_dna_view(request):
                         )
 
                 logger.info(f"Generated {len(recommendations)} recommendations for user {request.user.id}")
+                # Track recommendations generated
+                track_recommendations_generated(
+                    user_id=request.user.id,
+                    recommendation_count=len(recommendations),
+                    is_authenticated=True,
+                )
             except Exception as e:
                 logger.error(f"Error generating recommendations for user {request.user.id}: {e}", exc_info=True)
                 rec_error = "Unable to load recommendations at this time."
@@ -200,7 +220,7 @@ def display_dna_view(request):
                 from django.utils import timezone
                 from datetime import timedelta
                 from collections import Counter
-                
+
                 # Check if AnonymousUserSession exists, if not try to recreate it
                 try:
                     anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
@@ -209,24 +229,26 @@ def display_dna_view(request):
                 except AnonymousUserSession.DoesNotExist:
                     # Session record doesn't exist - try to recreate from session dna_data
                     # This can happen if the session expired but session data still exists
-                    logger.warning(f"AnonymousUserSession not found for session {request.session.session_key}, attempting to recreate from dna_data...")
+                    logger.warning(
+                        f"AnonymousUserSession not found for session {request.session.session_key}, attempting to recreate from dna_data..."
+                    )
                     try:
-                        
+
                         # Extract distributions from dna_data
                         genre_dist = {}
-                        for genre, count in dna_data.get('top_genres', []):
+                        for genre, count in dna_data.get("top_genres", []):
                             genre_dist[genre] = count
-                        
+
                         author_dist = {}
-                        for author, count in dna_data.get('top_authors', [])[:20]:
+                        for author, count in dna_data.get("top_authors", [])[:20]:
                             normalized = Author._normalize(author)
                             author_dist[normalized] = count
-                        
+
                         # Try to get book IDs from session if stored, otherwise use empty list
-                        books_data = request.session.get('book_ids', [])
-                        top_books_data = request.session.get('top_book_ids', [])
-                        book_ratings = request.session.get('book_ratings', {})  # Get ratings if stored
-                        
+                        books_data = request.session.get("book_ids", [])
+                        top_books_data = request.session.get("top_book_ids", [])
+                        book_ratings = request.session.get("book_ratings", {})  # Get ratings if stored
+
                         # Create a minimal AnonymousUserSession from dna_data
                         anon_session = AnonymousUserSession.objects.create(
                             session_key=request.session.session_key,
@@ -238,15 +260,19 @@ def display_dna_view(request):
                             book_ratings=book_ratings,  # Store ratings if available
                             expires_at=timezone.now() + timedelta(days=7),
                         )
-                        
+
                         # Now try to get recommendations
                         recommendations = get_recommendations_for_anonymous(request.session.session_key, limit=6)
-                        logger.info(f"Recreated AnonymousUserSession and generated {len(recommendations)} recommendations")
+                        logger.info(
+                            f"Recreated AnonymousUserSession and generated {len(recommendations)} recommendations"
+                        )
                     except Exception as recreate_error:
                         logger.error(f"Error recreating anonymous session: {recreate_error}", exc_info=True)
                         recommendations = []
-                        rec_error = "Unable to load recommendations. Session may have expired. Please upload your file again."
-                
+                        rec_error = (
+                            "Unable to load recommendations. Session may have expired. Please upload your file again."
+                        )
+
                 # Process recommendations if we got any
                 if recommendations:
                     for rec in recommendations:
@@ -261,6 +287,12 @@ def display_dna_view(request):
                                     rec["primary_source_user"] = source
 
                     logger.info(f"Generated {len(recommendations)} recommendations for anonymous session")
+                    # Track recommendations generated for anonymous user
+                    track_recommendations_generated(
+                        session_key=request.session.session_key,
+                        recommendation_count=len(recommendations),
+                        is_authenticated=False,
+                    )
             except Exception as e:
                 logger.error(f"Error generating recommendations for anonymous user: {e}", exc_info=True)
                 rec_error = "Unable to load recommendations at this time."
@@ -269,12 +301,35 @@ def display_dna_view(request):
         messages.info(request, "First, upload your library file to generate your Bibliotype!")
         return redirect("core:home")
 
+    # Track DNA displayed
+    has_recommendations = len(recommendations) > 0
+    if request.user.is_authenticated:
+        track_dna_displayed(request, is_authenticated=True, has_recommendations=has_recommendations)
+    else:
+        # Track anonymous DNA displayed
+        track_anonymous_dna_displayed(
+            session_key=request.session.session_key,
+            has_recommendations=has_recommendations,
+        )
+        track_dna_displayed(request, is_authenticated=False, has_recommendations=has_recommendations)
+
+    # Calculate title with proper possessive form
+    title = None
+    if request.user.is_authenticated:
+        display_name = request.user.first_name if request.user.first_name else request.user.username
+        display_name_lower = display_name.lower()
+        if display_name_lower.endswith("s"):
+            title = f"{display_name_lower}' bibliotype"
+        else:
+            title = f"{display_name_lower}'s bibliotype"
+
     context = {
         "dna": dna_data,
         "user_profile": user_profile,
         "is_processing": False,
         "recommendations": recommendations,
         "rec_error": rec_error,
+        "title": title,
     }
 
     return render(request, "core/dna_display.html", context)
@@ -292,6 +347,9 @@ def upload_view(request):
         if csv_file.size > 10 * 1024 * 1024:  # 10MB limit
             messages.error(request, "File is too large. Please upload an export smaller than 10MB.")
             return redirect("core:home")
+
+        # Track file upload started
+        track_file_upload_started(request, csv_file.size)
 
         csv_content = csv_file.read().decode("utf-8")
 
@@ -338,10 +396,26 @@ def signup_view(request):
             user = form.save()
             login(request, user)
 
+            had_dna_in_session = "dna_data" in request.session
+
             if task_id_to_claim:
                 user.userprofile.pending_dna_task_id = task_id_to_claim
                 user.userprofile.save()
                 claim_anonymous_dna_task.delay(user.id, task_id_to_claim)
+
+                # Track signup and DNA claim
+                track_user_signed_up(
+                    user_id=user.id,
+                    signup_source="with_task_claim",
+                    task_id_to_claim=task_id_to_claim,
+                    had_dna_in_session=had_dna_in_session,
+                )
+                track_anonymous_dna_claimed(
+                    user_id=user.id,
+                    task_id=task_id_to_claim,
+                    session_key=None,  # Session key not needed, task_id is sufficient identifier
+                )
+
                 messages.success(request, "Account created! We'll save your Bibliotype as soon as it's ready.")
                 processing_url = reverse("core:display_dna") + "?processing=true"
                 return redirect(processing_url)
@@ -349,16 +423,25 @@ def signup_view(request):
             if "dna_data" in request.session:
                 dna_to_save = request.session.pop("dna_data")
                 _save_dna_to_profile(user.userprofile, dna_to_save)
+
+                # Track signup with session DNA (could be after anonymous DNA)
+                track_user_signed_up(
+                    user_id=user.id,
+                    signup_source="with_session_dna",
+                    had_dna_in_session=True,
+                )
+
                 messages.success(request, "Account created and your Bibliotype has been saved!")
                 return redirect("core:display_dna")
 
-            messages.success(request, "Account created! Now, let's generate your Bibliotype.")
+            # Track signup before DNA generation
+            track_user_signed_up(
+                user_id=user.id,
+                signup_source="before_dna",
+                had_dna_in_session=False,
+            )
 
-            # Only capture event if PostHog is properly configured
-            if posthog.api_key:
-                posthog.capture(
-                    "user_signed_up_not_after_generating", properties={"example_property": "with_some_value"}
-                )
+            messages.success(request, "Account created! Now, let's generate your Bibliotype.")
             return redirect("core:home")
 
     else:
@@ -383,13 +466,20 @@ def login_view(request):
         if user is not None:
             login(request, user)
 
+            had_dna_in_session = "dna_data" in request.session
+
             if "dna_data" in request.session:
                 dna_to_save = request.session.pop("dna_data")
                 if not user.userprofile.dna_data:
                     _save_dna_to_profile(user.userprofile, dna_to_save)
                 messages.success(request, "Logged in successfully!")
+
+                # Track login
+                track_user_logged_in(user.id, had_dna_in_session=True)
                 return redirect("core:display_dna")
 
+            # Track login
+            track_user_logged_in(user.id, had_dna_in_session=False)
             return redirect("core:home")
 
         messages.error(request, "Invalid email or password. Please try again.")
@@ -418,6 +508,9 @@ def update_privacy_view(request):
     profile.save()
 
     if is_public:
+        # Track profile made public
+        track_profile_made_public(request.user.id)
+
         public_url = request.build_absolute_uri(
             reverse("core:public_profile", kwargs={"username": request.user.username})
         )
@@ -438,6 +531,8 @@ def update_display_name_view(request):
     form = UpdateDisplayNameForm(request.POST, user=request.user, instance=request.user)
     if form.is_valid():
         form.save()
+        # Track settings update
+        track_settings_updated(request.user.id, setting_type="display_name")
         messages.success(request, "Your display name has been updated!")
     else:
         for error in form.errors.values():
@@ -481,6 +576,9 @@ def update_recommendation_visibility(request):
     profile = request.user.userprofile
     profile.visible_in_recommendations = is_visible
     profile.save()
+
+    # Track settings update
+    track_settings_updated(request.user.id, setting_type="recommendation_visibility")
 
     if is_visible:
         messages.success(request, "You are now visible as a recommendation source to similar readers!")
@@ -536,31 +634,52 @@ def public_profile_view(request, username):
             return render(request, "core/profile_private.html")
 
         display_name = profile_user.first_name if profile_user.first_name else profile_user.username
+        display_name_lower = display_name.lower()
 
-        if display_name.lower().endswith("s"):
-            title = f"{display_name}' Reading DNA"
+        if display_name_lower.endswith("s"):
+            title = f"{display_name_lower}' bibliotype"
+            heading_name = f"{display_name}'"
         else:
-            title = f"{display_name}'s Reading DNA"
+            title = f"{display_name_lower}'s bibliotype"
+            heading_name = f"{display_name}'s"
 
         # Get recommendations for the profile owner
         recommendations = []
         if profile.dna_data:
             from .services.recommendation_service import get_recommendations_for_user
             import logging
-            
+
             logger = logging.getLogger(__name__)
             try:
                 recommendations = get_recommendations_for_user(profile_user, limit=6)
             except Exception as e:
                 # Log the error but don't break the page if recommendations fail
                 logger.error(f"Failed to get recommendations for user {profile_user.username}: {e}", exc_info=True)
+                # Track recommendation error in PostHog
+                track_recommendation_error(
+                    profile_user_id=profile_user.id,
+                    error_type=type(e).__name__,
+                    error_message=str(e),
+                    context="public_profile_view",
+                )
                 recommendations = []  # Continue with empty recommendations
+
+        # Track public profile viewed
+        track_public_profile_viewed(
+            profile_username=profile_user.username,
+            profile_user_id=profile_user.id,
+            viewer_is_authenticated=request.user.is_authenticated,
+            viewer_is_owner=request.user.is_authenticated and request.user == profile_user,
+            viewer_user_id=request.user.id if request.user.is_authenticated else None,
+            viewer_session_id=request.session.session_key if not request.user.is_authenticated else None,
+        )
 
         context = {
             "dna": profile.dna_data,
             "profile_user": profile_user,
             "user_profile": profile,
             "title": title,
+            "heading_name": heading_name,
             "recommendations": recommendations,
         }
         return render(request, "core/public_profile.html", context)
@@ -575,7 +694,7 @@ def task_status_view(request, task_id):
 
 def get_task_result_view(request, task_id):
     from .models import AnonymousUserSession
-    
+
     cached_result = cache.get(f"dna_result_{task_id}")
     if cached_result is not None:
         request.session["dna_data"] = cached_result
@@ -586,7 +705,7 @@ def get_task_result_view(request, task_id):
                 request.session["book_ids"] = anon_session.books_data or []
                 request.session["top_book_ids"] = anon_session.top_books_data or []
                 # Use getattr for backwards compatibility if migration hasn't run yet
-                request.session["book_ratings"] = getattr(anon_session, 'book_ratings', None) or {}
+                request.session["book_ratings"] = getattr(anon_session, "book_ratings", None) or {}
             except AnonymousUserSession.DoesNotExist:
                 pass
         request.session.save()
@@ -611,7 +730,7 @@ def get_task_result_view(request, task_id):
                 request.session["book_ids"] = anon_session.books_data or []
                 request.session["top_book_ids"] = anon_session.top_books_data or []
                 # Use getattr for backwards compatibility if migration hasn't run yet
-                request.session["book_ratings"] = getattr(anon_session, 'book_ratings', None) or {}
+                request.session["book_ratings"] = getattr(anon_session, "book_ratings", None) or {}
             except AnonymousUserSession.DoesNotExist:
                 pass
         request.session.save()
@@ -641,26 +760,26 @@ def get_task_result_view(request, task_id):
 def handler404(request, exception=None):
     """Custom 404 handler that renders our fun 404 page."""
     # Check if this is a user profile path to show user-not-found message
-    path = request.path.strip('/')
+    path = request.path.strip("/")
     username = None
-    if path.startswith('u/') and len(path.split('/')) >= 2:
+    if path.startswith("u/") and len(path.split("/")) >= 2:
         # Extract username from path like "u/username" or "u/username/"
-        parts = path.split('/')
-        if parts[0] == 'u' and len(parts) > 1:
+        parts = path.split("/")
+        if parts[0] == "u" and len(parts) > 1:
             username = parts[1]
-    
+
     return render(request, "core/404.html", {"username": username}, status=404)
 
 
 def catch_all_404_view(request, unused_path):
     """Catch-all view for unmatched URLs that shows our custom 404 page."""
     # Check if this is a user profile path to show user-not-found message
-    path = request.path.strip('/')
+    path = request.path.strip("/")
     username = None
-    if path.startswith('u/') and len(path.split('/')) >= 2:
+    if path.startswith("u/") and len(path.split("/")) >= 2:
         # Extract username from path like "u/username" or "u/username/"
-        parts = path.split('/')
-        if parts[0] == 'u' and len(parts) > 1:
+        parts = path.split("/")
+        if parts[0] == "u" and len(parts) > 1:
             username = parts[1]
-    
+
     return render(request, "core/404.html", {"username": username}, status=404)
