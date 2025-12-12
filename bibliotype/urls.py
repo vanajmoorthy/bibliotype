@@ -16,6 +16,7 @@ Including another URLconf
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
+from core.views import handler404
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -26,5 +27,5 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns.insert(0, path("silk/", include("silk.urls")))
 
-# Custom 404 handler - must be set in root URLconf for production
-handler404 = 'core.views.handler404'
+# Custom 404 handler - must be a callable in root URLconf (string format only works in settings.py)
+# This takes precedence over settings.py handler404 if both are set
