@@ -546,8 +546,15 @@ def public_profile_view(request, username):
         recommendations = []
         if profile.dna_data:
             from .services.recommendation_service import get_recommendations_for_user
-
-            recommendations = get_recommendations_for_user(profile_user, limit=6)
+            import logging
+            
+            logger = logging.getLogger(__name__)
+            try:
+                recommendations = get_recommendations_for_user(profile_user, limit=6)
+            except Exception as e:
+                # Log the error but don't break the page if recommendations fail
+                logger.error(f"Failed to get recommendations for user {profile_user.username}: {e}", exc_info=True)
+                recommendations = []  # Continue with empty recommendations
 
         context = {
             "dna": profile.dna_data,

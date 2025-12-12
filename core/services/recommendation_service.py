@@ -3,6 +3,7 @@ from django.utils import timezone
 from django.db.models import Q, Avg, Count
 from django.core.cache import cache
 import math
+import logging
 
 from .user_similarity_service import (
     find_similar_users,
@@ -11,6 +12,31 @@ from .user_similarity_service import (
     get_match_quality_label,
 )
 from ..models import UserBook, Book, User, AnonymousUserSession, AnonymizedReadingProfile, Genre, Author
+
+logger = logging.getLogger(__name__)
+
+
+def safe_cache_get(key, default=None):
+    """
+    Safely get a value from cache, handling Redis connection errors gracefully.
+    Returns default value if cache is unavailable.
+    """
+    try:
+        return cache.get(key, default)
+    except Exception as e:
+        logger.warning(f"Cache get failed for key '{key}': {e}. Continuing without cache.")
+        return default
+
+
+def safe_cache_set(key, value, timeout=None):
+    """
+    Safely set a value in cache, handling Redis connection errors gracefully.
+    Silently fails if cache is unavailable.
+    """
+    try:
+        cache.set(key, value, timeout)
+    except Exception as e:
+        logger.warning(f"Cache set failed for key '{key}': {e}. Continuing without cache.")
 
 
 class RecommendationEngine:
@@ -31,7 +57,7 @@ class RecommendationEngine:
         """
         # Cache key based on user ID and limit
         cache_key = f"user_recommendations_{user.id}_{limit}"
-        cached_result = cache.get(cache_key)
+        cached_result = safe_cache_get(cache_key)
         if cached_result is not None:
             return cached_result
 
@@ -54,7 +80,7 @@ class RecommendationEngine:
         result = final_recommendations[:limit]
         
         # Cache for 15 minutes (recommendations can change as users add books)
-        cache.set(cache_key, result, 900)
+        safe_cache_set(cache_key, result, 900)
         return result
 
     def get_recommendations_for_anonymous(self, session_key, limit=10, include_explanations=True):
@@ -381,12 +407,12 @@ class RecommendationEngine:
 
         # Source 2: Anonymized profiles (medium quality)
         cache_key = f"anon_profiles_sample_{user.id}"
-        anonymized_profiles = cache.get(cache_key)
+        anonymized_profiles = safe_cache_get(cache_key)
 
         if anonymized_profiles is None:
             # Sample relevant anonymized profiles (not all 200)
             anonymized_profiles = list(AnonymizedReadingProfile.objects.all()[:100])
-            cache.set(cache_key, anonymized_profiles, 3600)  # Cache 1 hour
+            safe_cache_set(cache_key, anonymized_profiles, 3600)  # Cache 1 hour
 
         candidate_book_ids = set()
         for anon_profile in anonymized_profiles:
@@ -462,7 +488,7 @@ class RecommendationEngine:
         # Source 1: Find similar users (similar to find_similar_users approach)
         # Get all public users who are visible in recommendations
         cache_key = f"public_users_for_recs_sample"
-        all_users = cache.get(cache_key)
+        all_users = safe_cache_get(cache_key)
 
         if all_users is None:
             all_users = list(
@@ -472,7 +498,7 @@ class RecommendationEngine:
                     userprofile__visible_in_recommendations=True,
                 )[:500]  # Limit to 500 users for performance
             )
-            cache.set(cache_key, all_users, 1800)  # Cache 30 min
+            safe_cache_set(cache_key, all_users, 1800)  # Cache 30 min
 
         # Calculate similarity for all users and get top N (similar to find_similar_users)
         similarities = []
