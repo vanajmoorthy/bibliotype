@@ -13,8 +13,12 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - make vibe look better with bg colours and fix dot separators and check mobile
 - put dev data into prod using fixtures? don't need
 - forgot password email and email verification(?)
+- show user id in django admin
+- save recommendations as part of their profile
+- same with llm vibe
+- configure llm via posthog for tracking 
+- check those little dot separators for vibe and improve vibe 
 - ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
-- improve profile private page
 - improve community stats look
   - timelines/graphs for all community stats
   - same for controversial ratings
@@ -38,7 +42,6 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - add cron job to check publishers for mainstreamness
 - check lighthouse scores 
 - add privacy statement? ToS
-- add posthog tracking
 - average "contrarian" score under most controversial ratings with phrases like "my, you're contrarian"
 - sign up form validate password and all on blur
 - how similar are you/similarity percentage for 2 or more people
