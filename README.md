@@ -11,7 +11,6 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 - edit mainstream meter text to "niche, normal, mainstream"
 - make vibe look better with bg colours and fix dot separators and check mobile
-- put dev data into prod using fixtures? don't need
 - forgot password email and email verification(?)
 - show user id in django admin
 - save recommendations as part of their profile
@@ -19,7 +18,12 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - configure llm via posthog for tracking 
 - check those little dot separators for vibe and improve vibe
 - fix redis cache issue
-- track total number of profiles/unique bibliotypes generated
+- posthog
+  - track total number of profiles/unique bibliotypes generated
+  - get rid of recommendations_generated event
+  - add bibliotype generated event
+  - enable web capture and web vitals
+  - track redis cache error as error and not event
 - ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 - improve community stats look
   - timelines/graphs for all community stats
@@ -31,14 +35,10 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - ~ai text explanation of most controversial ratings and possible explanations~ 
 - different colours for different reader types
 - pixel square background for banner
-- change instruction for goodreads desktop/mobile, remove storygraph
 - upload to instagram story
 - ai moodboard/collage. different options of things to upload to instagram 
 - SEO stuff
 - adjust copy ⚠️
-- make instructions modal better and detail app and web pathways
-- posthog integration
-- check ui on loading pages for logged in and non logged in
 - ui elements for community stats
 - update tests
 - add cron job to check publishers for mainstreamness
@@ -49,8 +49,7 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - how similar are you/similarity percentage for 2 or more people
   - add page for this
   - allow similarity comparison with multiple users (only public)
-- add "input your csv" link?
-- make pixelated dna strand logo
+- ~make pixelated dna strand logo~
 - add emojis in some places
 - think about more animation
 
