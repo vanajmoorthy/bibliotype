@@ -17,7 +17,9 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 - save recommendations as part of their profile
 - same with llm vibe
 - configure llm via posthog for tracking 
-- check those little dot separators for vibe and improve vibe 
+- check those little dot separators for vibe and improve vibe
+- fix redis cache issue
+- track total number of profiles/unique bibliotypes generated
 - ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 - improve community stats look
   - timelines/graphs for all community stats
