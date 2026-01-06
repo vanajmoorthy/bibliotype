@@ -1,9 +1,8 @@
 {% if dna.reading_vibe %}
     <div id="vibe-container"
-         class="mb-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-center text-xl italic">
+         class="mb-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-4 text-center text-xl italic">
         {% for phrase in dna.reading_vibe %}
-            <span class="vibe-item whitespace-nowrap text-gray-600">{{ phrase }}</span>
-            {% if not forloop.last %}<span class="vibe-separator font-bold text-blue-400">·</span>{% endif %}
+            <span class="vibe-item whitespace-nowrap px-2 py-0 text-gray-700 mb-1 mt-1" style="background-color: {% cycle '#40e7aa' '#ffb4dd' '#ffa75e'   '#8bbfff' %};">{{ phrase }}</span>{% if not forloop.last %}<span class="vibe-separator font-bold text-blue-400 mx-1">·</span>{% endif %}
         {% endfor %}
     </div>
 {% endif %}

@@ -5,8 +5,6 @@ import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 
-# --- All LLM-related code is now isolated here ---
-
 load_dotenv()
 logger = logging.getLogger(__name__)
 

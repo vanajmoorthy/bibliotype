@@ -38,11 +38,13 @@ class TaskUnitTests(TestCase):
 
     
 
-    def test_save_dna_to_profile(self):
+    @patch("core.tasks.generate_recommendations_task")
+    def test_save_dna_to_profile(self, mock_recommendations_task):
         """
         Tests the helper for saving DNA data to a user profile.
         """
         mock_profile = MagicMock(spec=UserProfile)
+        mock_recommendations_task.delay = MagicMock()
         dna_data = {
             "reader_type": "Test Type",
             "user_stats": {"total_books_read": 50},

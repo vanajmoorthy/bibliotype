@@ -120,10 +120,25 @@ def _save_dna_to_profile(profile, dna_data):
     
     # Clear the pending task ID since we've completed the regeneration
     profile.pending_dna_task_id = None
+    
+    # Clear old recommendations - they'll be regenerated asynchronously
+    profile.recommendations_data = None
+    profile.recommendations_generated_at = None
 
     try:
         # Explicitly save all fields including pending_dna_task_id
-        profile.save(update_fields=['dna_data', 'reader_type', 'total_books_read', 'reading_vibe', 'vibe_data_hash', 'pending_dna_task_id'])
+        profile.save(update_fields=[
+            'dna_data', 'reader_type', 'total_books_read', 'reading_vibe', 
+            'vibe_data_hash', 'pending_dna_task_id',
+            'recommendations_data', 'recommendations_generated_at'
+        ])
+        
+        # Trigger async recommendation generation
+        # Import here to avoid circular imports
+        from ..tasks import generate_recommendations_task
+        generate_recommendations_task.delay(profile.user.id)
+        logger.info(f"Triggered recommendation generation task for user {profile.user.username}")
+        
     except Exception as e:
         logger.error(f"Error saving profile for user {profile.user.username}: {e}")
         raise

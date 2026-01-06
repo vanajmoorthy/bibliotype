@@ -8,8 +8,11 @@ import logging
 from .user_similarity_service import (
     find_similar_users,
     calculate_anonymous_similarity,
+    calculate_anonymous_similarity_with_context,
     calculate_similarity_with_anonymized,
     get_match_quality_label,
+    _build_user_context_for_similarity,
+    _bulk_build_user_contexts,
 )
 from ..models import UserBook, Book, User, AnonymousUserSession, AnonymizedReadingProfile, Genre, Author
 from ..analytics.events import track_redis_cache_error
@@ -421,6 +424,7 @@ class RecommendationEngine:
                         candidates[book_id]["total_weight"] += weight
 
         # Source 2: Anonymized profiles (medium quality)
+        # OPTIMIZED: Build user context once and calculate similarity only once per profile
         cache_key = f"anon_profiles_sample_{user.id}"
         anonymized_profiles = safe_cache_get(cache_key)
 
@@ -429,10 +433,18 @@ class RecommendationEngine:
             anonymized_profiles = list(AnonymizedReadingProfile.objects.all()[:100])
             safe_cache_set(cache_key, anonymized_profiles, 3600)  # Cache 1 hour
 
+        # Build user context ONCE for all comparisons
+        user_ctx = _build_user_context_for_similarity(user)
+        
+        # Calculate similarities ONCE and store with results
         candidate_book_ids = set()
+        matching_profiles = []  # Store (profile, similarity_data) pairs
+        
         for anon_profile in anonymized_profiles:
-            similarity_data = calculate_similarity_with_anonymized(user, anon_profile)
+            # Use user_ctx to avoid re-querying user data
+            similarity_data = calculate_similarity_with_anonymized(user, anon_profile, user_ctx=user_ctx)
             if similarity_data["similarity_score"] >= self.min_similarity:
+                matching_profiles.append((anon_profile, similarity_data))
                 for book_id in anon_profile.top_book_ids[:5]:
                     if book_id not in user_context["read_book_ids"]:
                         candidate_book_ids.add(book_id)
@@ -446,41 +458,38 @@ class RecommendationEngine:
                 .prefetch_related("genres")
             }
 
-            # Now process anonymized profiles with pre-fetched books
-            for anon_profile in anonymized_profiles:
-                similarity_data = calculate_similarity_with_anonymized(user, anon_profile)
+            # Process using cached similarity data (NO recalculation!)
+            for anon_profile, similarity_data in matching_profiles:
+                for book_id in anon_profile.top_book_ids[:5]:
+                    if book_id not in user_context["read_book_ids"]:
+                        book = books_dict.get(book_id)
+                        if not book:
+                            continue
 
-                if similarity_data["similarity_score"] >= self.min_similarity:
-                    for book_id in anon_profile.top_book_ids[:5]:
-                        if book_id not in user_context["read_book_ids"]:
-                            book = books_dict.get(book_id)
-                            if not book:
-                                continue
+                        if book_id not in candidates:
+                            candidates[book_id] = {
+                                "book": book,
+                                "sources": [],
+                                "max_similarity": 0,
+                                "recommender_count": 0,
+                                "total_weight": 0,
+                            }
 
-                            if book_id not in candidates:
-                                candidates[book_id] = {
-                                    "book": book,
-                                    "sources": [],
-                                    "max_similarity": 0,
-                                    "recommender_count": 0,
-                                    "total_weight": 0,
-                                }
+                        candidates[book_id]["sources"].append(
+                            {
+                                "type": "anonymized_profile",
+                                "similarity_score": similarity_data["similarity_score"],
+                            }
+                        )
 
-                            candidates[book_id]["sources"].append(
-                                {
-                                    "type": "anonymized_profile",
-                                    "similarity_score": similarity_data["similarity_score"],
-                                }
-                            )
+                        candidates[book_id]["max_similarity"] = max(
+                            candidates[book_id]["max_similarity"], similarity_data["similarity_score"]
+                        )
+                        candidates[book_id]["recommender_count"] += 1
 
-                            candidates[book_id]["max_similarity"] = max(
-                                candidates[book_id]["max_similarity"], similarity_data["similarity_score"]
-                            )
-                            candidates[book_id]["recommender_count"] += 1
-
-                            # Lower weight for anonymized sources
-                            weight = similarity_data["similarity_score"] * 0.8
-                            candidates[book_id]["total_weight"] += weight
+                        # Lower weight for anonymized sources
+                        weight = similarity_data["similarity_score"] * 0.8
+                        candidates[book_id]["total_weight"] += weight
 
         # Strategy 3: Always add some fallback candidates for discovery and to
         # prevent zero-recommendation scenarios.
@@ -515,12 +524,19 @@ class RecommendationEngine:
             )
             safe_cache_set(cache_key, all_users, 1800)  # Cache 30 min
 
-        # Calculate similarity for all users and get top N (similar to find_similar_users)
+        # OPTIMIZED: Bulk-load all user contexts in one query
+        user_ids = [u.id for u in all_users]
+        user_lookup = {u.id: u for u in all_users}
+        all_user_contexts = _bulk_build_user_contexts(user_ids)
+        
+        # Calculate similarity for all users using pre-built contexts
         similarities = []
-        for user in all_users:
-            similarity_data = calculate_anonymous_similarity(anon_session, user)
+        for user_id, user_ctx in all_user_contexts.items():
+            if not user_ctx["book_ids"]:
+                continue
+            similarity_data = calculate_anonymous_similarity_with_context(anon_session, user_ctx)
             if similarity_data["similarity_score"] >= self.min_similarity:
-                similarities.append((user, similarity_data))
+                similarities.append((user_lookup[user_id], similarity_data))
         
         # Sort by similarity and take top 30 (same as logged-in users)
         similarities.sort(key=lambda x: x[1]["similarity_score"], reverse=True)
@@ -587,12 +603,16 @@ class RecommendationEngine:
                         candidates[book_id]["total_weight"] += weight
 
         # Source 2: Anonymized profiles
-        anonymized_profiles = AnonymizedReadingProfile.objects.all()[:100]
+        # OPTIMIZED: Calculate similarities once and cache results
+        anonymized_profiles = list(AnonymizedReadingProfile.objects.all()[:100])
 
         candidate_book_ids = set()
+        matching_profiles = []  # Store (profile, similarity_data) pairs
+        
         for anon_profile in anonymized_profiles:
             similarity_data = calculate_similarity_with_anonymized(anon_session, anon_profile)
             if similarity_data["similarity_score"] >= self.min_similarity:
+                matching_profiles.append((anon_profile, similarity_data))
                 for book_id in anon_profile.top_book_ids[:5]:
                     if book_id not in anon_context["read_book_ids"]:
                         candidate_book_ids.add(book_id)
@@ -606,38 +626,35 @@ class RecommendationEngine:
                 .prefetch_related("genres")
             }
 
-            # Now process anonymized profiles with pre-fetched books
-            for anon_profile in anonymized_profiles:
-                similarity_data = calculate_similarity_with_anonymized(anon_session, anon_profile)
+            # Process using cached similarity data (NO recalculation!)
+            for anon_profile, similarity_data in matching_profiles:
+                for book_id in anon_profile.top_book_ids[:5]:
+                    if book_id not in anon_context["read_book_ids"]:
+                        book = books_dict.get(book_id)
+                        if not book:
+                            continue
 
-                if similarity_data["similarity_score"] >= self.min_similarity:
-                    for book_id in anon_profile.top_book_ids[:5]:
-                        if book_id not in anon_context["read_book_ids"]:
-                            book = books_dict.get(book_id)
-                            if not book:
-                                continue
+                        if book_id not in candidates:
+                            candidates[book_id] = {
+                                "book": book,
+                                "sources": [],
+                                "max_similarity": 0,
+                                "recommender_count": 0,
+                                "total_weight": 0,
+                            }
 
-                            if book_id not in candidates:
-                                candidates[book_id] = {
-                                    "book": book,
-                                    "sources": [],
-                                    "max_similarity": 0,
-                                    "recommender_count": 0,
-                                    "total_weight": 0,
-                                }
+                        candidates[book_id]["sources"].append(
+                            {
+                                "type": "anonymized_profile",
+                                "similarity_score": similarity_data["similarity_score"],
+                            }
+                        )
 
-                            candidates[book_id]["sources"].append(
-                                {
-                                    "type": "anonymized_profile",
-                                    "similarity_score": similarity_data["similarity_score"],
-                                }
-                            )
-
-                            candidates[book_id]["max_similarity"] = max(
-                                candidates[book_id]["max_similarity"], similarity_data["similarity_score"]
-                            )
-                            candidates[book_id]["recommender_count"] += 1
-                            candidates[book_id]["total_weight"] += similarity_data["similarity_score"] * 0.8
+                        candidates[book_id]["max_similarity"] = max(
+                            candidates[book_id]["max_similarity"], similarity_data["similarity_score"]
+                        )
+                        candidates[book_id]["recommender_count"] += 1
+                        candidates[book_id]["total_weight"] += similarity_data["similarity_score"] * 0.8
 
         # Note: Fallback is now handled in get_recommendations_for_anonymous after candidate collection
         # This ensures we always have enough recommendations even if no similar users found

@@ -171,45 +171,50 @@ def display_dna_view(request):
         if dna_data is None and user_profile.dna_data:
             dna_data = user_profile.dna_data
 
-        # Get recommendations for registered user
+        # Get recommendations for registered user - use STORED recommendations
         if user_profile.dna_data:
             try:
-                from .services.recommendation_service import get_recommendations_for_user
-
-                recommendations = get_recommendations_for_user(request.user, limit=6)
-
-                for rec in recommendations:
-                    # 1. Add a ready-to-use percentage for the match score
-                    rec["confidence_pct"] = int(rec.get("confidence", 0) * 100)
-
-                    # 2. Find the best "similar_user" to link to
-                    rec["primary_source_user"] = None
-                    best_similarity = 0
-
-                    for source in rec.get("sources", []):
-                        # We only want to link to actual, registered users
-                        if source.get("type") == "similar_user":
-                            # Find the user with the highest similarity score for this specific book
-                            if source.get("similarity_score", 0) > best_similarity:
-                                best_similarity = source.get("similarity_score", 0)
-                                rec["primary_source_user"] = source
-
-                    if rec["primary_source_user"]:
-                        match_quality = rec["primary_source_user"].get("match_quality", "")
-                        # Assign a badge class based on the map, with a default
-                        rec["primary_source_user"]["badge_class"] = badge_color_map.get(
-                            match_quality, "bg-brand-purple"
-                        )
-
-                logger.info(f"Generated {len(recommendations)} recommendations for user {request.user.id}")
-                # Track recommendations generated
-                track_recommendations_generated(
-                    user_id=request.user.id,
-                    recommendation_count=len(recommendations),
-                    is_authenticated=True,
-                )
+                # Use stored recommendations if available (generated when DNA was created/updated)
+                if user_profile.recommendations_data:
+                    stored_recs = user_profile.recommendations_data
+                    
+                    # Transform stored format to template-expected format
+                    # Template expects rec.book.title, rec.book.author.name, etc.
+                    for rec in stored_recs:
+                        # Create nested book structure for template compatibility
+                        rec["book"] = {
+                            "id": rec.get("book_id"),
+                            "title": rec.get("book_title", "Unknown Title"),
+                            "author": {"name": rec.get("book_author", "Unknown Author")},
+                            "average_rating": rec.get("book_average_rating"),
+                        }
+                        
+                        # Add badge classes for display (these aren't stored in DB)
+                        if rec.get("primary_source_user"):
+                            match_quality = rec["primary_source_user"].get("match_quality", "")
+                            rec["primary_source_user"]["badge_class"] = badge_color_map.get(
+                                match_quality, "bg-brand-purple"
+                            )
+                    
+                    recommendations = stored_recs
+                    logger.info(f"Loaded {len(recommendations)} stored recommendations for user {request.user.id}")
+                else:
+                    # No stored recommendations yet - they're being generated asynchronously
+                    # Trigger generation if not already in progress (safety net)
+                    from .tasks import generate_recommendations_task
+                    generate_recommendations_task.delay(request.user.id)
+                    logger.info(f"No stored recommendations for user {request.user.id}, triggered generation")
+                    recommendations = []
+                
+                # Track recommendations displayed (only if we have some)
+                if recommendations:
+                    track_recommendations_generated(
+                        user_id=request.user.id,
+                        recommendation_count=len(recommendations),
+                        is_authenticated=True,
+                    )
             except Exception as e:
-                logger.error(f"Error generating recommendations for user {request.user.id}: {e}", exc_info=True)
+                logger.error(f"Error loading recommendations for user {request.user.id}: {e}", exc_info=True)
                 rec_error = "Unable to load recommendations at this time."
     else:
         # Anonymous user recommendations
@@ -643,22 +648,32 @@ def public_profile_view(request, username):
             title = f"{display_name_lower}'s bibliotype"
             heading_name = f"{display_name}'s"
 
-        # Get recommendations for the profile owner
+        # Get recommendations for the profile owner - use STORED recommendations
         recommendations = []
         if profile.dna_data:
-            from .services.recommendation_service import get_recommendations_for_user
-            import logging
-
-            logger = logging.getLogger(__name__)
             try:
-                recommendations = get_recommendations_for_user(profile_user, limit=6)
-                
-                # Process recommendations to add confidence_pct (same as display_dna_view)
-                for rec in recommendations:
-                    rec["confidence_pct"] = int(rec.get("confidence", 0) * 100)
+                # Use stored recommendations if available
+                if profile.recommendations_data:
+                    stored_recs = profile.recommendations_data
+                    
+                    # Transform stored format to template-expected format
+                    for rec in stored_recs:
+                        rec["book"] = {
+                            "id": rec.get("book_id"),
+                            "title": rec.get("book_title", "Unknown Title"),
+                            "author": {"name": rec.get("book_author", "Unknown Author")},
+                            "average_rating": rec.get("book_average_rating"),
+                        }
+                    
+                    recommendations = stored_recs
+                    logger.info(f"Loaded {len(recommendations)} stored recommendations for public profile {profile_user.username}")
+                else:
+                    # No stored recommendations - they may be generating
+                    logger.info(f"No stored recommendations for public profile {profile_user.username}")
+                    recommendations = []
             except Exception as e:
                 # Log the error but don't break the page if recommendations fail
-                logger.error(f"Failed to get recommendations for user {profile_user.username}: {e}", exc_info=True)
+                logger.error(f"Failed to load recommendations for user {profile_user.username}: {e}", exc_info=True)
                 # Track recommendation error in PostHog
                 track_recommendation_error(
                     profile_user_id=profile_user.id,
