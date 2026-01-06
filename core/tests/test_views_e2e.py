@@ -109,10 +109,11 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertIsNotNone(new_user.userprofile.dna_data)
         self.assertIn("an e2e vibe", new_user.userprofile.reading_vibe)
 
+    @patch("core.tasks.generate_recommendations_task")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
     @patch("core.services.dna_analyser.enrich_book_from_apis")
     @patch("core.tasks.check_author_mainstream_status_task")
-    def test_authenticated_user_dna_regeneration_flow(self, mock_author_check, mock_enrich_book, mock_generate_vibe):
+    def test_authenticated_user_dna_regeneration_flow(self, mock_author_check, mock_enrich_book, mock_generate_vibe, mock_recommendations_task):
         """
         Test complete DNA regeneration flow for authenticated users:
         1. Create user with initial DNA
@@ -123,6 +124,7 @@ class ViewE2E_Tests(TransactionTestCase):
         mock_enrich_book.return_value = (None, 0, 0)
         mock_generate_vibe.return_value = ["new regenerated vibe"]
         mock_author_check.delay = MagicMock()
+        mock_recommendations_task.delay = MagicMock()
 
         # Create user with initial DNA
         user = User.objects.create_user(username="dnatestuser", password="testpass123")
@@ -157,15 +159,17 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertEqual(user.userprofile.reader_type, "New Reader")
         self.assertEqual(user.userprofile.total_books_read, 10)
         
+    @patch("core.tasks.generate_recommendations_task")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
     @patch("core.services.dna_analyser.enrich_book_from_apis")
-    def test_pending_dna_task_id_cleared_on_save(self, mock_enrich_book, mock_generate_vibe):
+    def test_pending_dna_task_id_cleared_on_save(self, mock_enrich_book, mock_generate_vibe, mock_recommendations_task):
         """
         Test that pending_dna_task_id is properly cleared when DNA is saved to profile.
         This is critical for the status polling mechanism to work correctly.
         """
         mock_enrich_book.return_value = (None, 0, 0)
         mock_generate_vibe.return_value = ["test vibe"]
+        mock_recommendations_task.delay = MagicMock()
 
         # Create user with pending task
         user = User.objects.create_user(username="testuser2", password="password")
