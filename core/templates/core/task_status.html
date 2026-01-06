@@ -121,8 +121,9 @@
                                 if (pct !== null) {
                                     this.targetPct = Math.max(this.targetPct, Math.max(0, Math.min(100, pct)));
                                     const label = document.getElementById("progress-label");
-                                    if (label && data.progress.current != null && data.progress.total != null) {
-                                        label.textContent = `${Math.round(this.displayPct)}% (${data.progress.current}/${data.progress.total})`;
+                                    if (label) {
+                                        // Only show percentage value (no current/total)
+                                        label.textContent = `${Math.round(this.displayPct)}%`;
                                     }
                                 } else {
                                     let cap = 60;

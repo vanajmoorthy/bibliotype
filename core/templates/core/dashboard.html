@@ -89,9 +89,8 @@
 
                         if (pct !== null) {
                             targetPct = Math.max(targetPct, Math.max(0, Math.min(100, pct)));
-                            if (data.progress.current != null && data.progress.total != null) {
-                                progressLabel().textContent = `${Math.round(displayPct)}% (${data.progress.current}/${data.progress.total})`;
-                            }
+                            // Only show percentage value (no current/total)
+                            progressLabel().textContent = `${Math.round(displayPct)}%`;
                         } else {
                             // Stage-based optimistic targets
                             let cap = 60;

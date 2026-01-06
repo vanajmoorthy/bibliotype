@@ -1,7 +1,10 @@
 import numpy as np
-from collections import Counter
+from collections import Counter, defaultdict
 from django.db.models import Avg
 from ..models import UserBook, User, Book, Author, AnonymousUserSession, AnonymizedReadingProfile
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _calculate_cosine_similarity(counter1, counter2):
@@ -23,8 +26,106 @@ def _calculate_cosine_similarity(counter1, counter2):
     return float(dot_product / (norm1 * norm2))
 
 
+def _build_user_context_for_similarity(user):
+    """
+    Pre-build all user data needed for similarity calculations.
+    This should be called ONCE per user and reused for all comparisons.
+    Returns a dict with all pre-computed data structures.
+    """
+    # Single query with all needed relations
+    user_books_qs = (
+        UserBook.objects.filter(user=user)
+        .select_related("book", "book__author")
+        .prefetch_related("book__genres")
+    )
+    
+    # Convert to list ONCE to avoid multiple evaluations
+    user_books_list = list(user_books_qs)
+    
+    # Pre-compute all data in a single pass
+    book_ids = set()
+    top_book_ids = set()
+    book_ratings = {}  # book_id -> rating
+    genre_weights = Counter()
+    author_weights = Counter()
+    ratings_list = []
+    years_weighted = []
+    
+    for ub in user_books_list:
+        book_id = ub.book_id
+        book_ids.add(book_id)
+        
+        if ub.is_top_book:
+            top_book_ids.add(book_id)
+        
+        rating = ub.user_rating
+        if rating:
+            book_ratings[book_id] = rating
+            ratings_list.append(rating)
+        
+        weight = rating if rating else 3
+        
+        # Genres (prefetched, no query)
+        for genre in ub.book.genres.all():
+            genre_weights[genre.name] += weight
+        
+        # Authors (select_related, no query)
+        author_weights[ub.book.author.normalized_name] += weight
+        
+        # Publication years
+        if ub.book.publish_year:
+            years_weighted.extend([ub.book.publish_year] * int(weight))
+    
+    # Rating distribution
+    rating_dist = Counter(ratings_list)
+    
+    return {
+        "user_id": user.id,
+        "book_ids": book_ids,
+        "top_book_ids": top_book_ids,
+        "book_ratings": book_ratings,
+        "genre_weights": genre_weights,
+        "author_weights": author_weights,
+        "rating_dist": rating_dist,
+        "years_weighted": years_weighted,
+        "total_books": len(book_ids),
+    }
+
+
+def _calculate_rating_pattern_similarity_from_context(ctx1, ctx2):
+    """Compare rating distribution patterns using pre-built contexts"""
+    user1_dist = ctx1["rating_dist"]
+    user2_dist = ctx2["rating_dist"]
+
+    if not user1_dist or not user2_dist:
+        return 0.5  # Neutral similarity
+
+    total1 = sum(user1_dist.values())
+    total2 = sum(user2_dist.values())
+
+    # Compare proportions at each rating level
+    pattern_diff = (
+        sum(abs(user1_dist.get(r, 0) / total1 - user2_dist.get(r, 0) / total2) for r in range(1, 6)) / 2
+    )
+
+    pattern_similarity = 1 - pattern_diff
+
+    # Average difference
+    ratings1 = [r for r, count in user1_dist.items() for _ in range(count)]
+    ratings2 = [r for r, count in user2_dist.items() for _ in range(count)]
+    
+    if ratings1 and ratings2:
+        avg1 = sum(ratings1) / len(ratings1)
+        avg2 = sum(ratings2) / len(ratings2)
+        avg_similarity = 1 - abs(avg1 - avg2) / 4.0
+    else:
+        avg_similarity = 0.5
+
+    return pattern_similarity * 0.7 + avg_similarity * 0.3
+
+
 def _calculate_rating_pattern_similarity(user1_books_qs, user2_books_qs):
-    """Compare rating distribution patterns, not just averages"""
+    """Compare rating distribution patterns, not just averages (legacy, for backwards compat)"""
 
     # Get rating distributions
     user1_ratings = list(user1_books_qs.filter(user_rating__isnull=False).values_list("user_rating", flat=True))
@@ -56,9 +157,41 @@ def _calculate_rating_pattern_similarity(user1_books_qs, user2_books_qs):
     return pattern_similarity * 0.7 + avg_similarity * 0.3
 
 
+def _calculate_shared_book_correlation_from_context(ctx1, ctx2):
+    """
+    Pearson correlation using pre-built contexts.
+    Returns (correlation, shared_count) tuple.
+    """
+    ratings1 = ctx1["book_ratings"]
+    ratings2 = ctx2["book_ratings"]
+
+    shared_books = set(ratings1.keys()) & set(ratings2.keys())
+
+    if len(shared_books) < 3:
+        return None, len(shared_books)
+
+    r1_list = [ratings1[book_id] for book_id in shared_books]
+    r2_list = [ratings2[book_id] for book_id in shared_books]
+
+    mean1 = np.mean(r1_list)
+    mean2 = np.mean(r2_list)
+
+    numerator = sum((r1 - mean1) * (r2 - mean2) for r1, r2 in zip(r1_list, r2_list))
+    denom1 = sum((r1 - mean1) ** 2 for r1 in r1_list) ** 0.5
+    denom2 = sum((r2 - mean2) ** 2 for r2 in r2_list) ** 0.5
+
+    if denom1 == 0 or denom2 == 0:
+        return None, len(shared_books)
+
+    correlation = numerator / (denom1 * denom2)
+    normalized_correlation = (correlation + 1) / 2
+
+    return normalized_correlation, len(shared_books)
+
+
 def _calculate_shared_book_correlation(user1_books_qs, user2_books_qs):
     """
-    Pearson correlation on books both users have rated.
+    Pearson correlation on books both users have rated (legacy).
     Returns (correlation, shared_count) tuple.
     Correlation is normalized to 0-1 range, or None if insufficient data.
     """
@@ -94,8 +227,30 @@ def _calculate_shared_book_correlation(user1_books_qs, user2_books_qs):
     return normalized_correlation, len(shared_books)
 
 
+def _calculate_reading_era_similarity_from_context(ctx1, ctx2):
+    """Compare publication year preferences using pre-built contexts"""
+    user1_years = ctx1["years_weighted"]
+    user2_years = ctx2["years_weighted"]
+
+    if not user1_years or not user2_years:
+        return 0.5
+
+    def get_decade_distribution(years):
+        decades = Counter([(y // 10) * 10 for y in years])
+        total = sum(decades.values())
+        return {k: v / total for k, v in decades.items()}
+
+    user1_decades = get_decade_distribution(user1_years)
+    user2_decades = get_decade_distribution(user2_years)
+
+    all_decades = set(user1_decades.keys()) | set(user2_decades.keys())
+    similarity = 1 - sum(abs(user1_decades.get(d, 0) - user2_decades.get(d, 0)) for d in all_decades) / 2
+
+    return similarity
+
+
 def _calculate_reading_era_similarity(user1_books_qs, user2_books_qs):
-    """Compare publication year preferences using decade distributions"""
+    """Compare publication year preferences using decade distributions (legacy)"""
 
     user1_years = []
     user2_years = []
@@ -129,99 +284,59 @@ def _calculate_reading_era_similarity(user1_books_qs, user2_books_qs):
     return similarity
 
 
-def calculate_user_similarity(user1, user2):
+def calculate_user_similarity_from_context(ctx1, ctx2):
     """
-    Enhanced similarity calculation between two registered users.
-    Uses adaptive weighting based on data availability.
+    OPTIMIZED: Calculate similarity using pre-built contexts.
+    This avoids N+1 queries by using pre-computed data.
     """
-
-    # Get data with optimized queries (prefetch genres to avoid N+1)
-    user1_books_qs = (
-        UserBook.objects.filter(user=user1).select_related("book", "book__author").prefetch_related("book__genres")
-    )
-
-    user2_books_qs = (
-        UserBook.objects.filter(user=user2).select_related("book", "book__author").prefetch_related("book__genres")
-    )
-
-    user1_books = set(user1_books_qs.values_list("book_id", flat=True))
-    user2_books = set(user2_books_qs.values_list("book_id", flat=True))
-
-    # Initialize components and weights
     components = {}
     weights = {}
 
-    # 1. Shared book correlation (MOST IMPORTANT when available)
-    correlation, shared_rated_count = _calculate_shared_book_correlation(user1_books_qs, user2_books_qs)
+    # 1. Shared book correlation
+    correlation, shared_rated_count = _calculate_shared_book_correlation_from_context(ctx1, ctx2)
     if correlation is not None and shared_rated_count >= 5:
         components["shared_correlation"] = correlation
-        # Weight increases with more shared books (up to 20 books for full confidence)
         confidence = min(shared_rated_count / 20, 1.0)
         weights["shared_correlation"] = 0.35 * confidence
     else:
         weights["shared_correlation"] = 0
         shared_rated_count = shared_rated_count if correlation is not None else 0
 
-    # 2. Jaccard (book overlap) - less important if we have correlation data
-    intersection = user1_books & user2_books
-    union = user1_books | user2_books
+    # 2. Jaccard (book overlap)
+    intersection = ctx1["book_ids"] & ctx2["book_ids"]
+    union = ctx1["book_ids"] | ctx2["book_ids"]
     components["jaccard"] = len(intersection) / len(union) if union else 0
     weights["jaccard"] = 0.15 if correlation is not None else 0.25
 
-    # 3. Top books overlap (people who love the same books)
-    user1_top = set(UserBook.objects.filter(user=user1, is_top_book=True).values_list("book_id", flat=True))
-    user2_top = set(UserBook.objects.filter(user=user2, is_top_book=True).values_list("book_id", flat=True))
+    # 3. Top books overlap
+    top1 = ctx1["top_book_ids"]
+    top2 = ctx2["top_book_ids"]
     components["top_overlap"] = (
-        len(user1_top & user2_top) / max(len(user1_top), len(user2_top), 1) if (user1_top or user2_top) else 0
+        len(top1 & top2) / max(len(top1), len(top2), 1) if (top1 or top2) else 0
     )
     weights["top_overlap"] = 0.20
 
-    # 4. Genre similarity (weighted by ratings)
-    user1_genres = Counter()
-    user2_genres = Counter()
-
-    for ub in user1_books_qs:
-        weight = ub.user_rating if ub.user_rating else 3  # Default to neutral rating
-        for genre in ub.book.genres.all():
-            user1_genres[genre.name] += weight
-
-    for ub in user2_books_qs:
-        weight = ub.user_rating if ub.user_rating else 3
-        for genre in ub.book.genres.all():
-            user2_genres[genre.name] += weight
-
-    components["genre_similarity"] = _calculate_cosine_similarity(user1_genres, user2_genres)
+    # 4. Genre similarity
+    components["genre_similarity"] = _calculate_cosine_similarity(ctx1["genre_weights"], ctx2["genre_weights"])
     weights["genre_similarity"] = 0.15
 
-    # 5. Author similarity (weighted by ratings)
-    user1_authors = Counter()
-    user2_authors = Counter()
-
-    for ub in user1_books_qs:
-        weight = ub.user_rating if ub.user_rating else 3
-        user1_authors[ub.book.author.normalized_name] += weight
-
-    for ub in user2_books_qs:
-        weight = ub.user_rating if ub.user_rating else 3
-        user2_authors[ub.book.author.normalized_name] += weight
-
-    components["author_similarity"] = _calculate_cosine_similarity(user1_authors, user2_authors)
+    # 5. Author similarity
+    components["author_similarity"] = _calculate_cosine_similarity(ctx1["author_weights"], ctx2["author_weights"])
     weights["author_similarity"] = 0.15
 
-    # 6. Rating pattern similarity (harsh vs generous raters)
-    components["rating_pattern"] = _calculate_rating_pattern_similarity(user1_books_qs, user2_books_qs)
+    # 6. Rating pattern similarity
+    components["rating_pattern"] = _calculate_rating_pattern_similarity_from_context(ctx1, ctx2)
     weights["rating_pattern"] = 0.08
 
-    # 7. Publication era similarity (do they read similar time periods?)
-    components["era_similarity"] = _calculate_reading_era_similarity(user1_books_qs, user2_books_qs)
+    # 7. Publication era similarity
+    components["era_similarity"] = _calculate_reading_era_similarity_from_context(ctx1, ctx2)
     weights["era_similarity"] = 0.07
 
-    # Normalize weights to sum to 1
+    # Normalize weights
     total_weight = sum(weights.values())
     if total_weight > 0:
         weights = {k: v / total_weight for k, v in weights.items()}
 
-    # Calculate final score
     final_similarity = sum(components[key] * weights[key] for key in components if key in weights and weights[key] > 0)
 
     return {
@@ -230,16 +345,99 @@ def calculate_user_similarity(user1, user2):
         "weights_used": weights,
         "shared_books_count": len(intersection),
         "shared_rated_count": shared_rated_count,
-        "total_books_user1": len(user1_books),
-        "total_books_user2": len(user2_books),
+        "total_books_user1": ctx1["total_books"],
+        "total_books_user2": ctx2["total_books"],
     }
+
+
+def calculate_user_similarity(user1, user2):
+    """
+    Enhanced similarity calculation between two registered users.
+    Uses adaptive weighting based on data availability.
+    NOTE: For bulk comparisons, use calculate_user_similarity_from_context instead.
+    """
+    # Build contexts and use optimized function
+    ctx1 = _build_user_context_for_similarity(user1)
+    ctx2 = _build_user_context_for_similarity(user2)
+    return calculate_user_similarity_from_context(ctx1, ctx2)
+
+
+def _bulk_build_user_contexts(user_ids):
+    """
+    OPTIMIZED: Build contexts for multiple users with just 2 queries.
+    Returns dict of {user_id: context}
+    """
+    if not user_ids:
+        return {}
+    
+    # Single query to get all user books with relations
+    all_user_books = (
+        UserBook.objects
+        .filter(user_id__in=user_ids)
+        .select_related("book", "book__author")
+        .prefetch_related("book__genres")
+    )
+    
+    # Group by user_id
+    books_by_user = defaultdict(list)
+    for ub in all_user_books:
+        books_by_user[ub.user_id].append(ub)
+    
+    # Build contexts for each user
+    contexts = {}
+    for user_id in user_ids:
+        user_books_list = books_by_user.get(user_id, [])
+        
+        book_ids = set()
+        top_book_ids = set()
+        book_ratings = {}
+        genre_weights = Counter()
+        author_weights = Counter()
+        ratings_list = []
+        years_weighted = []
+        
+        for ub in user_books_list:
+            book_id = ub.book_id
+            book_ids.add(book_id)
+            
+            if ub.is_top_book:
+                top_book_ids.add(book_id)
+            
+            rating = ub.user_rating
+            if rating:
+                book_ratings[book_id] = rating
+                ratings_list.append(rating)
+            
+            weight = rating if rating else 3
+            
+            for genre in ub.book.genres.all():
+                genre_weights[genre.name] += weight
+            
+            author_weights[ub.book.author.normalized_name] += weight
+            
+            if ub.book.publish_year:
+                years_weighted.extend([ub.book.publish_year] * int(weight))
+        
+        contexts[user_id] = {
+            "user_id": user_id,
+            "book_ids": book_ids,
+            "top_book_ids": top_book_ids,
+            "book_ratings": book_ratings,
+            "genre_weights": genre_weights,
+            "author_weights": author_weights,
+            "rating_dist": Counter(ratings_list),
+            "years_weighted": years_weighted,
+            "total_books": len(book_ids),
+        }
+    
+    return contexts
 
 
 def find_similar_users(user, top_n=20, min_similarity=0.2):
     """
     Find registered users similar to the given user.
     Returns list of (user, similarity_data) tuples sorted by similarity.
-    Optimized to limit database queries and use bulk operations.
+    OPTIMIZED: Uses bulk loading to avoid N+1 queries.
     """
     from .recommendation_service import safe_cache_get, safe_cache_set
     
@@ -249,47 +447,62 @@ def find_similar_users(user, top_n=20, min_similarity=0.2):
     if cached_result is not None:
         return cached_result
 
-    # Get user's book IDs for filtering
-    user_book_ids = set(UserBook.objects.filter(user=user).values_list("book_id", flat=True))
+    # Build current user's context ONCE
+    current_user_ctx = _build_user_context_for_similarity(user)
     
-    if not user_book_ids:
-        # User has no books, return empty
+    if not current_user_ctx["book_ids"]:
         return []
     
-    users_with_shared_books = (
+    # Find candidate users who share books with current user
+    users_with_shared_books = list(
         User.objects
         .exclude(id=user.id)
         .select_related("userprofile")
         .filter(
             userprofile__dna_data__isnull=False,
             userprofile__visible_in_recommendations=True,
-            user_books__book_id__in=user_book_ids
+            user_books__book_id__in=current_user_ctx["book_ids"]
         )
         .distinct()[:500]
     )
     
-    # If we don't have enough users with shared books, also consider users with similar genres/authors
-    # This is a fallback to ensure we have enough candidates
-    if users_with_shared_books.count() < top_n * 2:
-        additional_users = (
+    # Fallback if not enough candidates
+    if len(users_with_shared_books) < top_n * 2:
+        existing_ids = {u.id for u in users_with_shared_books}
+        additional_users = list(
             User.objects
             .exclude(id=user.id)
-            .exclude(id__in=[u.id for u in users_with_shared_books])
+            .exclude(id__in=existing_ids)
             .select_related("userprofile")
             .filter(
                 userprofile__dna_data__isnull=False,
                 userprofile__visible_in_recommendations=True
-            )[:200]  # Get up to 200 more users
+            )[:200]
         )
-        all_users = list(users_with_shared_books) + list(additional_users)
+        all_users = users_with_shared_books + additional_users
     else:
-        all_users = list(users_with_shared_books)
-
+        all_users = users_with_shared_books
+    
+    if not all_users:
+        return []
+    
+    # BULK LOAD all candidate user contexts in ONE query
+    candidate_user_ids = [u.id for u in all_users]
+    candidate_contexts = _bulk_build_user_contexts(candidate_user_ids)
+    
+    # Create user lookup for results
+    user_lookup = {u.id: u for u in all_users}
+    
+    # Calculate similarities using pre-built contexts (NO additional queries!)
     similarities = []
-    for other_user in all_users:
-        similarity_data = calculate_user_similarity(user, other_user)
-
+    for user_id, other_ctx in candidate_contexts.items():
+        if not other_ctx["book_ids"]:  # Skip users with no books
+            continue
+            
+        similarity_data = calculate_user_similarity_from_context(current_user_ctx, other_ctx)
+        
         if similarity_data["similarity_score"] >= min_similarity:
+            other_user = user_lookup[user_id]
             similarities.append((other_user, similarity_data))
 
     # Sort by similarity score (highest first)
@@ -301,41 +514,34 @@ def find_similar_users(user, top_n=20, min_similarity=0.2):
     return result
 
 
-def calculate_anonymous_similarity(anonymous_session, user):
+def calculate_anonymous_similarity_with_context(anonymous_session, user_ctx):
     """
-    Calculate similarity between anonymous session and registered user.
-    Uses stored distribution data from anonymous session.
-    Enhanced to match calculate_user_similarity when rating data is available.
+    OPTIMIZED: Calculate similarity using pre-built user context.
+    Avoids N+1 queries when comparing anonymous session to multiple users.
     """
-
     anon_books = set(anonymous_session.books_data or [])
     anon_top_books = set(anonymous_session.top_books_data or [])
     anon_genres = Counter(anonymous_session.genre_distribution or {})
     anon_authors = Counter(anonymous_session.author_distribution or {})
-    # Use getattr for backwards compatibility if migration hasn't run yet
-    anon_ratings = getattr(anonymous_session, 'book_ratings', None) or {}  # Get stored ratings
+    anon_ratings = getattr(anonymous_session, 'book_ratings', None) or {}
 
-    # Get user data with optimized queries
-    user_books_qs = (
-        UserBook.objects.filter(user=user).select_related("book", "book__author").prefetch_related("book__genres")
-    )
+    user_books = user_ctx["book_ids"]
+    user_ratings = user_ctx["book_ratings"]
+    user_top = user_ctx["top_book_ids"]
+    user_genres = user_ctx["genre_weights"]
+    user_authors = user_ctx["author_weights"]
 
-    user_books = set(user_books_qs.values_list("book_id", flat=True))
-
-    # Initialize components and weights (similar to calculate_user_similarity)
     components = {}
     weights = {}
 
-    # 1. Shared book correlation (MOST IMPORTANT when available) - NEW!
-    if anon_ratings:
-        user_ratings_dict = {ub.book_id: ub.user_rating for ub in user_books_qs.filter(user_rating__isnull=False)}
-        shared_rated_books = set(anon_ratings.keys()) & set(user_ratings_dict.keys())
+    # 1. Shared book correlation
+    if anon_ratings and user_ratings:
+        shared_rated_books = set(anon_ratings.keys()) & set(user_ratings.keys())
         
-        if len(shared_rated_books) >= 3:  # Need minimum overlap for correlation
+        if len(shared_rated_books) >= 3:
             anon_ratings_list = [anon_ratings[book_id] for book_id in shared_rated_books]
-            user_ratings_list = [user_ratings_dict[book_id] for book_id in shared_rated_books]
+            user_ratings_list = [user_ratings[book_id] for book_id in shared_rated_books]
             
-            # Calculate Pearson correlation
             mean_anon = np.mean(anon_ratings_list)
             mean_user = np.mean(user_ratings_list)
             
@@ -345,7 +551,6 @@ def calculate_anonymous_similarity(anonymous_session, user):
             
             if denom_anon > 0 and denom_user > 0:
                 correlation = numerator / (denom_anon * denom_user)
-                # Convert from -1,1 to 0,1 range
                 normalized_correlation = (correlation + 1) / 2
                 components["shared_correlation"] = normalized_correlation
                 confidence = min(len(shared_rated_books) / 20, 1.0)
@@ -359,14 +564,13 @@ def calculate_anonymous_similarity(anonymous_session, user):
         weights["shared_correlation"] = 0
         shared_rated_books = set()
 
-    # 2. Jaccard similarity on books
+    # 2. Jaccard similarity
     intersection = anon_books & user_books
     union = anon_books | user_books
     components["jaccard"] = len(intersection) / len(union) if union else 0
     weights["jaccard"] = 0.15 if weights.get("shared_correlation", 0) > 0 else 0.25
 
-    # 3. Top books overlap
-    user_top = set(UserBook.objects.filter(user=user, is_top_book=True).values_list("book_id", flat=True))
+    # 3. Top books overlap (using pre-built context)
     components["top_overlap"] = (
         len(anon_top_books & user_top) / max(len(anon_top_books), len(user_top), 1)
         if (anon_top_books or user_top)
@@ -374,29 +578,16 @@ def calculate_anonymous_similarity(anonymous_session, user):
     )
     weights["top_overlap"] = 0.20
 
-    # 4. Genre similarity
-    user_genres = Counter()
-    for ub in user_books_qs:
-        weight = ub.user_rating if ub.user_rating else 3
-        for genre in ub.book.genres.all():
-            user_genres[genre.name] += weight
-
+    # 4. Genre similarity (using pre-built context)
     components["genre_similarity"] = _calculate_cosine_similarity(anon_genres, user_genres)
     weights["genre_similarity"] = 0.15
 
-    # 5. Author similarity
-    user_authors = Counter()
-    for ub in user_books_qs:
-        weight = ub.user_rating if ub.user_rating else 3
-        user_authors[ub.book.author.normalized_name] += weight
-
+    # 5. Author similarity (using pre-built context)
     components["author_similarity"] = _calculate_cosine_similarity(anon_authors, user_authors)
     weights["author_similarity"] = 0.15
 
-    # Weighted combination (similar to calculate_user_similarity)
     final_similarity = sum(components.get(key, 0) * weights.get(key, 0) for key in set(components.keys()) | set(weights.keys()))
     
-    # Normalize if weights don't sum to 1
     total_weight = sum(weights.values())
     if total_weight > 0:
         final_similarity = final_similarity / total_weight
@@ -409,44 +600,70 @@ def calculate_anonymous_similarity(anonymous_session, user):
         "author_similarity": components.get("author_similarity", 0),
         "shared_correlation": components.get("shared_correlation"),
         "shared_books_count": len(intersection),
-        "shared_rated_count": len(shared_rated_books),
+        "shared_rated_count": len(shared_rated_books) if 'shared_rated_books' in dir() else 0,
     }
 
 
-def calculate_similarity_with_anonymized(profile_data, anon_profile):
+def calculate_anonymous_similarity(anonymous_session, user):
+    """
+    Calculate similarity between anonymous session and registered user.
+    For bulk comparisons, use calculate_anonymous_similarity_with_context instead.
+    """
+    # Build user context and use optimized function
+    user_ctx = _build_user_context_for_similarity(user)
+    return calculate_anonymous_similarity_with_context(anonymous_session, user_ctx)
+
+
+def calculate_similarity_with_anonymized(profile_data, anon_profile, user_ctx=None):
     """
     Calculate similarity with anonymized profile.
     Enhanced to match quality of user-to-user comparisons.
 
     Args:
-        profile_data: Either a User object or dict with anonymous session data
+        profile_data: Either a User object, AnonymousUserSession, or dict with session data
         anon_profile: AnonymizedReadingProfile object
+        user_ctx: Optional pre-built user context (for optimization)
     """
 
     # Extract user data based on type
     if isinstance(profile_data, User):
         user = profile_data
-        dna = user.userprofile.dna_data
+        
+        # Use pre-built context if provided (OPTIMIZATION)
+        if user_ctx is not None:
+            user_genres = user_ctx["genre_weights"]
+            user_authors = user_ctx["author_weights"]
+            user_top_books = user_ctx["top_book_ids"]
+            user_rating_dist = user_ctx["rating_dist"]
+        else:
+            # Fallback: build from DNA data (no query needed)
+            dna = user.userprofile.dna_data
 
-        user_genres = Counter()
-        user_authors = Counter()
-        user_top_books = set(UserBook.objects.filter(user=user, is_top_book=True).values_list("book_id", flat=True))
+            user_genres = Counter()
+            user_authors = Counter()
+            user_top_books = set(UserBook.objects.filter(user=user, is_top_book=True).values_list("book_id", flat=True))
 
-        # Extract from DNA data
-        for genre, count in dna.get("top_genres", []):
-            user_genres[genre] = count
+            # Extract from DNA data
+            for genre, count in dna.get("top_genres", []):
+                user_genres[genre] = count
 
-        for author, count in dna.get("top_authors", []):
-            normalized = Author._normalize(author)
-            user_authors[normalized] = count
+            for author, count in dna.get("top_authors", []):
+                normalized = Author._normalize(author)
+                user_authors[normalized] = count
 
-        # Get rating distribution from DNA
-        user_rating_dist = Counter()
-        for rating_str, count in dna.get("ratings_distribution", {}).items():
-            user_rating_dist[int(rating_str)] = count
-
+            # Get rating distribution from DNA
+            user_rating_dist = Counter()
+            for rating_str, count in dna.get("ratings_distribution", {}).items():
+                user_rating_dist[int(rating_str)] = count
+    
+    elif isinstance(profile_data, AnonymousUserSession):
+        # AnonymousUserSession object
+        user_genres = Counter(profile_data.genre_distribution or {})
+        user_authors = Counter(profile_data.author_distribution or {})
+        user_top_books = set(profile_data.top_books_data or [])
+        user_rating_dist = Counter()  # Anonymous sessions may not have this
     else:
-        # Anonymous session data
+        # Dict with anonymous session data
         user_genres = Counter(profile_data.get("genre_distribution", {}))
         user_authors = Counter(profile_data.get("author_distribution", {}))
         user_top_books = set(profile_data.get("top_books_data", []))
@@ -456,7 +673,7 @@ def calculate_similarity_with_anonymized(profile_data, anon_profile):
     anon_genres = Counter(anon_profile.genre_distribution or {})
     anon_authors = Counter(anon_profile.author_distribution or {})
     anon_top_books = set(anon_profile.top_book_ids or [])
-    anon_rating_dist = Counter(anon_profile.rating_distribution or {})
+    anon_rating_dist = Counter(getattr(anon_profile, 'rating_distribution', None) or {})
 
     # Calculate similarity components
     genre_similarity = _calculate_cosine_similarity(user_genres, anon_genres)
