@@ -1,4 +1,4 @@
-# 🧬 Bibliotype - Your Reading DNA
+# 🧬 Bibliotype - Your Reading DNA (WIP)
 
 Bibliotype is a web application that generates a personalised “Reading DNA” dashboard from a user's Goodreads or StoryGraph export file and provides visual insights into reading habits and preferences.
 
