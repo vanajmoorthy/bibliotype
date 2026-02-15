@@ -1,0 +1,89 @@
+{% comment %}
+Number Line Partial — a reusable brutalist-style horizontal scale
+showing two markers (user vs comparison) on a track.
+
+Required context variables:
+  nl_min           — numeric low end of the scale
+  nl_max           — numeric high end of the scale
+  nl_min_label     — display label for the low end (e.g. "0 pg")
+  nl_max_label     — display label for the high end (e.g. "700 pg")
+  nl_user_value    — the user's numeric value
+  nl_user_tag      — short identifier for user marker (e.g. "You")
+  nl_compare_value — the comparison numeric value
+  nl_compare_tag   — short identifier for comparison marker (e.g. "Global Avg")
+  nl_unit          — unit suffix for displayed values (e.g. "pg", "★", "")
+
+Optional:
+  nl_user_color    — Tailwind bg class (default: "bg-brand-yellow")
+  nl_compare_color — Tailwind bg class (default: "bg-brand-purple")
+  nl_decimals      — decimal places for displayed values (default: 0)
+{% endcomment %}
+
+<div class="number-line-wrap mt-3 mb-1"
+     x-data="{
+         min: {{ nl_min }},
+         max: {{ nl_max }},
+         userVal: {{ nl_user_value }},
+         compVal: {{ nl_compare_value }},
+         unit: '{{ nl_unit|default:"" }}',
+         decimals: {{ nl_decimals|default:"0" }},
+         clamp(v) { return Math.max(this.min, Math.min(this.max, v)); },
+         pct(v)   { return ((this.clamp(v) - this.min) / (this.max - this.min)) * 100; },
+         fmt(v)   { return this.decimals > 0 ? Number(v).toFixed(this.decimals) : Math.round(v); },
+         get userPct()   { return this.pct(this.userVal); },
+         get compPct()   { return this.pct(this.compVal); },
+         get bandLeft()  { return Math.min(this.userPct, this.compPct); },
+         get bandWidth() { return Math.abs(this.userPct - this.compPct); },
+     }">
+
+    <!-- ── LABELS (stacked above the track) ── -->
+    <div class="relative mb-1 select-none text-sm font-bold" style="height: 52px;">
+
+        <!-- User label (bottom row) + tick -->
+        <div class="absolute bottom-0" :style="'left:' + userPct + '%'">
+            <div :style="userPct > 75 ? 'transform: translateX(-100%)' : (userPct < 25 ? '' : 'transform: translateX(-50%)')">
+                <span class="border-brand-text {{ nl_user_color|default:'bg-brand-yellow' }} inline-block border-2 px-1.5 py-0.5 leading-tight whitespace-nowrap"
+                      x-text="fmt(userVal) + (unit ? ' ' + unit : '') + ' — {{ nl_user_tag }}'"></span>
+            </div>
+            <div class="bg-brand-text absolute bottom-0 left-0 -ml-px" style="width: 2px; height: 8px; transform: translateY(100%);"></div>
+        </div>
+
+        <!-- Compare label (top row) + tick -->
+        <div class="absolute top-0" :style="'left:' + compPct + '%'">
+            <div :style="compPct > 75 ? 'transform: translateX(-100%)' : (compPct < 25 ? '' : 'transform: translateX(-50%)')">
+                <span class="border-brand-text {{ nl_compare_color|default:'bg-brand-purple' }} inline-block border-2 px-1.5 py-0.5 leading-tight whitespace-nowrap"
+                      x-text="fmt(compVal) + (unit ? ' ' + unit : '') + ' — {{ nl_compare_tag }}'"></span>
+            </div>
+            <div class="bg-brand-text absolute bottom-0 left-0 -ml-px" style="width: 2px; height: 8px; transform: translateY(100%);"></div>
+        </div>
+    </div>
+
+    <!-- ── TRACK ── -->
+    <div class="relative" style="height: 20px;">
+        <!-- Track bar -->
+        <div class="border-brand-text absolute inset-x-0 top-1/2 h-3 -translate-y-1/2 border-2 bg-gray-100">
+            <!-- Difference band (shaded area between markers) -->
+            <div class="bg-brand-pink absolute top-0 h-full opacity-40"
+                 :style="'left:' + bandLeft + '%; width:' + bandWidth + '%'">
+            </div>
+        </div>
+
+        <!-- User marker — diamond -->
+        <div class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
+             :style="'left:' + userPct + '%'">
+            <div class="border-brand-text {{ nl_user_color|default:'bg-brand-yellow' }} h-4 w-4 rotate-45 border-2"></div>
+        </div>
+
+        <!-- Compare marker — diamond -->
+        <div class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
+             :style="'left:' + compPct + '%'">
+            <div class="border-brand-text {{ nl_compare_color|default:'bg-brand-purple' }} h-4 w-4 rotate-45 border-2"></div>
+        </div>
+    </div>
+
+    <!-- ── ENDPOINT LABELS ── -->
+    <div class="mt-1 flex justify-between text-sm text-gray-500">
+        <span>{{ nl_min_label }}</span>
+        <span>{{ nl_max_label }}</span>
+    </div>
+</div>

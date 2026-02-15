@@ -1,7 +1,8 @@
 <div class="border-brand-text shadow-neo border-2 bg-white p-6">
     <h2 class="mb-4 text-2xl font-bold uppercase">Comparative Analytics</h2>
     {% if dna.bibliotype_percentiles %}
-        <div class="space-y-4 text-lg">
+        <div class="space-y-6 text-lg">
+            <!-- Average Book Length -->
             <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
                 <p>
                     {{ pronoun_pos|default:"Your" }} average book length is <strong>{{ dna.user_stats.avg_book_length }} pages</strong>.
@@ -12,7 +13,10 @@
                     <strong>{{ dna.bibliotype_percentiles.avg_book_length|floatformat:1 }}%</strong> of
                     other Bibliotype readers.
                 </p>
+                {% include 'core/partials/dna/number_line.html' with nl_min=50 nl_max=700 nl_min_label="50 pg" nl_max_label="700 pg" nl_user_value=dna.user_stats.avg_book_length nl_user_tag="You" nl_compare_value=dna.global_averages.avg_book_length_pages nl_compare_tag="Avg" nl_unit="pg" %}
             </div>
+
+            <!-- Average Book Age -->
             <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
                 <p>
                     The average age of books {{ pronoun_sub|default:"you" }} read is from
@@ -24,7 +28,10 @@
                     <strong>{{ dna.bibliotype_percentiles.avg_publish_year|floatformat:1 }}%</strong> of
                     other Bibliotype readers.
                 </p>
+                {% include 'core/partials/dna/number_line.html' with nl_min=1900 nl_max=2025 nl_min_label="1900" nl_max_label="2025" nl_user_value=dna.user_stats.avg_publish_year nl_user_tag="You" nl_compare_value=dna.global_averages.avg_publish_year nl_compare_tag="Avg" nl_unit="" %}
             </div>
+
+            <!-- Total Books Read -->
             <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
                 <p>
                     {{ pronoun_sub|default:"You"|title }} have read <strong>{{ dna.user_stats.total_books_read }} books</strong> in total.
@@ -47,4 +54,3 @@
         </p>
     {% endif %}
 </div>
-
