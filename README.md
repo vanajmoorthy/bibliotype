@@ -12,12 +12,15 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 Prioritised 
 - number line thing (happening, add snapshot tests or something for these)
 - share to story, several options
+- adjust reader type calculations
 - allow user to delete profile
 - tos, privacy policy
 - average "contrarian" score under most controversial ratings with phrases like "my, you're contrarian"
 - how similar are you/similarity percentage for 2 or more people
   - add page for this
   - allow similarity comparison with multiple users (only public)
+ 
+
 - ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 - edit mainstream meter text to "niche, normal, mainstream"
 - make vibe look better with bg colours and fix dot separators and check mobile
