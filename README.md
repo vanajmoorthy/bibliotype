@@ -20,6 +20,8 @@ Prioritised
     - profile shared to story
     - also want to see how many people drop off after generating step
 - share to story, several options
+- investigate why niamh and pmc recs not showing
+    - always show minimum number of recommendations 
 - show book cover for most niche read
 - email for forgot password
 - beta test feedback banner https://forms.gle/EoZAbYdigngwFdpm9
