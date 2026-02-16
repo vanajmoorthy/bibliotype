@@ -14,6 +14,7 @@ Prioritised
 - clean up code
 - share to story, several options
 - show book cover for most niche read
+- beta test feedback banner https://forms.gle/EoZAbYdigngwFdpm9
 - rename "how mainstream is your taste" to "mainstream meter" ✅
 - save llm vibe against the dna dictionary, cache this for a month and only refetch if dictionary has changed
     - user a uploads a csv, vibe generated
