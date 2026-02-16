@@ -1511,7 +1511,7 @@ EXCLUDED_GENRES = {
 
 GLOBAL_AVERAGES = {
     "avg_books_per_year": 7,
-    "avg_book_length_pages": 340,
+    "avg_book_length_pages": 375,
     "avg_publish_year": 2009,
 }
 

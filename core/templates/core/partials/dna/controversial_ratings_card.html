@@ -4,15 +4,8 @@
     <div class="space-y-4 text-lg">
         {% for book in dna.top_controversial_books %}
             <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
-                <p class="font-bold">{{ book.Title }}</p>
-                <div class="mt-1 flex items-center justify-between text-base">
-                    <span>{{ pronoun_pos|default:"Your"|title }} Rating:
-                        <span class="text-xl font-bold">{{ book.my_rating|floatformat:1 }}&#9733;</span></span>
-                    <span>Goodreads Avg:
-                        <span class="text-xl font-bold">{{ book.average_rating|floatformat:1 }}&#9733;</span></span>
-                    <span class="bg-brand-purple text-brand-text border-brand-text border-2 px-2 py-1 font-bold">Diff: {{ book.rating_difference|floatformat:1 }}</span>
-                </div>
-                {% include 'core/partials/dna/number_line.html' with nl_min=0 nl_max=5 nl_min_label="0.0 ★" nl_max_label="5.0 ★" nl_user_value=book.my_rating nl_user_tag="You" nl_compare_value=book.average_rating nl_compare_tag="GR" nl_unit="★" nl_decimals=1 nl_user_color="bg-brand-cyan" nl_compare_color="bg-brand-orange" %}
+                <p class="font-bold">{{ book.Title }} &mdash; {{ book.Author }}</p>
+                {% include 'core/partials/dna/number_line.html' with nl_min=0 nl_max=5 nl_min_label="0.0 ★" nl_max_label="5.0 ★" nl_user_value=book.my_rating nl_user_tag="Your Rating" nl_compare_value=book.average_rating nl_compare_tag="Goodreads Average" nl_unit="★" nl_decimals=1 nl_user_color="bg-brand-cyan" nl_compare_color="bg-brand-orange" nl_show_diff=1 %}
             </div>
         {% empty %}
             <p>Not enough data to calculate controversial ratings.</p>

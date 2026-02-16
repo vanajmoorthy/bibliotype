@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 from ..models import Author, Book, Genre
 from ..percentile_engine import (
+    calculate_community_means,
     calculate_percentiles_from_aggregates,
     update_analytics_from_stats,
 )
@@ -372,6 +373,32 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             progress_cb(total_books, total_books, "Crunching stats")
         logger.info("Calculating base user statistics...")
 
+        # Calculate stats_by_year early so we can derive avg_books_per_year
+        stats_by_year_list = []
+        avg_books_per_year = 0
+        num_reading_years = 0
+
+        if "Date Read" in read_df.columns and not read_df["Date Read"].dropna().empty:
+            yearly_df = read_df.dropna(subset=["Date Read"])
+            yearly_df["year"] = yearly_df["Date Read"].dt.year
+
+            yearly_stats = (
+                yearly_df.groupby("year").agg(count=("Title", "size"), avg_rating=("My Rating", "mean")).reset_index()
+            )
+
+            yearly_stats["avg_rating"] = yearly_stats["avg_rating"].fillna(0).round(2)
+            stats_by_year_list = yearly_stats.to_dict("records")
+
+            for item in stats_by_year_list:
+                item["year"] = int(item["year"])
+                item["count"] = int(item["count"])
+                item["avg_rating"] = float(item["avg_rating"])
+
+            num_reading_years = len(stats_by_year_list)
+            books_with_dates = int(yearly_df.shape[0])
+            if num_reading_years > 0:
+                avg_books_per_year = round(books_with_dates / num_reading_years, 1)
+
         user_base_stats = {
             "total_books_read": int(len(read_df)),
             "total_pages_read": int(read_df["Number of Pages"].dropna().sum()),
@@ -386,6 +413,8 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 and not read_df["Original Publication Year"].dropna().empty
                 else 0
             ),
+            "avg_books_per_year": avg_books_per_year,
+            "num_reading_years": num_reading_years,
         }
 
         logger.info("Calculating community stats...")
@@ -393,6 +422,8 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         update_analytics_from_stats(user_base_stats)
 
         percentiles = calculate_percentiles_from_aggregates(user_base_stats)
+
+        community_averages = calculate_community_means()
 
         most_niche_book = None
 
@@ -473,25 +504,6 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
             most_negative_review["sentiment"] = float(most_negative_review["sentiment"])
 
-        stats_by_year_list = []
-
-        if "Date Read" in read_df.columns and not read_df["Date Read"].dropna().empty:
-            yearly_df = read_df.dropna(subset=["Date Read"])
-            yearly_df["year"] = yearly_df["Date Read"].dt.year
-
-            yearly_stats = (
-                yearly_df.groupby("year").agg(count=("Title", "size"), avg_rating=("My Rating", "mean")).reset_index()
-            )
-
-            yearly_stats["avg_rating"] = yearly_stats["avg_rating"].fillna(0).round(2)
-            stats_by_year_list = yearly_stats.to_dict("records")
-
-            # Ensure all types are native Python types for JSON serialization
-            for item in stats_by_year_list:
-                item["year"] = int(item["year"])
-                item["count"] = int(item["count"])
-                item["avg_rating"] = float(item["avg_rating"])
-
         mainstream_score = 0
         if user_book_objects:
             mainstream_books_count = 0
@@ -504,10 +516,48 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             if total_user_books > 0:
                 mainstream_score = round((mainstream_books_count / total_user_books) * 100)
 
+        # Build comparative_text dict for template rendering
+        comparative_text = {}
+        if percentiles:
+            # Book length: higher percentile = longer books
+            len_pct = percentiles.get("avg_book_length", 50)
+            user_len = user_base_stats["avg_book_length"]
+            comm_len = community_averages.get("avg_book_length")
+            if comm_len and user_len >= comm_len:
+                comparative_text["length_direction"] = "longer"
+                comparative_text["length_pct"] = round(len_pct, 1)
+            else:
+                comparative_text["length_direction"] = "shorter"
+                comparative_text["length_pct"] = round(100 - len_pct, 1)
+
+            # Book age: higher percentile = older books (inverted in percentile engine)
+            year_pct = percentiles.get("avg_publish_year", 50)
+            user_year = user_base_stats["avg_publish_year"]
+            comm_year = community_averages.get("avg_publish_year")
+            if comm_year and user_year <= comm_year:
+                comparative_text["age_direction"] = "older"
+                comparative_text["age_pct"] = round(year_pct, 1)
+            else:
+                comparative_text["age_direction"] = "newer"
+                comparative_text["age_pct"] = round(100 - year_pct, 1)
+
+            # Books per year
+            bpy_pct = percentiles.get("avg_books_per_year", 50)
+            user_bpy = user_base_stats.get("avg_books_per_year", 0)
+            comm_bpy = community_averages.get("avg_books_per_year")
+            if comm_bpy and user_bpy >= comm_bpy:
+                comparative_text["bpy_direction"] = "more"
+                comparative_text["bpy_pct"] = round(bpy_pct, 1)
+            else:
+                comparative_text["bpy_direction"] = "fewer"
+                comparative_text["bpy_pct"] = round(100 - bpy_pct, 1)
+
         dna = {
             "user_stats": user_base_stats,
             "bibliotype_percentiles": percentiles,
             "global_averages": GLOBAL_AVERAGES,
+            "community_averages": community_averages,
+            "comparative_text": comparative_text,
             "most_niche_book": most_niche_book,
             "reader_type": reader_type,
             "reader_type_explanation": explanation,

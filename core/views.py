@@ -1,5 +1,7 @@
 import json
 import logging
+import math
+from datetime import date
 
 
 import posthog
@@ -121,6 +123,123 @@ def sitemap_xml_view(request):
 def home_view(request):
     """Displays the main upload page."""
     return render(request, "core/home.html")
+
+
+def _enrich_dna_for_display(dna_data):
+    """Patch dna_data with fresh community averages, global averages, and comparative text.
+
+    This ensures old stored DNA (missing new fields) renders correctly, and that
+    community averages are always up-to-date rather than stale from generation time.
+    """
+    if not dna_data:
+        return dna_data
+
+    from .dna_constants import GLOBAL_AVERAGES
+    from .percentile_engine import calculate_community_means
+
+    # Always use current global averages constant
+    dna_data["global_averages"] = GLOBAL_AVERAGES
+
+    # Fallback values when community has no data yet
+    COMMUNITY_FALLBACKS = {
+        "avg_book_length": GLOBAL_AVERAGES["avg_book_length_pages"],
+        "avg_publish_year": GLOBAL_AVERAGES["avg_publish_year"],
+        "total_books_read": 50,
+        "avg_books_per_year": GLOBAL_AVERAGES["avg_books_per_year"],
+    }
+
+    # Always compute fresh community averages from current histogram data
+    raw_community = calculate_community_means()
+    dna_data["community_averages"] = {
+        k: v if v is not None else COMMUNITY_FALLBACKS.get(k, 0)
+        for k, v in raw_community.items()
+    }
+
+    # Backfill avg_books_per_year into user_stats if missing (old DNA)
+    user_stats = dna_data.get("user_stats", {})
+    if "avg_books_per_year" not in user_stats:
+        stats_by_year = dna_data.get("stats_by_year", [])
+        if stats_by_year:
+            total_books_with_dates = sum(y.get("count", 0) for y in stats_by_year)
+            num_years = len(stats_by_year)
+            user_stats["avg_books_per_year"] = round(total_books_with_dates / num_years, 1) if num_years > 0 else 0
+            user_stats["num_reading_years"] = num_years
+        else:
+            user_stats["avg_books_per_year"] = 0
+            user_stats["num_reading_years"] = 0
+
+    # Recompute comparative_text from current percentiles + community averages
+    percentiles = dna_data.get("bibliotype_percentiles", {})
+    community = dna_data.get("community_averages", {})
+    comparative_text = {}
+
+    if percentiles:
+        # Book length
+        len_pct = percentiles.get("avg_book_length", 50)
+        user_len = user_stats.get("avg_book_length", 0)
+        comm_len = community.get("avg_book_length")
+        if comm_len and user_len >= comm_len:
+            comparative_text["length_direction"] = "longer"
+            comparative_text["length_pct"] = round(len_pct, 1)
+        else:
+            comparative_text["length_direction"] = "shorter"
+            comparative_text["length_pct"] = round(100 - len_pct, 1)
+
+        # Book age
+        year_pct = percentiles.get("avg_publish_year", 50)
+        user_year = user_stats.get("avg_publish_year", 2025)
+        comm_year = community.get("avg_publish_year")
+        if comm_year and user_year <= comm_year:
+            comparative_text["age_direction"] = "older"
+            comparative_text["age_pct"] = round(year_pct, 1)
+        else:
+            comparative_text["age_direction"] = "newer"
+            comparative_text["age_pct"] = round(100 - year_pct, 1)
+
+        # Books per year
+        bpy_pct = percentiles.get("avg_books_per_year", 50)
+        user_bpy = user_stats.get("avg_books_per_year", 0)
+        comm_bpy = community.get("avg_books_per_year")
+        if comm_bpy and user_bpy >= comm_bpy:
+            comparative_text["bpy_direction"] = "more"
+            comparative_text["bpy_pct"] = round(bpy_pct, 1)
+        else:
+            comparative_text["bpy_direction"] = "fewer"
+            comparative_text["bpy_pct"] = round(100 - bpy_pct, 1)
+
+    dna_data["comparative_text"] = comparative_text
+
+    # Compute dynamic number line ranges so markers are well-spread
+    current_year = date.today().year
+
+    page_vals = [v for v in [
+        user_stats.get("avg_book_length"), community.get("avg_book_length"), GLOBAL_AVERAGES["avg_book_length_pages"]
+    ] if v is not None]
+    if page_vals:
+        lo, hi = min(page_vals), max(page_vals)
+        pages_min = 300 if lo >= 300 else max(0, math.floor(lo / 50) * 50 - 50)
+        pages_max = 400 if hi <= 400 else math.ceil(hi / 50) * 50 + 50
+    else:
+        pages_min, pages_max = 300, 400
+
+    year_vals = [v for v in [
+        user_stats.get("avg_publish_year"), community.get("avg_publish_year"), GLOBAL_AVERAGES["avg_publish_year"]
+    ] if v is not None]
+    years_min = min(1980, math.floor(min(year_vals) / 5) * 5) if year_vals else 1980
+    years_max = current_year
+
+    bpy_vals = [v for v in [
+        user_stats.get("avg_books_per_year"), community.get("avg_books_per_year"), GLOBAL_AVERAGES["avg_books_per_year"]
+    ] if v is not None]
+    bpy_max = 10 if (not bpy_vals or max(bpy_vals) <= 10) else math.ceil(max(bpy_vals) / 5) * 5 + 5
+
+    dna_data["number_line_ranges"] = {
+        "pages": {"min": pages_min, "max": pages_max, "min_label": f"{pages_min} pages", "max_label": f"{pages_max} pages"},
+        "year": {"min": years_min, "max": years_max, "min_label": f"{years_min} CE", "max_label": f"{years_max} CE"},
+        "bpy": {"min": 0, "max": bpy_max, "min_label": "0 per year", "max_label": f"{bpy_max} per year"},
+    }
+
+    return dna_data
 
 
 def display_dna_view(request):
@@ -327,6 +446,8 @@ def display_dna_view(request):
             title = f"{display_name_lower}' bibliotype"
         else:
             title = f"{display_name_lower}'s bibliotype"
+
+    dna_data = _enrich_dna_for_display(dna_data)
 
     context = {
         "dna": dna_data,
@@ -693,8 +814,10 @@ def public_profile_view(request, username):
             viewer_session_id=request.session.session_key if not request.user.is_authenticated else None,
         )
 
+        enriched_dna = _enrich_dna_for_display(profile.dna_data)
+
         context = {
-            "dna": profile.dna_data,
+            "dna": enriched_dna,
             "profile_user": profile_user,
             "user_profile": profile,
             "title": title,

@@ -223,6 +223,7 @@ class AggregateAnalytics(models.Model):
     avg_book_length_dist = models.JSONField(default=dict)
     avg_publish_year_dist = models.JSONField(default=dict)
     total_books_read_dist = models.JSONField(default=dict)
+    avg_books_per_year_dist = models.JSONField(default=dict)
 
     def save(self, *args, **kwargs):
         self.pk = 1

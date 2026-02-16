@@ -1,89 +1,138 @@
 {% comment %}
 Number Line Partial — a reusable brutalist-style horizontal scale
-showing two markers (user vs comparison) on a track.
+showing two or three markers on a track with a legend below.
 
 Required context variables:
   nl_min           — numeric low end of the scale
   nl_max           — numeric high end of the scale
-  nl_min_label     — display label for the low end (e.g. "0 pg")
-  nl_max_label     — display label for the high end (e.g. "700 pg")
+  nl_min_label     — display label for the low end (e.g. "300 pages")
+  nl_max_label     — display label for the high end (e.g. "400 pages")
   nl_user_value    — the user's numeric value
   nl_user_tag      — short identifier for user marker (e.g. "You")
   nl_compare_value — the comparison numeric value
-  nl_compare_tag   — short identifier for comparison marker (e.g. "Global Avg")
-  nl_unit          — unit suffix for displayed values (e.g. "pg", "★", "")
+  nl_compare_tag   — short identifier for comparison marker (e.g. "Community")
+  nl_unit          — unit suffix for displayed values (e.g. "pages", "★", "")
 
 Optional:
-  nl_user_color    — Tailwind bg class (default: "bg-brand-yellow")
-  nl_compare_color — Tailwind bg class (default: "bg-brand-purple")
+  nl_user_color    — Tailwind bg class (default: "bg-brand-pink")
+  nl_compare_color — Tailwind bg class (default: "bg-brand-cyan")
   nl_decimals      — decimal places for displayed values (default: 0)
+  nl_third_value   — numeric value for optional third marker (world average)
+  nl_third_tag     — short identifier for third marker (e.g. "World Avg")
+  nl_third_color   — Tailwind bg class for third marker (default: "bg-brand-green")
+  nl_show_diff     — if truthy, show a "diff: X" badge between user and compare legends
 {% endcomment %}
 
-<div class="number-line-wrap mt-3 mb-1"
+<div class="number-line-wrap mt-2 mb-1"
      x-data="{
          min: {{ nl_min }},
          max: {{ nl_max }},
          userVal: {{ nl_user_value }},
          compVal: {{ nl_compare_value }},
+         thirdVal: {{ nl_third_value|default:'null' }},
          unit: '{{ nl_unit|default:"" }}',
          decimals: {{ nl_decimals|default:"0" }},
+         userCssColor: 'var(--color-{{ nl_user_color|default:'bg-brand-pink'|cut:'bg-' }})',
+         compCssColor: 'var(--color-{{ nl_compare_color|default:'bg-brand-cyan'|cut:'bg-' }})',
+         thirdCssColor: 'var(--color-{{ nl_third_color|default:'bg-brand-green'|cut:'bg-' }})',
          clamp(v) { return Math.max(this.min, Math.min(this.max, v)); },
          pct(v)   { return ((this.clamp(v) - this.min) / (this.max - this.min)) * 100; },
          fmt(v)   { return this.decimals > 0 ? Number(v).toFixed(this.decimals) : Math.round(v); },
          get userPct()   { return this.pct(this.userVal); },
          get compPct()   { return this.pct(this.compVal); },
-         get bandLeft()  { return Math.min(this.userPct, this.compPct); },
-         get bandWidth() { return Math.abs(this.userPct - this.compPct); },
+         get hasThird()  { return this.thirdVal !== null; },
+         get thirdPct()  { return this.hasThird ? this.pct(this.thirdVal) : 0; },
+         get bands() {
+             let items = [
+                 { pct: this.userPct, color: this.userCssColor },
+                 { pct: this.compPct, color: this.compCssColor },
+             ];
+             if (this.hasThird) {
+                 items.push({ pct: this.thirdPct, color: this.thirdCssColor });
+             }
+             items.sort((a, b) => a.pct - b.pct);
+             let result = [];
+             for (let i = 0; i < items.length - 1; i++) {
+                 result.push({
+                     left: items[i].pct,
+                     width: items[i + 1].pct - items[i].pct,
+                     colorL: items[i].color,
+                     colorR: items[i + 1].color,
+                 });
+             }
+             return result;
+         },
+         bandStyle(band) {
+             return 'background:linear-gradient(to right,' + band.colorL + ',' + band.colorR + ');' +
+                    'opacity:0.5;' +
+                    '-webkit-mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);' +
+                    'mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);';
+         },
      }">
 
-    <!-- ── LABELS (stacked above the track) ── -->
-    <div class="relative mb-1 select-none text-sm font-bold" style="height: 52px;">
-
-        <!-- User label (bottom row) + tick -->
-        <div class="absolute bottom-0" :style="'left:' + userPct + '%'">
-            <div :style="userPct > 75 ? 'transform: translateX(-100%)' : (userPct < 25 ? '' : 'transform: translateX(-50%)')">
-                <span class="border-brand-text {{ nl_user_color|default:'bg-brand-yellow' }} inline-block border-2 px-1.5 py-0.5 leading-tight whitespace-nowrap"
-                      x-text="fmt(userVal) + (unit ? ' ' + unit : '') + ' — {{ nl_user_tag }}'"></span>
-            </div>
-            <div class="bg-brand-text absolute bottom-0 left-0 -ml-px" style="width: 2px; height: 8px; transform: translateY(100%);"></div>
-        </div>
-
-        <!-- Compare label (top row) + tick -->
-        <div class="absolute top-0" :style="'left:' + compPct + '%'">
-            <div :style="compPct > 75 ? 'transform: translateX(-100%)' : (compPct < 25 ? '' : 'transform: translateX(-50%)')">
-                <span class="border-brand-text {{ nl_compare_color|default:'bg-brand-purple' }} inline-block border-2 px-1.5 py-0.5 leading-tight whitespace-nowrap"
-                      x-text="fmt(compVal) + (unit ? ' ' + unit : '') + ' — {{ nl_compare_tag }}'"></span>
-            </div>
-            <div class="bg-brand-text absolute bottom-0 left-0 -ml-px" style="width: 2px; height: 8px; transform: translateY(100%);"></div>
-        </div>
-    </div>
-
     <!-- ── TRACK ── -->
-    <div class="relative" style="height: 20px;">
-        <!-- Track bar -->
-        <div class="border-brand-text absolute inset-x-0 top-1/2 h-3 -translate-y-1/2 border-2 bg-gray-100">
-            <!-- Difference band (shaded area between markers) -->
-            <div class="bg-brand-pink absolute top-0 h-full opacity-40"
-                 :style="'left:' + bandLeft + '%; width:' + bandWidth + '%'">
+    <div class="relative" style="height: 32px;">
+        <div class="border-brand-text absolute inset-x-0 bottom-0 h-3 border-2 bg-gray-100">
+            <!-- Gradient-hatched bands between each pair of adjacent markers -->
+            <template x-for="(band, idx) in bands" :key="idx">
+                <div class="absolute top-0 h-full"
+                     :style="'left:' + band.left + '%; width:' + band.width + '%;' + bandStyle(band)"></div>
+            </template>
+        </div>
+
+        <!-- User tick stem + diamond -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + userPct + '%'">
+            <div class="{{ nl_user_color|default:'bg-brand-pink' }} border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text {{ nl_user_color|default:'bg-brand-pink' }} h-4 w-4 rotate-45 border-2"></div>
             </div>
         </div>
 
-        <!-- User marker — diamond -->
-        <div class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
-             :style="'left:' + userPct + '%'">
-            <div class="border-brand-text {{ nl_user_color|default:'bg-brand-yellow' }} h-4 w-4 rotate-45 border-2"></div>
+        <!-- Compare tick stem + square -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + compPct + '%'">
+            <div class="{{ nl_compare_color|default:'bg-brand-cyan' }} border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text {{ nl_compare_color|default:'bg-brand-cyan' }} h-4 w-4 border-2"></div>
+            </div>
         </div>
 
-        <!-- Compare marker — diamond -->
-        <div class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
-             :style="'left:' + compPct + '%'">
-            <div class="border-brand-text {{ nl_compare_color|default:'bg-brand-purple' }} h-4 w-4 rotate-45 border-2"></div>
+        {% if nl_third_value %}
+        <!-- Third tick stem + circle -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + thirdPct + '%'">
+            <div class="{{ nl_third_color|default:'bg-brand-green' }} border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text {{ nl_third_color|default:'bg-brand-green' }} h-4 w-4 rounded-full border-2"></div>
+            </div>
         </div>
+        {% endif %}
     </div>
 
-    <!-- ── ENDPOINT LABELS ── -->
-    <div class="mt-1 flex justify-between text-sm text-gray-500">
-        <span>{{ nl_min_label }}</span>
-        <span>{{ nl_max_label }}</span>
+    <!-- ── ENDPOINT LABELS + LEGEND ── -->
+    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+        <span class="text-gray-500">{{ nl_min_label }}</span>
+        <div class="flex flex-1 flex-wrap justify-center items-center gap-x-3 gap-y-0.5">
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="{{ nl_user_color|default:'bg-brand-pink' }} border-brand-text inline-block h-2.5 w-2.5 rotate-45 border"></span>
+                <span x-text="fmt(userVal) + (unit ? ' ' + unit : '') + ' {{ nl_user_tag }}'"></span>
+            </span>
+            {% if nl_show_diff %}
+            <span class="inline-flex items-center gap-1 whitespace-nowrap text-gray-500">
+                <span>&larr;</span>
+                <span class="bg-brand-purple text-brand-text border-brand-text border px-1 font-bold" x-text="'difference: ' + (userVal >= compVal ? '+' : '\u2212') + fmt(Math.abs(userVal - compVal))"></span>
+                <span>&rarr;</span>
+            </span>
+            {% endif %}
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="{{ nl_compare_color|default:'bg-brand-cyan' }} border-brand-text inline-block h-2.5 w-2.5 border"></span>
+                <span x-text="fmt(compVal) + (unit ? ' ' + unit : '') + ' {{ nl_compare_tag }}'"></span>
+            </span>
+            {% if nl_third_value %}
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="{{ nl_third_color|default:'bg-brand-green' }} border-brand-text inline-block h-2.5 w-2.5 rounded-full border"></span>
+                <span x-text="fmt(thirdVal) + (unit ? ' ' + unit : '') + ' {{ nl_third_tag|default:"World Avg" }}'"></span>
+            </span>
+            {% endif %}
+        </div>
+        <span class="text-gray-500">{{ nl_max_label }}</span>
     </div>
 </div>

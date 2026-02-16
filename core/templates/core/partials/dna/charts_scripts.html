@@ -38,33 +38,6 @@
         Chart.defaults.font.size = 16;
         Chart.defaults.color = "#1f2937";
 
-        // --- Books By Year Chart ---
-        const booksByYearCtx = document.getElementById("booksByYearChart")?.getContext("2d");
-        if (booksByYearCtx && dnaData.stats_by_year) {
-            new Chart(booksByYearCtx, {
-                type: "bar",
-                data: {
-                    labels: dnaData.stats_by_year.map((d) => d.year),
-                    datasets: [
-                        {
-                            label: "# of Books",
-                            data: dnaData.stats_by_year.map((d) => d.count),
-                            backgroundColor: "#fde047",
-                            borderColor: "#1f2937",
-                            borderWidth: 2,
-                        },
-                    ],
-                },
-                options: {
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: "#e5e7eb" }, ticks: { stepSize: 1 } },
-                        x: { grid: { display: false } },
-                    },
-                },
-            });
-        }
-
         const chartColors = ['#ffb4dd', '#40e7aa', '#ffa75e', '#8bbfff', '#FFE9CE', '#ff647c', '#ffe56c', '#A1CDF1', '#9af6d4', '#fe9393'];
 
         // --- Helper to parse data (Array of tuples vs Object) ---

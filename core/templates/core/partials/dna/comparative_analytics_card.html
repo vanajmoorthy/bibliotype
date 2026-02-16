@@ -1,19 +1,23 @@
-<div class="border-brand-text shadow-neo border-2 bg-white p-6">
-    <h2 class="mb-4 text-2xl font-bold uppercase">Comparative Analytics</h2>
+<div class="border-brand-text shadow-neo border-2 bg-white p-4 sm:p-6">
+    <h2 class="mb-3 text-2xl font-bold uppercase">Comparative Analytics</h2>
     {% if dna.bibliotype_percentiles %}
-        <div class="space-y-6 text-lg">
+        <div class="space-y-4 text-lg">
             <!-- Average Book Length -->
             <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
                 <p>
-                    {{ pronoun_pos|default:"Your" }} average book length is <strong>{{ dna.user_stats.avg_book_length }} pages</strong>.
-                    <span class="text-gray-600">(Global avg: ~{{ dna.global_averages.avg_book_length_pages }})</span>
+                    The average length of books {{ pronoun_sub|default:"you" }} read is
+                    <strong>{{ dna.user_stats.avg_book_length }} pages</strong>.
                 </p>
                 <p class="mt-1 text-base">
-                    This is longer than
-                    <strong>{{ dna.bibliotype_percentiles.avg_book_length|floatformat:1 }}%</strong> of
+                    This is <strong>{{ dna.comparative_text.length_direction }}</strong> than
+                    <strong>{{ dna.comparative_text.length_pct }}%</strong> of
                     other Bibliotype readers.
                 </p>
-                {% include 'core/partials/dna/number_line.html' with nl_min=50 nl_max=700 nl_min_label="50 pg" nl_max_label="700 pg" nl_user_value=dna.user_stats.avg_book_length nl_user_tag="You" nl_compare_value=dna.global_averages.avg_book_length_pages nl_compare_tag="Avg" nl_unit="pg" %}
+                <p class="mt-1 text-sm text-gray-500">
+                    The average length of a book read by the average reader is {{ dna.global_averages.avg_book_length_pages }} pages.
+                    <a href="https://wordsrated.com/book-length-statistics/" target="_blank" rel="noopener" class="underline hover:text-brand-text">[source]</a>
+                </p>
+                {% include 'core/partials/dna/number_line.html' with nl_min=dna.number_line_ranges.pages.min nl_max=dna.number_line_ranges.pages.max nl_min_label=dna.number_line_ranges.pages.min_label nl_max_label=dna.number_line_ranges.pages.max_label nl_user_value=dna.user_stats.avg_book_length nl_user_tag="You" nl_compare_value=dna.community_averages.avg_book_length nl_compare_tag="Community" nl_unit="pages" nl_third_value=dna.global_averages.avg_book_length_pages nl_third_tag="World Avg" %}
             </div>
 
             <!-- Average Book Age -->
@@ -21,26 +25,49 @@
                 <p>
                     The average age of books {{ pronoun_sub|default:"you" }} read is from
                     <strong>{{ dna.user_stats.avg_publish_year|floatformat:0 }}</strong>.
-                    <span class="text-gray-600">(Global avg: ~{{ dna.global_averages.avg_publish_year }})</span>
                 </p>
                 <p class="mt-1 text-base">
-                    {{ pronoun_pos|default:"Your" }} reading tastes are older than
-                    <strong>{{ dna.bibliotype_percentiles.avg_publish_year|floatformat:1 }}%</strong> of
+                    {{ pronoun_pos|default:"Your" }} reading tastes are <strong>{{ dna.comparative_text.age_direction }}</strong> than
+                    <strong>{{ dna.comparative_text.age_pct }}%</strong> of
                     other Bibliotype readers.
                 </p>
-                {% include 'core/partials/dna/number_line.html' with nl_min=1900 nl_max=2025 nl_min_label="1900" nl_max_label="2025" nl_user_value=dna.user_stats.avg_publish_year nl_user_tag="You" nl_compare_value=dna.global_averages.avg_publish_year nl_compare_tag="Avg" nl_unit="" %}
+                <p class="mt-1 text-sm text-gray-500">
+                    The average publish year of a book read by the average reader is {{ dna.global_averages.avg_publish_year }}.
+                    <a href="https://ammar-alyousfi.com/2020/goodreads-books-statistics" target="_blank" rel="noopener" class="underline hover:text-brand-text">[source]</a>
+                </p>
+                {% include 'core/partials/dna/number_line.html' with nl_min=dna.number_line_ranges.year.min nl_max=dna.number_line_ranges.year.max nl_min_label=dna.number_line_ranges.year.min_label nl_max_label=dna.number_line_ranges.year.max_label nl_user_value=dna.user_stats.avg_publish_year nl_user_tag="You" nl_compare_value=dna.community_averages.avg_publish_year nl_compare_tag="Community" nl_unit="CE" nl_third_value=dna.global_averages.avg_publish_year nl_third_tag="World Avg" %}
             </div>
 
-            <!-- Total Books Read -->
+            <!-- Books Per Year -->
             <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
                 <p>
-                    {{ pronoun_sub|default:"You"|title }} have read <strong>{{ dna.user_stats.total_books_read }} books</strong> in total.
+                    {{ pronoun_sub|default:"You"|title }}'ve read a total of
+                    <strong>{{ dna.user_stats.total_books_read }} books</strong>
+                    {% if dna.user_stats.num_reading_years %}
+                        across <strong>{{ dna.user_stats.num_reading_years }} years</strong>, averaging
+                        <strong>{{ dna.user_stats.avg_books_per_year }} books a year</strong>.
+                    {% else %}
+                        in total.
+                    {% endif %}
                 </p>
-                <p class="mt-1 text-base">
-                    {{ pronoun_sub|default:"You"|title }}'ve read more books than
-                    <strong>{{ dna.bibliotype_percentiles.total_books_read|floatformat:1 }}%</strong> of
-                    other Bibliotype readers.
-                </p>
+                {% if dna.user_stats.avg_books_per_year and dna.comparative_text.bpy_pct %}
+                    <p class="mt-1 text-base">
+                        This is <strong>{{ dna.comparative_text.bpy_direction }}</strong> than
+                        <strong>{{ dna.comparative_text.bpy_pct }}%</strong> of
+                        other Bibliotype readers.
+                    </p>
+                    <p class="mt-1 text-sm text-gray-500">
+                        The average reader reads {{ dna.global_averages.avg_books_per_year }} books a year.
+                        <a href="https://wordsrated.com/reading-statistics/" target="_blank" rel="noopener" class="underline hover:text-brand-text">[source]</a>
+                    </p>
+                    {% include 'core/partials/dna/number_line.html' with nl_min=dna.number_line_ranges.bpy.min nl_max=dna.number_line_ranges.bpy.max nl_min_label=dna.number_line_ranges.bpy.min_label nl_max_label=dna.number_line_ranges.bpy.max_label nl_user_value=dna.user_stats.avg_books_per_year nl_user_tag="You" nl_compare_value=dna.community_averages.avg_books_per_year nl_compare_tag="Community" nl_unit="per year" nl_decimals=1 nl_third_value=dna.global_averages.avg_books_per_year nl_third_tag="World Avg" %}
+                {% else %}
+                    <p class="mt-1 text-base">
+                        {{ pronoun_sub|default:"You"|title }}'ve read more books than
+                        <strong>{{ dna.bibliotype_percentiles.total_books_read|floatformat:1 }}%</strong> of
+                        other Bibliotype readers.
+                    </p>
+                {% endif %}
             </div>
         </div>
     {% else %}

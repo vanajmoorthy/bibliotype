@@ -23,6 +23,7 @@ def update_analytics_from_stats(user_stats):
         "avg_book_length": ("avg_book_length_dist", 50),
         "avg_publish_year": ("avg_publish_year_dist", 10),
         "total_books_read": ("total_books_read_dist", 25),
+        "avg_books_per_year": ("avg_books_per_year_dist", 5),
     }
 
     AggregateAnalytics.objects.filter(pk=1).update(total_profiles_counted=F("total_profiles_counted") + 1)
@@ -92,5 +93,50 @@ def calculate_percentiles_from_aggregates(user_stats):
     percentile_books = (better_than_count_books / total_other_users) * 100
     percentiles["total_books_read"] = min(100.0, percentile_books)
 
+    # Books per year percentile
+    bpy_dist = analytics.avg_books_per_year_dist
+    user_bpy = user_stats.get("avg_books_per_year", 0)
+    bucket_size_bpy = 5
+    user_bpy_bucket_start = int(user_bpy // bucket_size_bpy * bucket_size_bpy)
+    user_bpy_bucket_key = f"{user_bpy_bucket_start}-{user_bpy_bucket_start + bucket_size_bpy - 1}"
+
+    lower_buckets_count_bpy = sum(
+        count for bucket, count in bpy_dist.items() if int(bucket.split("-")[0]) < user_bpy_bucket_start
+    )
+    same_bucket_count_bpy = bpy_dist.get(user_bpy_bucket_key, 0)
+    better_than_count_bpy = lower_buckets_count_bpy + (same_bucket_count_bpy / 2)
+
+    percentile_bpy = (better_than_count_bpy / total_other_users) * 100
+    percentiles["avg_books_per_year"] = min(100.0, percentile_bpy)
+
     logger.debug("Calculated percentiles against global data")
     return percentiles
+
+
+def calculate_community_means():
+    """Computes weighted means from histogram distributions for all metrics."""
+    analytics = AggregateAnalytics.get_instance()
+
+    def _weighted_mean(dist, bucket_size):
+        total_count = 0
+        weighted_sum = 0.0
+        for bucket_key, count in dist.items():
+            if bucket_key == "Unknown":
+                continue
+            try:
+                lower = int(bucket_key.split("-")[0])
+                midpoint = lower + bucket_size / 2
+                weighted_sum += midpoint * count
+                total_count += count
+            except (ValueError, IndexError):
+                continue
+        if total_count == 0:
+            return None
+        return round(weighted_sum / total_count, 1)
+
+    return {
+        "avg_book_length": _weighted_mean(analytics.avg_book_length_dist, 50),
+        "avg_publish_year": _weighted_mean(analytics.avg_publish_year_dist, 10),
+        "total_books_read": _weighted_mean(analytics.total_books_read_dist, 25),
+        "avg_books_per_year": _weighted_mean(analytics.avg_books_per_year_dist, 5),
+    }
