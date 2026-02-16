@@ -104,6 +104,14 @@
 {% endblock %}
 
 {% block content %}
+    <div class="border-brand-text border-b-2 bg-brand-cyan px-4 py-3 text-center text-lg">
+        Bibliotype is currently in beta while I finish development and iron out the kinks — thank you for being a beta tester!
+        I'd hugely appreciate it if you could fill out
+        <a href="https://forms.gle/EoZAbYdigngwFdpm9"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="font-bold underline hover:bg-brand-yellow">this feedback form</a>.
+    </div>
     <div x-data="{ isUploading: false, instructionsOpen: false }"
          @keydown.escape.window="instructionsOpen = false"
          class="flex h-full flex-col justify-center">
