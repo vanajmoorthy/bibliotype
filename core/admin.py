@@ -285,3 +285,29 @@ def _patched_get_urls(self):
 
 
 admin.AdminSite.get_urls = _patched_get_urls
+
+# Patch admin sidebar to include command runner link
+_original_get_app_list = admin.AdminSite.get_app_list
+
+
+def _patched_get_app_list(self, request, app_label=None):
+    app_list = _original_get_app_list(self, request, app_label=app_label)
+    if app_label is None:
+        app_list.append({
+            "name": "Tools",
+            "app_label": "tools",
+            "app_url": "#",
+            "has_module_perms": True,
+            "models": [
+                {
+                    "name": "Command Runner",
+                    "object_name": "CommandRunner",
+                    "admin_url": "/admin/command-runner/",
+                    "view_only": True,
+                },
+            ],
+        })
+    return app_list
+
+
+admin.AdminSite.get_app_list = _patched_get_app_list
