@@ -254,11 +254,11 @@ class NumberLineRenderTests(TestCase):
         self.assertIn("rotate-45", content)
 
     def test_number_line_renders_compare_marker(self):
-        """Number line contains the community diamond marker."""
+        """Number line contains the community square marker."""
         response = self._get_dashboard()
         content = response.content.decode()
-        # Default compare color is bg-brand-purple
-        self.assertIn("bg-brand-purple", content)
+        # Default compare color is bg-brand-cyan (comparative analytics)
+        self.assertIn("bg-brand-cyan", content)
 
     def test_number_line_renders_third_marker(self):
         """Number line contains the world avg circle marker."""
