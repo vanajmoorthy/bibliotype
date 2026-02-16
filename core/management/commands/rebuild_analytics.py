@@ -34,8 +34,15 @@ class Command(BaseCommand):
             user_stats = profile.dna_data.get("user_stats")
 
             if user_stats:
-                # This is the key: we reuse the exact same function as the live app
-                # to ensure the logic is identical.
+                # Backfill avg_books_per_year if missing from stored data
+                if "avg_books_per_year" not in user_stats:
+                    stats_by_year = profile.dna_data.get("stats_by_year", [])
+                    if stats_by_year:
+                        total_books_with_dates = sum(y.get("count", 0) for y in stats_by_year)
+                        num_years = len(stats_by_year)
+                        user_stats["avg_books_per_year"] = round(total_books_with_dates / num_years, 1) if num_years > 0 else 0
+                        user_stats["num_reading_years"] = num_years
+
                 update_analytics_from_stats(user_stats)
                 self.stdout.write(f"     - Processed profile {i+1}/{total_profiles} for user {profile.user.username}")
             else:
