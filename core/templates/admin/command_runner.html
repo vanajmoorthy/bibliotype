@@ -1,0 +1,357 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Command Runner | {{ site_title|default:"Django site admin" }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+    :root {
+        --neo-black: #1a1a2e;
+        --neo-yellow: #ffe56c;
+        --neo-orange: #ffa75e;
+        --neo-pink: #ffb4dd;
+        --neo-cyan: #8bbfff;
+        --neo-green: #40e7aa;
+        --neo-purple: #c4b5fd;
+        --neo-bg: #FFF8F0;
+    }
+
+    .command-runner-container {
+        font-family: "VT323", monospace;
+        max-width: 960px;
+        margin: 0 auto;
+    }
+
+    .neo-card {
+        background: white;
+        border: 2px solid var(--neo-black);
+        box-shadow: 4px 4px 0 var(--neo-black);
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: all 150ms ease-in-out;
+    }
+
+    .neo-card:hover {
+        box-shadow: 6px 6px 0 var(--neo-black);
+    }
+
+    .neo-card h3 {
+        font-family: "VT323", monospace;
+        font-size: 1.5rem;
+        margin: 0 0 4px 0;
+        display: inline-block;
+        padding: 2px 8px;
+        border: 2px solid var(--neo-black);
+    }
+
+    .neo-card p.desc {
+        font-size: 1.1rem;
+        color: #555;
+        margin: 8px 0 16px 0;
+    }
+
+    .neo-btn {
+        font-family: "VT323", monospace;
+        font-size: 1.1rem;
+        padding: 8px 20px;
+        border: 2px solid var(--neo-black);
+        box-shadow: 3px 3px 0 var(--neo-black);
+        cursor: pointer;
+        transition: all 150ms ease-in-out;
+        display: inline-block;
+    }
+
+    .neo-btn:hover {
+        box-shadow: none;
+        transform: translate(3px, 3px);
+    }
+
+    .neo-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+    }
+
+    .neo-btn-run {
+        background: var(--neo-green);
+        color: var(--neo-black);
+    }
+
+    .neo-input {
+        font-family: "VT323", monospace;
+        font-size: 1rem;
+        padding: 6px 10px;
+        border: 2px solid var(--neo-black);
+        background: white;
+        width: 100px;
+    }
+
+    .neo-input:focus {
+        outline: none;
+        box-shadow: 2px 2px 0 var(--neo-black);
+    }
+
+    .neo-checkbox {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--neo-black);
+        cursor: pointer;
+    }
+
+    .args-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+
+    .arg-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .arg-group label {
+        font-size: 1.1rem;
+        color: var(--neo-black);
+        cursor: pointer;
+    }
+
+    .output-box {
+        background: var(--neo-black);
+        color: var(--neo-green);
+        font-family: "VT323", monospace;
+        font-size: 1rem;
+        padding: 16px;
+        border: 2px solid var(--neo-black);
+        margin-top: 16px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 400px;
+        overflow-y: auto;
+        line-height: 1.4;
+    }
+
+    .output-box.error {
+        color: #ff647c;
+    }
+
+    .status-badge {
+        font-family: "VT323", monospace;
+        font-size: 0.95rem;
+        padding: 2px 10px;
+        border: 2px solid var(--neo-black);
+        display: inline-block;
+        margin-left: 10px;
+    }
+
+    .status-pending { background: var(--neo-yellow); }
+    .status-running { background: var(--neo-orange); }
+    .status-success { background: var(--neo-green); }
+    .status-error { background: var(--neo-pink); }
+
+    .page-header {
+        font-family: "VT323", monospace;
+        font-size: 2rem;
+        margin-bottom: 8px;
+        padding: 6px 14px;
+        background: var(--neo-yellow);
+        border: 2px solid var(--neo-black);
+        box-shadow: 4px 4px 0 var(--neo-black);
+        display: inline-block;
+    }
+
+    .page-subtitle {
+        font-family: "VT323", monospace;
+        font-size: 1.2rem;
+        color: #666;
+        margin-bottom: 24px;
+    }
+
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+    .blinking { animation: blink 1s infinite; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="command-runner-container" x-data="commandRunner()">
+    <h1 class="page-header">Command Runner</h1>
+    <p class="page-subtitle">Run management commands on the server. Output will appear below each command.</p>
+
+    {% for cmd in commands %}
+    <div class="neo-card" x-data="{ expanded: false }">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <div>
+                <h3 style="background: {% cycle 'var(--neo-cyan)' 'var(--neo-pink)' 'var(--neo-orange)' 'var(--neo-yellow)' 'var(--neo-green)' 'var(--neo-purple)' 'var(--neo-cyan)' %};">
+                    {{ cmd.name }}
+                </h3>
+                <template x-if="tasks['{{ cmd.name }}']?.status === 'pending'">
+                    <span class="status-badge status-running blinking">Running...</span>
+                </template>
+                <template x-if="tasks['{{ cmd.name }}']?.status === 'complete'">
+                    <span class="status-badge status-success">Done</span>
+                </template>
+                <template x-if="tasks['{{ cmd.name }}']?.status === 'error'">
+                    <span class="status-badge status-error">Error</span>
+                </template>
+            </div>
+            <button
+                class="neo-btn neo-btn-run"
+                @click="runCommand('{{ cmd.name }}')"
+                :disabled="tasks['{{ cmd.name }}']?.status === 'pending'"
+            >
+                <span x-show="tasks['{{ cmd.name }}']?.status !== 'pending'">Run</span>
+                <span x-show="tasks['{{ cmd.name }}']?.status === 'pending'" class="blinking">Running...</span>
+            </button>
+        </div>
+
+        <p class="desc">{{ cmd.description }}</p>
+
+        {% if cmd.arguments %}
+        <div class="args-row">
+            {% for arg in cmd.arguments %}
+            <div class="arg-group">
+                {% if arg.type == "flag" %}
+                    <input
+                        type="checkbox"
+                        class="neo-checkbox"
+                        id="arg-{{ cmd.name }}-{{ arg.name }}"
+                        x-model="args['{{ cmd.name }}']['{{ arg.name }}']"
+                    />
+                    <label for="arg-{{ cmd.name }}-{{ arg.name }}" title="{{ arg.help }}">{{ arg.label }}</label>
+                {% elif arg.type == "int" %}
+                    <label for="arg-{{ cmd.name }}-{{ arg.name }}" title="{{ arg.help }}">{{ arg.label }}:</label>
+                    <input
+                        type="number"
+                        class="neo-input"
+                        id="arg-{{ cmd.name }}-{{ arg.name }}"
+                        x-model="args['{{ cmd.name }}']['{{ arg.name }}']"
+                        placeholder="{{ arg.help }}"
+                        min="1"
+                    />
+                {% elif arg.type == "str" %}
+                    <label for="arg-{{ cmd.name }}-{{ arg.name }}" title="{{ arg.help }}">{{ arg.label }}:</label>
+                    <input
+                        type="text"
+                        class="neo-input"
+                        style="width: 160px;"
+                        id="arg-{{ cmd.name }}-{{ arg.name }}"
+                        x-model="args['{{ cmd.name }}']['{{ arg.name }}']"
+                        placeholder="{{ arg.help }}"
+                    />
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <template x-if="tasks['{{ cmd.name }}']?.output !== undefined">
+            <div
+                class="output-box"
+                :class="{ 'error': tasks['{{ cmd.name }}']?.status === 'error' }"
+                x-text="tasks['{{ cmd.name }}']?.output || 'No output.'"
+            ></div>
+        </template>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+function commandRunner() {
+    // Build initial args state from the command config
+    const commands = {{ commands|safe }};
+    const initialArgs = {};
+    commands.forEach(cmd => {
+        initialArgs[cmd.name] = {};
+        (cmd.arguments || []).forEach(arg => {
+            initialArgs[cmd.name][arg.name] = arg.type === "flag" ? false : "";
+        });
+    });
+
+    return {
+        tasks: {},
+        args: initialArgs,
+
+        async runCommand(name) {
+            this.tasks[name] = { status: "pending", output: undefined };
+
+            const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value
+                || document.cookie.split("; ").find(c => c.startsWith("csrftoken="))?.split("=")[1]
+                || "";
+
+            try {
+                const resp = await fetch("{% url 'admin:command_run_api' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken,
+                    },
+                    body: JSON.stringify({
+                        command: name,
+                        arguments: this.args[name] || {},
+                    }),
+                });
+
+                const data = await resp.json();
+                if (!resp.ok) {
+                    this.tasks[name] = { status: "error", output: data.error || "Request failed." };
+                    return;
+                }
+
+                this.pollResult(name, data.task_id);
+            } catch (err) {
+                this.tasks[name] = { status: "error", output: "Network error: " + err.message };
+            }
+        },
+
+        async pollResult(name, taskId) {
+            const url = "{% url 'admin:command_result_api' task_id='__TASK_ID__' %}".replace("__TASK_ID__", taskId);
+            const maxAttempts = 120;
+            let attempts = 0;
+
+            const poll = async () => {
+                attempts++;
+                try {
+                    const resp = await fetch(url);
+                    const data = await resp.json();
+
+                    if (data.status === "pending") {
+                        if (attempts < maxAttempts) {
+                            setTimeout(poll, 2000);
+                        } else {
+                            this.tasks[name] = { status: "error", output: "Timed out waiting for result." };
+                        }
+                    } else if (data.status === "complete") {
+                        const result = data.result;
+                        let output = "";
+                        if (result.stdout) output += result.stdout;
+                        if (result.stderr) output += (output ? "\n--- STDERR ---\n" : "") + result.stderr;
+                        if (result.error) output += (output ? "\n--- ERROR ---\n" : "") + result.error;
+                        this.tasks[name] = {
+                            status: result.status === "error" ? "error" : "complete",
+                            output: output || "Command completed with no output.",
+                        };
+                    } else if (data.status === "error") {
+                        this.tasks[name] = { status: "error", output: data.error || "Task failed." };
+                    }
+                } catch (err) {
+                    this.tasks[name] = { status: "error", output: "Poll error: " + err.message };
+                }
+            };
+
+            poll();
+        },
+    };
+}
+</script>
+{% endblock %}

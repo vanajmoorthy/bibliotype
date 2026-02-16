@@ -17,8 +17,10 @@ from .services.dna_analyser import calculate_full_dna, _save_dna_to_profile
 import requests
 from django.utils import timezone
 
+from django.db import models as models
+
 from .services.author_service import check_author_mainstream_status
-from .models import Author
+from .models import Author, Book
 from .analytics.events import (
     track_dna_generation_started,
     track_dna_generation_completed,
@@ -69,6 +71,30 @@ def check_author_mainstream_status_task(author_id: int):
             f"Critical error in check_author_mainstream_status_task for author_id {author_id}: {e}", exc_info=True
         )
         raise
+
+
+@shared_task(bind=True, max_retries=3)
+def enrich_book_task(self, book_id: int):
+    """Enrich a single book with data from Open Library and Google Books APIs."""
+    try:
+        book = Book.objects.get(pk=book_id)
+    except Book.DoesNotExist:
+        logger.error(f"Enrich task: Book with ID {book_id} not found")
+        return
+
+    logger.info(f"Enriching book '{book.title}' (id={book_id}) via background task")
+
+    try:
+        from .book_enrichment_service import enrich_book_from_apis
+
+        with requests.Session() as session:
+            session.headers.update({"User-Agent": "BibliotypeApp/1.0"})
+            enrich_book_from_apis(book, session, slow_down=True)
+
+        logger.info(f"Successfully enriched '{book.title}'")
+    except Exception as e:
+        logger.error(f"Error enriching book '{book.title}' (id={book_id}): {e}", exc_info=True)
+        raise self.retry(countdown=60 * (2**self.request.retries), exc=e)
 
 
 @shared_task(bind=True, max_retries=5)
@@ -345,6 +371,98 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
         )
         logger.error(f"Task failed due to an error in the analysis engine: {e}", exc_info=True)
         raise
+
+
+@shared_task
+def research_publisher_mainstream_task():
+    """Periodic task to check unchecked publishers for mainstream status via AI research."""
+    from .models import Publisher, Author
+    from .services.publisher_service import research_publisher_identity
+
+    BATCH_LIMIT = 20
+    AGE_THRESHOLD_DAYS = 90
+
+    cutoff = timezone.now() - timezone.timedelta(days=AGE_THRESHOLD_DAYS)
+    publishers_to_check = list(
+        Publisher.objects.filter(
+            models.Q(mainstream_last_checked__isnull=True) | models.Q(mainstream_last_checked__lt=cutoff),
+            parent__isnull=True,
+        )[:BATCH_LIMIT]
+    )
+
+    if not publishers_to_check:
+        logger.info("Publisher mainstream check: no publishers need checking.")
+        return 0
+
+    logger.info(f"Publisher mainstream check: processing {len(publishers_to_check)} publishers")
+    updated_count = 0
+
+    with requests.Session() as session:
+        session.headers.update({"User-Agent": "BibliotypeApp/1.0"})
+
+        for publisher in publishers_to_check:
+            try:
+                findings = research_publisher_identity(publisher.name, session)
+
+                if findings["error"]:
+                    logger.warning(f"Publisher research error for '{publisher.name}': {findings['error']}")
+                    publisher.mainstream_last_checked = timezone.now()
+                else:
+                    is_mainstream_result = findings.get("is_mainstream")
+                    publisher.is_mainstream = is_mainstream_result if isinstance(is_mainstream_result, bool) else False
+                    publisher.mainstream_last_checked = timezone.now()
+
+                    if parent_name := findings.get("parent_company_name"):
+                        parent_obj, _ = Publisher.objects.get_or_create(
+                            normalized_name=Author._normalize(parent_name),
+                            defaults={"name": parent_name, "is_mainstream": True},
+                        )
+                        publisher.parent = parent_obj
+
+                    updated_count += 1
+
+                publisher.save()
+                import time as _time
+
+                _time.sleep(2)
+            except Exception as e:
+                logger.error(f"Error researching publisher '{publisher.name}': {e}", exc_info=True)
+                continue
+
+    logger.info(f"Publisher mainstream check complete: updated {updated_count} publishers")
+    return updated_count
+
+
+@shared_task
+def run_management_command_task(command_name: str, args: list = None, kwargs: dict = None):
+    """Run a Django management command and store the output in cache."""
+    import io
+    from django.core.management import call_command
+    from .services.recommendation_service import safe_cache_set
+
+    args = args or []
+    kwargs = kwargs or {}
+
+    stdout_buffer = io.StringIO()
+    stderr_buffer = io.StringIO()
+
+    try:
+        call_command(command_name, *args, stdout=stdout_buffer, stderr=stderr_buffer, **kwargs)
+        result = {
+            "status": "success",
+            "stdout": stdout_buffer.getvalue(),
+            "stderr": stderr_buffer.getvalue(),
+        }
+    except Exception as e:
+        logger.error(f"Management command '{command_name}' failed: {e}", exc_info=True)
+        result = {
+            "status": "error",
+            "stdout": stdout_buffer.getvalue(),
+            "stderr": stderr_buffer.getvalue(),
+            "error": str(e),
+        }
+
+    return result
 
 
 @shared_task

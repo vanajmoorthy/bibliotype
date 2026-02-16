@@ -49,10 +49,11 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("--process-all flag set. Re-checking all books."))
             queryset = Book.objects.all()
         else:
-            self.stdout.write(self.style.NOTICE("Processing books that have not been checked or are missing genres."))
-            # A more robust query: get books that either haven't been checked OR still have no genres.
+            self.stdout.write(
+                self.style.NOTICE("Processing books that have not been checked or are missing genres/publish year.")
+            )
             queryset = Book.objects.filter(
-                Q(google_books_last_checked__isnull=True) | Q(genres__isnull=True)
+                Q(google_books_last_checked__isnull=True) | Q(genres__isnull=True) | Q(publish_year__isnull=True)
             ).distinct()
 
         total_books_to_process = queryset.count()
