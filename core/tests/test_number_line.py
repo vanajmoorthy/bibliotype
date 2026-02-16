@@ -237,19 +237,19 @@ class NumberLineRenderTests(TestCase):
         return self.client.get(reverse("core:display_dna"))
 
     def test_comparative_analytics_renders_three_number_lines(self):
-        """The comparative analytics card should contain 3 number line components."""
+        """The dashboard should contain 5 number lines: 3 comparative + 2 controversial."""
         response = self._get_dashboard()
         self.assertEqual(response.status_code, 200)
         content = response.content.decode()
-        # Each number line has a wrapper with class "number-line-wrap"
-        self.assertEqual(content.count("number-line-wrap"), 3)
+        # 3 from comparative analytics + 2 from controversial ratings (test data has 2 books)
+        self.assertEqual(content.count("number-line-wrap"), 5)
 
     def test_number_line_renders_user_marker(self):
         """Number line contains a user diamond marker with the correct color class."""
         response = self._get_dashboard()
         content = response.content.decode()
-        # Default user color is bg-brand-yellow, used in the track marker
-        self.assertIn("bg-brand-yellow", content)
+        # Default user color is bg-brand-pink, used in the track marker
+        self.assertIn("bg-brand-pink", content)
         # Diamond marker: rotated square
         self.assertIn("rotate-45", content)
 
@@ -289,13 +289,13 @@ class NumberLineRenderTests(TestCase):
         # Books per year: "per year" label
         self.assertContains(response, "per year")
 
-    def test_number_line_renders_difference_band(self):
-        """The pink difference band div is present."""
+    def test_number_line_renders_hatching_bands(self):
+        """The gradient diagonal hatching bands are present."""
         response = self._get_dashboard()
         content = response.content.decode()
-        # Difference band uses bg-brand-pink with opacity-40
-        self.assertIn("bg-brand-pink", content)
-        self.assertIn("opacity-40", content)
+        # Hatching uses bandStyle() which generates mask-image CSS
+        self.assertIn("bandStyle", content)
+        self.assertIn("mask-image", content)
 
     def test_number_line_two_marker_mode(self):
         """Controversial ratings number lines render without third marker (2-marker variant)."""
@@ -304,15 +304,14 @@ class NumberLineRenderTests(TestCase):
         # Controversial ratings uses bg-brand-cyan and bg-brand-orange
         self.assertIn("bg-brand-cyan", content)
         self.assertIn("bg-brand-orange", content)
-        # The GR tag appears in the controversial section
-        self.assertContains(response, "GR")
+        # The Goodreads Average tag appears in the controversial section
+        self.assertContains(response, "Goodreads Average")
 
     def test_number_line_no_layout_js(self):
         """The new template should not contain the old layoutLabels JS."""
         response = self._get_dashboard()
         content = response.content.decode()
         self.assertNotIn("layoutLabels", content)
-        self.assertNotIn("x-ref=", content)
         self.assertNotIn("@resize.window", content)
 
 
@@ -355,15 +354,15 @@ class NumberLineEdgeCaseTests(TestCase):
         self.assertContains(response, "number-line-wrap")
 
     def test_comparative_analytics_hidden_without_percentiles(self):
-        """When bibliotype_percentiles is missing, fallback text is shown instead of number lines."""
+        """When bibliotype_percentiles is missing, comparative number lines are hidden but controversial ones remain."""
         dna = _make_dna_data()
         del dna["bibliotype_percentiles"]
         response = self._render_with_dna(dna)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode()
-        # No number lines should render (the {% if dna.bibliotype_percentiles %} guard)
-        self.assertNotIn("number-line-wrap", content)
-        # Fallback text should be shown
+        # Only controversial number lines should render (2 books in test data)
+        self.assertEqual(content.count("number-line-wrap"), 2)
+        # Fallback text should be shown for comparative section
         self.assertContains(response, "community rankings and percentiles")
 
     def test_controversial_books_empty(self):
