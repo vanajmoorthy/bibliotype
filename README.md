@@ -12,8 +12,16 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 Prioritised 
 - ~number line thing (happening, add snapshot tests or something for these)~ ✅
 - clean up code
+- posthog analytics, use mcp to add more events and create dashboards of
+    - new signups
+    - dna generated
+    - anonymous dna generated
+    - profile shared
+    - profile shared to story
+    - also want to see how many people drop off after generating step
 - share to story, several options
 - show book cover for most niche read
+- email for forgot password
 - beta test feedback banner https://forms.gle/EoZAbYdigngwFdpm9
 - ~rename "how mainstream is your taste" to "mainstream meter"~ ✅
 - save llm vibe against the dna dictionary, cache this for a month and only refetch if dictionary has changed
