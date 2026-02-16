@@ -11,6 +11,7 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 
 Prioritised 
 - number line thing (happening, add snapshot tests or something for these)
+- clean up code
 - share to story, several options
 - adjust reader type calculations
 - allow user to delete profile
