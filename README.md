@@ -10,12 +10,12 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 ## TODO
 
 Prioritised 
-- number line thing (happening, add snapshot tests or something for these) ✅
+- ~number line thing (happening, add snapshot tests or something for these)~ ✅
 - clean up code
 - share to story, several options
 - show book cover for most niche read
 - beta test feedback banner https://forms.gle/EoZAbYdigngwFdpm9
-- rename "how mainstream is your taste" to "mainstream meter" ✅
+- ~rename "how mainstream is your taste" to "mainstream meter"~ ✅
 - save llm vibe against the dna dictionary, cache this for a month and only refetch if dictionary has changed
     - user a uploads a csv, vibe generated
     - user b uploads the same csv, we want to reuse this same vibe instead of hitting gemini again
