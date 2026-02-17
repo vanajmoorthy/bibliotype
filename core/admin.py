@@ -150,6 +150,14 @@ class AggregateAnalyticsAdmin(admin.ModelAdmin):
 
 ADMIN_COMMANDS = [
     {
+        "name": "backfill_isbn",
+        "description": "Backfill ISBN13 for books missing it by querying Open Library. Run before backfill_enrichment for better results.",
+        "arguments": [
+            {"name": "--dry-run", "type": "flag", "label": "Dry run", "help": "Show what would be updated without saving"},
+            {"name": "--limit", "type": "int", "label": "Limit", "help": "Max books to process"},
+        ],
+    },
+    {
         "name": "backfill_enrichment",
         "description": "Dispatch background Celery tasks to enrich books missing publish_year, genres, or Google Books data.",
         "arguments": [

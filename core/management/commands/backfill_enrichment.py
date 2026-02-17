@@ -1,8 +1,12 @@
+import logging
+
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 
 from core.models import Book
 from core.tasks import enrich_book_task
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -20,6 +24,10 @@ class Command(BaseCommand):
             help="Limit the number of books to dispatch tasks for.",
         )
 
+    def _log(self, msg):
+        self.stdout.write(msg)
+        logger.info(f"backfill_enrichment: {msg}")
+
     def handle(self, *args, **options):
         queryset = Book.objects.filter(
             Q(publish_year__isnull=True) | Q(genres__isnull=True) | Q(google_books_last_checked__isnull=True)
@@ -28,7 +36,7 @@ class Command(BaseCommand):
         total = queryset.count()
 
         if total == 0:
-            self.stdout.write(self.style.SUCCESS("All books are already enriched. Nothing to do."))
+            self._log("All books are already enriched. Nothing to do.")
             return
 
         # Show breakdown
@@ -36,17 +44,17 @@ class Command(BaseCommand):
         missing_genres = Book.objects.filter(genres__isnull=True).count()
         missing_gb = Book.objects.filter(google_books_last_checked__isnull=True).count()
 
-        self.stdout.write(f"Books missing publish_year: {missing_year}")
-        self.stdout.write(f"Books missing genres: {missing_genres}")
-        self.stdout.write(f"Books missing Google Books check: {missing_gb}")
-        self.stdout.write(f"Total unique books needing enrichment: {total}")
+        self._log(f"Books missing publish_year: {missing_year}")
+        self._log(f"Books missing genres: {missing_genres}")
+        self._log(f"Books missing Google Books check: {missing_gb}")
+        self._log(f"Total unique books needing enrichment: {total}")
 
         if options["limit"]:
             queryset = queryset[: options["limit"]]
-            self.stdout.write(self.style.NOTICE(f"Limiting to {options['limit']} books."))
+            self._log(f"Limiting to {options['limit']} books.")
 
         if options["dry_run"]:
-            self.stdout.write(self.style.WARNING("Dry run — no tasks dispatched."))
+            self._log("Dry run — no tasks dispatched.")
             return
 
         dispatched = 0
@@ -54,4 +62,4 @@ class Command(BaseCommand):
             enrich_book_task.delay(book.pk)
             dispatched += 1
 
-        self.stdout.write(self.style.SUCCESS(f"Dispatched {dispatched} enrichment tasks to Celery."))
+        self._log(f"Dispatched {dispatched} enrichment tasks to Celery.")
