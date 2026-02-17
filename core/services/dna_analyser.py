@@ -1,6 +1,7 @@
 import hashlib
 import logging
 
+from django.db import IntegrityError
 from django.db.models import F
 from django.core.cache import cache
 import random
@@ -272,6 +273,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     except (ValueError, TypeError):
                         publish_year_value = None
 
+                isbn13_value = None
+                raw_isbn = original_row.get("ISBN13")
+                if raw_isbn and pd.notna(raw_isbn):
+                    # Goodreads wraps ISBNs in ="..." — strip that
+                    cleaned = str(raw_isbn).strip().strip('="')
+                    if cleaned and len(cleaned) >= 10:
+                        isbn13_value = cleaned[:13]
+
                 book_defaults = {
                     "title": title_from_csv,
                     "page_count": int(p) if pd.notna(p := original_row.get("Number of Pages")) else None,
@@ -279,12 +288,23 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 }
                 if publish_year_value:
                     book_defaults["publish_year"] = publish_year_value
+                if isbn13_value:
+                    book_defaults["isbn13"] = isbn13_value
 
-                book, created = Book.objects.update_or_create(
-                    normalized_title=normalized_book_title,
-                    author=author,
-                    defaults=book_defaults,
-                )
+                try:
+                    book, created = Book.objects.update_or_create(
+                        normalized_title=normalized_book_title,
+                        author=author,
+                        defaults=book_defaults,
+                    )
+                except IntegrityError:
+                    # Duplicate ISBN13 — retry without it
+                    book_defaults.pop("isbn13", None)
+                    book, created = Book.objects.update_or_create(
+                        normalized_title=normalized_book_title,
+                        author=author,
+                        defaults=book_defaults,
+                    )
 
                 # Check if the book already has genres by querying the database directly
                 # This ensures we get the actual current state, not cached relationship data
