@@ -9,14 +9,17 @@
         <title>{% block seo_title %}Bibliotype - Discover Your Reading DNA & Literary Personality{% endblock %}</title>
         <meta
             name="description"
-            content="{% block seo_description %}Discover your unique reading DNA and literary personality type. Upload
-            your Goodreads data to get personalized insights into your reading habits, favorite genres, and book
-            preferences.{% endblock %}"
+            content="{% block seo_description %}
+                Discover your unique reading DNA and literary personality type. Upload your Goodreads data to get
+                personalized insights into your reading habits, favorite genres, and book preferences.
+            {% endblock %}"
         />
         <meta
             name="keywords"
-            content="{% block seo_keywords %}reading DNA, literary personality, book analysis, reading habits, Goodreads
-            export, reading statistics, book recommendations, reading insights, bibliophile, reading dashboard{% endblock %}"
+            content="{% block seo_keywords %}
+                reading DNA, literary personality, book analysis, reading habits, Goodreads export, reading statistics,
+                book recommendations, reading insights, bibliophile, reading dashboard
+            {% endblock %}"
         />
         <meta name="author" content="Bibliotype" />
         <meta
@@ -42,8 +45,10 @@
         <meta property="og:title" content="{% block og_title %}Bibliotype - Discover Your Reading DNA{% endblock %}" />
         <meta
             property="og:description"
-            content="{% block og_description %}Discover your unique reading DNA and literary personality type. Get
-            personalized insights into your reading habits and book preferences.{% endblock %}"
+            content="{% block og_description %}
+                Discover your unique reading DNA and literary personality type. Get personalized insights into your
+                reading habits and book preferences.
+            {% endblock %}"
         />
         <meta
             property="og:image"
@@ -67,8 +72,10 @@
         />
         <meta
             name="twitter:description"
-            content="{% block twitter_description %}Discover your unique reading DNA and literary personality type. Get
-            personalized insights into your reading habits.{% endblock %}"
+            content="{% block twitter_description %}
+                Discover your unique reading DNA and literary personality type. Get personalized insights into your
+                reading habits.
+            {% endblock %}"
         />
         <meta
             name="twitter:image"
@@ -209,5 +216,12 @@
             {% block content %}
             {% endblock %}
         </main>
+        <footer class="container mx-auto flex justify-center gap-6 p-4 text-lg font-normal">
+            <a href="{% url 'core:about' %}" class="hover:bg-brand-yellow cursor-pointer uppercase underline">About</a>
+            <a href="{% url 'core:privacy' %}" class="hover:bg-brand-yellow cursor-pointer uppercase underline"
+                >Privacy</a
+            >
+            <a href="{% url 'core:terms' %}" class="hover:bg-brand-yellow cursor-pointer uppercase underline">Terms</a>
+        </footer>
     </body>
 </html>
