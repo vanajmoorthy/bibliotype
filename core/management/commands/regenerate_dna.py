@@ -17,6 +17,14 @@ class Command(BaseCommand):
         "for users from their current Book data. Use after enrichment backfills."
     )
 
+    def _log(self, msg):
+        self.stdout.write(msg)
+        logger.info(f"regenerate_dna: {msg}")
+
+    def _warn(self, msg):
+        self.stdout.write(self.style.WARNING(msg))
+        logger.warning(f"regenerate_dna: {msg}")
+
     def add_arguments(self, parser):
         parser.add_argument(
             "--dry-run",
@@ -46,10 +54,10 @@ class Command(BaseCommand):
         profiles = list(profiles)
 
         if not profiles:
-            self.stdout.write(self.style.SUCCESS("No profiles with DNA data found."))
+            self._log("No profiles with DNA data found.")
             return
 
-        self.stdout.write(f"Found {len(profiles)} profiles to regenerate.")
+        self._log(f"Found {len(profiles)} profiles to regenerate.")
         updated = 0
 
         for profile in profiles:
@@ -61,7 +69,7 @@ class Command(BaseCommand):
             )
 
             if not user_books.exists():
-                self.stdout.write(f"  {user.username}: no UserBook records, skipping.")
+                self._log(f"  {user.username}: no UserBook records, skipping.")
                 continue
 
             # Collect current genres from enriched books
@@ -121,10 +129,10 @@ class Command(BaseCommand):
                 changes.append(f"mainstream: {old_mainstream}% -> {new_mainstream_score}%")
 
             if not changes:
-                self.stdout.write(f"  {user.username}: no changes needed.")
+                self._log(f"  {user.username}: no changes needed.")
                 continue
 
-            self.stdout.write(f"  {user.username}: {', '.join(changes)}")
+            self._log(f"  {user.username}: {', '.join(changes)}")
 
             if not options["dry_run"]:
                 dna = profile.dna_data.copy()
@@ -142,6 +150,6 @@ class Command(BaseCommand):
                 updated += 1
 
         if options["dry_run"]:
-            self.stdout.write(self.style.WARNING("Dry run complete. No changes saved."))
+            self._warn("Dry run complete. No changes saved.")
         else:
-            self.stdout.write(self.style.SUCCESS(f"Updated {updated} profiles."))
+            self._log(f"Updated {updated} profiles.")

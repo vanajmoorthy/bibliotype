@@ -1,3 +1,4 @@
+import logging
 import re
 import time
 
@@ -6,6 +7,8 @@ from django.core.management.base import BaseCommand
 from django.db import IntegrityError
 
 from core.models import Book
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -45,6 +48,7 @@ class Command(BaseCommand):
             return
 
         self.stdout.write(f"Found {total} books missing ISBN13.")
+        logger.info(f"backfill_isbn: Found {total} books missing ISBN13.")
 
         if options["limit"]:
             queryset = queryset[: options["limit"]]
@@ -79,28 +83,36 @@ class Command(BaseCommand):
                     res.raise_for_status()
                     data = res.json()
                 except requests.RequestException as e:
-                    self.stdout.write(self.style.WARNING(f"  API error for '{book.title}': {e}"))
+                    msg = f"API error for '{book.title}': {e}"
+                    self.stdout.write(self.style.WARNING(f"  {msg}"))
+                    logger.warning(f"backfill_isbn: {msg}")
                     skipped += 1
                     time.sleep(1.2)
                     continue
 
                 docs = data.get("docs", [])
                 if not docs or "isbn" not in docs[0]:
-                    self.stdout.write(f"  No ISBN found: '{book.title}'")
+                    msg = f"No ISBN found: '{book.title}'"
+                    self.stdout.write(f"  {msg}")
+                    logger.info(f"backfill_isbn: {msg}")
                     not_found += 1
                     time.sleep(1.2)
                     continue
 
                 isbn13 = self._find_isbn13(docs[0]["isbn"])
                 if not isbn13:
-                    self.stdout.write(f"  No ISBN-13 in results: '{book.title}'")
+                    msg = f"No ISBN-13 in results: '{book.title}'"
+                    self.stdout.write(f"  {msg}")
+                    logger.info(f"backfill_isbn: {msg}")
                     not_found += 1
                     time.sleep(1.2)
                     continue
 
                 # Check for existing book with this ISBN before saving
                 if Book.objects.filter(isbn13=isbn13).exists():
-                    self.stdout.write(self.style.WARNING(f"  ISBN conflict: '{book.title}' -> {isbn13} (already taken)"))
+                    msg = f"ISBN conflict: '{book.title}' -> {isbn13} (already taken)"
+                    self.stdout.write(self.style.WARNING(f"  {msg}"))
+                    logger.warning(f"backfill_isbn: {msg}")
                     conflicts += 1
                     time.sleep(1.2)
                     continue
@@ -108,17 +120,23 @@ class Command(BaseCommand):
                 book.isbn13 = isbn13
                 try:
                     book.save(update_fields=["isbn13"])
-                    self.stdout.write(self.style.SUCCESS(f"  Updated: '{book.title}' -> {isbn13}"))
+                    msg = f"Updated: '{book.title}' -> {isbn13}"
+                    self.stdout.write(self.style.SUCCESS(f"  {msg}"))
+                    logger.info(f"backfill_isbn: {msg}")
                     updated += 1
                 except IntegrityError:
-                    self.stdout.write(self.style.WARNING(f"  ISBN conflict on save: '{book.title}' -> {isbn13}"))
+                    msg = f"ISBN conflict on save: '{book.title}' -> {isbn13}"
+                    self.stdout.write(self.style.WARNING(f"  {msg}"))
+                    logger.warning(f"backfill_isbn: {msg}")
                     conflicts += 1
 
                 time.sleep(1.2)
 
+        summary = f"Done. Updated: {updated}, Not found: {not_found}, Conflicts: {conflicts}, API errors: {skipped}"
         self.stdout.write("")
         self.stdout.write(f"Updated: {updated}")
         self.stdout.write(f"Not found: {not_found}")
         self.stdout.write(f"Conflicts: {conflicts}")
         self.stdout.write(f"API errors: {skipped}")
         self.stdout.write(self.style.SUCCESS(f"Done. {updated} books updated with ISBN13."))
+        logger.info(f"backfill_isbn: {summary}")

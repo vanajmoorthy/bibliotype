@@ -1,40 +1,44 @@
+import logging
+
 from django.core.management.base import BaseCommand
 
 from core.models import AggregateAnalytics, UserProfile
-
-# We'll reuse the same function that the live app uses!
 from core.percentile_engine import update_analytics_from_stats
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
     help = "Rebuilds the AggregateAnalytics data from all existing UserProfiles."
 
-    def handle(self, *args, **kwargs):
-        self.stdout.write(self.style.WARNING("Rebuilding aggregate analytics from scratch..."))
+    def _log(self, msg):
+        self.stdout.write(msg)
+        logger.info(f"rebuild_analytics: {msg}")
 
-        # Step 1: Clear the old analytics data
-        self.stdout.write("  -> Deleting old aggregate analytics...")
+    def _warn(self, msg):
+        self.stdout.write(self.style.WARNING(msg))
+        logger.warning(f"rebuild_analytics: {msg}")
+
+    def handle(self, *args, **kwargs):
+        self._log("Rebuilding aggregate analytics from scratch...")
+
+        self._log("  -> Deleting old aggregate analytics...")
         AggregateAnalytics.objects.all().delete()
-        # Create a fresh, empty instance
         analytics = AggregateAnalytics.get_instance()
 
-        # Step 2: Get all user profiles that have DNA data
         profiles_with_dna = UserProfile.objects.exclude(dna_data__isnull=True)
         total_profiles = profiles_with_dna.count()
 
         if total_profiles == 0:
-            self.stdout.write(self.style.SUCCESS("No user profiles with DNA found. Analytics table is now empty."))
+            self._log("No user profiles with DNA found. Analytics table is now empty.")
             return
 
-        self.stdout.write(f"  -> Found {total_profiles} user profiles with DNA data to process.")
+        self._log(f"  -> Found {total_profiles} user profiles with DNA data to process.")
 
-        # Step 3: Loop through each profile and re-run the analytics update
         for i, profile in enumerate(profiles_with_dna):
-            # Extract the specific `user_stats` dictionary from the larger JSON blob
             user_stats = profile.dna_data.get("user_stats")
 
             if user_stats:
-                # Backfill avg_books_per_year if missing from stored data
                 if "avg_books_per_year" not in user_stats:
                     stats_by_year = profile.dna_data.get("stats_by_year", [])
                     if stats_by_year:
@@ -44,12 +48,8 @@ class Command(BaseCommand):
                         user_stats["num_reading_years"] = num_years
 
                 update_analytics_from_stats(user_stats)
-                self.stdout.write(f"     - Processed profile {i+1}/{total_profiles} for user {profile.user.username}")
+                self._log(f"     - Processed profile {i+1}/{total_profiles} for user {profile.user.username}")
             else:
-                self.stdout.write(
-                    self.style.WARNING(f"     - Skipped profile for {profile.user.username} (missing user_stats).")
-                )
+                self._warn(f"     - Skipped profile for {profile.user.username} (missing user_stats).")
 
-        self.stdout.write(
-            self.style.SUCCESS(f"\nSuccessfully rebuilt aggregate analytics from {total_profiles} profiles.")
-        )
+        self._log(f"Successfully rebuilt aggregate analytics from {total_profiles} profiles.")
