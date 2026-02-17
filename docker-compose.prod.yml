@@ -41,6 +41,7 @@ services:
             - SECRET_KEY=${SECRET_KEY}
             - POSTHOG_API_KEY=${POSTHOG_API_KEY}
             - GEMINI_API_KEY=${GEMINI_API_KEY}
+            - GOOGLE_BOOKS_API_KEY=${GOOGLE_BOOKS_API_KEY}
             - DEBUG=${DEBUG}
             - ALLOWED_HOSTS=${ALLOWED_HOSTS}
             - POSTGRES_DB=${POSTGRES_DB}
@@ -63,7 +64,9 @@ services:
             - CELERY_RESULT_BACKEND=redis://redis:6379/0
             - REDIS_CACHE_URL=redis://redis:6379/1
             - SECRET_KEY=${SECRET_KEY}
+            - POSTHOG_API_KEY=${POSTHOG_API_KEY}
             - GEMINI_API_KEY=${GEMINI_API_KEY}
+            - GOOGLE_BOOKS_API_KEY=${GOOGLE_BOOKS_API_KEY}
             - DEBUG=${DEBUG}
             - ALLOWED_HOSTS=${ALLOWED_HOSTS}
             - POSTGRES_DB=${POSTGRES_DB}
