@@ -15,7 +15,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--dry-run",
             action="store_true",
-            help="Show what would be updated without saving.",
+            help="Show count of books missing ISBN13 without making API calls.",
         )
         parser.add_argument(
             "--limit",
@@ -51,7 +51,10 @@ class Command(BaseCommand):
             self.stdout.write(self.style.NOTICE(f"Limiting to {options['limit']} books."))
 
         if options["dry_run"]:
-            self.stdout.write(self.style.WARNING("Dry run — no changes will be saved."))
+            for book in queryset.iterator():
+                self.stdout.write(f"  Missing ISBN: '{book.title}' by {book.author.name}")
+            self.stdout.write(self.style.WARNING(f"Dry run — {total} books need ISBN13. No API calls made."))
+            return
 
         updated = 0
         skipped = 0
@@ -95,25 +98,21 @@ class Command(BaseCommand):
                     time.sleep(1.2)
                     continue
 
-                if options["dry_run"]:
-                    self.stdout.write(f"  Would set: '{book.title}' -> {isbn13}")
-                    updated += 1
-                else:
-                    # Check for existing book with this ISBN before saving
-                    if Book.objects.filter(isbn13=isbn13).exists():
-                        self.stdout.write(self.style.WARNING(f"  ISBN conflict: '{book.title}' -> {isbn13} (already taken)"))
-                        conflicts += 1
-                        time.sleep(1.2)
-                        continue
+                # Check for existing book with this ISBN before saving
+                if Book.objects.filter(isbn13=isbn13).exists():
+                    self.stdout.write(self.style.WARNING(f"  ISBN conflict: '{book.title}' -> {isbn13} (already taken)"))
+                    conflicts += 1
+                    time.sleep(1.2)
+                    continue
 
-                    book.isbn13 = isbn13
-                    try:
-                        book.save(update_fields=["isbn13"])
-                        self.stdout.write(self.style.SUCCESS(f"  Updated: '{book.title}' -> {isbn13}"))
-                        updated += 1
-                    except IntegrityError:
-                        self.stdout.write(self.style.WARNING(f"  ISBN conflict on save: '{book.title}' -> {isbn13}"))
-                        conflicts += 1
+                book.isbn13 = isbn13
+                try:
+                    book.save(update_fields=["isbn13"])
+                    self.stdout.write(self.style.SUCCESS(f"  Updated: '{book.title}' -> {isbn13}"))
+                    updated += 1
+                except IntegrityError:
+                    self.stdout.write(self.style.WARNING(f"  ISBN conflict on save: '{book.title}' -> {isbn13}"))
+                    conflicts += 1
 
                 time.sleep(1.2)
 
@@ -122,8 +121,4 @@ class Command(BaseCommand):
         self.stdout.write(f"Not found: {not_found}")
         self.stdout.write(f"Conflicts: {conflicts}")
         self.stdout.write(f"API errors: {skipped}")
-
-        if options["dry_run"]:
-            self.stdout.write(self.style.WARNING("Dry run complete. No changes saved."))
-        else:
-            self.stdout.write(self.style.SUCCESS(f"Done. {updated} books updated with ISBN13."))
+        self.stdout.write(self.style.SUCCESS(f"Done. {updated} books updated with ISBN13."))
