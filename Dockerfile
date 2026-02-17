@@ -29,12 +29,14 @@ COPY package.json pnpm-lock.yaml ./
 COPY static/ ./static/
 COPY tailwind.config.js ./
 
-# Install Node.js dependencies and build Tailwind CSS
+# Install Node.js dependencies
 RUN pnpm install --frozen-lockfile
-RUN pnpm run build
 
-# Copy the rest of the application
+# Copy the rest of the application (templates must exist before Tailwind build)
 COPY . .
+
+# Build Tailwind CSS (after templates are available for class scanning)
+RUN pnpm run build
 
 RUN dos2unix /app/wait-for-postgres.sh
 RUN dos2unix /app/docker-entrypoint.sh
