@@ -169,6 +169,11 @@
             <p class="mt-10 text-center text-lg">
                 Your data is processed temporarily and deleted afterwards. Create an account to save & share!
             </p>
+            <footer class="mt-12 flex justify-center gap-6 text-lg">
+                <a href="{% url 'core:about' %}" class="font-bold uppercase underline hover:bg-brand-yellow">About</a>
+                <a href="{% url 'core:privacy' %}" class="font-bold uppercase underline hover:bg-brand-yellow">Privacy</a>
+                <a href="{% url 'core:terms' %}" class="font-bold uppercase underline hover:bg-brand-yellow">Terms</a>
+            </footer>
             <div x-show="instructionsOpen"
                  x-cloak
                  class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">

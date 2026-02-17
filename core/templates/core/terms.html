@@ -1,0 +1,123 @@
+{% extends 'core/base.html' %}
+
+{% block seo_title %}Terms of Service - Bibliotype{% endblock %}
+
+{% block seo_description %}Bibliotype terms of service. Understand the terms and conditions for using our free reading
+analysis tool.{% endblock %}
+
+{% block seo_keywords %}Bibliotype terms of service, reading analysis terms, Bibliotype conditions, book analysis terms{% endblock %}
+
+{% block og_title %}Terms of Service - Bibliotype{% endblock %}
+
+{% block og_description %}Terms and conditions for using Bibliotype, the free reading analysis tool.{% endblock %}
+
+{% block twitter_title %}Terms of Service - Bibliotype{% endblock %}
+
+{% block twitter_description %}Terms and conditions for using Bibliotype, the free reading analysis tool.{% endblock %}
+
+{% block structured_data %}
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": "Terms of Service - Bibliotype",
+            "description": "Terms and conditions for using Bibliotype.",
+            "url": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}",
+            "breadcrumb": {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Home",
+                        "item": "{{ request.scheme }}://{{ request.get_host }}/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "Terms of Service",
+                        "item": "{{ request.scheme }}://{{ request.get_host }}/terms/"
+                    }
+                ]
+            }
+        }
+    </script>
+{% endblock %}
+
+{% block content %}
+    <div class="mx-auto max-w-3xl space-y-8 p-2 md:p-4">
+        <h1 class="text-center text-4xl font-bold tracking-widest uppercase md:text-5xl">Terms of Service</h1>
+        <p class="text-center text-lg">Last updated: February 17, 2026</p>
+
+        <div class="border-brand-text shadow-neo space-y-6 border-2 bg-white p-6 text-lg md:p-8">
+            <h2 class="text-2xl font-bold tracking-wider uppercase">1. Acceptance of Terms</h2>
+            <p>
+                By accessing or using Bibliotype ("the Service"), you agree to be bound by these Terms of Service. If
+                you do not agree, please do not use the Service.
+            </p>
+
+            <h2 class="text-2xl font-bold tracking-wider uppercase">2. Description of Service</h2>
+            <p>
+                Bibliotype is a free web application that analyzes reading data exported from Goodreads to generate
+                personalized reading profiles ("Reading DNA"). The Service includes reader type classification, reading
+                statistics, AI-generated reading vibes, and book recommendations.
+            </p>
+
+            <h2 class="text-2xl font-bold tracking-wider uppercase">3. User Accounts</h2>
+            <p>
+                You may use Bibliotype without an account (anonymously) or create a free account to save your data. If
+                you create an account, you are responsible for maintaining the security of your login credentials. You
+                must provide a valid email address and agree not to impersonate others.
+            </p>
+
+            <h2 class="text-2xl font-bold tracking-wider uppercase">4. Acceptable Use</h2>
+            <p>You agree not to:</p>
+            <ul class="list-outside list-disc space-y-2 pl-6">
+                <li>Upload malicious, fraudulent, or excessively large files.</li>
+                <li>Attempt to access other users' accounts or private data.</li>
+                <li>Use automated tools to scrape or overload the Service.</li>
+                <li>Use the Service for any unlawful purpose.</li>
+            </ul>
+
+            <h2 class="text-2xl font-bold tracking-wider uppercase">5. Your Data</h2>
+            <p>
+                You retain ownership of the reading data you upload. By uploading your data, you grant Bibliotype a
+                limited license to process it for the purpose of generating your Reading DNA. See our
+                <a href="{% url 'core:privacy' %}" class="hover:bg-brand-yellow font-bold underline">Privacy Policy</a>
+                for details on data handling, retention, and third-party services.
+            </p>
+
+            <h2 class="text-2xl font-bold tracking-wider uppercase">6. AI-Generated Content</h2>
+            <p>
+                Reading vibes and certain insights are generated using AI (Google Gemini). These are provided for
+                entertainment and informational purposes only. We do not guarantee their accuracy or completeness.
+            </p>
+
+            <h2 class="text-2xl font-bold tracking-wider uppercase">7. Availability & Changes</h2>
+            <p>
+                Bibliotype is provided "as is" without warranties of any kind. We may modify, suspend, or discontinue
+                the Service at any time without notice. We reserve the right to update these terms, and continued use
+                after changes constitutes acceptance.
+            </p>
+
+            <h2 class="text-2xl font-bold tracking-wider uppercase">8. Limitation of Liability</h2>
+            <p>
+                Bibliotype is a free, open-source hobby project. To the maximum extent permitted by law, we shall not be
+                liable for any indirect, incidental, or consequential damages arising from your use of the Service.
+            </p>
+
+            <h2 class="text-2xl font-bold tracking-wider uppercase">9. Contact</h2>
+            <p>
+                For questions about these terms, open an issue on
+                <a
+                    href="https://github.com/vanajmoorthy/bibliotype"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="hover:bg-brand-yellow font-bold underline"
+                    >GitHub</a
+                >
+                or reach out via the feedback form linked in the site banner.
+            </p>
+        </div>
+    </div>
+{% endblock %}

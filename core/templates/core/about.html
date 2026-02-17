@@ -1,0 +1,139 @@
+{% extends 'core/base.html' %}
+
+{% block seo_title %}About Bibliotype - Reading DNA & Literary Personality Analysis{% endblock %}
+
+{% block seo_description %}Learn about Bibliotype, a free tool that analyzes your Goodreads reading data to discover
+your unique literary personality type, reading habits, and book preferences.{% endblock %}
+
+{% block seo_keywords %}about Bibliotype, reading DNA tool, literary personality analyzer, Goodreads analysis, book
+reading insights, reading statistics tool{% endblock %}
+
+{% block og_title %}About Bibliotype{% endblock %}
+
+{% block og_description %}Learn about Bibliotype, a free tool that analyzes your reading data to discover your unique
+literary personality.{% endblock %}
+
+{% block twitter_title %}About Bibliotype{% endblock %}
+
+{% block twitter_description %}Learn about Bibliotype, a free reading analysis tool that discovers your literary
+personality.{% endblock %}
+
+{% block structured_data %}
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "AboutPage",
+            "name": "About Bibliotype",
+            "description": "Learn about Bibliotype, a free tool that analyzes your reading data to discover your literary personality.",
+            "url": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}",
+            "breadcrumb": {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Home",
+                        "item": "{{ request.scheme }}://{{ request.get_host }}/"
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "About",
+                        "item": "{{ request.scheme }}://{{ request.get_host }}/about/"
+                    }
+                ]
+            }
+        }
+    </script>
+{% endblock %}
+
+{% block content %}
+    <div class="mx-auto max-w-3xl space-y-8 p-2 md:p-4">
+        <h1 class="text-center text-4xl font-bold tracking-widest uppercase md:text-5xl">About</h1>
+
+        <div class="border-brand-text shadow-neo space-y-6 border-2 bg-white p-6 text-lg md:p-8">
+            <p>
+                Bibliotype is a free tool that analyzes your reading history to reveal your unique
+                <span class="bg-brand-yellow px-1 font-bold">Reading DNA</span> &mdash; a personalized profile of your
+                literary personality, favorite genres, reading habits, and book preferences.
+            </p>
+
+            <h2 class="text-2xl font-bold tracking-wider uppercase">How It Works</h2>
+            <ol class="list-outside list-decimal space-y-2 pl-6">
+                <li>
+                    Export your library from
+                    <a
+                        href="https://www.goodreads.com/review/import"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="hover:bg-brand-yellow font-bold underline"
+                        >Goodreads</a
+                    >
+                    as a CSV file.
+                </li>
+                <li>Upload the file to Bibliotype.</li>
+                <li>
+                    Get your personalized Reading DNA dashboard with insights into your literary personality type,
+                    reading statistics, genre breakdowns, and AI-generated reading vibes.
+                </li>
+            </ol>
+
+            <h2 class="text-2xl font-bold tracking-wider uppercase">What You Get</h2>
+            <ul class="list-outside list-disc space-y-2 pl-6">
+                <li>
+                    <span class="font-bold">Reader Type</span> &mdash; your literary personality classification based on
+                    what you read
+                </li>
+                <li>
+                    <span class="font-bold">Reading Vibe</span> &mdash; AI-generated phrases that capture the essence of
+                    your reading taste
+                </li>
+                <li>
+                    <span class="font-bold">Genre & Author Insights</span> &mdash; breakdowns of your most-read genres
+                    and favorite authors
+                </li>
+                <li>
+                    <span class="font-bold">Reading Statistics</span> &mdash; page counts, ratings analysis, reading
+                    pace, and yearly trends
+                </li>
+                <li>
+                    <span class="font-bold">Community Benchmarking</span> &mdash; see how your reading compares to the
+                    Bibliotype community
+                </li>
+                <li>
+                    <span class="font-bold">Book Recommendations</span> &mdash; personalized suggestions based on
+                    readers with similar taste
+                </li>
+            </ul>
+
+            <h2 class="text-2xl font-bold tracking-wider uppercase">Your Data</h2>
+            <p>
+                Anonymous uploads are processed temporarily and deleted after 7 days. Create a free account to save your
+                Bibliotype permanently and share it with friends. Read our
+                <a href="{% url 'core:privacy' %}" class="hover:bg-brand-yellow font-bold underline">Privacy Policy</a>
+                for full details on how we handle your data.
+            </p>
+
+            <h2 class="text-2xl font-bold tracking-wider uppercase">Open Source</h2>
+            <p>
+                Bibliotype is open source. You can find the code on
+                <a
+                    href="https://github.com/vanajmoorthy/bibliotype"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="hover:bg-brand-yellow font-bold underline"
+                    >GitHub</a
+                >.
+            </p>
+        </div>
+
+        <div class="text-center">
+            <a
+                href="{% url 'core:home' %}"
+                class="border-brand-text shadow-neo bg-brand-yellow inline-block border-2 px-8 py-3 text-xl font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1"
+            >
+                Get Your Reading DNA
+            </a>
+        </div>
+    </div>
+{% endblock %}

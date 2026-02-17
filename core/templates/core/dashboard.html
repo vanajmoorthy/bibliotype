@@ -3,7 +3,11 @@
 
 {% block seo_title %}Bibliotype – Dashboard{% endblock %}
 
-{% block seo_description %}View your personalized reading DNA dashboard with insights into your literary personality, favorite genres, reading statistics, and book recommendations.{% endblock %}
+{% block seo_description %}View your personalized reading DNA dashboard with insights into your literary personality,
+favorite genres, reading statistics, and book recommendations.{% endblock %}
+
+{% block seo_keywords %}reading DNA dashboard, literary personality results, reading statistics, genre analysis, book
+recommendations, reading insights{% endblock %}
 
 {% block seo_robots %}noindex, nofollow{% endblock %}
 
@@ -12,7 +16,8 @@
         {% if is_processing %}
             <div class="flex h-full flex-col items-center justify-center p-4">
                 <div class="w-full max-w-2xl text-center">
-                    <h1 class="title-underline relative mb-4 inline-block text-4xl font-bold"
+                    <h1
+                        class="title-underline relative mb-4 inline-block text-4xl font-bold"
                         x-data="{
                             messages: [
                                 'Sequencing Your Bibliotype...',
@@ -36,29 +41,43 @@
                         x-transition:enter-end="opacity-100 transform scale-100"
                         x-transition:leave="transition ease-in duration-200"
                         x-transition:leave-start="opacity-100 transform scale-100"
-                        x-transition:leave-end="opacity-0 transform scale-95">
-                    </h1>
+                        x-transition:leave-end="opacity-0 transform scale-95"
+                    ></h1>
                     <p class="mb-8 text-lg text-gray-600">
-                        We're analyzing your library and fetching details from the archives. This can take a minute or two.
-                        Please keep this page open — we'll redirect you as soon as it's ready!
+                        We're analyzing your library and fetching details from the archives. This can take a minute or
+                        two. Please keep this page open — we'll redirect you as soon as it's ready!
                     </p>
                     <div class="shadow-neo border-brand-text border-2 bg-white p-8">
                         <div class="flex justify-center">
-                            <svg class="text-brand-text h-16 w-16 animate-spin"
-                                 xmlns="http://www.w3.org/2000/svg"
-                                 fill="none"
-                                 viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                </path>
+                            <svg
+                                class="text-brand-text h-16 w-16 animate-spin"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                            >
+                                <circle
+                                    class="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    stroke-width="4"
+                                ></circle>
+                                <path
+                                    class="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
                             </svg>
                         </div>
                         <p class="mt-4 text-xl font-bold tracking-widest uppercase">Processing...</p>
                         {% include 'core/partials/progress_bar.html' %}
                     </div>
-                    <div x-show="status === 'FAILURE'"
-                         class="border-brand-text shadow-neo mt-8 border-2 bg-red-500 p-4 font-bold text-white"
-                         style="display: none">
+                    <div
+                        x-show="status === 'FAILURE'"
+                        class="border-brand-text shadow-neo mt-8 border-2 bg-red-500 p-4 font-bold text-white"
+                        style="display: none"
+                    >
                         Sorry, something went wrong while processing your file. Please try uploading it again.
                     </div>
                 </div>
@@ -74,7 +93,7 @@
                     const step = Math.max(0.5, (targetPct - displayPct) * 0.2);
                     if (displayPct < targetPct) {
                         displayPct = Math.min(targetPct, displayPct + step);
-                        progressBar().style.width = Math.round(displayPct) + '%';
+                        progressBar().style.width = Math.round(displayPct) + "%";
                         progressLabel().textContent = `${Math.round(displayPct)}%`;
                     }
                 }
@@ -83,8 +102,8 @@
 
                 function updateTargetsFromServer(data) {
                     if (data.progress) {
-                        const pct = typeof data.progress.percent === 'number' ? data.progress.percent : null;
-                        const stage = data.progress.stage || 'Processing';
+                        const pct = typeof data.progress.percent === "number" ? data.progress.percent : null;
+                        const stage = data.progress.stage || "Processing";
                         progressStage().textContent = stage;
 
                         if (pct !== null) {
@@ -94,9 +113,9 @@
                         } else {
                             // Stage-based optimistic targets
                             let cap = 60;
-                            if (stage.toLowerCase().includes('syncing')) cap = 70;
-                            if (stage.toLowerCase().includes('crunching')) cap = 90;
-                            if (stage.toLowerCase().includes('finishing')) cap = 98;
+                            if (stage.toLowerCase().includes("syncing")) cap = 70;
+                            if (stage.toLowerCase().includes("crunching")) cap = 90;
+                            if (stage.toLowerCase().includes("finishing")) cap = 98;
                             targetPct = Math.max(targetPct, cap);
                         }
                     } else {
@@ -130,8 +149,8 @@
                 }
 
                 document.addEventListener("DOMContentLoaded", function () {
-                    progressStage().textContent = 'Processing';
-                    progressLabel().textContent = '0%';
+                    progressStage().textContent = "Processing";
+                    progressLabel().textContent = "0%";
                     checkStatus();
                 });
             </script>
@@ -140,21 +159,33 @@
             <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
                 <span class="relative z-10">
                     {% if user.is_authenticated %}
-                        <div x-data="{ editing: false, newName: '{{ user.username|escapejs }}', originalName: '{{ user.username|escapejs }}', errorMessage: '',  get isNewNameValid() { return this.newName.trim() !== '' && this.newName.length <= 15; },  updateUsername: function() { if (!this.isNewNameValid) return; this.errorMessage = ''; fetch('{% url "core:api_update_username" %}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }, body: JSON.stringify({ username: this.newName }) }) .then(response => response.json()) .then(data => { if (data.status === 'success') { window.location.reload(); } else { this.errorMessage = data.message; } }) .catch(() => { this.errorMessage = 'Could not connect to the server.'; }); } }"
-                             class="inline-block">
-                            <div x-show="!editing"
-                                 class="flex flex-col items-center justify-center gap-y-2 text-4xl sm:text-5xl md:flex-row md:gap-x-3">
+                        <div
+                            x-data="{ editing: false, newName: '{{ user.username|escapejs }}', originalName: '{{ user.username|escapejs }}', errorMessage: '',  get isNewNameValid() { return this.newName.trim() !== '' && this.newName.length <= 15; },  updateUsername: function() { if (!this.isNewNameValid) return; this.errorMessage = ''; fetch('{% url "core:api_update_username" %}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }, body: JSON.stringify({ username: this.newName }) }) .then(response => response.json()) .then(data => { if (data.status === 'success') { window.location.reload(); } else { this.errorMessage = data.message; } }) .catch(() => { this.errorMessage = 'Could not connect to the server.'; }); } }"
+                            class="inline-block"
+                        >
+                            <div
+                                x-show="!editing"
+                                class="flex flex-col items-center justify-center gap-y-2 text-4xl sm:text-5xl md:flex-row md:gap-x-3"
+                            >
                                 <div class="inline-flex items-center">
-                                    <div @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
-                                         class="group relative cursor-pointer">
-                                        <span class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"></span>
+                                    <div
+                                        @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
+                                        class="group relative cursor-pointer"
+                                    >
+                                        <span
+                                            class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"
+                                        ></span>
                                         <span class="relative z-20 px-2" x-text="originalName"></span>
                                         <div class="text-brand-text absolute -right-2 -bottom-2 z-30">
-                                            <svg class="h-7 w-7"
-                                                 xmlns="http://www.w3.org/2000/svg"
-                                                 viewBox="0 0 16 16"
-                                                 fill="currentColor">
-                                                <path d="M14 0l2 2-2 2-2-2 2-2zM12 2l2 2-8 8H4v-2l8-8zM2 12v2h2l-l-2-2z" />
+                                            <svg
+                                                class="h-7 w-7"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                viewBox="0 0 16 16"
+                                                fill="currentColor"
+                                            >
+                                                <path
+                                                    d="M14 0l2 2-2 2-2-2 2-2zM12 2l2 2-8 8H4v-2l8-8zM2 12v2h2l-l-2-2z"
+                                                />
                                             </svg>
                                         </div>
                                     </div>
@@ -163,24 +194,29 @@
                                 <span>Reading DNA</span>
                             </div>
                             <div x-show="editing" x-cloak class="flex justify-center">
-                                <form @submit.prevent="updateUsername"
-                                      @keydown.escape.window="editing = false; newName = originalName"
-                                      class="inline-flex items-stretch gap-4">
-                                    <input type="text"
-                                           x-ref="usernameInput"
-                                           x-model="newName"
-                                           maxlength="15"
-                                           class="border-brand-text focus:border-brand-purple w-full border-2 bg-white p-1 text-4xl font-bold tracking-widest uppercase focus:outline-none sm:text-5xl" />
+                                <form
+                                    @submit.prevent="updateUsername"
+                                    @keydown.escape.window="editing = false; newName = originalName"
+                                    class="inline-flex items-stretch gap-4"
+                                >
+                                    <input
+                                        type="text"
+                                        x-ref="usernameInput"
+                                        x-model="newName"
+                                        maxlength="15"
+                                        class="border-brand-text focus:border-brand-purple w-full border-2 bg-white p-1 text-4xl font-bold tracking-widest uppercase focus:outline-none sm:text-5xl"
+                                    />
                                     {% include 'core/partials/buttons/small_button.html' with text="Save" color="green" type="submit" extra_classes="text-xl" extra_attrs=':disabled="!isNewNameValid" :class="{ \'opacity-50 cursor-not-allowed\': !isNewNameValid }"' %}
                                 </form>
                             </div>
-                            <div x-show="editing && newName.length > 15"
-                                 class="mt-2 text-lg font-bold text-red-600">
+                            <div x-show="editing && newName.length > 15" class="mt-2 text-lg font-bold text-red-600">
                                 Display name cannot be more than 15 characters.
                             </div>
-                            <div x-show="editing && errorMessage"
-                                 x-text="errorMessage"
-                                 class="mt-2 text-lg font-bold text-red-600"></div>
+                            <div
+                                x-show="editing && errorMessage"
+                                x-text="errorMessage"
+                                class="mt-2 text-lg font-bold text-red-600"
+                            ></div>
                         </div>
                     {% else %}
                         Your Reading DNA
@@ -189,22 +225,18 @@
             </h1>
 
             {% include 'core/partials/dna/vibe_display.html' %}
-            
             {% include 'core/partials/dna/reader_type_card.html' %}
-            
             {% include 'core/partials/dna/top_traits_list.html' %}
-            
             {% include 'core/partials/dna/key_stats_row.html' %}
-            
             {% include 'core/partials/dna/comparative_analytics_card.html' %}
-            
+
             <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                 {% include 'core/partials/dna/niche_read_card.html' %}
                 {% include 'core/partials/dna/mainstream_gauge_card.html' %}
             </div>
-            
+
             {% include 'core/partials/dna/top_genres_authors_row.html' with use_rainbow=True %}
-            
+
             <div class="border-brand-text shadow-neo border-2 bg-white p-6">
                 <h2 class="mb-4 text-2xl font-bold uppercase">Review Analysis</h2>
                 <div class="grid grid-cols-1 gap-6 text-lg md:grid-cols-2">
@@ -232,33 +264,42 @@
                     </div>
                 </div>
             </div>
-            
+
             {% include 'core/partials/dna/controversial_ratings_card.html' %}
-            
+
             {% if recommendations %}
                 {% include 'core/partials/dna/recommendations_grid.html' with is_public_view=False %}
             {% endif %}
-            
+
             {% if user.is_authenticated %}
                 <div class="grid grid-cols-1 items-center gap-6 md:grid-cols-3">
-                    <div class="border-brand-text shadow-neo flex h-full items-center border-2 bg-white p-4 md:col-span-2">
+                    <div
+                        class="border-brand-text shadow-neo flex h-full items-center border-2 bg-white p-4 md:col-span-2"
+                    >
                         <div class="flex-grow">
                             {% if user_profile.is_public %}
                                 <h3 class="text-xl font-bold uppercase">
                                     <span class="flex flex-col md:flex-row md:items-center md:gap-2">
                                         <span>
                                             Your profile is
-                                            <span class="bg-brand-green border-brand-text border-2 px-2 py-1 font-bold">Public</span>
+                                            <span class="bg-brand-green border-brand-text border-2 px-2 py-1 font-bold"
+                                                >Public</span
+                                            >
                                         </span>
-                                        <a href="{% url 'core:public_profile' username=user.username %}"
-                                           class="hover:bg-brand-yellow ml-0 mt-2 sm:ml-4 sm:!mt-0 underline block md:inline-block"
-                                           target="_blank">/u/{{ user.username }}</a>
+                                        <a
+                                            href="{% url 'core:public_profile' username=user.username %}"
+                                            class="hover:bg-brand-yellow mt-2 ml-0 block underline sm:!mt-0 sm:ml-4 md:inline-block"
+                                            target="_blank"
+                                            >/u/{{ user.username }}</a
+                                        >
                                     </span>
                                 </h3>
                             {% else %}
                                 <h3 class="text-xl font-bold uppercase">
                                     Your profile is
-                                    <span class="bg-brand-pink border-brand-text border-2 px-2 py-1 font-bold">Private</span>
+                                    <span class="bg-brand-pink border-brand-text border-2 px-2 py-1 font-bold"
+                                        >Private</span
+                                    >
                                 </h3>
                             {% endif %}
                         </div>
@@ -273,7 +314,9 @@
                             {% endif %}
                         </form>
                     </div>
-                    <div class="border-brand-text shadow-neo flex h-full items-center justify-center border-2 bg-white p-4">
+                    <div
+                        class="border-brand-text shadow-neo flex h-full items-center justify-center border-2 bg-white p-4"
+                    >
                         {% url 'core:home' as home_url %}
                         {% include 'core/partials/buttons/small_link_button.html' with href=home_url text="Update Bibliotype" color="purple" %}
                     </div>
@@ -282,40 +325,52 @@
                 <div class="bg-brand-purple border-brand-text shadow-neo border-2 p-6 text-center">
                     <h2 class="text-2xl font-bold uppercase">Enjoying Your Bibliotype?</h2>
                     <p class="mt-2 text-lg">
-                        <a href="{% url 'core:signup' %}"
-                           class="hover:bg-brand-yellow underline">Create a free account</a>
+                        <a href="{% url 'core:signup' %}" class="hover:bg-brand-yellow underline"
+                            >Create a free account</a
+                        >
                         to save your DNA, track your history, and share it with friends.
                     </p>
                 </div>
             {% endif %}
-            
             {% include 'core/partials/dna/charts_scripts.html' %}
         {% else %}
             <div class="flex h-full flex-col p-4">
                 <div class="w-full">
                     <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
                         <span class="relative z-10">
-                            <div x-data="{ editing: false, newName: '{{ user.username|escapejs }}', originalName: '{{ user.username|escapejs }}', errorMessage: '',  updateUsername: function() { this.errorMessage = ''; fetch('{% url "core:api_update_username" %}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }, body: JSON.stringify({ username: this.newName }) }) .then(response => response.json()) .then(data => { if (data.status === 'success') { window.location.reload(); } else { this.errorMessage = data.message; } }) .catch(() => { this.errorMessage = 'Could not connect to the server.'; }); } }"
-                                 class="inline-block">
+                            <div
+                                x-data="{ editing: false, newName: '{{ user.username|escapejs }}', originalName: '{{ user.username|escapejs }}', errorMessage: '',  updateUsername: function() { this.errorMessage = ''; fetch('{% url "core:api_update_username" %}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }, body: JSON.stringify({ username: this.newName }) }) .then(response => response.json()) .then(data => { if (data.status === 'success') { window.location.reload(); } else { this.errorMessage = data.message; } }) .catch(() => { this.errorMessage = 'Could not connect to the server.'; }); } }"
+                                class="inline-block"
+                            >
                                 <!-- VIEW STATE (FIXED) -->
-                                <div x-show="!editing"
-                                     class="flex flex-col items-center justify-center gap-y-2 text-4xl sm:text-5xl md:flex-row md:gap-x-3">
+                                <div
+                                    x-show="!editing"
+                                    class="flex flex-col items-center justify-center gap-y-2 text-4xl sm:text-5xl md:flex-row md:gap-x-3"
+                                >
                                     <!-- [ANYA]'S -->
                                     <div class="inline-flex items-center">
                                         <!-- Clickable username area -->
-                                        <div @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
-                                             class="group relative cursor-pointer">
+                                        <div
+                                            @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
+                                            class="group relative cursor-pointer"
+                                        >
                                             <!-- Yellow background -->
-                                            <span class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"></span>
+                                            <span
+                                                class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"
+                                            ></span>
                                             <!-- Username text -->
                                             <span class="relative z-20 px-2" x-text="originalName"></span>
                                             <!-- Pencil Icon -->
                                             <div class="text-brand-text absolute -right-2 -bottom-2 z-30">
-                                                <svg class="h-7 w-7"
-                                                     xmlns="http://www.w3.org/2000/svg"
-                                                     viewBox="0 0 16 16"
-                                                     fill="currentColor">
-                                                    <path d="M14 0l2 2-2 2-2-2 2-2zM12 2l2 2-8 8H4v-2l8-8zM2 12v2h2l-l-2-2z" />
+                                                <svg
+                                                    class="h-7 w-7"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 16 16"
+                                                    fill="currentColor"
+                                                >
+                                                    <path
+                                                        d="M14 0l2 2-2 2-2-2 2-2zM12 2l2 2-8 8H4v-2l8-8zM2 12v2h2l-l-2-2z"
+                                                    />
                                                 </svg>
                                             </div>
                                         </div>
@@ -323,20 +378,26 @@
                                     </div>
                                     <span>Reading DNA</span>
                                 </div>
-                                <form x-show="editing"
-                                      x-cloak
-                                      @submit.prevent="updateUsername"
-                                      @keydown.escape.window="editing = false; newName = originalName"
-                                      class="inline-flex items-stretch gap-4">
-                                    <input type="text"
-                                           x-ref="usernameInput"
-                                           x-model="newName"
-                                           class="border-brand-text focus:border-brand-purple w-full border-2 bg-white p-1 text-5xl font-bold tracking-widest uppercase focus:outline-none" />
+                                <form
+                                    x-show="editing"
+                                    x-cloak
+                                    @submit.prevent="updateUsername"
+                                    @keydown.escape.window="editing = false; newName = originalName"
+                                    class="inline-flex items-stretch gap-4"
+                                >
+                                    <input
+                                        type="text"
+                                        x-ref="usernameInput"
+                                        x-model="newName"
+                                        class="border-brand-text focus:border-brand-purple w-full border-2 bg-white p-1 text-5xl font-bold tracking-widest uppercase focus:outline-none"
+                                    />
                                     {% include 'core/partials/buttons/small_button.html' with text="Save" color="green" type="submit" extra_classes="text-xl cursor-pointer" %}
                                 </form>
-                                <div x-show="editing && errorMessage"
-                                     x-text="errorMessage"
-                                     class="mt-2 text-lg font-bold text-red-600"></div>
+                                <div
+                                    x-show="editing && errorMessage"
+                                    x-text="errorMessage"
+                                    class="mt-2 text-lg font-bold text-red-600"
+                                ></div>
                             </div>
                         </span>
                     </h1>
