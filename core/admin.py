@@ -3,6 +3,8 @@ import logging
 
 from django.contrib import admin
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.urls import path
@@ -22,6 +24,18 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+
+# ──────────────────────────────────────────────
+# User Admin (add ID column)
+# ──────────────────────────────────────────────
+
+admin.site.unregister(User)
+
+
+@admin.register(User)
+class UserAdmin(BaseUserAdmin):
+    list_display = ("id", "username", "email", "is_staff")
+
 
 # ──────────────────────────────────────────────
 # Model Admins
@@ -204,6 +218,7 @@ def command_runner_view(request):
         **admin.site.each_context(request),
         "title": "Command Runner",
         "commands": ADMIN_COMMANDS,
+        "commands_json": ADMIN_COMMANDS,
     }
     return render(request, "admin/command_runner.html", context)
 

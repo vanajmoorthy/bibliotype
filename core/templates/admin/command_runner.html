@@ -10,34 +10,38 @@
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <style>
+    /* Force light mode on the command runner page */
     :root {
-        --neo-black: #1a1a2e;
-        --neo-yellow: #ffe56c;
-        --neo-orange: #ffa75e;
-        --neo-pink: #ffb4dd;
-        --neo-cyan: #8bbfff;
-        --neo-green: #40e7aa;
-        --neo-purple: #c4b5fd;
-        --neo-bg: #FFF8F0;
+        color-scheme: light !important;
     }
+
+    #content {
+        background: #FFF8F0 !important;
+        padding: 24px !important;
+    }
+
+    /* Hide the default admin breadcrumb/header since we have our own */
+    .breadcrumbs { display: none; }
+    #content > h1:first-child { display: none; }
 
     .command-runner-container {
         font-family: "VT323", monospace;
         max-width: 960px;
         margin: 0 auto;
+        color: #1a1a2e;
     }
 
     .neo-card {
-        background: white;
-        border: 2px solid var(--neo-black);
-        box-shadow: 4px 4px 0 var(--neo-black);
+        background: #ffffff;
+        border: 2px solid #1a1a2e;
+        box-shadow: 4px 4px 0 #1a1a2e;
         padding: 20px;
         margin-bottom: 20px;
         transition: all 150ms ease-in-out;
     }
 
     .neo-card:hover {
-        box-shadow: 6px 6px 0 var(--neo-black);
+        box-shadow: 6px 6px 0 #1a1a2e;
     }
 
     .neo-card h3 {
@@ -45,25 +49,30 @@
         font-size: 1.5rem;
         margin: 0 0 4px 0;
         display: inline-block;
-        padding: 2px 8px;
-        border: 2px solid var(--neo-black);
+        padding: 2px 10px;
+        border: 2px solid #1a1a2e;
+        color: #1a1a2e;
     }
 
     .neo-card p.desc {
-        font-size: 1.1rem;
-        color: #555;
+        font-family: "VT323", monospace;
+        font-size: 1.15rem;
+        color: #444;
         margin: 8px 0 16px 0;
     }
 
     .neo-btn {
         font-family: "VT323", monospace;
-        font-size: 1.1rem;
-        padding: 8px 20px;
-        border: 2px solid var(--neo-black);
-        box-shadow: 3px 3px 0 var(--neo-black);
+        font-size: 1.15rem;
+        padding: 8px 22px;
+        border: 2px solid #1a1a2e;
+        box-shadow: 3px 3px 0 #1a1a2e;
         cursor: pointer;
         transition: all 150ms ease-in-out;
         display: inline-block;
+        color: #1a1a2e;
+        background: #40e7aa;
+        text-decoration: none;
     }
 
     .neo-btn:hover {
@@ -78,29 +87,31 @@
         transform: none;
     }
 
-    .neo-btn-run {
-        background: var(--neo-green);
-        color: var(--neo-black);
-    }
-
     .neo-input {
         font-family: "VT323", monospace;
-        font-size: 1rem;
+        font-size: 1.05rem;
         padding: 6px 10px;
-        border: 2px solid var(--neo-black);
-        background: white;
-        width: 100px;
+        border: 2px solid #1a1a2e;
+        background: #ffffff !important;
+        color: #1a1a2e !important;
+        width: 110px;
+        -webkit-appearance: auto;
+        appearance: auto;
     }
 
     .neo-input:focus {
         outline: none;
-        box-shadow: 2px 2px 0 var(--neo-black);
+        box-shadow: 2px 2px 0 #1a1a2e;
+    }
+
+    .neo-input::placeholder {
+        color: #999;
     }
 
     .neo-checkbox {
         width: 18px;
         height: 18px;
-        accent-color: var(--neo-black);
+        accent-color: #1a1a2e;
         cursor: pointer;
     }
 
@@ -119,18 +130,19 @@
     }
 
     .arg-group label {
+        font-family: "VT323", monospace;
         font-size: 1.1rem;
-        color: var(--neo-black);
+        color: #1a1a2e;
         cursor: pointer;
     }
 
     .output-box {
-        background: var(--neo-black);
-        color: var(--neo-green);
+        background: #1a1a2e;
+        color: #40e7aa;
         font-family: "VT323", monospace;
-        font-size: 1rem;
+        font-size: 1.05rem;
         padding: 16px;
-        border: 2px solid var(--neo-black);
+        border: 2px solid #1a1a2e;
         margin-top: 16px;
         white-space: pre-wrap;
         word-break: break-word;
@@ -147,25 +159,26 @@
         font-family: "VT323", monospace;
         font-size: 0.95rem;
         padding: 2px 10px;
-        border: 2px solid var(--neo-black);
+        border: 2px solid #1a1a2e;
         display: inline-block;
         margin-left: 10px;
+        color: #1a1a2e;
     }
 
-    .status-pending { background: var(--neo-yellow); }
-    .status-running { background: var(--neo-orange); }
-    .status-success { background: var(--neo-green); }
-    .status-error { background: var(--neo-pink); }
+    .status-running { background: #ffa75e; }
+    .status-success { background: #40e7aa; }
+    .status-error { background: #ff647c; color: #fff; }
 
     .page-header {
         font-family: "VT323", monospace;
         font-size: 2rem;
         margin-bottom: 8px;
         padding: 6px 14px;
-        background: var(--neo-yellow);
-        border: 2px solid var(--neo-black);
-        box-shadow: 4px 4px 0 var(--neo-black);
+        background: #ffe56c;
+        border: 2px solid #1a1a2e;
+        box-shadow: 4px 4px 0 #1a1a2e;
         display: inline-block;
+        color: #1a1a2e;
     }
 
     .page-subtitle {
@@ -180,19 +193,37 @@
         50% { opacity: 0.3; }
     }
     .blinking { animation: blink 1s infinite; }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .card-header-left {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+{{ commands_json|json_script:"commands-data" }}
+{% csrf_token %}
+
 <div class="command-runner-container" x-data="commandRunner()">
     <h1 class="page-header">Command Runner</h1>
     <p class="page-subtitle">Run management commands on the server. Output will appear below each command.</p>
 
     {% for cmd in commands %}
-    <div class="neo-card" x-data="{ expanded: false }">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-            <div>
-                <h3 style="background: {% cycle 'var(--neo-cyan)' 'var(--neo-pink)' 'var(--neo-orange)' 'var(--neo-yellow)' 'var(--neo-green)' 'var(--neo-purple)' 'var(--neo-cyan)' %};">
+    <div class="neo-card">
+        <div class="card-header">
+            <div class="card-header-left">
+                <h3 style="background: {% cycle '#8bbfff' '#ffb4dd' '#ffa75e' '#ffe56c' '#40e7aa' '#c4b5fd' '#8bbfff' '#ffb4dd' %};">
                     {{ cmd.name }}
                 </h3>
                 <template x-if="tasks['{{ cmd.name }}']?.status === 'pending'">
@@ -206,7 +237,7 @@
                 </template>
             </div>
             <button
-                class="neo-btn neo-btn-run"
+                class="neo-btn"
                 @click="runCommand('{{ cmd.name }}')"
                 :disabled="tasks['{{ cmd.name }}']?.status === 'pending'"
             >
@@ -268,8 +299,7 @@
 
 <script>
 function commandRunner() {
-    // Build initial args state from the command config
-    const commands = {{ commands|safe }};
+    const commands = JSON.parse(document.getElementById("commands-data").textContent);
     const initialArgs = {};
     commands.forEach(cmd => {
         initialArgs[cmd.name] = {};
@@ -285,9 +315,7 @@ function commandRunner() {
         async runCommand(name) {
             this.tasks[name] = { status: "pending", output: undefined };
 
-            const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value
-                || document.cookie.split("; ").find(c => c.startsWith("csrftoken="))?.split("=")[1]
-                || "";
+            const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value || "";
 
             try {
                 const resp = await fetch("{% url 'admin:command_run_api' %}", {

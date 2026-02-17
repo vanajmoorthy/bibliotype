@@ -162,8 +162,8 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str):
 
 def _create_userbooks_from_anonymous_session(user, session_key):
     """Create UserBook records from AnonymousUserSession when claiming anonymous DNA"""
-    from ..models import AnonymousUserSession, UserBook, Book
-    from ..services.top_books_service import calculate_and_store_top_books
+    from .models import AnonymousUserSession, UserBook, Book
+    from .services.top_books_service import calculate_and_store_top_books
 
     try:
         anon_session = AnonymousUserSession.objects.get(session_key=session_key)
