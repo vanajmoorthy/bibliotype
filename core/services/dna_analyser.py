@@ -263,14 +263,27 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     check_author_mainstream_status_task.delay(author.id)
 
                 normalized_book_title = Book._normalize_title(title_from_csv)
+
+                publish_year_value = None
+                raw_year = original_row.get("Original Publication Year")
+                if pd.notna(raw_year):
+                    try:
+                        publish_year_value = int(float(raw_year))
+                    except (ValueError, TypeError):
+                        publish_year_value = None
+
+                book_defaults = {
+                    "title": title_from_csv,
+                    "page_count": int(p) if pd.notna(p := original_row.get("Number of Pages")) else None,
+                    "average_rating": float(r) if pd.notna(r := original_row.get("Average Rating")) else None,
+                }
+                if publish_year_value:
+                    book_defaults["publish_year"] = publish_year_value
+
                 book, created = Book.objects.update_or_create(
                     normalized_title=normalized_book_title,
                     author=author,
-                    defaults={
-                        "title": title_from_csv,
-                        "page_count": int(p) if pd.notna(p := original_row.get("Number of Pages")) else None,
-                        "average_rating": float(r) if pd.notna(r := original_row.get("Average Rating")) else None,
-                    },
+                    defaults=book_defaults,
                 )
 
                 # Check if the book already has genres by querying the database directly
@@ -283,19 +296,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     # Query from the Genre side of the relationship to ensure fresh data
                     has_genres = Genre.objects.filter(books__id=book.pk).exists()
                 
-                # Skip enrichment during upload to avoid database locks
-                # Enrichment should be done in a separate background task
-                # if created or not has_genres:
-                #     logger.debug(f"Enriching '{book.title}' (created={created}, has_genres={has_genres})...")
-                #     enrich_book_from_apis(book, session)
-                # else:
-                #     logger.debug(f"Book '{book.title}' already exists with genres. Skipping enrichment.")
-                
-                # Just log the enrichment status
+                # Dispatch enrichment as a background task to avoid blocking upload
                 if created or not has_genres:
-                    logger.debug(f"Book '{book.title}' will be enriched later (created={created}, has_genres={has_genres})")
+                    from ..tasks import enrich_book_task
+
+                    logger.debug(f"Dispatching enrichment for '{book.title}' (created={created}, has_genres={has_genres})")
+                    enrich_book_task.delay(book.pk)
                 else:
-                    logger.debug(f"Book '{book.title}' already exists with genres.")
+                    logger.debug(f"Book '{book.title}' already enriched. Skipping.")
 
                 Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
 
