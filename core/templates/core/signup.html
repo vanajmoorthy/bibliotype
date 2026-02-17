@@ -1,4 +1,13 @@
 {% extends 'core/base.html' %}
+
+{% block seo_title %}Sign Up - Bibliotype{% endblock %}
+
+{% block seo_description %}Create a free Bibliotype account to save your Reading DNA, share your literary personality
+profile, and get personalized book recommendations.{% endblock %}
+
+{% block seo_keywords %}Bibliotype sign up, create reading DNA account, save literary personality, free book analysis
+account{% endblock %}
+
 {% block content %}
     <div class="flex h-full flex-col justify-center">
         <div class="mx-auto w-full max-w-2xl p-2 text-center">
@@ -46,7 +55,7 @@
                         >
                             Ensure this value has at most 15 characters (it has
                             <span x-text="displayName.length"></span>).
-                            </div>
+                        </div>
 
                         {% for error in form.username.errors %}
                             <p x-show="displayName.length <= 15" class="mt-2 text-lg font-bold text-red-600 uppercase">
@@ -79,7 +88,6 @@
                             </div>
                         {% endif %}
                     {% endfor %}
-
                     {% include 'core/partials/buttons/primary_button.html' with text="Create Account & Save DNA" %}
                 </form>
             </div>

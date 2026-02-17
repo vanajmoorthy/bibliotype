@@ -62,8 +62,10 @@ def robots_txt_view(request):
 def sitemap_xml_view(request):
     """Generate and serve sitemap.xml."""
     from django.urls import reverse
+    from django.utils import timezone
 
     base_url = f"{request.scheme}://{request.get_host()}"
+    today = timezone.now().strftime("%Y-%m-%d")
 
     # Get public profiles (limit to recent/public ones for performance)
     from django.contrib.auth.models import User
@@ -76,18 +78,39 @@ def sitemap_xml_view(request):
     urls = [
         {
             "loc": f"{base_url}/",
+            "lastmod": today,
             "changefreq": "daily",
             "priority": "1.0",
         },
         {
             "loc": f"{base_url}/login/",
+            "lastmod": today,
             "changefreq": "monthly",
             "priority": "0.8",
         },
         {
             "loc": f"{base_url}/signup/",
+            "lastmod": today,
             "changefreq": "monthly",
             "priority": "0.8",
+        },
+        {
+            "loc": f"{base_url}/about/",
+            "lastmod": today,
+            "changefreq": "monthly",
+            "priority": "0.6",
+        },
+        {
+            "loc": f"{base_url}/privacy/",
+            "lastmod": today,
+            "changefreq": "monthly",
+            "priority": "0.4",
+        },
+        {
+            "loc": f"{base_url}/terms/",
+            "lastmod": today,
+            "changefreq": "monthly",
+            "priority": "0.4",
         },
     ]
 
@@ -95,9 +118,13 @@ def sitemap_xml_view(request):
     for profile in public_profiles:
         try:
             profile_url = reverse("core:public_profile", kwargs={"username": profile.user.username})
+            lastmod = today
+            if profile.recommendations_generated_at:
+                lastmod = profile.recommendations_generated_at.strftime("%Y-%m-%d")
             urls.append(
                 {
                     "loc": f"{base_url}{profile_url}",
+                    "lastmod": lastmod,
                     "changefreq": "weekly",
                     "priority": "0.7",
                 }
@@ -111,6 +138,7 @@ def sitemap_xml_view(request):
     for url_data in urls:
         sitemap_xml += "  <url>\n"
         sitemap_xml += f'    <loc>{url_data["loc"]}</loc>\n'
+        sitemap_xml += f'    <lastmod>{url_data["lastmod"]}</lastmod>\n'
         sitemap_xml += f'    <changefreq>{url_data["changefreq"]}</changefreq>\n'
         sitemap_xml += f'    <priority>{url_data["priority"]}</priority>\n'
         sitemap_xml += "  </url>\n"
@@ -123,6 +151,21 @@ def sitemap_xml_view(request):
 def home_view(request):
     """Displays the main upload page."""
     return render(request, "core/home.html")
+
+
+def about_view(request):
+    """Displays the about page."""
+    return render(request, "core/about.html")
+
+
+def privacy_view(request):
+    """Displays the privacy policy page."""
+    return render(request, "core/privacy.html")
+
+
+def terms_view(request):
+    """Displays the terms of service page."""
+    return render(request, "core/terms.html")
 
 
 def _enrich_dna_for_display(dna_data):
