@@ -198,18 +198,22 @@ def _enrich_dna_for_display(dna_data):
         for k, v in raw_community.items()
     }
 
-    # Backfill avg_books_per_year into user_stats if missing (old DNA)
+    # Backfill missing fields for old DNA data
     user_stats = dna_data.get("user_stats", {})
+    stats_by_year = dna_data.get("stats_by_year", [])
+    dated_book_count = sum(y.get("count", 0) for y in stats_by_year)
+
     if "avg_books_per_year" not in user_stats:
-        stats_by_year = dna_data.get("stats_by_year", [])
         if stats_by_year:
-            total_books = user_stats.get("total_books_read", 0)
             num_years = len(stats_by_year)
-            user_stats["avg_books_per_year"] = round(total_books / num_years, 1) if num_years > 0 else 0
+            user_stats["avg_books_per_year"] = round(dated_book_count / num_years, 1) if num_years > 0 else 0
             user_stats["num_reading_years"] = num_years
         else:
             user_stats["avg_books_per_year"] = 0
             user_stats["num_reading_years"] = 0
+
+    if "books_with_dates" not in user_stats:
+        user_stats["books_with_dates"] = dated_book_count
 
     # Recalculate percentiles from current aggregate data so they're never stale.
     # Cached for 60s to avoid a DB hit on every page load while still staying fresh.
