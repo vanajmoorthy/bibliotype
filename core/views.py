@@ -312,7 +312,6 @@ def display_dna_view(request):
     dna_data = request.session.get("dna_data")
     user_profile = None
     recommendations = []
-    rec_error = None
 
     if request.user.is_authenticated:
         user_profile = request.user.userprofile
@@ -369,7 +368,6 @@ def display_dna_view(request):
                     )
             except Exception as e:
                 logger.error(f"Error loading recommendations for user {request.user.id}: {e}", exc_info=True)
-                rec_error = "Unable to load recommendations at this time."
     else:
         # Anonymous user recommendations
         if dna_data and request.session.session_key:
@@ -427,9 +425,6 @@ def display_dna_view(request):
                     except Exception as recreate_error:
                         logger.error(f"Error recreating anonymous session: {recreate_error}", exc_info=True)
                         recommendations = []
-                        rec_error = (
-                            "Unable to load recommendations. Session may have expired. Please upload your file again."
-                        )
 
                 # Process recommendations if we got any
                 if recommendations:
@@ -453,7 +448,6 @@ def display_dna_view(request):
                     )
             except Exception as e:
                 logger.error(f"Error generating recommendations for anonymous user: {e}", exc_info=True)
-                rec_error = "Unable to load recommendations at this time."
 
     if not request.user.is_authenticated and dna_data is None:
         messages.info(request, "First, upload your library file to generate your Bibliotype!")
@@ -488,7 +482,6 @@ def display_dna_view(request):
         "user_profile": user_profile,
         "is_processing": False,
         "recommendations": recommendations,
-        "rec_error": rec_error,
         "title": title,
     }
 
@@ -860,7 +853,6 @@ def public_profile_view(request, username):
         context = {
             "dna": enriched_dna,
             "profile_user": profile_user,
-            "user_profile": profile,
             "title": title,
             "heading_name": heading_name,
             "recommendations": recommendations,
