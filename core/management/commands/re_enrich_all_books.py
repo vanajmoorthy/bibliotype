@@ -75,14 +75,10 @@ class Command(BaseCommand):
                         book.save()
                         
                         # Force re-fetch by resetting flags
-                        original_google_check = book.google_books_last_checked
                         book.google_books_last_checked = None
-                        
+
                         # Re-enrich with fresh data
                         enrich_book_from_apis(book, session, slow_down=True)
-                        
-                        # Restore the google_books timestamp to avoid re-checking
-                        book.google_books_last_checked = original_google_check
                         
                         # Refresh from DB to get the actual current genres
                         book.refresh_from_db()

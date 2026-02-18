@@ -41,7 +41,10 @@ class Command(BaseCommand):
                     continue
                 
                 # Get or create author
-                author, created = Author.objects.get_or_create(name=author_name)
+                author, created = Author.objects.get_or_create(
+                    normalized_name=Author._normalize(author_name),
+                    defaults={"name": author_name},
+                )
                 
                 # Normalize title for lookup
                 normalized_title = Book._normalize_title(title)
@@ -66,7 +69,11 @@ class Command(BaseCommand):
                 pub_name = row.get('Publisher', '').strip()
                 if pub_name and not book.publisher:
                     try:
-                        publisher, _ = Publisher.objects.get_or_create(name=pub_name)
+                        normalized = pub_name.strip().lower()
+                        publisher, _ = Publisher.objects.get_or_create(
+                            normalized_name=normalized,
+                            defaults={"name": pub_name},
+                        )
                         book.publisher = publisher
                         book.save()
                     except Exception as e:

@@ -1,6 +1,7 @@
 """
 Populate DNA data for test users based on their UserBook entries
 """
+import hashlib
 import random
 from collections import Counter
 from django.core.management.base import BaseCommand
@@ -183,9 +184,9 @@ class Command(BaseCommand):
             'stats_by_year': [],  # Could add this if we have dates
             'mainstream_score_percent': mainstream_score,
             'reading_vibe': f"You're a {reader_type.lower()} with eclectic taste, drawn to {top_genres[0][0] if top_genres else 'various'} genres.",
-            'vibe_data_hash': hash(str(top_genres + top_authors)),
+            'vibe_data_hash': hashlib.sha256(str(top_genres + top_authors).encode()).hexdigest(),
         }
-        
+
         return dna
 
     def determine_reader_type(self, top_genres, avg_rating, mainstream_score):
@@ -330,8 +331,8 @@ class Command(BaseCommand):
             'stats_by_year': [],
             'mainstream_score_percent': 40,
             'reading_vibe': f"You're a {reader_type.lower()} exploring {top_genres[0][0] if top_genres else 'various'} genres.",
-            'vibe_data_hash': hash(str(top_genres + top_authors)),
+            'vibe_data_hash': hashlib.sha256(str(top_genres + top_authors).encode()).hexdigest(),
         }
-        
+
         return dna
 
