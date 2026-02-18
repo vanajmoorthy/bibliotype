@@ -44,12 +44,11 @@ def update_analytics_from_stats(user_stats, previous_stats=None):
     }
 
     with transaction.atomic():
-        # Ensure the singleton row exists before locking it
-        AggregateAnalytics.objects.get_or_create(pk=1)
-        qs = AggregateAnalytics.objects.filter(pk=1)
+        # Lock the singleton row to prevent concurrent workers from interleaving reads/writes.
+        # Gracefully skips locking on SQLite (dev/test) where select_for_update is unsupported.
+        analytics, _ = AggregateAnalytics.objects.get_or_create(pk=1)
         if connection.features.has_select_for_update:
-            qs = qs.select_for_update()
-        analytics = qs.get()
+            analytics = AggregateAnalytics.objects.select_for_update().get(pk=1)
 
         if previous_stats is None:
             analytics.total_profiles_counted = F("total_profiles_counted") + 1

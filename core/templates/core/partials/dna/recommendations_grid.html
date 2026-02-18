@@ -51,12 +51,28 @@
                                 • {{ rec.explanation_components.shared }}
                             </p>{% endif %}
                         {% endif %}
-                        {% if rec.explanation_components.genre %}<p>
-                            • {{ rec.explanation_components.genre }}
-                        </p>{% endif %}
-                        {% if rec.explanation_components.popularity %}<p>
-                            • {{ rec.explanation_components.popularity }}
-                        </p>{% endif %}
+                        {% if is_public_view %}
+                            {% if rec.explanation_components.genre_public %}<p>
+                                • {{ rec.explanation_components.genre_public }}
+                            </p>{% elif rec.explanation_components.genre %}<p>
+                                • {{ rec.explanation_components.genre }}
+                            </p>{% endif %}
+                        {% else %}
+                            {% if rec.explanation_components.genre %}<p>
+                                • {{ rec.explanation_components.genre }}
+                            </p>{% endif %}
+                        {% endif %}
+                        {% if is_public_view %}
+                            {% if rec.explanation_components.popularity_public %}<p>
+                                • {{ rec.explanation_components.popularity_public }}
+                            </p>{% elif rec.explanation_components.popularity %}<p>
+                                • {{ rec.explanation_components.popularity }}
+                            </p>{% endif %}
+                        {% else %}
+                            {% if rec.explanation_components.popularity %}<p>
+                                • {{ rec.explanation_components.popularity }}
+                            </p>{% endif %}
+                        {% endif %}
                         {% if rec.explanation_components.rating %}<p>
                             • {{ rec.explanation_components.rating }}
                         </p>{% endif %}
