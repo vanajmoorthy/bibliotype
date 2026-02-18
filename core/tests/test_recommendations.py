@@ -4,6 +4,7 @@ Tests for the book recommendation system
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import TestCase
 from core.models import Book, Author, Genre, Publisher, UserBook, UserProfile
 from core.services.user_similarity_service import (
@@ -21,6 +22,12 @@ class RecommendationTestCase(TestCase):
     
     def setUp(self):
         """Set up test data"""
+        # Clear cache to prevent stale similarity/recommendation results between tests
+        try:
+            cache.clear()
+        except Exception:
+            pass
+
         # Create authors
         self.author1 = Author.objects.create(name="J.R.R. Tolkien", normalized_name="tolkien, j.r.r.")
         self.author2 = Author.objects.create(name="George R.R. Martin", normalized_name="martin, george r.r.")
@@ -256,14 +263,14 @@ class RecommendationTestCase(TestCase):
         """Test that recommendations include source information"""
         # User1 reads book1
         UserBook.objects.create(user=self.user1, book=self.book1, user_rating=5, is_top_book=True, top_book_position=1)
-        
+
         # User2 reads book1 and book2
         UserBook.objects.create(user=self.user2, book=self.book1, user_rating=5)
         UserBook.objects.create(user=self.user2, book=self.book2, user_rating=4, is_top_book=True, top_book_position=1)
-        
+
         # Get recommendations for user1
         recommendations = get_recommendations_for_user(self.user1, limit=10)
-        
+
         # Should have recommendations from user2
         found_user2_rec = False
         for rec in recommendations:
@@ -276,7 +283,7 @@ class RecommendationTestCase(TestCase):
                         if source.get('username') == self.user2.username:
                             self.assertEqual(source['username'], self.user2.username)
                             break
-        
+
         self.assertTrue(found_user2_rec)
     
     def test_top_books_sentiment_analysis(self):
