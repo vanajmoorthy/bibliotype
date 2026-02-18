@@ -409,6 +409,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         stats_by_year_list = []
         avg_books_per_year = 0
         num_reading_years = 0
+        books_with_dates = 0
 
         if "Date Read" in read_df.columns and not read_df["Date Read"].dropna().empty:
             yearly_df = read_df.dropna(subset=["Date Read"])
@@ -427,12 +428,13 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 item["avg_rating"] = float(item["avg_rating"])
 
             num_reading_years = len(stats_by_year_list)
-            total_books = int(len(read_df))
+            books_with_dates = int(yearly_df.shape[0])
             if num_reading_years > 0:
-                avg_books_per_year = round(total_books / num_reading_years, 1)
+                avg_books_per_year = round(books_with_dates / num_reading_years, 1)
 
         user_base_stats = {
             "total_books_read": int(len(read_df)),
+            "books_with_dates": books_with_dates,
             "total_pages_read": int(read_df["Number of Pages"].dropna().sum()),
             "avg_book_length": (
                 int(round(read_df["Number of Pages"].dropna().mean()))
