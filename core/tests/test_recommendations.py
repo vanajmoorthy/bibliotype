@@ -568,7 +568,3 @@ class EmptyStateRecommendationsViewTestCase(TestCase):
         self.assertContains(response, "more readers join Bibliotype")
 
 
-if __name__ == '__main__':
-    # Run tests with: python manage.py test core.tests.test_recommendations
-    pass
-

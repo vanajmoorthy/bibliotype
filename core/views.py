@@ -123,6 +123,7 @@ def sitemap_xml_view(request):
                 }
             )
         except Exception:
+            logger.warning(f"Error generating sitemap entry for user {profile.user.username}", exc_info=True)
             continue
 
     sitemap_xml = '<?xml version="1.0" encoding="UTF-8"?>\n'

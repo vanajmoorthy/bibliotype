@@ -494,7 +494,7 @@ def calculate_anonymous_similarity_with_context(anonymous_session, user_ctx):
         "author_similarity": components.get("author_similarity", 0),
         "shared_correlation": components.get("shared_correlation"),
         "shared_books_count": len(intersection),
-        "shared_rated_count": len(shared_rated_books) if 'shared_rated_books' in dir() else 0,
+        "shared_rated_count": len(shared_rated_books),
     }
 
 

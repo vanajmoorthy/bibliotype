@@ -247,11 +247,9 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
         # Calculate processing time
         processing_time = time.time() - start_time
 
-        # Extract books count from result_data if available
-        books_count = None
-        if isinstance(result_data, dict):
-            user_stats = result_data.get("user_stats", {})
-            books_count = user_stats.get("total_books_read")
+        # Extract books count from result_data (always a dict)
+        user_stats = result_data.get("user_stats", {})
+        books_count = user_stats.get("total_books_read")
 
         if not user:
             # Track anonymous DNA generated

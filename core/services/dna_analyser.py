@@ -628,8 +628,6 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             else:
                 logger.info("Vibe data has changed. Generating a new vibe with LLM...")
                 reading_vibe = generate_vibe_with_llm(dna)
-                profile.reading_vibe = reading_vibe
-                profile.vibe_data_hash = new_data_hash
         else:
             logger.info("Anonymous user. Generating a new vibe with LLM...")
             reading_vibe = generate_vibe_with_llm(dna)
@@ -653,10 +651,10 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         if user:
             # Calculate and store top books
             calculate_and_store_top_books(user, limit=5)
-            
+
             _save_dna_to_profile(user.userprofile, dna)
             logger.info(f"Saved DNA for user: {user.username}")
-            return f"DNA saved for user {user.id}"
+            return dna
         else:
             # Save anonymous session data
             if session_key:
