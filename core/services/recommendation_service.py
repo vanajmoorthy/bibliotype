@@ -875,33 +875,33 @@ class RecommendationEngine:
                 book_genres = [genre.name for genre in rec["book"].genres.all()[:2]]
                 if book_genres:
                     genre_str = ", ".join(book_genres)
-                    rec["explanation_components"]["genre"] = f"Matches your interest in {genre_str}"
+                    rec["explanation_components"]["genre"] = f"matches your interest in {genre_str}"
                     if owner_possessive:
                         rec["explanation_components"]["genre_public"] = (
-                            f"Matches {owner_possessive} interest in {genre_str}"
+                            f"matches {owner_possessive} interest in {genre_str}"
                         )
 
             # --- Component 3: Popularity among similar readers ---
             if rec["recommender_count"] >= 3:
-                rec["explanation_components"]["popularity"] = f"Loved by {rec['recommender_count']} similar readers"
+                rec["explanation_components"]["popularity"] = f"loved by {rec['recommender_count']} similar readers"
                 rec["explanation_components"]["popularity_public"] = (
-                    f"Loved by {rec['recommender_count']} other similar readers"
+                    f"loved by {rec['recommender_count']} other similar readers"
                 )
 
             # --- Component 4: Quality indicator ---
             if rec["book"].average_rating and rec["book"].average_rating >= 4.2:
-                rec["explanation_components"]["rating"] = f"Highly rated ({rec['book'].average_rating:.1f}★)"
+                rec["explanation_components"]["rating"] = f"highly rated ({rec['book'].average_rating:.1f}★)"
 
             # --- Component 5: Global popularity fallback ---
             if any(s.get("type") == "global_popularity" for s in sources):
-                rec["explanation_components"]["discovery"] = "Popular across the Bibliotype community"
+                rec["explanation_components"]["discovery"] = "popular across the Bibliotype community"
 
             # --- Ensure at least one explanation always exists ---
             if not rec["explanation_components"]:
                 if rec["book"].average_rating:
-                    rec["explanation_components"]["rating"] = f"Highly rated ({rec['book'].average_rating:.1f}★)"
+                    rec["explanation_components"]["rating"] = f"highly rated ({rec['book'].average_rating:.1f}★)"
                 else:
-                    rec["explanation_components"]["discovery"] = "Popular across the Bibliotype community"
+                    rec["explanation_components"]["discovery"] = "popular across the Bibliotype community"
 
         return recommendations
 
