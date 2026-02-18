@@ -41,6 +41,11 @@ class Command(BaseCommand):
             type=str,
             help="Regenerate for a single user by username.",
         )
+        parser.add_argument(
+            "--with-recommendations",
+            action="store_true",
+            help="Also regenerate recommendations after DNA update.",
+        )
 
     def handle(self, *args, **options):
         profiles = UserProfile.objects.filter(dna_data__isnull=False).select_related("user")
@@ -59,6 +64,7 @@ class Command(BaseCommand):
 
         self._log(f"Found {len(profiles)} profiles to regenerate.")
         updated = 0
+        updated_profiles = []
 
         for profile in profiles:
             user = profile.user
@@ -148,8 +154,17 @@ class Command(BaseCommand):
                 profile.reader_type = new_reader_type
                 profile.save(update_fields=["dna_data", "reader_type"])
                 updated += 1
+                updated_profiles.append(profile)
 
         if options["dry_run"]:
             self._warn("Dry run complete. No changes saved.")
         else:
             self._log(f"Updated {updated} profiles.")
+
+        if options["with_recommendations"] and not options["dry_run"] and updated_profiles:
+            from core.tasks import generate_recommendations_task
+
+            for profile in updated_profiles:
+                generate_recommendations_task.delay(profile.user.id)
+                self._log(f"  Dispatched recommendations for {profile.user.username}")
+            self._log(f"Dispatched recommendation generation for {len(updated_profiles)} users.")

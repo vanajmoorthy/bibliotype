@@ -62,7 +62,7 @@ class ProfilePrivacyTestCase(TestCase):
         response = self.client.get(reverse("core:public_profile", kwargs={"username": "private_user"}))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Private")
-        self.assertContains(response, "This user's Reading DNA profile is set to private.")
+        self.assertContains(response, "This user's Bibliotype is set to private.")
         self.assertNotContains(response, "Private Reader")
     
     def test_private_profile_shows_private_page_when_different_user(self):
@@ -71,7 +71,7 @@ class ProfilePrivacyTestCase(TestCase):
         response = self.client.get(reverse("core:public_profile", kwargs={"username": "private_user"}))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Private")
-        self.assertContains(response, "This user's Reading DNA profile is set to private.")
+        self.assertContains(response, "This user's Bibliotype is set to private.")
         self.assertNotContains(response, "Private Reader")
     
     def test_private_profile_accessible_to_owner(self):
@@ -81,7 +81,7 @@ class ProfilePrivacyTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "private_user")
         self.assertContains(response, "Private Reader")
-        self.assertNotContains(response, "This user's Reading DNA profile is set to private.")
+        self.assertNotContains(response, "This user's Bibliotype is set to private.")
     
     def test_nonexistent_user_shows_404_page(self):
         """Test that nonexistent user shows 404 page"""

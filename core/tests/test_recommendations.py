@@ -1,6 +1,8 @@
 """
 Tests for the book recommendation system
 """
+from unittest.mock import MagicMock, patch
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from core.models import Book, Author, Genre, Publisher, UserBook, UserProfile
@@ -353,6 +355,210 @@ class PrivacyTestCase(TestCase):
         
         # Should find similar users since they share books and have similar DNA data
         self.assertGreater(len(similar_users), 0)
+
+
+class GlobalPopularityFallbackTestCase(TestCase):
+    """Test the global popularity last-resort fallback in the recommendation engine."""
+
+    def setUp(self):
+        self.author1 = Author.objects.create(name="Popular Author 1")
+        self.author2 = Author.objects.create(name="Popular Author 2")
+        self.author3 = Author.objects.create(name="Popular Author 3")
+        self.genre = Genre.objects.create(name="fiction")
+
+        # Create globally popular books with high ratings and rating counts
+        self.popular_book1 = Book.objects.create(
+            title="Popular Book One",
+            author=self.author1,
+            average_rating=4.5,
+            google_books_ratings_count=50000,
+        )
+        self.popular_book1.genres.add(self.genre)
+
+        self.popular_book2 = Book.objects.create(
+            title="Popular Book Two",
+            author=self.author2,
+            average_rating=4.3,
+            google_books_ratings_count=40000,
+        )
+        self.popular_book2.genres.add(self.genre)
+
+        self.popular_book3 = Book.objects.create(
+            title="Popular Book Three",
+            author=self.author3,
+            average_rating=4.1,
+            google_books_ratings_count=30000,
+        )
+        self.popular_book3.genres.add(self.genre)
+
+        # Create an isolated user with no similar users
+        self.user = User.objects.create_user(username="isolated_user", password="test123")
+        self.user.userprofile.is_public = True
+        self.user.userprofile.visible_in_recommendations = True
+        self.user.userprofile.dna_data = {
+            "top_genres": [("fiction", 3)],
+            "top_authors": [],
+        }
+        self.user.userprofile.save()
+
+    def test_global_fallback_provides_recommendations_when_no_similar_users(self):
+        """User with no similar users still gets recommendations from global popularity."""
+        recommendations = get_recommendations_for_user(self.user, limit=6)
+        self.assertGreater(len(recommendations), 0)
+
+    def test_global_fallback_excludes_already_read_books(self):
+        """Global fallback skips books the user has already read."""
+        UserBook.objects.create(user=self.user, book=self.popular_book1, user_rating=4)
+
+        recommendations = get_recommendations_for_user(self.user, limit=6)
+        recommended_ids = {rec["book"].id for rec in recommendations}
+        self.assertNotIn(self.popular_book1.id, recommended_ids)
+
+    def test_global_fallback_has_discovery_explanation(self):
+        """Global fallback recommendations get a 'discovery' explanation component."""
+        from core.services.recommendation_service import RecommendationEngine
+
+        engine = RecommendationEngine()
+        context = engine._build_user_context(self.user)
+        fallback = engine._get_fallback_candidates(context, limit=6)
+
+        # Verify fallback candidates have global_popularity source type
+        for book_id, candidate in fallback.items():
+            source_types = [s["type"] for s in candidate["sources"]]
+            if "global_popularity" in source_types:
+                self.assertGreater(candidate["max_similarity"], 0)
+                return
+
+        self.fail("No global_popularity candidates found in fallback")
+
+    def test_global_fallback_limits_one_book_per_author(self):
+        """Global fallback enforces author diversity (max 1 per author)."""
+        # Create a second book by author1
+        extra_book = Book.objects.create(
+            title="Another Book By Author 1",
+            author=self.author1,
+            average_rating=4.4,
+            google_books_ratings_count=45000,
+        )
+        extra_book.genres.add(self.genre)
+
+        from core.services.recommendation_service import RecommendationEngine
+
+        engine = RecommendationEngine()
+        context = engine._build_user_context(self.user)
+        fallback = engine._get_fallback_candidates(context, limit=10)
+
+        # Count books per author in global_popularity candidates
+        author_counts = {}
+        for book_id, candidate in fallback.items():
+            if any(s["type"] == "global_popularity" for s in candidate["sources"]):
+                author_id = candidate["book"].author_id
+                author_counts[author_id] = author_counts.get(author_id, 0) + 1
+
+        for author_id, count in author_counts.items():
+            self.assertLessEqual(count, 1, f"Author {author_id} has {count} books in global fallback")
+
+    def test_global_fallback_only_includes_high_rated_books(self):
+        """Global fallback only includes books with 4.0+ average rating."""
+        # Create a low-rated book
+        low_author = Author.objects.create(name="Low Rated Author")
+        low_book = Book.objects.create(
+            title="Low Rated Book",
+            author=low_author,
+            average_rating=3.0,
+            google_books_ratings_count=100000,
+        )
+
+        from core.services.recommendation_service import RecommendationEngine
+
+        engine = RecommendationEngine()
+        context = engine._build_user_context(self.user)
+        fallback = engine._get_fallback_candidates(context, limit=10)
+
+        fallback_ids = set(fallback.keys())
+        self.assertNotIn(low_book.id, fallback_ids)
+
+
+class EmptyStateRecommendationsViewTestCase(TestCase):
+    """Test that the empty-state UI shows when there are no recommendations."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="emptyrecuser", email="empty@test.com", password="test123")
+        self.user.userprofile.dna_data = {
+            "reader_type": "Fantasy Fanatic",
+            "reader_type_explanation": "Test",
+            "top_reader_types": [{"type": "Fantasy Fanatic", "score": 10}],
+            "reader_type_scores": {"Fantasy Fanatic": 10},
+            "top_genres": [["fantasy", 5]],
+            "top_authors": [["Test Author", 3]],
+            "average_rating_overall": 4.0,
+            "ratings_distribution": {"1": 0, "2": 0, "3": 1, "4": 2, "5": 1},
+            "top_controversial_books": [],
+            "most_positive_review": None,
+            "most_negative_review": None,
+            "stats_by_year": [],
+            "mainstream_score_percent": 50,
+            "reading_vibe": ["Test vibe"],
+            "vibe_data_hash": "test",
+            "user_stats": {"total_books_read": 4, "total_pages_read": 1200, "avg_book_length": 300, "avg_publish_year": 2020},
+            "bibliotype_percentiles": {},
+            "global_averages": {},
+            "most_niche_book": None,
+        }
+        self.user.userprofile.reader_type = "Fantasy Fanatic"
+        self.user.userprofile.recommendations_data = None
+        self.user.userprofile.save()
+
+    @patch("core.tasks.generate_recommendations_task")
+    def test_dashboard_shows_empty_state_when_no_recommendations(self, mock_rec_task):
+        """Dashboard shows fallback message when recommendations_data is None."""
+        mock_rec_task.delay = MagicMock()
+        self.client.login(username="emptyrecuser", password="test123")
+
+        response = self.client.get("/dashboard/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No recommended books yet")
+        self.assertContains(response, "upload an updated CSV")
+
+    @patch("core.tasks.generate_recommendations_task")
+    def test_dashboard_shows_recommendations_when_present(self, mock_rec_task):
+        """Dashboard shows recommendations grid when data exists."""
+        mock_rec_task.delay = MagicMock()
+
+        self.user.userprofile.recommendations_data = [
+            {
+                "book_id": 1,
+                "book_title": "Test Book",
+                "book_author": "Test Author",
+                "book_average_rating": 4.5,
+                "confidence": 0.8,
+                "confidence_pct": 80,
+                "score": 1.0,
+                "recommender_count": 2,
+                "genre_alignment": 0.5,
+                "sources": [{"type": "similar_user", "username": "other", "similarity_score": 0.8}],
+                "explanation_components": {"rating": "Highly rated (4.5)"},
+                "primary_source_user": {"username": "other", "match_quality": "Strong"},
+            }
+        ]
+        self.user.userprofile.save()
+        self.client.login(username="emptyrecuser", password="test123")
+
+        response = self.client.get("/dashboard/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Test Book")
+        self.assertNotContains(response, "No recommended books yet")
+
+    def test_public_profile_shows_empty_state_when_no_recommendations(self):
+        """Public profile shows fallback message when no recommendations."""
+        self.user.userprofile.is_public = True
+        self.user.userprofile.recommendations_data = None
+        self.user.userprofile.save()
+
+        response = self.client.get(f"/u/{self.user.username}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No recommended books yet")
+        self.assertContains(response, "more readers join Bibliotype")
 
 
 if __name__ == '__main__':

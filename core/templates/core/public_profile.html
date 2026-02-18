@@ -3,7 +3,7 @@
 
 {% block seo_title %}Bibliotype – {{ heading_name }} Reading DNA{% endblock %}
 
-{% block seo_description %}{% if dna %}View {{ title }} and literary personality. Discover their favorite genres,
+{% block seo_description %}{% if dna %}View {{ title }} and literary personality. Discover their favourite genres,
 reading statistics, and book preferences.{% else %}{{ title }} profile.{% endif %}{% endblock %}
 
 {% block seo_keywords %}{{ heading_name }} reading DNA, {{ heading_name }} literary personality, reading profile, book
@@ -11,7 +11,7 @@ analysis, reader type, reading statistics{% endblock %}
 
 {% block og_title %}{{ title }}{% endblock %}
 
-{% block og_description %}{% if dna %}Discover {{ title }} and their unique reading DNA, literary personality, favorite
+{% block og_description %}{% if dna %}Discover {{ title }} and their unique reading DNA, literary personality, favourite
 genres, and reading insights.{% else %}{{ title }} profile.{% endif %}{% endblock %}
 
 {% block twitter_title %}{{ title }}{% endblock %}
@@ -26,7 +26,7 @@ profile.{% endif %}{% endblock %}
                 "@context": "https://schema.org",
                 "@type": "ProfilePage",
                 "name": "{{ title }}",
-                "description": "{{ title }} personalized reading DNA and literary personality profile",
+                "description": "{{ title }} personalised reading DNA and literary personality profile",
                 "url": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}",
                 "mainEntity": {
                     "@type": "Person",
@@ -61,12 +61,12 @@ profile.{% endif %}{% endblock %}
         {% if dna %}
             {# This script tag is still needed for the charts to work #}
             {{ dna|json_script:"dna-data" }}
-            <!-- The main header, personalized with the profile owner's name -->
+            <!-- The main header, personalised with the profile owner's name -->
             <h1
                 class="mb-8 flex flex-col items-center justify-center gap-x-4 text-center text-4xl font-bold tracking-widest uppercase sm:text-5xl md:flex-row"
             >
                 <span>{{ heading_name }}</span>
-                <span class="whitespace-nowrap">Reading DNA</span>
+                <span class="whitespace-nowrap">Bibliotype</span>
             </h1>
 
             {% include 'core/partials/dna/vibe_display.html' %}
@@ -76,7 +76,7 @@ profile.{% endif %}{% endblock %}
             {% endwith %}
             {% include 'core/partials/dna/top_traits_list.html' %}
             {% include 'core/partials/dna/key_stats_row.html' %}
-            {% include 'core/partials/dna/comparative_analytics_card.html' with pronoun_pos="Their" pronoun_sub="They" is_public=True %}
+            {% include 'core/partials/dna/comparative_analytics_card.html' with pronoun_pos="Their" pronoun_sub="they" is_public=True %}
 
             <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                 {% if dna.most_niche_book %}
@@ -90,12 +90,22 @@ profile.{% endif %}{% endblock %}
             </div>
 
             {% include 'core/partials/dna/top_genres_authors_row.html' with use_rainbow=True %}
-            {% include 'core/partials/dna/controversial_ratings_card.html' with controversial_title='Most "Controversial" Ratings 🤯' pronoun_pos="their" %}
+
+            {% include 'core/partials/dna/review_analysis_card.html' %}
+
+            {% include 'core/partials/dna/controversial_ratings_card.html' with controversial_title='Most Controversial Ratings' pronoun_pos="their" %}
 
             {% if recommendations %}
                 {% with name=profile_user.first_name|default:profile_user.username %}
                     {% include 'core/partials/dna/recommendations_grid.html' with rec_title="Recommended for "|add:name is_public_view=True %}
                 {% endwith %}
+            {% else %}
+                <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+                    <h2 class="mb-4 text-2xl font-bold uppercase">Book Recommendations</h2>
+                    <p class="text-lg opacity-70">
+                        No recommended books yet. Recommendations get better as more readers join Bibliotype.
+                    </p>
+                </div>
             {% endif %}
             {% include 'core/partials/dna/charts_scripts.html' %}
         {% else %}
