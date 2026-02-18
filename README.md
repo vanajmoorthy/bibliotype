@@ -30,6 +30,8 @@ Prioritised
     - this would prevent several llm vibes being generated during testing
 - adjust reader type calculations
 - allow user to delete profile
+    - make sure public by default
+    - allow users to opt out of recommendations
 - ~tos, privacy policy~ (update maybe)
 - average "contrarian" score under most controversial ratings with phrases like "my, you're contrarian"
 - how similar are you/similarity percentage for 2 or more people
