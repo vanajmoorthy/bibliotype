@@ -60,11 +60,25 @@ class Command(BaseCommand):
             bucket = f"{lower_bound}-{lower_bound + bucket_size - 1}"
             year_dist[bucket] = year_dist.get(bucket, 0) + 1
 
+        # Average Books Per Year (Distribution centered around 10-30)
+        bpy_dist = {}
+        for _ in range(total_profiles):
+            avg_bpy = random.choices(
+                population=[random.randint(1, 9), random.randint(10, 29), random.randint(30, 60)],
+                weights=[0.25, 0.6, 0.15],
+                k=1,
+            )[0]
+            bucket_size = 5
+            lower_bound = int(avg_bpy // bucket_size * bucket_size)
+            bucket = f"{lower_bound}-{lower_bound + bucket_size - 1}"
+            bpy_dist[bucket] = bpy_dist.get(bucket, 0) + 1
+
         # --- Update and save the analytics instance ---
         analytics.total_profiles_counted = total_profiles
         analytics.total_books_read_dist = books_dist
         analytics.avg_book_length_dist = length_dist
         analytics.avg_publish_year_dist = year_dist
+        analytics.avg_books_per_year_dist = bpy_dist
 
         analytics.save()
 

@@ -44,7 +44,7 @@
                     {{ pronoun_sub|default:"You"|title }}'ve read a total of
                     <strong>{{ dna.user_stats.total_books_read }} books</strong>
                     {% if dna.user_stats.num_reading_years %}
-                        across <strong>{{ dna.user_stats.num_reading_years }} years</strong>, averaging
+                        across <strong>{{ dna.user_stats.num_reading_years }} year{{ dna.user_stats.num_reading_years|pluralize }}</strong>, averaging
                         <strong>{{ dna.user_stats.avg_books_per_year }} books a year</strong>.
                     {% else %}
                         in total.

@@ -197,7 +197,7 @@ class EnrichDnaTests(TestCase):
         self.assertLessEqual(result["number_line_ranges"]["year"]["min"], 1950)
 
     def test_enrich_dna_backfills_avg_books_per_year(self):
-        """Old DNA without avg_books_per_year is backfilled from stats_by_year."""
+        """Old DNA without avg_books_per_year is backfilled using total_books_read / num_years."""
         dna = _make_dna_data()
         del dna["user_stats"]["avg_books_per_year"]
         del dna["user_stats"]["num_reading_years"]
@@ -208,6 +208,53 @@ class EnrichDnaTests(TestCase):
         # 5 years of data with total 80 books → 16.0
         self.assertEqual(us["num_reading_years"], 5)
         self.assertEqual(us["avg_books_per_year"], 16.0)
+
+    def test_backfill_uses_total_books_not_dated_books(self):
+        """Backfill should use total_books_read, not sum of stats_by_year counts."""
+        dna = _make_dna_data()
+        del dna["user_stats"]["avg_books_per_year"]
+        del dna["user_stats"]["num_reading_years"]
+        # Set total_books_read higher than sum of stats_by_year counts (80 vs 60)
+        dna["user_stats"]["total_books_read"] = 100
+        dna["stats_by_year"] = [
+            {"year": 2022, "count": 25, "avg_rating": 3.9},
+            {"year": 2023, "count": 20, "avg_rating": 4.0},
+            {"year": 2024, "count": 15, "avg_rating": 3.6},
+        ]
+        result = _enrich_dna_for_display(dna)
+        us = result["user_stats"]
+        # Should be 100/3 = 33.3, NOT 60/3 = 20.0
+        self.assertEqual(us["num_reading_years"], 3)
+        self.assertAlmostEqual(us["avg_books_per_year"], 33.3, places=1)
+
+    def test_enrich_dna_recalculates_fresh_percentiles(self):
+        """Stored stale percentiles should be replaced with fresh calculations."""
+        dna = _make_dna_data()
+        # Set obviously wrong stored percentiles
+        dna["bibliotype_percentiles"] = {
+            "avg_book_length": 1.0,
+            "avg_publish_year": 1.0,
+            "total_books_read": 1.0,
+            "avg_books_per_year": 1.0,
+        }
+        result = _enrich_dna_for_display(dna)
+        pct = result["bibliotype_percentiles"]
+        # Fresh percentiles should differ from the stale 1.0 values
+        # With seeded data (50 users), avg_book_length=300 is in the middle
+        self.assertNotEqual(pct.get("avg_book_length"), 1.0)
+
+    def test_enrich_dna_keeps_stored_percentiles_when_community_too_small(self):
+        """When community has <10 users, stored percentiles are preserved."""
+        # Override the seeded analytics with a small community
+        analytics = AggregateAnalytics.get_instance()
+        analytics.total_profiles_counted = 5
+        analytics.save()
+
+        dna = _make_dna_data()
+        dna["bibliotype_percentiles"] = {"avg_book_length": 42.0}
+        result = _enrich_dna_for_display(dna)
+        # Should keep stored value since fresh calc returns {}
+        self.assertEqual(result["bibliotype_percentiles"].get("avg_book_length"), 42.0)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -354,7 +401,16 @@ class NumberLineEdgeCaseTests(TestCase):
         self.assertContains(response, "number-line-wrap")
 
     def test_comparative_analytics_hidden_without_percentiles(self):
-        """When bibliotype_percentiles is missing, comparative number lines are hidden but controversial ones remain."""
+        """When percentiles can't be computed (too few users), comparative number lines are hidden."""
+        # Clear aggregate analytics so fresh percentile calculation returns {}
+        analytics = AggregateAnalytics.get_instance()
+        analytics.total_profiles_counted = 3
+        analytics.avg_book_length_dist = {}
+        analytics.avg_publish_year_dist = {}
+        analytics.total_books_read_dist = {}
+        analytics.avg_books_per_year_dist = {}
+        analytics.save()
+
         dna = _make_dna_data()
         del dna["bibliotype_percentiles"]
         response = self._render_with_dna(dna)

@@ -423,9 +423,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 item["avg_rating"] = float(item["avg_rating"])
 
             num_reading_years = len(stats_by_year_list)
-            books_with_dates = int(yearly_df.shape[0])
+            total_books = int(len(read_df))
             if num_reading_years > 0:
-                avg_books_per_year = round(books_with_dates / num_reading_years, 1)
+                avg_books_per_year = round(total_books / num_reading_years, 1)
 
         user_base_stats = {
             "total_books_read": int(len(read_df)),
@@ -447,7 +447,15 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         logger.info("Calculating community stats...")
 
-        update_analytics_from_stats(user_base_stats)
+        previous_stats = None
+        if user:
+            try:
+                existing_dna = user.userprofile.dna_data
+                if existing_dna:
+                    previous_stats = existing_dna.get("user_stats")
+            except Exception:
+                pass
+        update_analytics_from_stats(user_base_stats, previous_stats=previous_stats)
 
         percentiles = calculate_percentiles_from_aggregates(user_base_stats)
 

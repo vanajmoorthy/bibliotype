@@ -16,7 +16,14 @@ def get_bucket(value, bucket_size):
     return f"{lower_bound}-{upper_bound}"
 
 
-def update_analytics_from_stats(user_stats):
+def update_analytics_from_stats(user_stats, previous_stats=None):
+    """Updates aggregate analytics histograms with a user's stats.
+
+    Args:
+        user_stats: Current stats to add to distributions.
+        previous_stats: If provided (re-upload), old stats are subtracted before adding new ones.
+            When None (first upload or anonymous), total_profiles_counted is incremented.
+    """
     analytics = AggregateAnalytics.get_instance()
 
     distributions = {
@@ -26,16 +33,27 @@ def update_analytics_from_stats(user_stats):
         "avg_books_per_year": ("avg_books_per_year_dist", 5),
     }
 
-    AggregateAnalytics.objects.filter(pk=1).update(total_profiles_counted=F("total_profiles_counted") + 1)
+    if previous_stats is None:
+        AggregateAnalytics.objects.filter(pk=1).update(total_profiles_counted=F("total_profiles_counted") + 1)
     analytics.refresh_from_db()
 
     for stat_key, (dist_field, bucket_size) in distributions.items():
-        value = user_stats.get(stat_key)
-        if value is not None:
-            bucket = get_bucket(value, bucket_size)
-            current_dist = getattr(analytics, dist_field, {})
-            current_dist[bucket] = current_dist.get(bucket, 0) + 1
-            setattr(analytics, dist_field, current_dist)
+        current_dist = getattr(analytics, dist_field, {})
+
+        # Subtract old bucket on re-upload
+        if previous_stats is not None:
+            old_value = previous_stats.get(stat_key)
+            if old_value is not None:
+                old_bucket = get_bucket(old_value, bucket_size)
+                current_dist[old_bucket] = max(0, current_dist.get(old_bucket, 0) - 1)
+
+        # Add new bucket
+        new_value = user_stats.get(stat_key)
+        if new_value is not None:
+            new_bucket = get_bucket(new_value, bucket_size)
+            current_dist[new_bucket] = current_dist.get(new_bucket, 0) + 1
+
+        setattr(analytics, dist_field, current_dist)
 
     analytics.save()
     logger.debug("Updated global aggregate statistics")
