@@ -285,6 +285,16 @@ def _enrich_dna_for_display(dna_data):
     return dna_data
 
 
+BADGE_COLOR_MAP = {
+    "Literary twin": "bg-badge-5",
+    "Kindred reader": "bg-badge-4",
+    "Some shared tastes": "bg-badge-3",
+    "Some overlap": "bg-badge-2",
+    "Different preferences": "bg-gray-200",
+    "Opposite tastes": "bg-gray-200",
+}
+
+
 def display_dna_view(request):
     is_processing = request.GET.get("processing") == "true"
 
@@ -312,15 +322,6 @@ def display_dna_view(request):
         "Somewhat Similar - Some Overlap": ("border-quality-overlap", "text-quality-overlap", "SOME OVERLAP"),
     }
 
-    badge_color_map = {
-        "Literary twin": "bg-badge-5",
-        "Kindred reader": "bg-badge-4",
-        "Some shared tastes": "bg-badge-3",
-        "Some overlap": "bg-badge-2",
-        # We use a neutral background for weaker matches for better visual distinction
-        "Different preferences": "bg-gray-200",
-        "Opposite tastes": "bg-gray-200",
-    }
 
     if request.user.is_authenticated:
         user_profile = request.user.userprofile
@@ -354,7 +355,7 @@ def display_dna_view(request):
                         # Add badge classes for display (these aren't stored in DB)
                         if rec.get("primary_source_user"):
                             match_quality = rec["primary_source_user"].get("match_quality", "")
-                            rec["primary_source_user"]["badge_class"] = badge_color_map.get(
+                            rec["primary_source_user"]["badge_class"] = BADGE_COLOR_MAP.get(
                                 match_quality, "bg-brand-purple"
                             )
                     
@@ -828,7 +829,14 @@ def public_profile_view(request, username):
                             "author": {"name": rec.get("book_author", "Unknown Author")},
                             "average_rating": rec.get("book_average_rating"),
                         }
-                    
+
+                        # Add badge classes for display (these aren't stored in DB)
+                        if rec.get("primary_source_user"):
+                            match_quality = rec["primary_source_user"].get("match_quality", "")
+                            rec["primary_source_user"]["badge_class"] = BADGE_COLOR_MAP.get(
+                                match_quality, "bg-brand-purple"
+                            )
+
                     recommendations = stored_recs
                     logger.info(f"Loaded {len(recommendations)} stored recommendations for public profile {profile_user.username}")
                 else:

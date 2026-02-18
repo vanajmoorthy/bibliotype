@@ -211,6 +211,21 @@ ADMIN_COMMANDS = [
             {"name": "--dry-run", "type": "flag", "label": "Dry run", "help": "Show changes without saving"},
             {"name": "--limit", "type": "int", "label": "Limit", "help": "Max profiles to process"},
             {"name": "--username", "type": "str", "label": "Username", "help": "Process a single user"},
+            {
+                "name": "--with-recommendations",
+                "type": "flag",
+                "label": "With recommendations",
+                "help": "Also regenerate recommendations after DNA update",
+            },
+        ],
+    },
+    {
+        "name": "regenerate_recommendations",
+        "description": "Regenerate recommendations for users with DNA data. Dispatches async Celery tasks.",
+        "arguments": [
+            {"name": "--dry-run", "type": "flag", "label": "Dry run", "help": "Show what would happen without dispatching"},
+            {"name": "--limit", "type": "int", "label": "Limit", "help": "Max profiles to process"},
+            {"name": "--username", "type": "str", "label": "Username", "help": "Process a single user"},
         ],
     },
 ]

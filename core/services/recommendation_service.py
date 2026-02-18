@@ -850,6 +850,7 @@ class RecommendationEngine:
                 shared_count = best_source.get("shared_books", 0)
                 if shared_count > 1:  # Only show if there's a meaningful overlap
                     rec["explanation_components"]["shared"] = f"You share {shared_count} books in common"
+                    rec["explanation_components"]["shared_public"] = f"They share {shared_count} books in common"
 
             # --- Component 2: Genre Match ---
             if rec.get("genre_alignment", 0) > 0.6:
@@ -866,8 +867,16 @@ class RecommendationEngine:
             if rec["book"].average_rating and rec["book"].average_rating >= 4.2:
                 rec["explanation_components"]["rating"] = f"Highly rated ({rec['book'].average_rating:.1f}★)"
 
-            # We no longer create a single "explanation" string.
-            # The template will now build the UI from these components.
+            # --- Component 5: Global popularity fallback ---
+            if any(s.get("type") == "global_popularity" for s in sources):
+                rec["explanation_components"]["discovery"] = "Popular across the Bibliotype community"
+
+            # --- Ensure at least one explanation always exists ---
+            if not rec["explanation_components"]:
+                if rec["book"].average_rating:
+                    rec["explanation_components"]["rating"] = f"Highly rated ({rec['book'].average_rating:.1f}★)"
+                else:
+                    rec["explanation_components"]["discovery"] = "Popular across the Bibliotype community"
 
         return recommendations
 
@@ -935,6 +944,34 @@ class RecommendationEngine:
                             }
                 except Genre.DoesNotExist:
                     continue
+
+        # Strategy 3: Globally popular books (last resort)
+        if len(candidates) < limit:
+            remaining = limit - len(candidates)
+            popular_books = (
+                Book.objects.filter(average_rating__gte=4.0)
+                .exclude(id__in=context["read_book_ids"])
+                .exclude(id__in=candidates.keys())
+                .select_related("author")
+                .prefetch_related("genres")
+                .order_by("-google_books_ratings_count", "-average_rating")[: remaining * 3]
+            )
+
+            seen_authors = set()
+            for book in popular_books:
+                if len(candidates) >= limit:
+                    break
+                if book.author_id in seen_authors:
+                    continue
+                seen_authors.add(book.author_id)
+
+                candidates[book.id] = {
+                    "book": book,
+                    "sources": [{"type": "global_popularity", "similarity_score": 0.2}],
+                    "max_similarity": 0.2,
+                    "recommender_count": 1,
+                    "total_weight": 0.2,
+                }
 
         return candidates
 

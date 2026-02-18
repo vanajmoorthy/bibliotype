@@ -54,7 +54,7 @@
                 {% url 'core:signup' as signup_base_url %}
                 {% with query_string="?task_id="|add:task_id %}
                     {% with full_signup_url=signup_base_url|add:query_string %}
-                        {% include 'core/partials/buttons/link_button.html' with href=full_signup_url text="Sign Up & Save My DNA" color="green" extra_classes="mt-4 px-3 py-2" %}
+                        {% include 'core/partials/buttons/link_button.html' with href=full_signup_url text="Sign Up & Save My Bibliotype" color="green" extra_classes="mt-4 px-3 py-2" %}
                     {% endwith %}
                 {% endwith %}
             </div>
