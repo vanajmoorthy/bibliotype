@@ -42,9 +42,9 @@ class Command(BaseCommand):
                 if "avg_books_per_year" not in user_stats:
                     stats_by_year = profile.dna_data.get("stats_by_year", [])
                     if stats_by_year:
-                        total_books_with_dates = sum(y.get("count", 0) for y in stats_by_year)
+                        total_books = user_stats.get("total_books_read", 0)
                         num_years = len(stats_by_year)
-                        user_stats["avg_books_per_year"] = round(total_books_with_dates / num_years, 1) if num_years > 0 else 0
+                        user_stats["avg_books_per_year"] = round(total_books / num_years, 1) if num_years > 0 else 0
                         user_stats["num_reading_years"] = num_years
 
                 update_analytics_from_stats(user_stats)

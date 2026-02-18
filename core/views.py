@@ -178,7 +178,7 @@ def _enrich_dna_for_display(dna_data):
         return dna_data
 
     from .dna_constants import GLOBAL_AVERAGES
-    from .percentile_engine import calculate_community_means
+    from .percentile_engine import calculate_community_means, calculate_percentiles_from_aggregates
 
     # Always use current global averages constant
     dna_data["global_averages"] = GLOBAL_AVERAGES
@@ -203,13 +203,27 @@ def _enrich_dna_for_display(dna_data):
     if "avg_books_per_year" not in user_stats:
         stats_by_year = dna_data.get("stats_by_year", [])
         if stats_by_year:
-            total_books_with_dates = sum(y.get("count", 0) for y in stats_by_year)
+            total_books = user_stats.get("total_books_read", 0)
             num_years = len(stats_by_year)
-            user_stats["avg_books_per_year"] = round(total_books_with_dates / num_years, 1) if num_years > 0 else 0
+            user_stats["avg_books_per_year"] = round(total_books / num_years, 1) if num_years > 0 else 0
             user_stats["num_reading_years"] = num_years
         else:
             user_stats["avg_books_per_year"] = 0
             user_stats["num_reading_years"] = 0
+
+    # Recalculate percentiles from current aggregate data so they're never stale.
+    # Cached for 60s to avoid a DB hit on every page load while still staying fresh.
+    bl = user_stats.get("avg_book_length", 0)
+    br = user_stats.get("total_books_read", 0)
+    bpy = user_stats.get("avg_books_per_year", 0)
+    py = user_stats.get("avg_publish_year", 0)
+    cache_key = f"fresh_pct_{bl}_{br}_{bpy}_{py}"
+    fresh_percentiles = cache.get(cache_key)
+    if fresh_percentiles is None:
+        fresh_percentiles = calculate_percentiles_from_aggregates(user_stats)
+        cache.set(cache_key, fresh_percentiles or {}, 60)
+    if fresh_percentiles:
+        dna_data["bibliotype_percentiles"] = fresh_percentiles
 
     # Recompute comparative_text from current percentiles + community averages
     percentiles = dna_data.get("bibliotype_percentiles", {})

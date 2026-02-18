@@ -1,21 +1,36 @@
 import hashlib
 import logging
-import re
-
-from django.db import IntegrityError
-from django.db.models import F
-from django.core.cache import cache
 import random
+import re
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 
-from core.services.llm_service import generate_vibe_with_llm
 import pandas as pd
 import requests
-from django.db.models import F
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
+from django.core.cache import cache
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import IntegrityError
+from django.db.models import F
+
+from core.services.llm_service import generate_vibe_with_llm
+
+from ..book_enrichment_service import enrich_book_from_apis
+from ..dna_constants import (
+    CANONICAL_GENRE_MAP,
+    GLOBAL_AVERAGES,
+    READER_TYPE_DESCRIPTIONS,
+)
+from ..models import Author, Book, Genre
+from ..percentile_engine import (
+    calculate_community_means,
+    calculate_percentiles_from_aggregates,
+    update_analytics_from_stats,
+)
+from ..services.top_books_service import calculate_and_store_top_books
 
 logger = logging.getLogger(__name__)
 
@@ -29,30 +44,6 @@ def _sanitize_review_text(text):
     text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
     text = _HTML_TAG_RE.sub("", text)
     return text.strip()
-
-
-from ..models import Author, Book, Genre
-from ..percentile_engine import (
-    calculate_community_means,
-    calculate_percentiles_from_aggregates,
-    update_analytics_from_stats,
-)
-from ..services.top_books_service import calculate_and_store_top_books
-
-
-from ..book_enrichment_service import enrich_book_from_apis
-import hashlib
-import random
-import time
-from collections import Counter
-from concurrent.futures import ThreadPoolExecutor
-from io import StringIO
-import requests
-from ..dna_constants import (
-    CANONICAL_GENRE_MAP,
-    GLOBAL_AVERAGES,
-    READER_TYPE_DESCRIPTIONS,
-)
 
 
 def assign_reader_type(read_df, enriched_data, all_genres):
@@ -436,9 +427,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 item["avg_rating"] = float(item["avg_rating"])
 
             num_reading_years = len(stats_by_year_list)
-            books_with_dates = int(yearly_df.shape[0])
+            total_books = int(len(read_df))
             if num_reading_years > 0:
-                avg_books_per_year = round(books_with_dates / num_reading_years, 1)
+                avg_books_per_year = round(total_books / num_reading_years, 1)
 
         user_base_stats = {
             "total_books_read": int(len(read_df)),
@@ -460,8 +451,19 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         logger.info("Calculating community stats...")
 
-        update_analytics_from_stats(user_base_stats)
+        previous_stats = None
+        if user:
+            try:
+                existing_dna = user.userprofile.dna_data
+                if existing_dna:
+                    previous_stats = existing_dna.get("user_stats")
+            except ObjectDoesNotExist:
+                pass
+        update_analytics_from_stats(user_base_stats, previous_stats=previous_stats)
 
+        # Percentiles stored here serve as a fallback for contexts that bypass
+        # _enrich_dna_for_display (API access, data exports). The view recalculates
+        # fresh percentiles at display time so dashboard values are never stale.
         percentiles = calculate_percentiles_from_aggregates(user_base_stats)
 
         community_averages = calculate_community_means()
