@@ -10,23 +10,19 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 ## TODO
 
 Prioritised 
-- ~number line thing (happening, add snapshot tests or something for these)~ ✅
 - clean up code
 - lock down canonical genres and improve mapping
+- improve recommendations with fallback, empty state, regeneraitng recommendations
 - posthog analytics, use mcp to add more events and create dashboards of
-    - new signups
-    - dna generated
-    - anonymous dna generated
+    - ~new signups~
+    - ~dna generated~
+    - ~anonymous dna generated~
     - profile shared
     - profile shared to story
-    - also want to see how many people drop off after generating step
+    - ~also want to see how many people drop off after generating step~
 - share to story, several options
-- investigate why niamh and pmc recs not showing
-    - always show minimum number of recommendations 
 - show book cover for most niche read
 - email for forgot password
-- beta test feedback banner https://forms.gle/EoZAbYdigngwFdpm9
-- ~rename "how mainstream is your taste" to "mainstream meter"~ ✅
 - save llm vibe against the dna dictionary, cache this for a month and only refetch if dictionary has changed
     - user a uploads a csv, vibe generated
     - user b uploads the same csv, we want to reuse this same vibe instead of hitting gemini again
@@ -34,12 +30,14 @@ Prioritised
     - this would prevent several llm vibes being generated during testing
 - adjust reader type calculations
 - allow user to delete profile
-- tos, privacy policy
+- ~tos, privacy policy~ (update maybe)
 - average "contrarian" score under most controversial ratings with phrases like "my, you're contrarian"
 - how similar are you/similarity percentage for 2 or more people
   - add page for this
   - allow similarity comparison with multiple users (only public)
- 
+
+
+ -------------------
 
 - ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 - edit mainstream meter text to "niche, normal, mainstream"
