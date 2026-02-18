@@ -252,15 +252,147 @@ This is a data dictionary, not a management command. It belongs in `core/` or `c
 
 ---
 
-## 10. Potential Duplicate Logic
+## 10. Additional Broken Management Commands
 
-### 10a. `_collect_candidates_for_user()` vs `_collect_candidates_for_anonymous()` (`recommendation_service.py`)
+Beyond the 6 commands in Section 1, one more command will crash on import:
+
+| Command | Issue | Lines |
+|---|---|---|
+| `generate_test_data.py` | `from core.models import Book, Author, User` — `User` does not exist in `core.models`. Will crash with `ImportError`. User is correctly imported on the next line as `from django.contrib.auth.models import User as DjangoUser`. | 8 |
+
+### Proposed fix
+
+Remove `User` from the `core.models` import on line 8.
+
+---
+
+## 11. Management Command Data Integrity Issues
+
+### 11a. Wrong Author lookup pattern (`seed_test_books.py:44`)
+
+```python
+author, created = Author.objects.get_or_create(name=author_name)
+```
+
+This uses `name` instead of `normalized_name` for the lookup. The correct pattern (used in `seed_books.py:275-276`) is:
+
+```python
+author_obj, _ = Author.objects.get_or_create(
+    normalized_name=Author._normalize(book_data["author"]),
+    defaults={"name": book_data["author"]}
+)
+```
+
+Using `name` can create duplicate Author records when the same author appears with different casing or whitespace.
+
+### 11b. Wrong Publisher lookup pattern (`seed_test_books.py:69`)
+
+Same issue — uses `name` instead of `normalized_name` for `Publisher.objects.get_or_create()`, inconsistent with `seed_mainstream_publishers.py` which correctly uses `normalized_name`.
+
+### 11c. Contradictory timestamp logic (`re_enrich_all_books.py:78-85`)
+
+```python
+original_google_check = book.google_books_last_checked   # line 78 - save
+book.google_books_last_checked = None                    # line 79 - clear to force re-fetch
+enrich_book_from_apis(book, session, slow_down=True)     # line 82 - enrich
+book.google_books_last_checked = original_google_check   # line 85 - restore old value
+```
+
+The timestamp is cleared to force a re-check, then restored to its original value afterward — which defeats the purpose. If the book was successfully re-enriched, the timestamp should reflect the new check time, not the old one.
+
+### 11d. Wrong hash function (`populate_test_dna.py:186, 333`)
+
+Uses Python's built-in `hash()` for `vibe_data_hash`, but the real DNA pipeline uses `hashlib.sha256`. This means test data has inconsistent hash values that won't match production behavior.
+
+### Proposed fix
+
+Fix the lookup patterns to use `normalized_name`. Remove the timestamp save/restore in `re_enrich_all_books.py`. Use `hashlib.sha256` in `populate_test_dna.py`.
+
+---
+
+## 12. Additional Unused Imports
+
+Beyond Section 6, these additional unused imports were found:
+
+| File | Line | Import | Reason unused |
+|---|---|---|---|
+| `core/views.py` | 390 | `from collections import Counter` (function-level) | Imported inside `display_dna_view` anonymous branch but `Counter()` is never called |
+| `core/services/recommendation_service.py` | 1 | `defaultdict` from `collections` | Only `Counter` is used from this import |
+| `core/tasks.py` | 20 | `from django.db import models as models` | Redundant self-alias; could be `from django.db import models` or just `from django.db.models import Q` (the only usage) |
+| `core/management/commands/seed_test_books.py` | 7 | `Genre` from `core.models` | Never used in the command |
+| `core/tests/test_recommendations.py` | 9 | `UserProfile` from `core.models` | Imported but never referenced in any test |
+
+### Proposed fix
+
+Remove all the above unused imports.
+
+---
+
+## 13. Duplicate Management Commands
+
+Several management commands have significant overlap:
+
+### 13a. `backfill_enrichment.py` vs `enrich_books.py`
+
+Both target books missing enrichment data (genres, publish_year, google_books_last_checked). Both have `--limit` and `--dry-run` flags. The only difference is `backfill_enrichment.py` queues async Celery tasks while `enrich_books.py` runs synchronously.
+
+### 13b. `create_users_from_csvs.py` vs `upload_test_data.py`
+
+Both upload CSVs for `test_reader*` users. `create_users_from_csvs.py` creates users AND uploads their CSVs, while `upload_test_data.py` assumes users already exist. `upload_test_data.py` appears redundant.
+
+### Proposed fix
+
+Either consolidate the overlapping commands or add clear docstrings explaining when to use each one.
+
+---
+
+## 14. Duplicate Template Code
+
+### 14a. Duplicate username editor in `dashboard.html`
+
+Lines 163-220 (authenticated DNA section) and lines 324-383 (no-DNA section) contain nearly identical Alpine.js username editing components — same `x-data` object, same fetch logic, same HTML structure. ~120 lines of duplication.
+
+**Proposed fix:** Extract into a shared partial like `partials/username_editor.html`.
+
+---
+
+## 15. Dead Template Variables
+
+Template variables that are defined with `|default:` fallbacks but never actually passed from any view:
+
+| Template | Variable | Line | Notes |
+|---|---|---|---|
+| `partials/dna/top_genres_authors_row.html` | `genre_color_class` | 10 | Always renders as default `bg-brand-yellow` |
+| `partials/dna/top_genres_authors_row.html` | `author_color_class` | 33 | Always renders as default `bg-brand-cyan` |
+| `partials/dna/recommendations_grid.html` | `rec_colors_js` | 2 | Always renders as the default color array |
+
+### Proposed fix
+
+Remove the variable references and replace with their default values directly, since no view ever passes these.
+
+---
+
+## 16. Dead Test Code
+
+| File | Lines | Issue |
+|---|---|---|
+| `core/tests/test_recommendations.py` | 571-573 | Dead `if __name__ == '__main__': pass` boilerplate. Django test discovery doesn't use this pattern. |
+
+### Proposed fix
+
+Delete the dead boilerplate block.
+
+---
+
+## 17. Potential Duplicate Logic
+
+### 17a. `_collect_candidates_for_user()` vs `_collect_candidates_for_anonymous()` (`recommendation_service.py`)
 
 Lines 358-506 vs 508-661 — these two methods are ~95% identical. They follow the same pattern (collect from similar users, collect from anonymized profiles, collect fallback candidates) with only minor differences in how the user context is sourced.
 
 **Proposed fix:** Extract the shared logic into a common helper method that both call, reducing ~200 lines of duplication.
 
-### 10b. Duplicate cycling message animation
+### 17b. Duplicate cycling message animation
 
 `dashboard.html` (lines 19-44) and `task_status.html` (lines 9-32) both contain nearly identical Alpine.js cycling message animations with 4-second intervals.
 
@@ -272,16 +404,21 @@ Lines 358-506 vs 508-661 — these two methods are ~95% identical. They follow t
 
 | Category | Count | Estimated lines removable |
 |---|---|---|
-| Broken management commands (crash at runtime) | 6 commands + utils.py | Needs model fields added or commands deleted |
+| Broken management commands (crash at runtime) | 7 commands + utils.py | Needs model fields added or commands deleted |
 | Broken error display | 1 template | ~5 lines to fix |
 | Dead functions | 12 | ~280 lines |
 | Dead variables/dicts | 2 | ~10 lines |
 | Unused model methods | 2 | ~10 lines |
-| Unused imports (module-level) | 12 | ~15 lines |
+| Unused imports (module-level) | 17 | ~20 lines |
 | Duplicate imports | 9 | ~10 lines |
 | Redundant function-level re-imports | 8 | ~12 lines |
 | Unused CSS variables | 9 | ~10 lines |
 | Unused context variables | 3 | ~3 lines |
 | Dead assignments / logic issues | 6 | ~5 lines |
+| Management command data integrity issues | 4 | ~10 lines to fix |
+| Duplicate management commands | 2 pairs | Consolidate or document |
+| Duplicate template code | 1 area | ~120 lines reducible |
+| Dead template variables | 3 | ~3 lines |
+| Dead test code | 1 | ~3 lines |
 | Duplicate logic (refactor opportunity) | 2 areas | ~200 lines reducible |
-| **Total** | | **~560 lines of dead code + 200 lines refactorable** |
+| **Total** | | **~700 lines of dead code + 320 lines refactorable** |
