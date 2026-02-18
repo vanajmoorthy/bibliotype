@@ -1,23 +1,28 @@
 import hashlib
 import logging
-
-from django.core.cache import cache
-from django.core.exceptions import ObjectDoesNotExist
-from django.db import IntegrityError
-from django.db.models import F
 import random
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 
-from core.services.llm_service import generate_vibe_with_llm
 import pandas as pd
 import requests
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-logger = logging.getLogger(__name__)
+from django.core.cache import cache
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import IntegrityError
+from django.db.models import F
 
+from core.services.llm_service import generate_vibe_with_llm
+
+from ..book_enrichment_service import enrich_book_from_apis
+from ..dna_constants import (
+    CANONICAL_GENRE_MAP,
+    GLOBAL_AVERAGES,
+    READER_TYPE_DESCRIPTIONS,
+)
 from ..models import Author, Book, Genre
 from ..percentile_engine import (
     calculate_community_means,
@@ -26,20 +31,7 @@ from ..percentile_engine import (
 )
 from ..services.top_books_service import calculate_and_store_top_books
 
-
-from ..book_enrichment_service import enrich_book_from_apis
-import hashlib
-import random
-import time
-from collections import Counter
-from concurrent.futures import ThreadPoolExecutor
-from io import StringIO
-import requests
-from ..dna_constants import (
-    CANONICAL_GENRE_MAP,
-    GLOBAL_AVERAGES,
-    READER_TYPE_DESCRIPTIONS,
-)
+logger = logging.getLogger(__name__)
 
 
 def assign_reader_type(read_df, enriched_data, all_genres):
@@ -457,6 +449,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 pass
         update_analytics_from_stats(user_base_stats, previous_stats=previous_stats)
 
+        # Percentiles stored here serve as a fallback for contexts that bypass
+        # _enrich_dna_for_display (API access, data exports). The view recalculates
+        # fresh percentiles at display time so dashboard values are never stale.
         percentiles = calculate_percentiles_from_aggregates(user_base_stats)
 
         community_averages = calculate_community_means()

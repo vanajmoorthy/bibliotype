@@ -1,5 +1,6 @@
 import logging
 
+from django.db import connection, transaction
 from django.db.models import F
 
 from .models import AggregateAnalytics
@@ -27,13 +28,14 @@ def _parse_bucket_start(bucket_key):
 def update_analytics_from_stats(user_stats, previous_stats=None):
     """Updates aggregate analytics histograms with a user's stats.
 
+    Uses select_for_update to prevent concurrent Celery workers from losing
+    histogram updates via interleaved read-modify-write cycles.
+
     Args:
         user_stats: Current stats to add to distributions.
         previous_stats: If provided (re-upload), old stats are subtracted before adding new ones.
             When None (first upload or anonymous), total_profiles_counted is incremented.
     """
-    analytics = AggregateAnalytics.get_instance()
-
     distributions = {
         "avg_book_length": ("avg_book_length_dist", 50),
         "avg_publish_year": ("avg_publish_year_dist", 10),
@@ -41,29 +43,36 @@ def update_analytics_from_stats(user_stats, previous_stats=None):
         "avg_books_per_year": ("avg_books_per_year_dist", 5),
     }
 
-    if previous_stats is None:
-        AggregateAnalytics.objects.filter(pk=1).update(total_profiles_counted=F("total_profiles_counted") + 1)
-    analytics.refresh_from_db()
+    with transaction.atomic():
+        # Ensure the singleton row exists before locking it
+        AggregateAnalytics.objects.get_or_create(pk=1)
+        qs = AggregateAnalytics.objects.filter(pk=1)
+        if connection.features.has_select_for_update:
+            qs = qs.select_for_update()
+        analytics = qs.get()
 
-    for stat_key, (dist_field, bucket_size) in distributions.items():
-        current_dist = getattr(analytics, dist_field, {})
+        if previous_stats is None:
+            analytics.total_profiles_counted = F("total_profiles_counted") + 1
 
-        # Subtract old bucket on re-upload
-        if previous_stats is not None:
-            old_value = previous_stats.get(stat_key)
-            if old_value is not None:
-                old_bucket = get_bucket(old_value, bucket_size)
-                current_dist[old_bucket] = max(0, current_dist.get(old_bucket, 0) - 1)
+        for stat_key, (dist_field, bucket_size) in distributions.items():
+            current_dist = getattr(analytics, dist_field)
 
-        # Add new bucket
-        new_value = user_stats.get(stat_key)
-        if new_value is not None:
-            new_bucket = get_bucket(new_value, bucket_size)
-            current_dist[new_bucket] = current_dist.get(new_bucket, 0) + 1
+            # Subtract old bucket on re-upload
+            if previous_stats is not None:
+                old_value = previous_stats.get(stat_key)
+                if old_value is not None:
+                    old_bucket = get_bucket(old_value, bucket_size)
+                    current_dist[old_bucket] = max(0, current_dist.get(old_bucket, 0) - 1)
 
-        setattr(analytics, dist_field, current_dist)
+            # Add new bucket
+            new_value = user_stats.get(stat_key)
+            if new_value is not None:
+                new_bucket = get_bucket(new_value, bucket_size)
+                current_dist[new_bucket] = current_dist.get(new_bucket, 0) + 1
 
-    analytics.save()
+            setattr(analytics, dist_field, current_dist)
+
+        analytics.save()
     logger.debug("Updated global aggregate statistics")
 
 

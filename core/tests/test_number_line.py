@@ -10,6 +10,8 @@ from django.contrib.auth.models import User
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
+from django.core.cache import cache as django_cache
+
 from core.models import AggregateAnalytics
 from core.views import _enrich_dna_for_display
 
@@ -98,6 +100,7 @@ def _seed_aggregate_analytics():
 )
 class EnrichDnaTests(TestCase):
     def setUp(self):
+        django_cache.clear()
         _seed_aggregate_analytics()
 
     def test_enrich_dna_produces_community_averages(self):
@@ -240,8 +243,11 @@ class EnrichDnaTests(TestCase):
         result = _enrich_dna_for_display(dna)
         pct = result["bibliotype_percentiles"]
         # Fresh percentiles should differ from the stale 1.0 values
-        # With seeded data (50 users), avg_book_length=300 is in the middle
-        self.assertNotEqual(pct.get("avg_book_length"), 1.0)
+        # and must be valid percentages in the 0-100 range
+        for key in ("avg_book_length", "avg_publish_year", "total_books_read", "avg_books_per_year"):
+            self.assertNotEqual(pct.get(key), 1.0, f"{key} was not recalculated from stale value")
+            self.assertGreaterEqual(pct.get(key), 0, f"{key} percentile below 0")
+            self.assertLessEqual(pct.get(key), 100.0, f"{key} percentile above 100")
 
     def test_enrich_dna_keeps_stored_percentiles_when_community_too_small(self):
         """When community has <10 users, stored percentiles are preserved."""

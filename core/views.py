@@ -211,8 +211,14 @@ def _enrich_dna_for_display(dna_data):
             user_stats["avg_books_per_year"] = 0
             user_stats["num_reading_years"] = 0
 
-    # Recalculate percentiles from current aggregate data so they're never stale
-    fresh_percentiles = calculate_percentiles_from_aggregates(user_stats)
+    # Recalculate percentiles from current aggregate data so they're never stale.
+    # Cached for 60s to avoid a DB hit on every page load while still staying fresh.
+    cache_key = f"fresh_percentiles_{hash(frozenset(user_stats.items()))}"
+    fresh_percentiles = cache.get(cache_key)
+    if fresh_percentiles is None:
+        fresh_percentiles = calculate_percentiles_from_aggregates(user_stats)
+        if fresh_percentiles:
+            cache.set(cache_key, fresh_percentiles, 60)
     if fresh_percentiles:
         dna_data["bibliotype_percentiles"] = fresh_percentiles
 
