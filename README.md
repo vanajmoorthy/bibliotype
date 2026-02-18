@@ -29,7 +29,7 @@ Prioritised
     - so need to keep a mapping of dictionary hashes to llm vibes and reuse llm vibe when same dictionary is presented again
     - this would prevent several llm vibes being generated during testing
 - adjust reader type calculations
-- allow user to delete profile
+- allow user to delete profile - settings panel maybe? put make private there too, and opt out of recs, display name can also be there, email update as well? and change password functionality might as well
     - make sure public by default
     - allow users to opt out of recommendations
 - ~tos, privacy policy~ (update maybe)
