@@ -12,6 +12,7 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 Prioritised 
 - clean up code
 - lock down canonical genres and improve mapping
+- update the sources for comparative analytics
 - posthog analytics, use mcp to add more events and create dashboards of
     - ~new signups~
     - ~dna generated~
