@@ -321,26 +321,6 @@ def display_dna_view(request):
     recommendations = []
     rec_error = None
 
-    def get_match_badge_class(confidence_pct):
-        if confidence_pct >= 95:
-            return "bg-match-100"
-        if confidence_pct >= 85:
-            return "bg-match-90"
-        if confidence_pct >= 75:
-            return "bg-match-80"
-        if confidence_pct >= 60:
-            return "bg-match-70"
-        return "bg-match-low"
-
-    # --- NEW: Maps quality label to a tuple of (border_class, text_class) ---
-    quality_badge_class_map = {
-        "Extremely Similar - Literary Twin": ("border-quality-twin", "text-quality-twin", "LITERARY TWIN"),
-        "Very Similar - Kindred Reader": ("border-quality-kindred", "text-quality-kindred", "KINDRED READER"),
-        "Moderately Similar - Shared Tastes": ("border-quality-tastes", "text-quality-tastes", "SHARED TASTES"),
-        "Somewhat Similar - Some Overlap": ("border-quality-overlap", "text-quality-overlap", "SOME OVERLAP"),
-    }
-
-
     if request.user.is_authenticated:
         user_profile = request.user.userprofile
         user_profile.refresh_from_db()
@@ -983,15 +963,3 @@ def handler404(request, exception=None):
     return render(request, "core/404.html", {"username": username}, status=404)
 
 
-def catch_all_404_view(request, unused_path):
-    """Catch-all view for unmatched URLs that shows our custom 404 page."""
-    # Check if this is a user profile path to show user-not-found message
-    path = request.path.strip("/")
-    username = None
-    if path.startswith("u/") and len(path.split("/")) >= 2:
-        # Extract username from path like "u/username" or "u/username/"
-        parts = path.split("/")
-        if parts[0] == "u" and len(parts) > 1:
-            username = parts[1]
-
-    return render(request, "core/404.html", {"username": username}, status=404)

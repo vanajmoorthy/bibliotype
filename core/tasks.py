@@ -208,63 +208,6 @@ def _create_userbooks_from_anonymous_session(user, session_key):
         logger.error(f"Error creating UserBooks from anonymous session: {e}", exc_info=True)
 
 
-def normalize_and_filter_genres(subjects):
-    """
-    Cleans the raw subject list from the API, using the master EXCLUDED_GENRES set.
-    """
-    plausible_genres = []
-    for s in subjects:
-        s_lower = s.lower().strip()
-        # Check against the imported exclusion set
-        if s_lower in EXCLUDED_GENRES:
-            continue
-        # Check for junk patterns (e.g., call numbers, NYT lists)
-        if "ps35" in s_lower or "nyt:" in s_lower or "b485" in s_lower:
-            continue
-        # Filter out overly long or non-genre-like subjects
-        if len(s.split()) < 4 and "history" not in s_lower and "accessible" not in s_lower:
-            plausible_genres.append(s_lower)
-
-    return plausible_genres[:5]
-
-
-def analyze_and_print_genres(all_raw_genres, canonical_map):
-    """
-    A helper function to analyze and log the frequency of raw genres,
-    separating them into unmapped and already-mapped categories.
-    """
-    logger.info("=" * 50)
-    logger.info("RUNNING GENRE ANALYSIS")
-    logger.info("=" * 50)
-
-    if not all_raw_genres:
-        logger.info("No genres were found to analyze.")
-        return
-
-    raw_genre_counts = Counter(all_raw_genres)
-    unmapped_genres = {}
-
-    for genre, count in raw_genre_counts.items():
-        if genre not in canonical_map:
-            unmapped_genres[genre] = count
-
-    # Sort the unmapped genres by frequency (most common first)
-    sorted_unmapped = sorted(unmapped_genres.items(), key=lambda item: item[1], reverse=True)
-
-    logger.info(f"Found {len(raw_genre_counts)} unique raw genre strings in total")
-    logger.info(f"Of those, {len(unmapped_genres)} are currently UNMAPPED")
-
-    logger.info("--- UNMAPPED GENRES (Most Common First) ---")
-
-    if not sorted_unmapped:
-        logger.info("Great news! All genres are already mapped!")
-    else:
-        for genre, count in sorted_unmapped:
-            logger.info(f"  - '{genre}' (appears {count} times)")
-
-    logger.info("=" * 50)
-
-
 @shared_task(bind=True)
 def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, session_key: str = None):
     logger.info("Running the latest (refactored) version of the Celery task")
