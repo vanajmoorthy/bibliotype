@@ -1,0 +1,26 @@
+<h1
+    class="title-underline relative mb-4 inline-block text-4xl font-bold"
+    x-data="{
+        messages: [
+            'Sequencing Your Bibliotype...',
+            'Analyzing Your Reading Patterns...',
+            '{{ third_message|default:"Generating Your Bibliotype..." }}',
+            'Mapping Your Book Preferences...'
+        ],
+        currentMessage: 'Sequencing Your Bibliotype...',
+        init() {
+            let index = 0;
+            setInterval(() => {
+                index = (index + 1) % this.messages.length;
+                this.currentMessage = this.messages[index];
+            }, 4000);
+        }
+    }"
+    x-text="currentMessage"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0 transform scale-95"
+    x-transition:enter-end="opacity-100 transform scale-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100 transform scale-100"
+    x-transition:leave-end="opacity-0 transform scale-95"
+></h1>

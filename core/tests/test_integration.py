@@ -581,25 +581,25 @@ class ManagementCommandIntegrationTests(TestCase):
         UserBook.objects.create(user=self.user, book=self.book1, user_rating=5)
         UserBook.objects.create(user=self.user, book=self.book3, user_rating=4)
 
-    @patch("core.management.commands.backfill_enrichment.enrich_book_task")
-    def test_backfill_enrichment_dry_run(self, mock_task):
+    @patch("core.management.commands.enrich_books.enrich_book_task")
+    def test_enrich_books_dry_run(self, mock_task):
         """Identifies books needing enrichment but dispatches nothing."""
         from io import StringIO
 
         out = StringIO()
-        call_command("backfill_enrichment", "--dry-run", stdout=out)
+        call_command("enrich_books", "--dry-run", stdout=out)
         output = out.getvalue()
 
         self.assertIn("missing", output.lower())
         mock_task.delay.assert_not_called()
 
-    @patch("core.management.commands.backfill_enrichment.enrich_book_task")
-    def test_backfill_enrichment_with_limit(self, mock_task):
+    @patch("core.management.commands.enrich_books.enrich_book_task")
+    def test_enrich_books_async_with_limit(self, mock_task):
         """Dispatches only up to --limit tasks."""
         from io import StringIO
 
         out = StringIO()
-        call_command("backfill_enrichment", "--limit", "1", stdout=out)
+        call_command("enrich_books", "--limit", "1", stdout=out)
 
         self.assertEqual(mock_task.delay.call_count, 1)
 
