@@ -151,15 +151,12 @@ def calculate_community_means():
         total_count = 0
         weighted_sum = 0.0
         for bucket_key, count in dist.items():
-            if bucket_key == "Unknown":
+            lower = _parse_bucket_start(bucket_key)
+            if lower is None:
                 continue
-            try:
-                lower = int(bucket_key.split("-")[0])
-                midpoint = lower + bucket_size / 2
-                weighted_sum += midpoint * count
-                total_count += count
-            except (ValueError, IndexError):
-                continue
+            midpoint = lower + bucket_size / 2
+            weighted_sum += midpoint * count
+            total_count += count
         if total_count == 0:
             return None
         return round(weighted_sum / total_count, 1)

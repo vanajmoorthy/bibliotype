@@ -14,7 +14,6 @@ from io import StringIO
 from core.services.llm_service import generate_vibe_with_llm
 import pandas as pd
 import requests
-from django.db.models import F
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 logger = logging.getLogger(__name__)
