@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase
-from core.models import Book, Author, Genre, Publisher, UserBook, UserProfile
+from core.models import Book, Author, Genre, Publisher, UserBook
 from core.services.user_similarity_service import (
     calculate_user_similarity,
     find_similar_users

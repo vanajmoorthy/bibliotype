@@ -44,7 +44,7 @@ class ViewE2E_Tests(TransactionTestCase):
         super().tearDown()
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    @patch("core.services.dna_analyser.enrich_book_from_apis")
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
     def test_anonymous_upload_to_signup_and_claim_flow(self, mock_enrich_book, mock_generate_vibe):
         """
         Critical path test:
@@ -111,7 +111,7 @@ class ViewE2E_Tests(TransactionTestCase):
 
     @patch("core.tasks.generate_recommendations_task")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    @patch("core.services.dna_analyser.enrich_book_from_apis")
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
     @patch("core.tasks.check_author_mainstream_status_task")
     def test_authenticated_user_dna_regeneration_flow(self, mock_author_check, mock_enrich_book, mock_generate_vibe, mock_recommendations_task):
         """
@@ -161,7 +161,7 @@ class ViewE2E_Tests(TransactionTestCase):
         
     @patch("core.tasks.generate_recommendations_task")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    @patch("core.services.dna_analyser.enrich_book_from_apis")
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
     def test_pending_dna_task_id_cleared_on_save(self, mock_enrich_book, mock_generate_vibe, mock_recommendations_task):
         """
         Test that pending_dna_task_id is properly cleared when DNA is saved to profile.

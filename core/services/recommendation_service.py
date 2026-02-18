@@ -1,6 +1,6 @@
-from collections import Counter, defaultdict
+from collections import Counter
 from django.utils import timezone
-from django.db.models import Q, Avg, Count
+from django.db.models import Q
 from django.core.cache import cache
 import math
 import logging
@@ -104,9 +104,6 @@ class RecommendationEngine:
         """
         Get recommendations for an anonymous user.
         """
-        import logging
-        logger = logging.getLogger(__name__)
-        
         try:
             anon_session = AnonymousUserSession.objects.get(session_key=session_key)
         except AnonymousUserSession.DoesNotExist:
@@ -224,9 +221,6 @@ class RecommendationEngine:
 
     def _build_anonymous_context(self, anon_session):
         """Build context for anonymous user"""
-        import logging
-        logger = logging.getLogger(__name__)
-        
         read_book_ids = set(anon_session.books_data or [])
         top_books = set(anon_session.top_books_data or [])
         
@@ -540,9 +534,6 @@ class RecommendationEngine:
         # Sort by similarity and take top 30 (same as logged-in users)
         similarities.sort(key=lambda x: x[1]["similarity_score"], reverse=True)
         similar_users = similarities[:30]
-
-        import logging
-        logger = logging.getLogger(__name__)
 
         if similar_users:
             similar_user_ids = [su[0].id for su in similar_users]

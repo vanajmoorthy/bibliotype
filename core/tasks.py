@@ -1,26 +1,19 @@
-import os
 import logging
+import os
 import time
 
 import google.generativeai as genai
+import requests
 from celery import shared_task
 from celery.result import AsyncResult
 from django.contrib.auth.models import User
-from django.core.cache import cache
-from dotenv import load_dotenv
-from collections import Counter
-
-from .dna_constants import (
-    EXCLUDED_GENRES,
-)
-from .services.dna_analyser import calculate_full_dna, _save_dna_to_profile
-import requests
+from django.db.models import Q
 from django.utils import timezone
+from dotenv import load_dotenv
 
-from django.db import models as models
-
-from .services.author_service import check_author_mainstream_status
 from .models import Author, Book
+from .services.author_service import check_author_mainstream_status
+from .services.dna_analyser import _save_dna_to_profile, calculate_full_dna
 from .analytics.events import (
     track_dna_generation_started,
     track_dna_generation_completed,
@@ -328,7 +321,7 @@ def research_publisher_mainstream_task():
     cutoff = timezone.now() - timezone.timedelta(days=AGE_THRESHOLD_DAYS)
     publishers_to_check = list(
         Publisher.objects.filter(
-            models.Q(mainstream_last_checked__isnull=True) | models.Q(mainstream_last_checked__lt=cutoff),
+            Q(mainstream_last_checked__isnull=True) | Q(mainstream_last_checked__lt=cutoff),
             parent__isnull=True,
         )[:BATCH_LIMIT]
     )
@@ -365,9 +358,7 @@ def research_publisher_mainstream_task():
                     updated_count += 1
 
                 publisher.save()
-                import time as _time
-
-                _time.sleep(2)
+                time.sleep(2)
             except Exception as e:
                 logger.error(f"Error researching publisher '{publisher.name}': {e}", exc_info=True)
                 continue
@@ -439,7 +430,6 @@ def generate_recommendations_task(self, user_id: int):
     This runs asynchronously so it doesn't slow down DNA generation.
     """
     from .services.recommendation_service import get_recommendations_for_user
-    from django.utils import timezone
 
     try:
         user = User.objects.get(pk=user_id)

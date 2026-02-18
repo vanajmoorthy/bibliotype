@@ -11,14 +11,11 @@ import pandas as pd
 import requests
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django.db.models import F
 
 from core.services.llm_service import generate_vibe_with_llm
-
-from ..book_enrichment_service import enrich_book_from_apis
 from ..dna_constants import (
     CANONICAL_GENRE_MAP,
     GLOBAL_AVERAGES,

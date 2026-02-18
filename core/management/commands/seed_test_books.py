@@ -4,7 +4,7 @@ Seed the database with books from existing CSV files for testing
 import csv
 import os
 from django.core.management.base import BaseCommand
-from core.models import Book, Author, Publisher, Genre
+from core.models import Book, Author, Publisher
 
 
 class Command(BaseCommand):

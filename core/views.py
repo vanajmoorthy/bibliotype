@@ -1,30 +1,26 @@
 import json
 import logging
 import math
+import os
 from datetime import date
 
-
-import posthog
-
-logger = logging.getLogger(__name__)
-from django.core.cache import cache
 from celery.result import AsyncResult
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import (
-    AuthenticationForm,
-)
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
-from django.conf import settings
-import os
 
 from .forms import CustomUserCreationForm, UpdateDisplayNameForm
 from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
+
+logger = logging.getLogger(__name__)
 from .analytics.events import (
     track_file_upload_started,
     track_dna_displayed,
@@ -61,15 +57,12 @@ def robots_txt_view(request):
 
 def sitemap_xml_view(request):
     """Generate and serve sitemap.xml."""
-    from django.urls import reverse
     from django.utils import timezone
+
+    from .models import UserProfile
 
     base_url = f"{request.scheme}://{request.get_host()}"
     today = timezone.now().strftime("%Y-%m-%d")
-
-    # Get public profiles (limit to recent/public ones for performance)
-    from django.contrib.auth.models import User
-    from .models import UserProfile
 
     public_profiles = UserProfile.objects.filter(is_public=True, dna_data__isnull=False).select_related("user")[
         :1000
@@ -385,7 +378,6 @@ def display_dna_view(request):
                 from .models import AnonymousUserSession, Author
                 from django.utils import timezone
                 from datetime import timedelta
-                from collections import Counter
 
                 # Check if AnonymousUserSession exists, if not try to recreate it
                 try:

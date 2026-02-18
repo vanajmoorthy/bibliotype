@@ -5,7 +5,7 @@ Helper functions for tracking specific events in the Bibliotype application.
 """
 
 import logging
-from django.core.cache import cache
+
 from .posthog_client import get_environment, get_distinct_id, capture_event, capture_exception
 
 logger = logging.getLogger(__name__)

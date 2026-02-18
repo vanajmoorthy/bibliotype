@@ -5,7 +5,7 @@ import csv
 import random
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
-from core.models import Book, Author, User
+from core.models import Book, Author
 from django.contrib.auth.models import User as DjangoUser
 
 
