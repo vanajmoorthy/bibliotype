@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 
@@ -7,6 +8,8 @@ from django.db.models import Q
 
 from core.book_enrichment_service import enrich_book_from_apis
 from core.models import Author, Book
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -39,41 +42,45 @@ class Command(BaseCommand):
         self.gb_api_calls = 0
         self.ol_api_calls = 0
 
+    def _log(self, msg):
+        self.stdout.write(msg)
+        logger.info(f"enrich_books: {msg}")
+
+    def _warn(self, msg):
+        self.stdout.write(self.style.WARNING(msg))
+        logger.warning(f"enrich_books: {msg}")
+
     def handle(self, *args, **options):
-        self.stdout.write("🚀 Starting enrichment of Book entries with external APIs...")
+        self._log("Starting enrichment of Book entries with external APIs...")
 
         gb_limit = options["limit"] or self.GOOGLE_BOOKS_API_LIMIT
-        self.stdout.write(self.style.NOTICE(f"Google Books API request limit for this run is set to {gb_limit}."))
+        self._log(f"Google Books API request limit for this run is set to {gb_limit}.")
 
         if options["process_all"]:
-            self.stdout.write(self.style.WARNING("--process-all flag set. Re-checking all books."))
+            self._warn("--process-all flag set. Re-checking all books.")
             queryset = Book.objects.all()
         else:
-            self.stdout.write(
-                self.style.NOTICE("Processing books that have not been checked or are missing genres/publish year.")
-            )
+            self._log("Processing books that have not been checked or are missing genres/publish year.")
             queryset = Book.objects.filter(
                 Q(google_books_last_checked__isnull=True) | Q(genres__isnull=True) | Q(publish_year__isnull=True)
             ).distinct()
 
         total_books_to_process = queryset.count()
         if total_books_to_process == 0:
-            self.stdout.write(self.style.SUCCESS("No books found that need enrichment. All done!"))
+            self._log("No books found that need enrichment. All done!")
             return
 
-        self.stdout.write(f"Found {total_books_to_process} books to process.")
+        self._log(f"Found {total_books_to_process} books to process.")
 
         processed_books = 0
         for book in queryset.iterator():
             # The check now only applies to the Google Books counter
             if self.gb_api_calls >= gb_limit:
-                self.stdout.write(
-                    self.style.WARNING(f"\nGoogle Books API request limit of {gb_limit} reached. Stopping.")
-                )
+                self._warn(f"Google Books API request limit of {gb_limit} reached. Stopping.")
                 break
 
             processed_books += 1
-            self.stdout.write(
+            self._log(
                 f'  -> Processing: "{book.title}" ({processed_books}/{total_books_to_process}) | OL Calls: {self.ol_api_calls} | GB Calls: {self.gb_api_calls}'
             )
 
@@ -86,10 +93,7 @@ class Command(BaseCommand):
 
             # The polite delay is now correctly handled inside the service, so we don't need a sleep here.
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"\n✅ Finished enriching books. Processed {processed_books} books."
-                f"\n   - Open Library Calls: {self.ol_api_calls}"
-                f"\n   - Google Books Calls: {self.gb_api_calls}"
-            )
+        self._log(
+            f"Finished enriching books. Processed {processed_books} books. "
+            f"Open Library Calls: {self.ol_api_calls}, Google Books Calls: {self.gb_api_calls}"
         )

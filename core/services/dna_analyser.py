@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import re
 
 from django.db import IntegrityError
 from django.db.models import F
@@ -17,6 +18,18 @@ from django.db.models import F
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 logger = logging.getLogger(__name__)
+
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _sanitize_review_text(text):
+    """Strip HTML tags from review text, preserving <br> variants as newlines."""
+    if not text or not isinstance(text, str):
+        return text
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = _HTML_TAG_RE.sub("", text)
+    return text.strip()
+
 
 from ..models import Author, Book, Genre
 from ..percentile_engine import (
@@ -525,12 +538,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             ].to_dict()
 
             most_positive_review["sentiment"] = float(most_positive_review["sentiment"])
+            most_positive_review["my_review"] = _sanitize_review_text(most_positive_review.get("my_review", ""))
 
             most_negative_review = neg_review_row.rename({"My Review": "my_review"})[
                 ["Title", "Author", "my_review", "sentiment"]
             ].to_dict()
 
             most_negative_review["sentiment"] = float(most_negative_review["sentiment"])
+            most_negative_review["my_review"] = _sanitize_review_text(most_negative_review.get("my_review", ""))
 
         mainstream_score = 0
         if user_book_objects:

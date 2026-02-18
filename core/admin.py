@@ -150,6 +150,14 @@ class AggregateAnalyticsAdmin(admin.ModelAdmin):
 
 ADMIN_COMMANDS = [
     {
+        "name": "backfill_isbn",
+        "description": "Backfill ISBN13 for books missing it by querying Open Library. Run before backfill_enrichment for better results.",
+        "arguments": [
+            {"name": "--dry-run", "type": "flag", "label": "Dry run", "help": "Show what would be updated without saving"},
+            {"name": "--limit", "type": "int", "label": "Limit", "help": "Max books to process"},
+        ],
+    },
+    {
         "name": "backfill_enrichment",
         "description": "Dispatch background Celery tasks to enrich books missing publish_year, genres, or Google Books data.",
         "arguments": [
@@ -201,6 +209,21 @@ ADMIN_COMMANDS = [
         "description": "Regenerate genre/reader-type DNA fields from current enriched Book data. Run after enrichment backfills.",
         "arguments": [
             {"name": "--dry-run", "type": "flag", "label": "Dry run", "help": "Show changes without saving"},
+            {"name": "--limit", "type": "int", "label": "Limit", "help": "Max profiles to process"},
+            {"name": "--username", "type": "str", "label": "Username", "help": "Process a single user"},
+            {
+                "name": "--with-recommendations",
+                "type": "flag",
+                "label": "With recommendations",
+                "help": "Also regenerate recommendations after DNA update",
+            },
+        ],
+    },
+    {
+        "name": "regenerate_recommendations",
+        "description": "Regenerate recommendations for users with DNA data. Dispatches async Celery tasks.",
+        "arguments": [
+            {"name": "--dry-run", "type": "flag", "label": "Dry run", "help": "Show what would happen without dispatching"},
             {"name": "--limit", "type": "int", "label": "Limit", "help": "Max profiles to process"},
             {"name": "--username", "type": "str", "label": "Username", "help": "Process a single user"},
         ],

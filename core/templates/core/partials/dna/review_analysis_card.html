@@ -1,0 +1,29 @@
+<div class="border-brand-text shadow-neo border-2 bg-white p-6">
+    <h2 class="mb-4 text-2xl font-bold uppercase">Review Analysis</h2>
+    <div class="grid grid-cols-1 gap-6 text-lg md:grid-cols-2">
+        <div>
+            <h3 class="text-xl font-bold uppercase">Most Positive Review</h3>
+            {% if dna.most_positive_review %}
+                <p class="mt-2 font-bold">{{ dna.most_positive_review.Title }}</p>
+                {# Review text is sanitized at ingestion - never use |safe here #}
+                <blockquote class="border-brand-text shadow-neo-sm mt-2 border-2 bg-gray-100 p-3">
+                    "{{ dna.most_positive_review.my_review|linebreaksbr }}"
+                </blockquote>
+            {% else %}
+                <p class="mt-2">No reviews found.</p>
+            {% endif %}
+        </div>
+        <div>
+            <h3 class="text-xl font-bold uppercase">Most Negative Review</h3>
+            {% if dna.most_negative_review %}
+                <p class="mt-2 font-bold">{{ dna.most_negative_review.Title }}</p>
+                {# Review text is sanitized at ingestion - never use |safe here #}
+                <blockquote class="border-brand-text shadow-neo-sm mt-2 border-2 bg-gray-100 p-3">
+                    "{{ dna.most_negative_review.my_review|linebreaksbr }}"
+                </blockquote>
+            {% else %}
+                <p class="mt-2">No reviews found.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>

@@ -405,6 +405,43 @@ class AdminCommandRunnerIntegrationTests(TestCase):
         self.assertEqual(result["status"], "error")
         self.assertIn("Something went wrong", result["error"])
 
+    @patch("core.tasks.run_management_command_task")
+    def test_regenerate_recommendations_is_whitelisted(self, mock_task):
+        """regenerate_recommendations command is accepted by command runner."""
+        mock_result = MagicMock()
+        mock_result.id = "task-regen-rec"
+        mock_task.delay.return_value = mock_result
+
+        response = self.client.post(
+            "/admin/api/command-run/",
+            data=json.dumps({"command": "regenerate_recommendations", "arguments": {}}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["task_id"], "task-regen-rec")
+
+    @patch("core.tasks.run_management_command_task")
+    def test_regenerate_dna_with_recommendations_flag_parsed(self, mock_task):
+        """--with-recommendations flag is correctly parsed for regenerate_dna."""
+        mock_result = MagicMock()
+        mock_result.id = "task-dna-rec"
+        mock_task.delay.return_value = mock_result
+
+        response = self.client.post(
+            "/admin/api/command-run/",
+            data=json.dumps({
+                "command": "regenerate_dna",
+                "arguments": {"--with-recommendations": True},
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        call_kwargs = mock_task.delay.call_args
+        self.assertEqual(call_kwargs[0][0], "regenerate_dna")
+        self.assertTrue(call_kwargs[1]["kwargs"]["with_recommendations"])
+
 
 # ──────────────────────────────────────────────
 # Class 4: Create UserBooks From Anonymous Session
@@ -586,3 +623,130 @@ class ManagementCommandIntegrationTests(TestCase):
 
         # Mainstream score should be recalculated (author is mainstream)
         self.assertEqual(dna["mainstream_score_percent"], 100)
+
+    @patch("core.tasks.generate_recommendations_task")
+    def test_regenerate_dna_with_recommendations_dispatches_tasks(self, mock_rec_task):
+        """--with-recommendations dispatches recommendation tasks for updated profiles."""
+        mock_rec_task.delay = MagicMock()
+        from io import StringIO
+
+        out = StringIO()
+        call_command("regenerate_dna", "--username", "dnauser", "--with-recommendations", stdout=out)
+        output = out.getvalue()
+
+        self.assertIn("Dispatched recommendations", output)
+        mock_rec_task.delay.assert_called_once_with(self.user.id)
+
+    @patch("core.tasks.generate_recommendations_task")
+    def test_regenerate_dna_with_recommendations_dry_run_does_not_dispatch(self, mock_rec_task):
+        """--with-recommendations + --dry-run does not dispatch tasks."""
+        mock_rec_task.delay = MagicMock()
+        from io import StringIO
+
+        out = StringIO()
+        call_command("regenerate_dna", "--username", "dnauser", "--dry-run", "--with-recommendations", stdout=out)
+
+        mock_rec_task.delay.assert_not_called()
+
+    @patch("core.tasks.generate_recommendations_task")
+    def test_regenerate_dna_without_flag_does_not_dispatch_recommendations(self, mock_rec_task):
+        """Without --with-recommendations, no recommendation tasks are dispatched."""
+        mock_rec_task.delay = MagicMock()
+        from io import StringIO
+
+        out = StringIO()
+        call_command("regenerate_dna", "--username", "dnauser", stdout=out)
+
+        mock_rec_task.delay.assert_not_called()
+
+
+class RegenerateRecommendationsCommandTests(TestCase):
+    """Tests for the regenerate_recommendations management command."""
+
+    def setUp(self):
+        self.user1 = User.objects.create_user(username="recuser1", password="test123")
+        self.user1.userprofile.dna_data = {"reader_type": "Test", "top_genres": []}
+        self.user1.userprofile.save()
+
+        self.user2 = User.objects.create_user(username="recuser2", password="test123")
+        self.user2.userprofile.dna_data = {"reader_type": "Test", "top_genres": []}
+        self.user2.userprofile.recommendations_data = [{"book_id": 1}]
+        self.user2.userprofile.save()
+
+        # User with no DNA data — should be skipped
+        self.user_no_dna = User.objects.create_user(username="nodna", password="test123")
+
+    @patch("core.management.commands.regenerate_recommendations.generate_recommendations_task")
+    def test_dispatches_tasks_for_users_with_dna(self, mock_task):
+        """Dispatches tasks for all users with dna_data."""
+        mock_task.delay = MagicMock()
+        from io import StringIO
+
+        out = StringIO()
+        call_command("regenerate_recommendations", stdout=out)
+        output = out.getvalue()
+
+        self.assertEqual(mock_task.delay.call_count, 2)
+        self.assertIn("Dispatched recommendation generation for 2 users", output)
+
+    @patch("core.management.commands.regenerate_recommendations.generate_recommendations_task")
+    def test_dry_run_does_not_dispatch(self, mock_task):
+        """--dry-run shows info but doesn't dispatch tasks."""
+        mock_task.delay = MagicMock()
+        from io import StringIO
+
+        out = StringIO()
+        call_command("regenerate_recommendations", "--dry-run", stdout=out)
+        output = out.getvalue()
+
+        mock_task.delay.assert_not_called()
+        self.assertIn("Dry run complete", output)
+        self.assertIn("recuser1", output)
+        self.assertIn("recuser2", output)
+
+    @patch("core.management.commands.regenerate_recommendations.generate_recommendations_task")
+    def test_username_filter(self, mock_task):
+        """--username processes only the specified user."""
+        mock_task.delay = MagicMock()
+        from io import StringIO
+
+        out = StringIO()
+        call_command("regenerate_recommendations", "--username", "recuser1", stdout=out)
+
+        mock_task.delay.assert_called_once_with(self.user1.id)
+
+    @patch("core.management.commands.regenerate_recommendations.generate_recommendations_task")
+    def test_limit_flag(self, mock_task):
+        """--limit restricts number of profiles processed."""
+        mock_task.delay = MagicMock()
+        from io import StringIO
+
+        out = StringIO()
+        call_command("regenerate_recommendations", "--limit", "1", stdout=out)
+
+        self.assertEqual(mock_task.delay.call_count, 1)
+
+    @patch("core.management.commands.regenerate_recommendations.generate_recommendations_task")
+    def test_dry_run_shows_current_rec_count(self, mock_task):
+        """--dry-run displays how many recommendations each user currently has."""
+        mock_task.delay = MagicMock()
+        from io import StringIO
+
+        out = StringIO()
+        call_command("regenerate_recommendations", "--dry-run", stdout=out)
+        output = out.getvalue()
+
+        self.assertIn("recuser1: current recommendations = 0", output)
+        self.assertIn("recuser2: current recommendations = 1", output)
+
+    @patch("core.management.commands.regenerate_recommendations.generate_recommendations_task")
+    def test_skips_users_without_dna(self, mock_task):
+        """Users without dna_data are excluded."""
+        mock_task.delay = MagicMock()
+        from io import StringIO
+
+        out = StringIO()
+        call_command("regenerate_recommendations", stdout=out)
+        output = out.getvalue()
+
+        self.assertNotIn("nodna", output)

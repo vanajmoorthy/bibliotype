@@ -40,10 +40,10 @@
                     {% include 'core/partials/buttons/link_button.html' with href=home_url text="Return to Home" color="green" %}
                     {% if user.is_authenticated %}
                         {% url 'core:display_dna' as display_dna_url %}
-                        {% include 'core/partials/buttons/link_button.html' with href=display_dna_url text="View Your DNA" color="cyan" %}
+                        {% include 'core/partials/buttons/link_button.html' with href=display_dna_url text="View Your Bibliotype" color="cyan" %}
                     {% else %}
                         {% url 'core:signup' as signup_url %}
-                        {% include 'core/partials/buttons/link_button.html' with href=signup_url text="Discover Your DNA" color="cyan" %}
+                        {% include 'core/partials/buttons/link_button.html' with href=signup_url text="Get Your Bibliotype" color="cyan" %}
                     {% endif %}
                 </div>
                 

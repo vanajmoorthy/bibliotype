@@ -837,6 +837,15 @@ class RecommendationEngine:
 
     def _add_explanations(self, recommendations, context):
         """Add human-readable explanation components for why each book was recommended."""
+        # Build possessive form of owner's display name for public profile text
+        owner_user = context.get("user")
+        if owner_user:
+            owner_name = owner_user.first_name or owner_user.username
+            owner_possessive = f"{owner_name}'" if owner_name.endswith("s") else f"{owner_name}'s"
+        else:
+            owner_name = None
+            owner_possessive = None
+
         for rec in recommendations:
             # Use a dictionary to hold the separate parts of the explanation
             rec["explanation_components"] = {}
@@ -848,26 +857,51 @@ class RecommendationEngine:
             # --- Component 1: Shared Books ---
             if best_source["type"] == "similar_user":
                 shared_count = best_source.get("shared_books", 0)
+                recommender_name = best_source.get("username", "")
                 if shared_count > 1:  # Only show if there's a meaningful overlap
                     rec["explanation_components"]["shared"] = f"You share {shared_count} books in common"
+                    if owner_name and recommender_name:
+                        rec["explanation_components"]["shared_public"] = (
+                            f"{owner_name} and {recommender_name} share {shared_count} books in common"
+                        )
+                    else:
+                        rec["explanation_components"]["shared_public"] = (
+                            f"They share {shared_count} books in common"
+                        )
 
             # --- Component 2: Genre Match ---
             if rec.get("genre_alignment", 0) > 0.6:
                 # Use prefetched genres - should not trigger query
                 book_genres = [genre.name for genre in rec["book"].genres.all()[:2]]
                 if book_genres:
-                    rec["explanation_components"]["genre"] = f"Matches your interest in {', '.join(book_genres)}"
+                    genre_str = ", ".join(book_genres)
+                    rec["explanation_components"]["genre"] = f"matches your interest in {genre_str}"
+                    if owner_possessive:
+                        rec["explanation_components"]["genre_public"] = (
+                            f"matches {owner_possessive} interest in {genre_str}"
+                        )
 
             # --- Component 3: Popularity among similar readers ---
             if rec["recommender_count"] >= 3:
-                rec["explanation_components"]["popularity"] = f"Loved by {rec['recommender_count']} similar readers"
+                rec["explanation_components"]["popularity"] = f"loved by {rec['recommender_count']} similar readers"
+                rec["explanation_components"]["popularity_public"] = (
+                    f"loved by {rec['recommender_count']} other similar readers"
+                )
 
             # --- Component 4: Quality indicator ---
             if rec["book"].average_rating and rec["book"].average_rating >= 4.2:
-                rec["explanation_components"]["rating"] = f"Highly rated ({rec['book'].average_rating:.1f}★)"
+                rec["explanation_components"]["rating"] = f"highly rated ({rec['book'].average_rating:.1f}★)"
 
-            # We no longer create a single "explanation" string.
-            # The template will now build the UI from these components.
+            # --- Component 5: Global popularity fallback ---
+            if any(s.get("type") == "global_popularity" for s in sources):
+                rec["explanation_components"]["discovery"] = "popular across the Bibliotype community"
+
+            # --- Ensure at least one explanation always exists ---
+            if not rec["explanation_components"]:
+                if rec["book"].average_rating:
+                    rec["explanation_components"]["rating"] = f"highly rated ({rec['book'].average_rating:.1f}★)"
+                else:
+                    rec["explanation_components"]["discovery"] = "popular across the Bibliotype community"
 
         return recommendations
 
@@ -935,6 +969,34 @@ class RecommendationEngine:
                             }
                 except Genre.DoesNotExist:
                     continue
+
+        # Strategy 3: Globally popular books (last resort)
+        if len(candidates) < limit:
+            remaining = limit - len(candidates)
+            popular_books = (
+                Book.objects.filter(average_rating__gte=4.0)
+                .exclude(id__in=context["read_book_ids"])
+                .exclude(id__in=candidates.keys())
+                .select_related("author")
+                .prefetch_related("genres")
+                .order_by("-google_books_ratings_count", "-average_rating")[: remaining * 3]
+            )
+
+            seen_authors = set()
+            for book in popular_books:
+                if len(candidates) >= limit:
+                    break
+                if book.author_id in seen_authors:
+                    continue
+                seen_authors.add(book.author_id)
+
+                candidates[book.id] = {
+                    "book": book,
+                    "sources": [{"type": "global_popularity", "similarity_score": 0.2}],
+                    "max_similarity": 0.2,
+                    "recommender_count": 1,
+                    "total_weight": 0.2,
+                }
 
         return candidates
 

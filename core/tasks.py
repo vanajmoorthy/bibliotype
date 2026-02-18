@@ -448,17 +448,31 @@ def run_management_command_task(command_name: str, args: list = None, kwargs: di
 
     try:
         call_command(command_name, *args, stdout=stdout_buffer, stderr=stderr_buffer, **kwargs)
+        stdout_output = stdout_buffer.getvalue()
+        stderr_output = stderr_buffer.getvalue()
+
+        if stdout_output:
+            logger.info(f"[{command_name}] stdout:\n{stdout_output}")
+        if stderr_output:
+            logger.warning(f"[{command_name}] stderr:\n{stderr_output}")
+
         result = {
             "status": "success",
-            "stdout": stdout_buffer.getvalue(),
-            "stderr": stderr_buffer.getvalue(),
+            "stdout": stdout_output,
+            "stderr": stderr_output,
         }
     except Exception as e:
+        stdout_output = stdout_buffer.getvalue()
+        stderr_output = stderr_buffer.getvalue()
+
+        if stdout_output:
+            logger.info(f"[{command_name}] stdout:\n{stdout_output}")
+
         logger.error(f"Management command '{command_name}' failed: {e}", exc_info=True)
         result = {
             "status": "error",
-            "stdout": stdout_buffer.getvalue(),
-            "stderr": stderr_buffer.getvalue(),
+            "stdout": stdout_output,
+            "stderr": stderr_output,
             "error": str(e),
         }
 
