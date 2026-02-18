@@ -754,6 +754,13 @@ def check_dna_status_view(request):
     if profile.pending_dna_task_id:
         try:
             result = AsyncResult(profile.pending_dna_task_id)
+
+            # Check for failure first
+            if result.state == "FAILURE":
+                profile.pending_dna_task_id = None
+                profile.save(update_fields=["pending_dna_task_id"])
+                return JsonResponse({"status": "FAILURE", "error": "An error occurred while processing your file."})
+
             info = result.info or {}
             current = info.get("current")
             total = info.get("total")

@@ -232,9 +232,34 @@ class ViewE2E_Tests(TransactionTestCase):
         """
         user = User.objects.create_user(username="testuser5", password="password")
         user.userprofile.save()
-        
+
         self.client.login(username="testuser5", password="password")
-        
+
         response = self.client.get(reverse("core:api_check_dna_status"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "PENDING")
+
+    def test_status_check_returns_failure_when_task_failed(self):
+        """
+        Test that check_dna_status_view returns FAILURE status when Celery task fails
+        and clears pending_dna_task_id.
+        """
+        user = User.objects.create_user(username="testuser6", password="password")
+        user.userprofile.pending_dna_task_id = "failed-task-id"
+        user.userprofile.save()
+
+        self.client.login(username="testuser6", password="password")
+
+        mock_result = MagicMock()
+        mock_result.state = "FAILURE"
+        mock_result.info = Exception("Something went wrong")
+
+        with patch("core.views.AsyncResult", return_value=mock_result):
+            response = self.client.get(reverse("core:api_check_dna_status"))
+
+        data = response.json()
+        self.assertEqual(data["status"], "FAILURE")
+        self.assertIn("error", data)
+
+        user.userprofile.refresh_from_db()
+        self.assertIsNone(user.userprofile.pending_dna_task_id)
