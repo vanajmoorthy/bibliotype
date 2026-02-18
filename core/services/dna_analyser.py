@@ -1,9 +1,10 @@
 import hashlib
 import logging
 
+from django.core.cache import cache
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django.db.models import F
-from django.core.cache import cache
 import random
 import time
 from collections import Counter
@@ -453,7 +454,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 existing_dna = user.userprofile.dna_data
                 if existing_dna:
                     previous_stats = existing_dna.get("user_stats")
-            except Exception:
+            except ObjectDoesNotExist:
                 pass
         update_analytics_from_stats(user_base_stats, previous_stats=previous_stats)
 

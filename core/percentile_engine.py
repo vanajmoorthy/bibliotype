@@ -16,6 +16,14 @@ def get_bucket(value, bucket_size):
     return f"{lower_bound}-{upper_bound}"
 
 
+def _parse_bucket_start(bucket_key):
+    """Safely parse the lower bound from a bucket key like '250-299'. Returns None for malformed keys."""
+    try:
+        return int(bucket_key.split("-")[0])
+    except (ValueError, IndexError):
+        return None
+
+
 def update_analytics_from_stats(user_stats, previous_stats=None):
     """Updates aggregate analytics histograms with a user's stats.
 
@@ -75,7 +83,8 @@ def calculate_percentiles_from_aggregates(user_stats):
     user_length_bucket_key = f"{user_length_bucket_start}-{user_length_bucket_start + bucket_size_len - 1}"
 
     lower_buckets_count_len = sum(
-        count for bucket, count in length_dist.items() if int(bucket.split("-")[0]) < user_length_bucket_start
+        count for bucket, count in length_dist.items()
+        if (bs := _parse_bucket_start(bucket)) is not None and bs < user_length_bucket_start
     )
     same_bucket_count_len = length_dist.get(user_length_bucket_key, 0)
     better_than_count_length = lower_buckets_count_len + (same_bucket_count_len / 2)
@@ -89,7 +98,8 @@ def calculate_percentiles_from_aggregates(user_stats):
     user_year_bucket_key = f"{user_year_bucket_start}-{user_year_bucket_start + bucket_size_year - 1}"
 
     higher_buckets_count_year = sum(
-        count for bucket, count in year_dist.items() if int(bucket.split("-")[0]) > user_year_bucket_start
+        count for bucket, count in year_dist.items()
+        if (bs := _parse_bucket_start(bucket)) is not None and bs > user_year_bucket_start
     )
     same_bucket_count_year = year_dist.get(user_year_bucket_key, 0)
     older_than_count = higher_buckets_count_year + (same_bucket_count_year / 2)
@@ -103,7 +113,8 @@ def calculate_percentiles_from_aggregates(user_stats):
     user_books_bucket_key = f"{user_books_bucket_start}-{user_books_bucket_start + bucket_size_books - 1}"
 
     lower_buckets_count_books = sum(
-        count for bucket, count in books_dist.items() if int(bucket.split("-")[0]) < user_books_bucket_start
+        count for bucket, count in books_dist.items()
+        if (bs := _parse_bucket_start(bucket)) is not None and bs < user_books_bucket_start
     )
     same_bucket_count_books = books_dist.get(user_books_bucket_key, 0)
     better_than_count_books = lower_buckets_count_books + (same_bucket_count_books / 2)
@@ -119,7 +130,8 @@ def calculate_percentiles_from_aggregates(user_stats):
     user_bpy_bucket_key = f"{user_bpy_bucket_start}-{user_bpy_bucket_start + bucket_size_bpy - 1}"
 
     lower_buckets_count_bpy = sum(
-        count for bucket, count in bpy_dist.items() if int(bucket.split("-")[0]) < user_bpy_bucket_start
+        count for bucket, count in bpy_dist.items()
+        if (bs := _parse_bucket_start(bucket)) is not None and bs < user_bpy_bucket_start
     )
     same_bucket_count_bpy = bpy_dist.get(user_bpy_bucket_key, 0)
     better_than_count_bpy = lower_buckets_count_bpy + (same_bucket_count_bpy / 2)
