@@ -19,6 +19,10 @@ genres, and reading insights.{% else %}{{ title }} profile.{% endif %}{% endbloc
 {% block twitter_description %}{% if dna %}View {{ title }} and discover their literary personality.{% else %}{{ title }}
 profile.{% endif %}{% endblock %}
 
+{% block extra_head_js %}
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
 {% block structured_data %}
     {% if dna %}
         <script type="application/ld+json">

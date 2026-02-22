@@ -101,9 +101,18 @@
         {# Preconnect for performance #}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
 
         {# Stylesheets #}
-        <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+        <link
+            rel="preload"
+            href="https://fonts.googleapis.com/css2?family=VT323&display=swap"
+            as="style"
+            onload="this.onload=null;this.rel='stylesheet'"
+        />
+        <noscript>
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap" />
+        </noscript>
         <link href="{% static 'dist/output.css' %}" rel="stylesheet" />
 
         {# Structured Data (JSON-LD) #}
@@ -147,8 +156,8 @@
         {% block structured_data %}{% endblock %}
 
         {# JavaScript #}
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        {% block extra_head_js %}{% endblock %}
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.8/dist/cdn.min.js"></script>
     </head>
     <body class="bg-brand-background text-brand-text grid-background flex h-full flex-col font-sans antialiased">
         <div class="bg-brand-green border-brand-text border-b-2 px-4 py-3 text-center text-lg">
