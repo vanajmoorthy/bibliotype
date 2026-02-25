@@ -11,6 +11,10 @@ recommendations, reading insights{% endblock %}
 
 {% block seo_robots %}noindex, nofollow{% endblock %}
 
+{% block extra_head_js %}
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
 {% block content %}
     <div class="mx-auto h-full max-w-4xl space-y-8 p-2">
         {% if is_processing %}

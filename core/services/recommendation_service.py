@@ -7,7 +7,6 @@ import logging
 
 from .user_similarity_service import (
     find_similar_users,
-    calculate_anonymous_similarity,
     calculate_anonymous_similarity_with_context,
     calculate_similarity_with_anonymized,
     get_match_quality_label,
