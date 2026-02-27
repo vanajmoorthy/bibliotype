@@ -21,13 +21,12 @@ from core.tasks import claim_anonymous_dna_task, generate_reading_dna_task
 class TaskIntegrationTests(TestCase):
 
     # Mock the slow, external network calls
-    @patch("core.services.dna_analyser.enrich_book_from_apis")
+    @patch("core.tasks.enrich_book_task.delay")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    def test_generate_dna_for_authenticated_user(self, mock_generate_vibe, mock_enrich_apis):
+    def test_generate_dna_for_authenticated_user(self, mock_generate_vibe, mock_enrich_delay):
         """
         Tests the full DNA generation task for a logged-in user.
         """
-        mock_enrich_apis.return_value = (None, 0, 0)
         mock_generate_vibe.return_value = ["a cool vibe"]
 
         user = User.objects.create_user(username="testuser", password="password")
@@ -44,13 +43,12 @@ class TaskIntegrationTests(TestCase):
         self.assertIsNotNone(user.userprofile.dna_data)
         self.assertEqual(user.userprofile.reader_type, "Novella Navigator")
 
-    @patch("core.services.dna_analyser.enrich_book_from_apis")
+    @patch("core.tasks.enrich_book_task.delay")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    def test_generate_dna_for_anonymous_user(self, mock_generate_vibe, mock_enrich_apis):
+    def test_generate_dna_for_anonymous_user(self, mock_generate_vibe, mock_enrich_delay):
         """
         Tests that anonymous generation saves its result to the cache.
         """
-        mock_enrich_apis.return_value = (None, 0, 0)
         mock_generate_vibe.return_value = ["an anonymous vibe"]
 
         header = "Title,Author,Exclusive Shelf,My Rating,Number of Pages,Original Publication Year,Date Read,Average Rating,My Review,ISBN13"

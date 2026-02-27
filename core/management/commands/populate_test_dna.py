@@ -241,7 +241,7 @@ class Command(BaseCommand):
                 "stats_by_year": [],
                 "mainstream_score_percent": 40,
                 "reading_vibe": "An eclectic reader exploring various genres",
-                "vibe_data_hash": hash("synthetic"),
+                "vibe_data_hash": hashlib.sha256("synthetic".encode()).hexdigest(),
             }
 
         import random
