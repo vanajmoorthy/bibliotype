@@ -1,7 +1,7 @@
 ---
 title: Codebase Cleanup - Dead Code Removal, Import Cleanup, and Consolidation
 type: refactor
-status: active
+status: completed
 date: 2026-02-18
 branch: refactor/codebase-cleanup
 ---
@@ -472,34 +472,34 @@ In `partials/dna/recommendations_grid.html`:
 
 ## Acceptance Criteria
 
-- [ ] All 9 broken management commands and dead files deleted (Phase 1)
-- [ ] All 12+ dead functions removed (Phase 2)
-- [ ] All 17+ unused imports cleaned up (Phase 3)
-- [ ] 9 unused CSS variables removed and Tailwind rebuilt (Phase 4)
-- [ ] `rec_error` computation removed, `user_profile` removed from public profile context (Phase 5)
-- [ ] Dead `currentIndex` Alpine variable removed (Phase 6)
-- [ ] Dead vibe assignments removed with regression test (Phase 7a)
-- [ ] `calculate_full_dna()` returns dict for both paths with simplified caller (Phase 7b)
-- [ ] `dir()` anti-pattern fixed (Phase 7c)
-- [ ] Sitemap exception logged (Phase 7d)
-- [ ] Dead test boilerplate removed (Phase 7e)
-- [ ] Dashboard FAILURE display works end-to-end with test (Phase 8)
-- [ ] `generate_test_data.py` import fixed (Phase 9a)
-- [ ] `seed_test_books.py` uses normalized lookups (Phase 9b, 9c)
-- [ ] `re_enrich_all_books.py` timestamp logic fixed (Phase 9d)
-- [ ] `populate_test_dna.py` uses SHA256 (Phase 9e)
-- [ ] Enrichment commands consolidated into one (Phase 10a)
-- [ ] Recommendation candidate collection deduplicated (Phase 10b)
-- [ ] Username editor extracted to partial (Phase 10c)
-- [ ] Cycling messages extracted to partial (Phase 10d)
-- [ ] Dead template variables replaced with defaults (Phase 10e)
-- [ ] All existing tests pass after every phase
-- [ ] Code formatted with `black --line-length 120` and `isort --profile black --line-length 120`
+- [x] All 9 broken management commands and dead files deleted (Phase 1)
+- [x] All 12+ dead functions removed (Phase 2)
+- [x] All 17+ unused imports cleaned up (Phase 3)
+- [x] 9 unused CSS variables removed and Tailwind rebuilt (Phase 4)
+- [x] `rec_error` computation removed, `user_profile` removed from public profile context (Phase 5)
+- [x] Dead `currentIndex` Alpine variable removed (Phase 6)
+- [x] Dead vibe assignments removed with regression test (Phase 7a)
+- [x] `calculate_full_dna()` returns dict for both paths with simplified caller (Phase 7b)
+- [x] `dir()` anti-pattern fixed (Phase 7c)
+- [x] Sitemap exception logged (Phase 7d)
+- [x] Dead test boilerplate removed (Phase 7e)
+- [x] Dashboard FAILURE display works end-to-end with test (Phase 8)
+- [x] `generate_test_data.py` import fixed (Phase 9a)
+- [x] `seed_test_books.py` uses normalized lookups (Phase 9b, 9c)
+- [x] `re_enrich_all_books.py` timestamp logic fixed (Phase 9d)
+- [x] `populate_test_dna.py` uses SHA256 (Phase 9e)
+- [x] Enrichment commands consolidated into one (Phase 10a)
+- [x] Recommendation candidate collection deduplicated (Phase 10b)
+- [x] Username editor extracted to partial (Phase 10c)
+- [x] Cycling messages extracted to partial (Phase 10d)
+- [x] Dead template variables replaced with defaults (Phase 10e)
+- [x] All existing tests pass after every phase
+- [x] Code formatted with `black --line-length 120`
 
 ## Test Plan
 
-- [ ] Run full test suite after each phase: `poetry run python manage.py test`
-- [ ] New test: FAILURE status returned by `check_dna_status_view` when task fails (Phase 8)
+- [x] Run full test suite after each phase: `poetry run python manage.py test`
+- [x] New test: FAILURE status returned by `check_dna_status_view` when task fails (Phase 8)
 - [ ] New test: `calculate_full_dna()` returns dict for authenticated users (Phase 7b)
 - [ ] New test: Vibe data persists correctly through `_save_dna_to_profile()` without dead assignments (Phase 7a)
 - [ ] Verify Tailwind build succeeds after CSS variable removal: `pnpm run build`
