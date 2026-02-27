@@ -6,6 +6,7 @@ Provides environment-aware PostHog client with helper functions for event tracki
 
 import os
 import logging
+import socket
 import posthog
 from django.conf import settings
 
@@ -88,7 +89,8 @@ def capture_event(distinct_id, event_name, properties=None, environment=None):
         environment = get_environment()
     
     properties["environment"] = environment
-    
+    properties["server_hostname"] = socket.gethostname()
+
     try:
         posthog.capture(
             distinct_id=distinct_id,
@@ -140,7 +142,8 @@ def capture_exception(distinct_id, exception, context=None, environment=None):
         environment = get_environment()
     
     properties["environment"] = environment
-    
+    properties["server_hostname"] = socket.gethostname()
+
     try:
         posthog.capture(
             distinct_id=distinct_id,

@@ -41,13 +41,13 @@
             <!-- Books Per Year -->
             <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
                 <p>
-                    {{ pronoun_sub|default:"You"|title }}'ve read a total of
-                    <strong>{{ dna.user_stats.total_books_read }} books</strong>
+                    {{ pronoun_sub|default:"You"|title }}'ve read
+                    <strong>{{ dna.user_stats.books_with_dates }} books</strong>
                     {% if dna.user_stats.num_reading_years %}
                         across <strong>{{ dna.user_stats.num_reading_years }} year{{ dna.user_stats.num_reading_years|pluralize }}</strong>, averaging
                         <strong>{{ dna.user_stats.avg_books_per_year }} books a year</strong>.
                     {% else %}
-                        in total.
+                        with a recorded finish date.
                     {% endif %}
                 </p>
                 {% if dna.user_stats.avg_books_per_year and dna.comparative_text.bpy_pct %}
@@ -68,6 +68,10 @@
                         other Bibliotype readers.
                     </p>
                 {% endif %}
+                <p class="mt-2 text-xs text-gray-400">
+                    * Based on books with a recorded finish date. If this seems low, some books
+                    on {{ pronoun_pos|lower|default:"your" }} "read" shelf may be missing a read date.
+                </p>
             </div>
         </div>
     {% else %}

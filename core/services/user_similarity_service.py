@@ -124,39 +124,6 @@ def _calculate_rating_pattern_similarity_from_context(ctx1, ctx2):
     return pattern_similarity * 0.7 + avg_similarity * 0.3
 
 
-def _calculate_rating_pattern_similarity(user1_books_qs, user2_books_qs):
-    """Compare rating distribution patterns, not just averages (legacy, for backwards compat)"""
-
-    # Get rating distributions
-    user1_ratings = list(user1_books_qs.filter(user_rating__isnull=False).values_list("user_rating", flat=True))
-    user2_ratings = list(user2_books_qs.filter(user_rating__isnull=False).values_list("user_rating", flat=True))
-
-    if not user1_ratings or not user2_ratings:
-        return 0.5  # Neutral similarity
-
-    # Distribution similarity (are they both harsh/generous?)
-    user1_dist = Counter(user1_ratings)
-    user2_dist = Counter(user2_ratings)
-
-    total1 = sum(user1_dist.values())
-    total2 = sum(user2_dist.values())
-
-    # Compare proportions at each rating level
-    pattern_diff = (
-        sum(abs(user1_dist.get(r, 0) / total1 - user2_dist.get(r, 0) / total2) for r in range(1, 6)) / 2
-    )  # Normalize to 0-1
-
-    pattern_similarity = 1 - pattern_diff
-
-    # Average difference
-    avg1 = sum(user1_ratings) / len(user1_ratings)
-    avg2 = sum(user2_ratings) / len(user2_ratings)
-    avg_similarity = 1 - abs(avg1 - avg2) / 4.0
-
-    # Combine: pattern more important than absolute average
-    return pattern_similarity * 0.7 + avg_similarity * 0.3
-
-
 def _calculate_shared_book_correlation_from_context(ctx1, ctx2):
     """
     Pearson correlation using pre-built contexts.
@@ -189,44 +156,6 @@ def _calculate_shared_book_correlation_from_context(ctx1, ctx2):
     return normalized_correlation, len(shared_books)
 
 
-def _calculate_shared_book_correlation(user1_books_qs, user2_books_qs):
-    """
-    Pearson correlation on books both users have rated (legacy).
-    Returns (correlation, shared_count) tuple.
-    Correlation is normalized to 0-1 range, or None if insufficient data.
-    """
-
-    # Get shared books with ratings
-    user1_dict = {ub.book_id: ub.user_rating for ub in user1_books_qs.filter(user_rating__isnull=False)}
-    user2_dict = {ub.book_id: ub.user_rating for ub in user2_books_qs.filter(user_rating__isnull=False)}
-
-    shared_books = set(user1_dict.keys()) & set(user2_dict.keys())
-
-    if len(shared_books) < 3:  # Need minimum overlap for correlation
-        return None, len(shared_books)
-
-    ratings1 = [user1_dict[book_id] for book_id in shared_books]
-    ratings2 = [user2_dict[book_id] for book_id in shared_books]
-
-    # Pearson correlation
-    mean1 = np.mean(ratings1)
-    mean2 = np.mean(ratings2)
-
-    numerator = sum((r1 - mean1) * (r2 - mean2) for r1, r2 in zip(ratings1, ratings2))
-    denom1 = sum((r1 - mean1) ** 2 for r1 in ratings1) ** 0.5
-    denom2 = sum((r2 - mean2) ** 2 for r2 in ratings2) ** 0.5
-
-    if denom1 == 0 or denom2 == 0:
-        return None, len(shared_books)
-
-    correlation = numerator / (denom1 * denom2)
-
-    # Convert from -1,1 to 0,1 range (0 = opposite tastes, 0.5 = no correlation, 1 = identical tastes)
-    normalized_correlation = (correlation + 1) / 2
-
-    return normalized_correlation, len(shared_books)
-
-
 def _calculate_reading_era_similarity_from_context(ctx1, ctx2):
     """Compare publication year preferences using pre-built contexts"""
     user1_years = ctx1["years_weighted"]
@@ -243,41 +172,6 @@ def _calculate_reading_era_similarity_from_context(ctx1, ctx2):
     user1_decades = get_decade_distribution(user1_years)
     user2_decades = get_decade_distribution(user2_years)
 
-    all_decades = set(user1_decades.keys()) | set(user2_decades.keys())
-    similarity = 1 - sum(abs(user1_decades.get(d, 0) - user2_decades.get(d, 0)) for d in all_decades) / 2
-
-    return similarity
-
-
-def _calculate_reading_era_similarity(user1_books_qs, user2_books_qs):
-    """Compare publication year preferences using decade distributions (legacy)"""
-
-    user1_years = []
-    user2_years = []
-
-    for ub in user1_books_qs:
-        if ub.book.publish_year:
-            weight = ub.user_rating if ub.user_rating else 3  # Default neutral weight
-            user1_years.extend([ub.book.publish_year] * int(weight))
-
-    for ub in user2_books_qs:
-        if ub.book.publish_year:
-            weight = ub.user_rating if ub.user_rating else 3
-            user2_years.extend([ub.book.publish_year] * int(weight))
-
-    if not user1_years or not user2_years:
-        return 0.5  # Neutral similarity
-
-    # Compare distributions using decade bins
-    def get_decade_distribution(years):
-        decades = Counter([(y // 10) * 10 for y in years])
-        total = sum(decades.values())
-        return {k: v / total for k, v in decades.items()}
-
-    user1_decades = get_decade_distribution(user1_years)
-    user2_decades = get_decade_distribution(user2_years)
-
-    # Calculate distribution similarity
     all_decades = set(user1_decades.keys()) | set(user2_decades.keys())
     similarity = 1 - sum(abs(user1_decades.get(d, 0) - user2_decades.get(d, 0)) for d in all_decades) / 2
 
@@ -604,16 +498,6 @@ def calculate_anonymous_similarity_with_context(anonymous_session, user_ctx):
     }
 
 
-def calculate_anonymous_similarity(anonymous_session, user):
-    """
-    Calculate similarity between anonymous session and registered user.
-    For bulk comparisons, use calculate_anonymous_similarity_with_context instead.
-    """
-    # Build user context and use optimized function
-    user_ctx = _build_user_context_for_similarity(user)
-    return calculate_anonymous_similarity_with_context(anonymous_session, user_ctx)
-
-
 def calculate_similarity_with_anonymized(profile_data, anon_profile, user_ctx=None):
     """
     Calculate similarity with anonymized profile.
@@ -719,79 +603,3 @@ def get_match_quality_label(similarity_score):
         return "Different preferences"
     else:
         return "Opposite tastes"
-
-
-# Add this new function at the end of the file
-def debug_user_similarity(user1, user2):
-    """
-    A wrapper for calculate_user_similarity that prints a detailed
-    breakdown of the calculation for debugging purposes.
-    """
-    print("=" * 60)
-    print(f"DEBUGGING SIMILARITY BETWEEN: {user1.username} AND {user2.username}")
-    print("=" * 60)
-
-    # 1. Get the raw data from the database
-    user1_books_qs = UserBook.objects.filter(user=user1).select_related("book", "book__author")
-    user2_books_qs = UserBook.objects.filter(user=user2).select_related("book", "book__author")
-
-    user1_books = {ub.book.title: ub for ub in user1_books_qs}
-    user2_books = {ub.book.title: ub for ub in user2_books_qs}
-
-    print(f"\n--- INPUT DATA ---")
-    print(f"{user1.username} has {len(user1_books)} books.")
-    print(f"{user2.username} has {len(user2_books)} books.")
-
-    shared_titles = set(user1_books.keys()) & set(user2_books.keys())
-    print(f"Found {len(shared_titles)} shared book titles between them.")
-    if shared_titles:
-        print(f"Shared titles: {list(shared_titles)[:5]}...")  # Print first 5
-
-    # 2. Call the real calculation function
-    similarity_data = calculate_user_similarity(user1, user2)
-
-    # 3. Print the detailed report
-    print("\n--- CALCULATION BREAKDOWN ---")
-
-    components = similarity_data.get("components", {})
-    weights = similarity_data.get("weights_used", {})
-
-    print("\n[Raw Component Scores]:")
-    for comp, score in components.items():
-        print(f"  - {comp:<20}: {score:.4f}")
-
-    print("\n[Weights Applied]: (How much each component matters)")
-    for comp, weight in weights.items():
-        if weight > 0:
-            print(f"  - {comp:<20}: {weight:.4f} ({weight*100:.1f}%)")
-
-    print("\n[Final Calculation]:")
-    final_score = 0
-    for comp, score in components.items():
-        weight = weights.get(comp, 0)
-        if weight > 0:
-            contribution = score * weight
-            final_score += contribution
-            print(f"  - {comp:<20}: {score:.4f} (score) * {weight:.4f} (weight) = {contribution:.4f}")
-
-    print("-" * 30)
-    print(
-        f"FINAL SIMILARITY SCORE: {similarity_data['similarity_score']:.4f} ({similarity_data['similarity_score']*100:.2f}%)"
-    )
-    print("=" * 60)
-
-    # Add a specific check for the most likely culprit: Normalization
-    print("\n--- NORMALIZATION CHECK ---")
-    print("Checking if titles that *look* the same are being mismatched...")
-    for title1, ub1 in user1_books.items():
-        for title2, ub2 in user2_books.items():
-            # If titles are very similar but not identical
-            if title1.lower() != title2.lower() and title1.lower().strip() == title2.lower().strip():
-                norm1 = Book._normalize_title(title1)
-                norm2 = Book._normalize_title(title2)
-                if norm1 == norm2:
-                    print(f"  - SUCCESSFUL MATCH: '{title1}' ==> '{norm1}'")
-                else:
-                    print(f"  - !!! MISMATCH FOUND !!!")
-                    print(f"    '{title1}' normalized to '{norm1}'")
-                    print(f"    '{title2}' normalized to '{norm2}'")

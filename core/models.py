@@ -140,13 +140,6 @@ class UserProfile(models.Model):
         help_text="Allow other users to see you as a recommendation source"
     )
 
-    def get_top_books(self, limit=5):
-        """Returns user's top books ordered by position"""
-        return UserBook.objects.filter(
-            user=self.user, 
-            is_top_book=True
-        ).select_related('book', 'book__author').order_by('top_book_position')[:limit]
-    
     def __str__(self):
         return f"DNA for {self.user.username}"
 
@@ -173,10 +166,6 @@ class AnonymousUserSession(models.Model):
             models.Index(fields=["session_key", "expires_at"]),
             models.Index(fields=["expires_at", "anonymized"]),
         ]
-    
-    def is_expired(self):
-        from django.utils import timezone
-        return timezone.now() > self.expires_at
     
     def __str__(self):
         return f"Anonymous session: {self.session_key}"

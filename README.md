@@ -12,6 +12,8 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 Prioritised 
 - clean up code
 - lock down canonical genres and improve mapping
+- update the sources for comparative analytics
+- edit mainstream meter percentages and text to "niche, normal, mainstream"
 - posthog analytics, use mcp to add more events and create dashboards of
     - ~new signups~
     - ~dna generated~
@@ -21,14 +23,14 @@ Prioritised
     - ~also want to see how many people drop off after generating step~
 - share to story, several options
 - show book cover for most niche read
-- email for forgot password
+- email for forgot password, turnstile/captcha
 - save llm vibe against the dna dictionary, cache this for a month and only refetch if dictionary has changed
     - user a uploads a csv, vibe generated
     - user b uploads the same csv, we want to reuse this same vibe instead of hitting gemini again
     - so need to keep a mapping of dictionary hashes to llm vibes and reuse llm vibe when same dictionary is presented again
     - this would prevent several llm vibes being generated during testing
-- adjust reader type calculations
-- allow user to delete profile
+- adjust reader type calculations, different coour for diff types? pixel square background for banner? animated?
+- allow user to delete profile - settings panel maybe? put make private there too, and opt out of recs, display name can also be there, email update as well? and change password functionality might as well
     - make sure public by default
     - allow users to opt out of recommendations
 - ~tos, privacy policy~ (update maybe)
@@ -36,54 +38,10 @@ Prioritised
 - how similar are you/similarity percentage for 2 or more people
   - add page for this
   - allow similarity comparison with multiple users (only public)
-
-
- -------------------
-
-- ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
-- edit mainstream meter text to "niche, normal, mainstream"
-- make vibe look better with bg colours and fix dot separators and check mobile
-- forgot password email and email verification(?)
-- show user id in django admin
-- save recommendations as part of their profile
-- same with llm vibe
-- configure llm via posthog for tracking 
-- check those little dot separators for vibe and improve vibe
-- fix redis cache issue
-- posthog
-  - track total number of profiles/unique bibliotypes generated
-  - get rid of recommendations_generated event
-  - add bibliotype generated event
-  - enable web capture and web vitals
-  - track redis cache error as error and not event
-- ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
-- improve community stats look
-  - timelines/graphs for all community stats
-  - same for controversial ratings
-- long author names and genre names cutting of count when hovering on chart
-- allow user to delete profile
-- ✅ ~get rid of books per year~ 
-- ^ make this like more granular month by month and scrollable and show genres in every month
-- ~ai text explanation of most controversial ratings and possible explanations~ 
-- different colours for different reader types
-- pixel square background for banner
-- upload to instagram story
-- ai moodboard/collage. different options of things to upload to instagram 
-- SEO stuff
-- adjust copy ⚠️
-- ui elements for community stats
-- update tests
-- add cron job to check publishers for mainstreamness
-- check lighthouse scores 
-- add privacy statement? ToS
-- average "contrarian" score under most controversial ratings with phrases like "my, you're contrarian"
 - sign up form validate password and all on blur
-- how similar are you/similarity percentage for 2 or more people
-  - add page for this
-  - allow similarity comparison with multiple users (only public)
-- ~make pixelated dna strand logo~
-- add emojis in some places
 - think about more animation
+- long author names and genre names cutting of count when hovering on chart
+
 
 ## ✨ Features
 

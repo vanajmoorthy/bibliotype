@@ -409,6 +409,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         stats_by_year_list = []
         avg_books_per_year = 0
         num_reading_years = 0
+        books_with_dates = 0
 
         if "Date Read" in read_df.columns and not read_df["Date Read"].dropna().empty:
             yearly_df = read_df.dropna(subset=["Date Read"])
@@ -427,12 +428,13 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 item["avg_rating"] = float(item["avg_rating"])
 
             num_reading_years = len(stats_by_year_list)
-            total_books = int(len(read_df))
+            books_with_dates = int(yearly_df.shape[0])
             if num_reading_years > 0:
-                avg_books_per_year = round(total_books / num_reading_years, 1)
+                avg_books_per_year = round(books_with_dates / num_reading_years, 1)
 
         user_base_stats = {
             "total_books_read": int(len(read_df)),
+            "books_with_dates": books_with_dates,
             "total_pages_read": int(read_df["Number of Pages"].dropna().sum()),
             "avg_book_length": (
                 int(round(read_df["Number of Pages"].dropna().mean()))
@@ -670,49 +672,3 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         user_identifier = user.id if user else "Anonymous"
         logger.error(f"A critical error occurred in DNA calculation for user_id {user_identifier}: {e}", exc_info=True)
         raise
-
-
-def normalize_and_filter_genres(subjects):
-    plausible_genres = []
-    for s in subjects:
-        s_lower = s.lower().strip()
-        if s_lower in EXCLUDED_GENRES:
-            continue
-        if "ps35" in s_lower or "nyt:" in s_lower or "b485" in s_lower:
-            continue
-        if len(s.split()) < 4 and "history" not in s_lower and "accessible" not in s_lower:
-            plausible_genres.append(s_lower)
-
-    return plausible_genres[:5]
-
-
-def analyze_and_print_genres(all_raw_genres, canonical_map):
-    logger.info("=" * 50)
-    logger.info("RUNNING GENRE ANALYSIS")
-    logger.info("=" * 50)
-
-    if not all_raw_genres:
-        logger.info("No genres were found to analyze.")
-        return
-
-    raw_genre_counts = Counter(all_raw_genres)
-    unmapped_genres = {}
-
-    for genre, count in raw_genre_counts.items():
-        if genre not in canonical_map:
-            unmapped_genres[genre] = count
-
-    sorted_unmapped = sorted(unmapped_genres.items(), key=lambda item: item[1], reverse=True)
-
-    logger.info(f"Found {len(raw_genre_counts)} unique raw genre strings in total")
-    logger.info(f"Of those, {len(unmapped_genres)} are currently UNMAPPED")
-
-    logger.info("--- UNMAPPED GENRES (Most Common First) ---")
-
-    if not sorted_unmapped:
-        logger.info("Great news! All genres are already mapped!")
-    else:
-        for genre, count in sorted_unmapped:
-            logger.info(f"  - '{genre}' (appears {count} times)")
-
-    logger.info("=" * 50)
