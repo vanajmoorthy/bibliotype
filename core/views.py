@@ -188,8 +188,7 @@ def _enrich_dna_for_display(dna_data):
     # Always compute fresh community averages from current histogram data
     raw_community = calculate_community_means()
     dna_data["community_averages"] = {
-        k: v if v is not None else COMMUNITY_FALLBACKS.get(k, 0)
-        for k, v in raw_community.items()
+        k: v if v is not None else COMMUNITY_FALLBACKS.get(k, 0) for k, v in raw_community.items()
     }
 
     # Backfill missing fields for old DNA data
@@ -267,9 +266,15 @@ def _enrich_dna_for_display(dna_data):
     # Compute dynamic number line ranges so markers are well-spread
     current_year = date.today().year
 
-    page_vals = [v for v in [
-        user_stats.get("avg_book_length"), community.get("avg_book_length"), GLOBAL_AVERAGES["avg_book_length_pages"]
-    ] if v is not None]
+    page_vals = [
+        v
+        for v in [
+            user_stats.get("avg_book_length"),
+            community.get("avg_book_length"),
+            GLOBAL_AVERAGES["avg_book_length_pages"],
+        ]
+        if v is not None
+    ]
     if page_vals:
         lo, hi = min(page_vals), max(page_vals)
         pages_min = 300 if lo >= 300 else max(0, math.floor(lo / 50) * 50 - 50)
@@ -277,19 +282,36 @@ def _enrich_dna_for_display(dna_data):
     else:
         pages_min, pages_max = 300, 400
 
-    year_vals = [v for v in [
-        user_stats.get("avg_publish_year"), community.get("avg_publish_year"), GLOBAL_AVERAGES["avg_publish_year"]
-    ] if v is not None]
+    year_vals = [
+        v
+        for v in [
+            user_stats.get("avg_publish_year"),
+            community.get("avg_publish_year"),
+            GLOBAL_AVERAGES["avg_publish_year"],
+        ]
+        if v is not None
+    ]
     years_min = min(1980, math.floor(min(year_vals) / 5) * 5) if year_vals else 1980
     years_max = current_year
 
-    bpy_vals = [v for v in [
-        user_stats.get("avg_books_per_year"), community.get("avg_books_per_year"), GLOBAL_AVERAGES["avg_books_per_year"]
-    ] if v is not None]
+    bpy_vals = [
+        v
+        for v in [
+            user_stats.get("avg_books_per_year"),
+            community.get("avg_books_per_year"),
+            GLOBAL_AVERAGES["avg_books_per_year"],
+        ]
+        if v is not None
+    ]
     bpy_max = 10 if (not bpy_vals or max(bpy_vals) <= 10) else math.ceil(max(bpy_vals) / 5) * 5 + 5
 
     dna_data["number_line_ranges"] = {
-        "pages": {"min": pages_min, "max": pages_max, "min_label": f"{pages_min} pages", "max_label": f"{pages_max} pages"},
+        "pages": {
+            "min": pages_min,
+            "max": pages_max,
+            "min_label": f"{pages_min} pages",
+            "max_label": f"{pages_max} pages",
+        },
         "year": {"min": years_min, "max": years_max, "min_label": f"{years_min} CE", "max_label": f"{years_max} CE"},
         "bpy": {"min": 0, "max": bpy_max, "min_label": "0 per year", "max_label": f"{bpy_max} per year"},
     }
@@ -331,7 +353,7 @@ def display_dna_view(request):
                 # Use stored recommendations if available (generated when DNA was created/updated)
                 if user_profile.recommendations_data:
                     stored_recs = user_profile.recommendations_data
-                    
+
                     # Transform stored format to template-expected format
                     # Template expects rec.book.title, rec.book.author.name, etc.
                     for rec in stored_recs:
@@ -342,24 +364,25 @@ def display_dna_view(request):
                             "author": {"name": rec.get("book_author", "Unknown Author")},
                             "average_rating": rec.get("book_average_rating"),
                         }
-                        
+
                         # Add badge classes for display (these aren't stored in DB)
                         if rec.get("primary_source_user"):
                             match_quality = rec["primary_source_user"].get("match_quality", "")
                             rec["primary_source_user"]["badge_class"] = BADGE_COLOR_MAP.get(
                                 match_quality, "bg-brand-purple"
                             )
-                    
+
                     recommendations = stored_recs
                     logger.info(f"Loaded {len(recommendations)} stored recommendations for user {request.user.id}")
                 else:
                     # No stored recommendations yet - they're being generated asynchronously
                     # Trigger generation if not already in progress (safety net)
                     from .tasks import generate_recommendations_task
+
                     generate_recommendations_task.delay(request.user.id)
                     logger.info(f"No stored recommendations for user {request.user.id}, triggered generation")
                     recommendations = []
-                
+
                 # Track recommendations displayed (only if we have some)
                 if recommendations:
                     track_recommendations_generated(
@@ -811,7 +834,7 @@ def public_profile_view(request, username):
                 # Use stored recommendations if available
                 if profile.recommendations_data:
                     stored_recs = profile.recommendations_data
-                    
+
                     # Transform stored format to template-expected format
                     for rec in stored_recs:
                         rec["book"] = {
@@ -829,7 +852,9 @@ def public_profile_view(request, username):
                             )
 
                     recommendations = stored_recs
-                    logger.info(f"Loaded {len(recommendations)} stored recommendations for public profile {profile_user.username}")
+                    logger.info(
+                        f"Loaded {len(recommendations)} stored recommendations for public profile {profile_user.username}"
+                    )
                 else:
                     # No stored recommendations - they may be generating
                     logger.info(f"No stored recommendations for public profile {profile_user.username}")
@@ -953,5 +978,3 @@ def handler404(request, exception=None):
             username = parts[1]
 
     return render(request, "core/404.html", {"username": username}, status=404)
-
-

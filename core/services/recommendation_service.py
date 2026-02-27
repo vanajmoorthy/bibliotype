@@ -95,7 +95,7 @@ class RecommendationEngine:
             final_recommendations = self._add_explanations(final_recommendations, user_context)
 
         result = final_recommendations[:limit]
-        
+
         # Cache for 15 minutes (recommendations can change as users add books)
         safe_cache_set(cache_key, result, 900)
         return result
@@ -140,7 +140,7 @@ class RecommendationEngine:
         user_books_qs = (
             UserBook.objects.filter(user=user).select_related("book", "book__author").prefetch_related("book__genres")
         )
-        
+
         # Convert to list to avoid multiple queryset evaluations
         user_books = list(user_books_qs)
 
@@ -188,9 +188,7 @@ class RecommendationEngine:
                 series_counter[series_key] += 1
 
         # Extract oversaturated series
-        oversaturated_series = {
-            series for series, count in series_counter.items() if count >= 3
-        }
+        oversaturated_series = {series for series, count in series_counter.items() if count >= 3}
 
         # Normalize genre weights
         total_weight = sum(genre_weights.values())
@@ -199,9 +197,7 @@ class RecommendationEngine:
         )
 
         # Authors user has read extensively (3+ books)
-        author_saturation = {
-            author_id: count for author_id, count in author_count.items() if count >= 3
-        }
+        author_saturation = {author_id: count for author_id, count in author_count.items() if count >= 3}
 
         # Get DNA data for additional context
         dna = user.userprofile.dna_data if hasattr(user, "userprofile") else {}
@@ -223,9 +219,9 @@ class RecommendationEngine:
         """Build context for anonymous user"""
         read_book_ids = set(anon_session.books_data or [])
         top_books = set(anon_session.top_books_data or [])
-        
+
         # Use getattr for backwards compatibility if migration hasn't run yet
-        book_ratings = getattr(anon_session, 'book_ratings', None) or {}
+        book_ratings = getattr(anon_session, "book_ratings", None) or {}
 
         # Get disliked books (rated 1-2 stars) - NEW!
         disliked_book_ids = {book_id for book_id, rating in book_ratings.items() if rating <= 2}
@@ -252,31 +248,36 @@ class RecommendationEngine:
         # Weight by ratings if available
         author_dist = anon_session.author_distribution or {}
         author_weights = Counter()
-        
+
         # Convert normalized author names to author IDs for fallback
         from ..models import Author
+
         # Optimize: get all authors in one query
         normalized_names = list(author_dist.keys())
-        authors_dict = {author.normalized_name: author for author in 
-                       Author.objects.filter(normalized_name__in=normalized_names)}
-        
+        authors_dict = {
+            author.normalized_name: author for author in Author.objects.filter(normalized_name__in=normalized_names)
+        }
+
         # Get all read books with authors in one query (reuse read_books if available)
         if read_book_ids:
             if read_books:  # Reuse if we already fetched them
                 read_books_with_authors = {book.id: book.author_id for book in read_books}
             else:
-                read_books_with_authors = {book.id: book.author_id for book in 
-                                           Book.objects.filter(id__in=read_book_ids).select_related('author')}
+                read_books_with_authors = {
+                    book.id: book.author_id
+                    for book in Book.objects.filter(id__in=read_book_ids).select_related("author")
+                }
         else:
             read_books_with_authors = {}
-        
+
         for normalized_name, count in author_dist.items():
             author = authors_dict.get(normalized_name)
             if not author:
                 continue
             # If we have ratings, weight by average rating for this author
-            author_book_ids = [book_id for book_id, author_id in read_books_with_authors.items() 
-                             if author_id == author.id]
+            author_book_ids = [
+                book_id for book_id, author_id in read_books_with_authors.items() if author_id == author.id
+            ]
             if author_book_ids and book_ratings:
                 author_ratings = [book_ratings.get(bid, 3) for bid in author_book_ids if bid in book_ratings]
                 if author_ratings:
@@ -421,7 +422,9 @@ class RecommendationEngine:
 
         books_dict = {
             book.id: book
-            for book in Book.objects.filter(id__in=candidate_book_ids).select_related("author").prefetch_related("genres")
+            for book in Book.objects.filter(id__in=candidate_book_ids)
+            .select_related("author")
+            .prefetch_related("genres")
         }
 
         for anon_profile, similarity_data in matching_profiles:
@@ -735,13 +738,11 @@ class RecommendationEngine:
                 if shared_count > 1:  # Only show if there's a meaningful overlap
                     rec["explanation_components"]["shared"] = f"You share {shared_count} books in common"
                     if owner_name and recommender_name:
-                        rec["explanation_components"]["shared_public"] = (
-                            f"{owner_name} and {recommender_name} share {shared_count} books in common"
-                        )
+                        rec["explanation_components"][
+                            "shared_public"
+                        ] = f"{owner_name} and {recommender_name} share {shared_count} books in common"
                     else:
-                        rec["explanation_components"]["shared_public"] = (
-                            f"They share {shared_count} books in common"
-                        )
+                        rec["explanation_components"]["shared_public"] = f"They share {shared_count} books in common"
 
             # --- Component 2: Genre Match ---
             if rec.get("genre_alignment", 0) > 0.6:
@@ -751,16 +752,16 @@ class RecommendationEngine:
                     genre_str = ", ".join(book_genres)
                     rec["explanation_components"]["genre"] = f"matches your interest in {genre_str}"
                     if owner_possessive:
-                        rec["explanation_components"]["genre_public"] = (
-                            f"matches {owner_possessive} interest in {genre_str}"
-                        )
+                        rec["explanation_components"][
+                            "genre_public"
+                        ] = f"matches {owner_possessive} interest in {genre_str}"
 
             # --- Component 3: Popularity among similar readers ---
             if rec["recommender_count"] >= 3:
                 rec["explanation_components"]["popularity"] = f"loved by {rec['recommender_count']} similar readers"
-                rec["explanation_components"]["popularity_public"] = (
-                    f"loved by {rec['recommender_count']} other similar readers"
-                )
+                rec["explanation_components"][
+                    "popularity_public"
+                ] = f"loved by {rec['recommender_count']} other similar readers"
 
             # --- Component 4: Quality indicator ---
             if rec["book"].average_rating and rec["book"].average_rating >= 4.2:

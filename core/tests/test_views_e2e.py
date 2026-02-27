@@ -113,7 +113,9 @@ class ViewE2E_Tests(TransactionTestCase):
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
     @patch("core.book_enrichment_service.enrich_book_from_apis")
     @patch("core.tasks.check_author_mainstream_status_task")
-    def test_authenticated_user_dna_regeneration_flow(self, mock_author_check, mock_enrich_book, mock_generate_vibe, mock_recommendations_task):
+    def test_authenticated_user_dna_regeneration_flow(
+        self, mock_author_check, mock_enrich_book, mock_generate_vibe, mock_recommendations_task
+    ):
         """
         Test complete DNA regeneration flow for authenticated users:
         1. Create user with initial DNA
@@ -135,12 +137,12 @@ class ViewE2E_Tests(TransactionTestCase):
         }
         user.userprofile.pending_dna_task_id = "fake-regeneration-task-id"
         user.userprofile.save()
-        
+
         # Verify initial state
         user.userprofile.refresh_from_db()
         self.assertIsNotNone(user.userprofile.pending_dna_task_id)
         self.assertEqual(user.userprofile.pending_dna_task_id, "fake-regeneration-task-id")
-        
+
         # Simulate DNA save after task completes
         new_dna_data = {
             "reader_type": "New Reader",
@@ -148,17 +150,18 @@ class ViewE2E_Tests(TransactionTestCase):
             "reading_vibe": ["new regenerated vibe"],
             "vibe_data_hash": "newhash",
         }
-        
+
         from core.services.dna_analyser import _save_dna_to_profile
+
         _save_dna_to_profile(user.userprofile, new_dna_data)
-        
+
         # Verify pending_dna_task_id is cleared and new DNA is saved
         user.userprofile.refresh_from_db()
         self.assertIsNone(user.userprofile.pending_dna_task_id)
         self.assertIsNotNone(user.userprofile.dna_data)
         self.assertEqual(user.userprofile.reader_type, "New Reader")
         self.assertEqual(user.userprofile.total_books_read, 10)
-        
+
     @patch("core.tasks.generate_recommendations_task")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
     @patch("core.book_enrichment_service.enrich_book_from_apis")
@@ -175,11 +178,11 @@ class ViewE2E_Tests(TransactionTestCase):
         user = User.objects.create_user(username="testuser2", password="password")
         user.userprofile.pending_dna_task_id = "fake-task-id-12345"
         user.userprofile.save()
-        
+
         # Verify it's set
         user.userprofile.refresh_from_db()
         self.assertEqual(user.userprofile.pending_dna_task_id, "fake-task-id-12345")
-        
+
         # Save new DNA data
         dna_data = {
             "reader_type": "Test Reader",
@@ -187,16 +190,17 @@ class ViewE2E_Tests(TransactionTestCase):
             "reading_vibe": ["test vibe"],
             "vibe_data_hash": "testhash",
         }
-        
+
         from core.services.dna_analyser import _save_dna_to_profile
+
         _save_dna_to_profile(user.userprofile, dna_data)
-        
+
         # Verify pending_dna_task_id is cleared
         user.userprofile.refresh_from_db()
         self.assertIsNone(user.userprofile.pending_dna_task_id)
         self.assertIsNotNone(user.userprofile.dna_data)
         self.assertEqual(user.userprofile.reader_type, "Test Reader")
-        
+
     def test_status_check_returns_pending_while_task_running(self):
         """
         Test that status check returns PENDING when pending_dna_task_id is set.
@@ -205,13 +209,13 @@ class ViewE2E_Tests(TransactionTestCase):
         user.userprofile.pending_dna_task_id = "in-progress-task-id"
         user.userprofile.dna_data = {"reader_type": "Old Data"}
         user.userprofile.save()
-        
+
         self.client.login(username="testuser3", password="password")
-        
+
         response = self.client.get(reverse("core:api_check_dna_status"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "PENDING")
-        
+
     def test_status_check_returns_success_when_no_pending_task(self):
         """
         Test that status check returns SUCCESS when no pending task and DNA exists.
@@ -219,13 +223,13 @@ class ViewE2E_Tests(TransactionTestCase):
         user = User.objects.create_user(username="testuser4", password="password")
         user.userprofile.dna_data = {"reader_type": "Completed Reader"}
         user.userprofile.save()
-        
+
         self.client.login(username="testuser4", password="password")
-        
+
         response = self.client.get(reverse("core:api_check_dna_status"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "SUCCESS")
-        
+
     def test_status_check_returns_pending_when_no_data(self):
         """
         Test that status check returns PENDING when there's no DNA data.

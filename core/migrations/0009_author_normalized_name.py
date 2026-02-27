@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0008_delete_popularbook_remove_book_average_rating_and_more'),
+        ("core", "0008_delete_popularbook_remove_book_average_rating_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='author',
-            name='normalized_name',
+            model_name="author",
+            name="normalized_name",
             field=models.CharField(db_index=True, editable=False, max_length=255, null=True, unique=True),
         ),
     ]

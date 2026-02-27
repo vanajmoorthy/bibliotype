@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0006_userprofile_pending_dna_task_id'),
+        ("core", "0006_userprofile_pending_dna_task_id"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='popularbook',
-            name='canon_lists',
+            model_name="popularbook",
+            name="canon_lists",
             field=models.JSONField(blank=True, default=list),
         ),
     ]

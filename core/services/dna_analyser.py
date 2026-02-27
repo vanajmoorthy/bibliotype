@@ -120,28 +120,36 @@ def _save_dna_to_profile(profile, dna_data):
     profile.total_books_read = dna_data.get("user_stats", {}).get("total_books_read")
     profile.reading_vibe = dna_data.get("reading_vibe")
     profile.vibe_data_hash = dna_data.get("vibe_data_hash")
-    
+
     # Clear the pending task ID since we've completed the regeneration
     profile.pending_dna_task_id = None
-    
+
     # Clear old recommendations - they'll be regenerated asynchronously
     profile.recommendations_data = None
     profile.recommendations_generated_at = None
 
     try:
         # Explicitly save all fields including pending_dna_task_id
-        profile.save(update_fields=[
-            'dna_data', 'reader_type', 'total_books_read', 'reading_vibe', 
-            'vibe_data_hash', 'pending_dna_task_id',
-            'recommendations_data', 'recommendations_generated_at'
-        ])
-        
+        profile.save(
+            update_fields=[
+                "dna_data",
+                "reader_type",
+                "total_books_read",
+                "reading_vibe",
+                "vibe_data_hash",
+                "pending_dna_task_id",
+                "recommendations_data",
+                "recommendations_generated_at",
+            ]
+        )
+
         # Trigger async recommendation generation
         # Import here to avoid circular imports
         from ..tasks import generate_recommendations_task
+
         generate_recommendations_task.delay(profile.user.id)
         logger.info(f"Triggered recommendation generation task for user {profile.user.username}")
-        
+
     except Exception as e:
         logger.error(f"Error saving profile for user {profile.user.username}: {e}")
         raise
@@ -152,21 +160,21 @@ def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_d
     from ..models import AnonymousUserSession
     from django.utils import timezone
     from datetime import timedelta
-    
+
     # Extract books and ratings
     books_data = [book.id for book in user_book_objects if book]
     book_ratings = {}  # Store ratings for rating correlation
-    
+
     # Calculate top books for anonymous users based on ratings and reviews
     book_scores = []
     analyzer = SentimentIntensityAnalyzer()
-    
-    for idx, row_dict in enumerate(read_df.to_dict('records')):
+
+    for idx, row_dict in enumerate(read_df.to_dict("records")):
         if idx < len(user_book_objects) and user_book_objects[idx]:
             book = user_book_objects[idx]
             score = 0
-            
-            rating = row_dict.get('My Rating')
+
+            rating = row_dict.get("My Rating")
             if pd.notna(rating) and rating > 0:
                 try:
                     rating_int = int(rating)
@@ -174,39 +182,39 @@ def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_d
                     score += rating_int * 20
                 except (ValueError, TypeError):
                     pass
-            
-            review = str(row_dict.get('My Review', '')).strip()
+
+            review = str(row_dict.get("My Review", "")).strip()
             if review and len(review) > 15:
                 sentiment = analyzer.polarity_scores(review)["compound"]
                 score += sentiment * 30
-            
+
             book_scores.append((book.id, score))
-    
+
     book_scores.sort(key=lambda x: x[1], reverse=True)
     top_books_data = [book_id for book_id, score in book_scores[:5]]
-    
+
     # Extract distributions from DNA
     genre_dist = {}
-    for genre, count in dna_data.get('top_genres', []):
+    for genre, count in dna_data.get("top_genres", []):
         genre_dist[genre] = count
-    
+
     author_dist = {}
-    for author, count in dna_data.get('top_authors', [])[:20]:
+    for author, count in dna_data.get("top_authors", [])[:20]:
         normalized = Author._normalize(author)
         author_dist[normalized] = count
-    
+
     # Save or update session
     AnonymousUserSession.objects.update_or_create(
         session_key=session_key,
         defaults={
-            'dna_data': dna_data,
-            'books_data': books_data,
-            'top_books_data': top_books_data,
-            'genre_distribution': genre_dist,
-            'author_distribution': author_dist,
-            'book_ratings': book_ratings,  # Store ratings for correlation
-            'expires_at': timezone.now() + timedelta(days=7),
-        }
+            "dna_data": dna_data,
+            "books_data": books_data,
+            "top_books_data": top_books_data,
+            "genre_distribution": genre_dist,
+            "author_distribution": author_dist,
+            "book_ratings": book_ratings,  # Store ratings for correlation
+            "expires_at": timezone.now() + timedelta(days=7),
+        },
     )
 
 
@@ -316,12 +324,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     # Use a direct database query that bypasses any instance caching
                     # Query from the Genre side of the relationship to ensure fresh data
                     has_genres = Genre.objects.filter(books__id=book.pk).exists()
-                
+
                 # Dispatch enrichment as a background task to avoid blocking upload
                 if created or not has_genres:
                     from ..tasks import enrich_book_task
 
-                    logger.debug(f"Dispatching enrichment for '{book.title}' (created={created}, has_genres={has_genres})")
+                    logger.debug(
+                        f"Dispatching enrichment for '{book.title}' (created={created}, has_genres={has_genres})"
+                    )
                     enrich_book_task.delay(book.pk)
                 else:
                     logger.debug(f"Book '{book.title}' already enriched. Skipping.")
@@ -346,41 +356,41 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             if book:
                 user_book_objects.append(book)
                 all_raw_genres.extend(genres)
-        
+
         # Store UserBook entries for registered users
         if user and results:
             from ..models import UserBook
-            
+
             # Store book data with ratings and reviews - now we have the original row
             for book, genres, original_row in results:
                 if book:
                     rating_value = None
-                    review_value = ''
-                    
-                    if pd.notna(original_row.get('My Rating')) and original_row['My Rating'] > 0:
+                    review_value = ""
+
+                    if pd.notna(original_row.get("My Rating")) and original_row["My Rating"] > 0:
                         try:
-                            rating_value = int(original_row['My Rating'])
+                            rating_value = int(original_row["My Rating"])
                         except (ValueError, TypeError):
                             rating_value = None
-                    
-                    if pd.notna(original_row.get('My Review')):
-                        review_value = str(original_row['My Review']).strip()
-                    
+
+                    if pd.notna(original_row.get("My Review")):
+                        review_value = str(original_row["My Review"]).strip()
+
                     date_read_value = None
-                    if pd.notna(original_row.get('Date Read')):
-                        date_read_value = pd.to_datetime(original_row['Date Read'], errors='coerce')
+                    if pd.notna(original_row.get("Date Read")):
+                        date_read_value = pd.to_datetime(original_row["Date Read"], errors="coerce")
                         if pd.isna(date_read_value):
                             date_read_value = None
-                    
+
                     # Use update_or_create to handle duplicates better
                     UserBook.objects.update_or_create(
                         user=user,
                         book=book,
                         defaults={
-                            'user_rating': rating_value,
-                            'user_review': review_value,
-                            'date_read': date_read_value,
-                        }
+                            "user_rating": rating_value,
+                            "user_review": review_value,
+                            "date_read": date_read_value,
+                        },
                     )
 
         enriched_data_for_scoring = {

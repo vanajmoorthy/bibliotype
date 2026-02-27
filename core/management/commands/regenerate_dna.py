@@ -98,8 +98,12 @@ class Command(BaseCommand):
             scores = Counter(old_scores)
             # Zero out genre-based scores before recalculating
             genre_types = [
-                "Fantasy Fanatic", "Non-Fiction Ninja", "Philosophical Philomath",
-                "Nature Nut Case", "Social Savant", "Self Help Scholar",
+                "Fantasy Fanatic",
+                "Non-Fiction Ninja",
+                "Philosophical Philomath",
+                "Nature Nut Case",
+                "Social Savant",
+                "Self Help Scholar",
             ]
             for gt in genre_types:
                 scores[gt] = 0
@@ -117,7 +121,8 @@ class Command(BaseCommand):
             # Recalculate mainstream score
             total = user_books.count()
             mainstream_count = sum(
-                1 for ub in user_books
+                1
+                for ub in user_books
                 if ub.book.author.is_mainstream or (ub.book.publisher and ub.book.publisher.is_mainstream)
             )
             new_mainstream_score = round((mainstream_count / total) * 100) if total > 0 else 0

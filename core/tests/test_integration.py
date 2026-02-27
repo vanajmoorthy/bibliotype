@@ -18,7 +18,6 @@ from core.models import (
     UserProfile,
 )
 
-
 # ──────────────────────────────────────────────
 # Class 1: Book Enrichment Integration Tests
 # ──────────────────────────────────────────────
@@ -181,9 +180,7 @@ class PublisherResearchIntegrationTests(TestCase):
             mainstream_last_checked=timezone.now() - timezone.timedelta(days=10),
         )
         # Publisher with parent should be excluded
-        parent = Publisher.objects.create(
-            name="Parent Corp", mainstream_last_checked=timezone.now()
-        )
+        parent = Publisher.objects.create(name="Parent Corp", mainstream_last_checked=timezone.now())
         self.pub_with_parent = Publisher.objects.create(
             name="Child Imprint",
             parent=parent,
@@ -248,9 +245,7 @@ class PublisherResearchIntegrationTests(TestCase):
     def test_no_publishers_to_check(self, mock_research):
         """Returns 0 when all publishers recently checked."""
         # Mark all parentless publishers as recently checked
-        Publisher.objects.filter(parent__isnull=True).update(
-            mainstream_last_checked=timezone.now()
-        )
+        Publisher.objects.filter(parent__isnull=True).update(mainstream_last_checked=timezone.now())
 
         from core.tasks import research_publisher_mainstream_task
 
@@ -272,12 +267,8 @@ class PublisherResearchIntegrationTests(TestCase):
 class AdminCommandRunnerIntegrationTests(TestCase):
 
     def setUp(self):
-        self.superuser = User.objects.create_superuser(
-            username="admin", password="adminpass", email="admin@test.com"
-        )
-        self.regular_user = User.objects.create_user(
-            username="regular", password="regularpass"
-        )
+        self.superuser = User.objects.create_superuser(username="admin", password="adminpass", email="admin@test.com")
+        self.regular_user = User.objects.create_user(username="regular", password="regularpass")
         self.client.login(username="admin", password="adminpass")
 
     @patch("core.tasks.run_management_command_task")
@@ -289,7 +280,7 @@ class AdminCommandRunnerIntegrationTests(TestCase):
 
         response = self.client.post(
             "/admin/api/command-run/",
-            data=json.dumps({"command": "backfill_enrichment", "arguments": {}}),
+            data=json.dumps({"command": "enrich_books", "arguments": {}}),
             content_type="application/json",
         )
 
@@ -318,26 +309,30 @@ class AdminCommandRunnerIntegrationTests(TestCase):
 
         response = self.client.post(
             "/admin/api/command-run/",
-            data=json.dumps({
-                "command": "backfill_enrichment",
-                "arguments": {"--dry-run": True, "--limit": "50"},
-            }),
+            data=json.dumps(
+                {
+                    "command": "enrich_books",
+                    "arguments": {"--dry-run": True, "--limit": "50"},
+                }
+            ),
             content_type="application/json",
         )
 
         self.assertEqual(response.status_code, 200)
         mock_task.delay.assert_called_once_with(
-            "backfill_enrichment", kwargs={"dry_run": True, "limit": 50}
+            "enrich_books", kwargs={"dry_run": True, "limit": 50, "sync": False, "process_all": False}
         )
 
     def test_rejects_invalid_integer_argument(self):
         """Non-numeric value for int arg returns 400."""
         response = self.client.post(
             "/admin/api/command-run/",
-            data=json.dumps({
-                "command": "backfill_enrichment",
-                "arguments": {"--limit": "not-a-number"},
-            }),
+            data=json.dumps(
+                {
+                    "command": "enrich_books",
+                    "arguments": {"--limit": "not-a-number"},
+                }
+            ),
             content_type="application/json",
         )
 
@@ -351,7 +346,7 @@ class AdminCommandRunnerIntegrationTests(TestCase):
 
         response = self.client.post(
             "/admin/api/command-run/",
-            data=json.dumps({"command": "backfill_enrichment", "arguments": {}}),
+            data=json.dumps({"command": "enrich_books", "arguments": {}}),
             content_type="application/json",
         )
 
@@ -430,10 +425,12 @@ class AdminCommandRunnerIntegrationTests(TestCase):
 
         response = self.client.post(
             "/admin/api/command-run/",
-            data=json.dumps({
-                "command": "regenerate_dna",
-                "arguments": {"--with-recommendations": True},
-            }),
+            data=json.dumps(
+                {
+                    "command": "regenerate_dna",
+                    "arguments": {"--with-recommendations": True},
+                }
+            ),
             content_type="application/json",
         )
 

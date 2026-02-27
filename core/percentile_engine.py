@@ -91,7 +91,8 @@ def calculate_percentiles_from_aggregates(user_stats):
     user_length_bucket_key = f"{user_length_bucket_start}-{user_length_bucket_start + bucket_size_len - 1}"
 
     lower_buckets_count_len = sum(
-        count for bucket, count in length_dist.items()
+        count
+        for bucket, count in length_dist.items()
         if (bs := _parse_bucket_start(bucket)) is not None and bs < user_length_bucket_start
     )
     same_bucket_count_len = length_dist.get(user_length_bucket_key, 0)
@@ -106,7 +107,8 @@ def calculate_percentiles_from_aggregates(user_stats):
     user_year_bucket_key = f"{user_year_bucket_start}-{user_year_bucket_start + bucket_size_year - 1}"
 
     higher_buckets_count_year = sum(
-        count for bucket, count in year_dist.items()
+        count
+        for bucket, count in year_dist.items()
         if (bs := _parse_bucket_start(bucket)) is not None and bs > user_year_bucket_start
     )
     same_bucket_count_year = year_dist.get(user_year_bucket_key, 0)
@@ -121,7 +123,8 @@ def calculate_percentiles_from_aggregates(user_stats):
     user_books_bucket_key = f"{user_books_bucket_start}-{user_books_bucket_start + bucket_size_books - 1}"
 
     lower_buckets_count_books = sum(
-        count for bucket, count in books_dist.items()
+        count
+        for bucket, count in books_dist.items()
         if (bs := _parse_bucket_start(bucket)) is not None and bs < user_books_bucket_start
     )
     same_bucket_count_books = books_dist.get(user_books_bucket_key, 0)
@@ -138,7 +141,8 @@ def calculate_percentiles_from_aggregates(user_stats):
     user_bpy_bucket_key = f"{user_bpy_bucket_start}-{user_bpy_bucket_start + bucket_size_bpy - 1}"
 
     lower_buckets_count_bpy = sum(
-        count for bucket, count in bpy_dist.items()
+        count
+        for bucket, count in bpy_dist.items()
         if (bs := _parse_bucket_start(bucket)) is not None and bs < user_bpy_bucket_start
     )
     same_bucket_count_bpy = bpy_dist.get(user_bpy_bucket_key, 0)

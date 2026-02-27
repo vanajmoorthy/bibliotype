@@ -61,8 +61,18 @@ def _make_dna_data(**overrides):
                 "rating_difference": 3.0,
             },
         ],
-        "most_positive_review": {"Title": "Great Book", "Author": "Good Author", "my_review": "Amazing!", "sentiment": 0.9},
-        "most_negative_review": {"Title": "Bad Book", "Author": "Bad Author", "my_review": "Terrible.", "sentiment": -0.8},
+        "most_positive_review": {
+            "Title": "Great Book",
+            "Author": "Good Author",
+            "my_review": "Amazing!",
+            "sentiment": 0.9,
+        },
+        "most_negative_review": {
+            "Title": "Bad Book",
+            "Author": "Bad Author",
+            "my_review": "Terrible.",
+            "sentiment": -0.8,
+        },
         "stats_by_year": [
             {"year": 2020, "count": 15, "avg_rating": 3.5},
             {"year": 2021, "count": 18, "avg_rating": 3.7},
@@ -71,7 +81,12 @@ def _make_dna_data(**overrides):
             {"year": 2024, "count": 13, "avg_rating": 3.6},
         ],
         "mainstream_score_percent": 45,
-        "reading_vibe": ["Daydreaming in libraries", "Epic quest seeker", "Magic system analyst", "Worldbuilder at heart"],
+        "reading_vibe": [
+            "Daydreaming in libraries",
+            "Epic quest seeker",
+            "Magic system analyst",
+            "Worldbuilder at heart",
+        ],
         "vibe_data_hash": "abc123",
         "most_niche_book": {"title": "Niche Book", "author": "Niche Author", "read_count": 3},
     }
