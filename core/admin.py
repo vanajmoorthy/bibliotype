@@ -8,8 +8,6 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.urls import path
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_protect
 
 from .models import (
     AggregateAnalytics,
@@ -107,7 +105,14 @@ class BookAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "reader_type", "total_books_read", "is_public", "visible_in_recommendations", "last_updated")
+    list_display = (
+        "user",
+        "reader_type",
+        "total_books_read",
+        "is_public",
+        "visible_in_recommendations",
+        "last_updated",
+    )
     list_filter = ("reader_type", "is_public", "visible_in_recommendations")
     search_fields = ("user__username",)
 
@@ -151,25 +156,29 @@ class AggregateAnalyticsAdmin(admin.ModelAdmin):
 ADMIN_COMMANDS = [
     {
         "name": "backfill_isbn",
-        "description": "Backfill ISBN13 for books missing it by querying Open Library. Run before backfill_enrichment for better results.",
+        "description": "Backfill ISBN13 for books missing it by querying Open Library. Run before enrich_books for better results.",
         "arguments": [
-            {"name": "--dry-run", "type": "flag", "label": "Dry run", "help": "Show what would be updated without saving"},
+            {
+                "name": "--dry-run",
+                "type": "flag",
+                "label": "Dry run",
+                "help": "Show what would be updated without saving",
+            },
             {"name": "--limit", "type": "int", "label": "Limit", "help": "Max books to process"},
         ],
     },
     {
-        "name": "backfill_enrichment",
-        "description": "Dispatch background Celery tasks to enrich books missing publish_year, genres, or Google Books data.",
-        "arguments": [
-            {"name": "--dry-run", "type": "flag", "label": "Dry run", "help": "Show count without dispatching tasks"},
-            {"name": "--limit", "type": "int", "label": "Limit", "help": "Max books to queue"},
-        ],
-    },
-    {
         "name": "enrich_books",
-        "description": "Enrich books synchronously via Open Library and Google Books APIs.",
+        "description": "Enrich books missing metadata. Default: async Celery tasks. Use --sync for direct API calls.",
         "arguments": [
-            {"name": "--limit", "type": "int", "label": "API limit", "help": "Google Books API request limit"},
+            {"name": "--dry-run", "type": "flag", "label": "Dry run", "help": "Show counts without processing"},
+            {"name": "--limit", "type": "int", "label": "Limit", "help": "Max books to process"},
+            {
+                "name": "--sync",
+                "type": "flag",
+                "label": "Sync mode",
+                "help": "Run synchronously via APIs instead of Celery",
+            },
             {"name": "--process-all", "type": "flag", "label": "Process all", "help": "Re-check all books"},
         ],
     },
@@ -223,7 +232,12 @@ ADMIN_COMMANDS = [
         "name": "regenerate_recommendations",
         "description": "Regenerate recommendations for users with DNA data. Dispatches async Celery tasks.",
         "arguments": [
-            {"name": "--dry-run", "type": "flag", "label": "Dry run", "help": "Show what would happen without dispatching"},
+            {
+                "name": "--dry-run",
+                "type": "flag",
+                "label": "Dry run",
+                "help": "Show what would happen without dispatching",
+            },
             {"name": "--limit", "type": "int", "label": "Limit", "help": "Max profiles to process"},
             {"name": "--username", "type": "str", "label": "Username", "help": "Process a single user"},
         ],
@@ -331,20 +345,22 @@ _original_get_app_list = admin.AdminSite.get_app_list
 def _patched_get_app_list(self, request, app_label=None):
     app_list = _original_get_app_list(self, request, app_label=app_label)
     if app_label is None:
-        app_list.append({
-            "name": "Tools",
-            "app_label": "tools",
-            "app_url": "#",
-            "has_module_perms": True,
-            "models": [
-                {
-                    "name": "Command Runner",
-                    "object_name": "CommandRunner",
-                    "admin_url": "/admin/command-runner/",
-                    "view_only": True,
-                },
-            ],
-        })
+        app_list.append(
+            {
+                "name": "Tools",
+                "app_label": "tools",
+                "app_url": "#",
+                "has_module_perms": True,
+                "models": [
+                    {
+                        "name": "Command Runner",
+                        "object_name": "CommandRunner",
+                        "admin_url": "/admin/command-runner/",
+                        "view_only": True,
+                    },
+                ],
+            }
+        )
     return app_list
 
 

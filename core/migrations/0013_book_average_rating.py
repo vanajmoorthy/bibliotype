@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0012_book_google_books_last_checked'),
+        ("core", "0012_book_google_books_last_checked"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='book',
-            name='average_rating',
+            model_name="book",
+            name="average_rating",
             field=models.FloatField(blank=True, null=True),
         ),
     ]

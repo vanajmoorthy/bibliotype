@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0005_popularbook_average_rating_popularbook_awards_won_and_more'),
+        ("core", "0005_popularbook_average_rating_popularbook_awards_won_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userprofile',
-            name='pending_dna_task_id',
+            model_name="userprofile",
+            name="pending_dna_task_id",
             field=models.CharField(blank=True, max_length=255, null=True),
         ),
     ]

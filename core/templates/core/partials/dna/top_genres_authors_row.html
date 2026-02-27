@@ -7,7 +7,7 @@
             <ol class="space-y-2 text-lg">
                 {% for genre, count in dna.top_genres %}
                     <li class="capitalize">
-                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 {{ genre_color_class|default:'bg-brand-yellow' }}"
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-yellow"
                               {% if use_rainbow %}:style="{ 'background-color': colors[{{ forloop.counter0 }}] }"{% endif %}>
                             {{ genre }}
                         </span>
@@ -30,7 +30,7 @@
             <ol class="space-y-2 text-lg">
                 {% for author, count in dna.top_authors %}
                     <li>
-                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 {{ author_color_class|default:'bg-brand-cyan' }}"
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-cyan"
                               {% if use_rainbow %}:style="{ 'background-color': colors[{{ forloop.counter0 }}] }"{% endif %}>
                             {{ author }}
                         </span>

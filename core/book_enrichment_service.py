@@ -24,7 +24,7 @@ def _clean_title_for_api(title):
 def _clean_and_canonicalize_genres(subjects):
     """
     Canonicalize Open Library subjects into our genre taxonomy.
-    
+
     This function is more strict about matching to prevent false positives where
     books get random genres that don't match their actual content.
     """
@@ -49,10 +49,10 @@ def _clean_and_canonicalize_genres(subjects):
             # Use word boundaries to ensure we match whole phrases
             # This helps avoid matching partial words (e.g., "science" in "social science")
             pattern = r"\b" + re.escape(alias) + r"\b"
-            
+
             if re.search(pattern, s_lower):
                 canonical_name = CANONICAL_GENRE_MAP[alias]
-                
+
                 # Double-check canonical name isn't excluded
                 if canonical_name not in EXCLUDED_GENRES:
                     canonical_genres.add(canonical_name)
@@ -70,7 +70,7 @@ def _clean_and_canonicalize_genres(subjects):
 def _canonicalize_google_books_categories(categories):
     """
     Canonicalize Google Books categories into our genre taxonomy.
-    
+
     Google Books categories are often more accurate than Open Library subjects.
     They come formatted like: "Fiction / Literary" or "History / Ancient / Rome"
     """
@@ -83,28 +83,28 @@ def _canonicalize_google_books_categories(categories):
     for category in categories:
         # Google Books categories often have separators like "Fiction / Literary Fiction"
         # We want to check each part
-        parts = category.split('/')
-        
+        parts = category.split("/")
+
         for part in parts:
             part_lower = part.strip().lower()
-            
+
             # Skip if excluded
             if part_lower in EXCLUDED_GENRES:
                 continue
-            
+
             matched = False
             for alias in sorted_aliases:
                 pattern = r"\b" + re.escape(alias) + r"\b"
-                
+
                 if re.search(pattern, part_lower):
                     canonical_name = CANONICAL_GENRE_MAP[alias]
-                    
+
                     if canonical_name not in EXCLUDED_GENRES:
                         canonical_genres.add(canonical_name)
                         matched = True
                         logger.debug(f"Matched Google Books category '{part}' to genre '{canonical_name}'")
                         break
-            
+
             # Debug unmatched parts
             if not matched:
                 logger.debug(f"Could not match Google Books category part: '{part.strip()}'")
@@ -271,27 +271,27 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
             return {}, 1
 
         volume_info = data["items"][0].get("volumeInfo", {})
-        
+
         result = {
             "ratings_count": volume_info.get("ratingsCount"),
             "average_rating": volume_info.get("averageRating"),
         }
-        
+
         # Also fetch categories (Google Books' genre equivalent)
         if categories := volume_info.get("categories"):
             # Google Books categories are often prefixed with something like "Fiction / Literary"
             # We want to canonicalize these
             logger.debug(f"Google Books categories for '{book.title}': {categories}")
-            
+
             # Filter out generic "Fiction" category - not useful for genre classification
-            filtered_categories = [cat for cat in categories if cat.lower() not in ['fiction', 'general']]
-            
+            filtered_categories = [cat for cat in categories if cat.lower() not in ["fiction", "general"]]
+
             if filtered_categories:
                 result["categories"] = filtered_categories
                 logger.debug(f"Filtered Google Books categories: {filtered_categories}")
             else:
                 logger.debug(f"All Google Books categories filtered out (too generic)")
-        
+
         return result, 1
 
     except requests.RequestException as e:
@@ -337,40 +337,68 @@ def enrich_book_from_apis(book, session, slow_down=False):
             # Always clear and replace existing genres with fresh API data
             book.genres.clear()
             # No need to save here - ManyToMany changes are persisted immediately
-            
+
             logger.debug(f"Adding genres for '{book.title}': {new_genres}")
-            
+
             # Limit to top 5-6 genres max - prioritize specific over generic
             genre_priority = [
                 # Fiction genres (most specific to generic)
-                'fantasy', 'science fiction', 'thriller', 'horror', 'historical fiction', 
-                'romance', 'humorous fiction', 'young adult', 'short stories',
-                # Non-fiction genres  
-                'biography', 'philosophy', 'psychology', 'history', 'social science', 
-                'non-fiction', 'science', 'nature', 'art & music', 'travel',
+                "fantasy",
+                "science fiction",
+                "thriller",
+                "horror",
+                "historical fiction",
+                "romance",
+                "humorous fiction",
+                "young adult",
+                "short stories",
+                # Non-fiction genres
+                "biography",
+                "philosophy",
+                "psychology",
+                "history",
+                "social science",
+                "non-fiction",
+                "science",
+                "nature",
+                "art & music",
+                "travel",
                 # Generic/classics
-                'classics', 'plays & drama', 'children\'s literature'
+                "classics",
+                "plays & drama",
+                "children's literature",
             ]
-            
+
             # Sort genres by priority (most specific first)
-            prioritized_genres = sorted(new_genres, key=lambda g: genre_priority.index(g) if g in genre_priority else 999)
-            
+            prioritized_genres = sorted(
+                new_genres, key=lambda g: genre_priority.index(g) if g in genre_priority else 999
+            )
+
             # Take top 5-6 genres (aim for 5, allow up to 6 if they're all highly specific)
             if len(prioritized_genres) <= 6:
                 genres_to_add_limited = prioritized_genres
-            elif len(prioritized_genres) >= 6 and prioritized_genres[5] in ['fantasy', 'science fiction', 'thriller', 'horror', 'historical fiction', 'romance']:
+            elif len(prioritized_genres) >= 6 and prioritized_genres[5] in [
+                "fantasy",
+                "science fiction",
+                "thriller",
+                "horror",
+                "historical fiction",
+                "romance",
+            ]:
                 # If we have 6+ specific fiction genres, take all 6
                 genres_to_add_limited = prioritized_genres[:6]
             else:
                 # Otherwise, take top 5
                 genres_to_add_limited = prioritized_genres[:5]
-            
+
             # Add the limited genres
             if genres_to_add_limited:
                 genre_objs = [Genre.objects.get_or_create(name=g_name)[0] for g_name in genres_to_add_limited]
                 book.genres.add(*genre_objs)
                 is_updated = True
-                logger.debug(f"Added {len(genres_to_add_limited)} genres (limited from {len(new_genres)}): {genres_to_add_limited}")
+                logger.debug(
+                    f"Added {len(genres_to_add_limited)} genres (limited from {len(new_genres)}): {genres_to_add_limited}"
+                )
             else:
                 logger.debug(f"No genres to add after limiting")
 
@@ -387,39 +415,58 @@ def enrich_book_from_apis(book, session, slow_down=False):
             if gb_data.get("average_rating") is not None:
                 book.google_books_average_rating = gb_data["average_rating"]
                 is_updated = True
-            
+
             # Use Google Books categories as primary source for genres if available
             if google_genres := gb_data.get("categories"):
                 canonical_google_genres = list(_canonicalize_google_books_categories(google_genres))
-                
+
                 # Only use Google Books genres if we got good results
                 if canonical_google_genres:
                     logger.debug(f"Using Google Books categories for '{book.title}': {canonical_google_genres}")
-                    
+
                     # Clear ALL existing genres and replace with Google Books (more accurate)
                     book.genres.clear()
-                    
+
                     genre_priority = [
-                        'fantasy', 'science fiction', 'thriller', 'horror', 'historical fiction', 
-                        'romance', 'humorous fiction', 'young adult', 'short stories',
-                        'biography', 'philosophy', 'psychology', 'history', 'social science', 
-                        'non-fiction', 'science', 'nature', 'art & music', 'travel',
-                        'classics', 'plays & drama', "children's literature"
+                        "fantasy",
+                        "science fiction",
+                        "thriller",
+                        "horror",
+                        "historical fiction",
+                        "romance",
+                        "humorous fiction",
+                        "young adult",
+                        "short stories",
+                        "biography",
+                        "philosophy",
+                        "psychology",
+                        "history",
+                        "social science",
+                        "non-fiction",
+                        "science",
+                        "nature",
+                        "art & music",
+                        "travel",
+                        "classics",
+                        "plays & drama",
+                        "children's literature",
                     ]
-                    prioritized_genres = sorted(canonical_google_genres, key=lambda g: genre_priority.index(g) if g in genre_priority else 999)
-                    
+                    prioritized_genres = sorted(
+                        canonical_google_genres, key=lambda g: genre_priority.index(g) if g in genre_priority else 999
+                    )
+
                     # Take top 5 (Google Books categories are usually more accurate)
                     genres_to_add_limited = prioritized_genres[:5]
-                    
+
                     if genres_to_add_limited:
                         genre_objs = [Genre.objects.get_or_create(name=g_name)[0] for g_name in genres_to_add_limited]
                         book.genres.add(*genre_objs)
                         is_updated = True
                         logger.debug(f"Added Google Books genres for '{book.title}': {genres_to_add_limited}")
-        
+
         # Mark as checked *after* the API call is attempted.
         book.google_books_last_checked = timezone.now()
-        is_updated = True # Always true if we ran the check
+        is_updated = True  # Always true if we ran the check
 
     # --- Step 3: Finalize and save ---
     if is_updated:
@@ -427,10 +474,12 @@ def enrich_book_from_apis(book, session, slow_down=False):
             book.save()
             logger.info(f"Successfully enriched and saved '{book.title}'")
         except IntegrityError as e:
-            logger.warning(f"Could not save '{book.title}'. An integrity error occurred (e.g., duplicate ISBN). Error: {e}")
+            logger.warning(
+                f"Could not save '{book.title}'. An integrity error occurred (e.g., duplicate ISBN). Error: {e}"
+            )
     else:
         logger.debug(f"No new data found to update for '{book.title}'")
-    
+
     # Always refresh from DB to get the current state of genres
     book.refresh_from_db()
 

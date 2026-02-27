@@ -6,60 +6,60 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0007_popularbook_canon_lists'),
+        ("core", "0007_popularbook_canon_lists"),
     ]
 
     operations = [
         migrations.DeleteModel(
-            name='PopularBook',
+            name="PopularBook",
         ),
         migrations.RemoveField(
-            model_name='book',
-            name='average_rating',
+            model_name="book",
+            name="average_rating",
         ),
         migrations.AddField(
-            model_name='book',
-            name='awards_won',
+            model_name="book",
+            name="awards_won",
             field=models.JSONField(blank=True, default=list),
         ),
         migrations.AddField(
-            model_name='book',
-            name='canon_lists',
+            model_name="book",
+            name="canon_lists",
             field=models.JSONField(blank=True, default=list),
         ),
         migrations.AddField(
-            model_name='book',
-            name='google_books_average_rating',
+            model_name="book",
+            name="google_books_average_rating",
             field=models.FloatField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='book',
-            name='google_books_ratings_count',
+            model_name="book",
+            name="google_books_ratings_count",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='book',
-            name='mainstream_score',
+            model_name="book",
+            name="mainstream_score",
             field=models.PositiveIntegerField(db_index=True, default=0),
         ),
         migrations.AddField(
-            model_name='book',
-            name='nyt_bestseller_weeks',
+            model_name="book",
+            name="nyt_bestseller_weeks",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='book',
-            name='score_breakdown',
+            model_name="book",
+            name="score_breakdown",
             field=models.JSONField(blank=True, default=dict),
         ),
         migrations.AddField(
-            model_name='book',
-            name='shortlists',
+            model_name="book",
+            name="shortlists",
             field=models.JSONField(blank=True, default=list),
         ),
         migrations.AlterField(
-            model_name='book',
-            name='isbn13',
+            model_name="book",
+            name="isbn13",
             field=models.CharField(blank=True, db_index=True, max_length=13, null=True, unique=True),
         ),
     ]

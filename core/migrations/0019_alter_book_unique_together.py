@@ -6,12 +6,12 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0018_publisher_mainstream_last_checked'),
+        ("core", "0018_publisher_mainstream_last_checked"),
     ]
 
     operations = [
         migrations.AlterUniqueTogether(
-            name='book',
-            unique_together={('normalized_title', 'author')},
+            name="book",
+            unique_together={("normalized_title", "author")},
         ),
     ]

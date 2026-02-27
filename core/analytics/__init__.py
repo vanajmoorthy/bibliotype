@@ -46,4 +46,3 @@ __all__ = [
     "track_recommendation_error",
     "track_redis_cache_error",
 ]
-

@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0017_remove_book_awards_won_remove_book_canon_lists_and_more'),
+        ("core", "0017_remove_book_awards_won_remove_book_canon_lists_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='publisher',
-            name='mainstream_last_checked',
+            model_name="publisher",
+            name="mainstream_last_checked",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
     ]

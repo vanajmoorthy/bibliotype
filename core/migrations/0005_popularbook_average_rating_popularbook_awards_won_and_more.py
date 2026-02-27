@@ -6,33 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0004_popularbook_score_breakdown_alter_popularbook_isbn13_and_more'),
+        ("core", "0004_popularbook_score_breakdown_alter_popularbook_isbn13_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='popularbook',
-            name='average_rating',
+            model_name="popularbook",
+            name="average_rating",
             field=models.FloatField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='popularbook',
-            name='awards_won',
+            model_name="popularbook",
+            name="awards_won",
             field=models.JSONField(default=list),
         ),
         migrations.AddField(
-            model_name='popularbook',
-            name='nyt_bestseller_weeks',
+            model_name="popularbook",
+            name="nyt_bestseller_weeks",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='popularbook',
-            name='ratings_count',
+            model_name="popularbook",
+            name="ratings_count",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='popularbook',
-            name='shortlists',
+            model_name="popularbook",
+            name="shortlists",
             field=models.JSONField(default=list),
         ),
     ]
