@@ -183,3 +183,94 @@ class SignupTurnstileTests(TestCase):
     def test_signup_page_has_turnstile_widget(self):
         response = self.client.get(reverse("core:signup"))
         self.assertContains(response, "cf-turnstile")
+
+
+@override_settings(
+    TURNSTILE_SECRET_KEY="",
+    TURNSTILE_SITE_KEY="",
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "dev-mode-tests",
+        }
+    },
+)
+class DevModeTurnstileTests(TestCase):
+    """Tests verifying Turnstile is fully bypassed when keys are empty (local dev)."""
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username="devuser",
+            email="dev@example.com",
+            password="testpassword123",
+        )
+
+    def test_signup_page_hides_turnstile_widget_in_dev(self):
+        response = self.client.get(reverse("core:signup"))
+        self.assertNotContains(response, "cf-turnstile")
+        self.assertNotContains(response, "challenges.cloudflare.com/turnstile")
+
+    def test_password_reset_page_hides_turnstile_widget_in_dev(self):
+        response = self.client.get(reverse("password_reset"))
+        self.assertNotContains(response, "cf-turnstile")
+        self.assertNotContains(response, "challenges.cloudflare.com/turnstile")
+
+    def test_password_reset_works_without_turnstile_in_dev(self):
+        """Password reset should succeed without any Turnstile token in dev mode."""
+        response = self.client.post(
+            reverse("password_reset"),
+            {"email": "dev@example.com"},
+        )
+        self.assertRedirects(response, reverse("password_reset_done"))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, "Reset your Bibliotype password")
+
+    def test_signup_works_without_turnstile_in_dev(self):
+        """Signup should succeed without any Turnstile token in dev mode."""
+        response = self.client.post(
+            reverse("core:signup"),
+            {
+                "username": "devnewuser",
+                "email": "devnew@example.com",
+                "password1": "complexpass123!",
+                "password2": "complexpass123!",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(User.objects.filter(username="devnewuser").exists())
+
+    def test_password_reset_confirm_sets_new_password(self):
+        """Full flow: request reset, use token from email, set new password."""
+        # Request reset
+        self.client.post(reverse("password_reset"), {"email": "dev@example.com"})
+        self.assertEqual(len(mail.outbox), 1)
+
+        # Extract token and uid from email body
+        email_body = mail.outbox[0].body
+        import re
+
+        reset_link = re.search(r"/password-reset-confirm/([^/]+)/([^/]+)/", email_body)
+        self.assertIsNotNone(reset_link, "Reset link not found in email body")
+        uid = reset_link.group(1)
+        token = reset_link.group(2)
+
+        # GET the confirm page (Django redirects to set-password token internally)
+        response = self.client.get(
+            reverse("password_reset_confirm", kwargs={"uidb64": uid, "token": token}),
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Set New Password")
+
+        # POST new password — Django's confirm view uses the internal "set-password" token after GET
+        response = self.client.post(
+            reverse("password_reset_confirm", kwargs={"uidb64": uid, "token": "set-password"}),
+            {"new_password1": "newstrongpass456!", "new_password2": "newstrongpass456!"},
+        )
+        self.assertRedirects(response, reverse("password_reset_complete"))
+
+        # Verify the password actually changed
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("newstrongpass456!"))
