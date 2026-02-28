@@ -1,5 +1,10 @@
 <div class="border-brand-text shadow-neo border-2 bg-white p-6">
-    <h2 class="mb-4 text-2xl font-bold uppercase">Review Analysis</h2>
+    <h2 class="mb-1 text-2xl font-bold uppercase">Review Analysis</h2>
+    {% if dna.total_reviews_count %}
+        <p class="mb-4 text-base italic text-gray-500">
+            Across {{ dna.total_reviews_count }} review{{ dna.total_reviews_count|pluralize }} we found {{ dna.positive_reviews_count }} positive and {{ dna.negative_reviews_count }} negative review{{ dna.negative_reviews_count|pluralize }}
+        </p>
+    {% endif %}
     <div class="grid grid-cols-1 gap-6 text-lg md:grid-cols-2">
         <div>
             <h3 class="text-xl font-bold uppercase">Most Positive Review</h3>

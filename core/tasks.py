@@ -474,10 +474,28 @@ def generate_recommendations_task(self, user_id: int):
 
             processed_recs.append(processed_rec)
 
+        # Extract similar user metadata for subtitle display
+        similar_user_set = set()
+        min_overlap_pct = None
+        for rec in processed_recs:
+            for source in rec.get("sources", []):
+                if source.get("type") == "similar_user" and source.get("user_id"):
+                    similar_user_set.add(source["user_id"])
+                    similarity = source.get("similarity_score", 0)
+                    overlap = int(round(similarity * 100))
+                    if min_overlap_pct is None or overlap < min_overlap_pct:
+                        min_overlap_pct = overlap
+
+        recommendations_meta = {
+            "similar_users_count": len(similar_user_set),
+            "min_overlap_pct": min_overlap_pct or 0,
+        }
+
         # Store in profile
         profile.recommendations_data = processed_recs
+        profile.recommendations_meta = recommendations_meta
         profile.recommendations_generated_at = timezone.now()
-        profile.save(update_fields=["recommendations_data", "recommendations_generated_at"])
+        profile.save(update_fields=["recommendations_data", "recommendations_meta", "recommendations_generated_at"])
 
         # Also clear the cache so fresh data is used
         from .cache_utils import safe_cache_delete
