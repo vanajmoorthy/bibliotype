@@ -77,24 +77,20 @@
                 <div class="absolute top-0 left-0 h-64 w-64 rounded-full border-4 border-brand-text"
                     style="background-image: conic-gradient(
                         from 180deg,
-                        #00c27a 0% 20%,      /* Niche */
-                        #66d19e 20% 40%,     /* Leaning Niche */
-                        #ffc107 40% 60%,     /* Balanced */
-                        #ff8c42 60% 80%,     /* Leaning Mainstream */
-                        #ff5c5c 80% 100%      /* Mainstream */
+                        #67e8f9 0% 45%,      /* Niche: 0-40% of arc */
+                        #86efac 45% 60%,     /* Normal: 40-70% of arc */
+                        #ff5c5c 60% 100%     /* Mainstream: 70-100% of arc */
                         );">
                 </div>
             </div>
 
-         <!-- Border at 20% mark -->
+         <!-- Border at 40% mark (niche/normal boundary) -->
+            <div class="absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2 bg-brand-text"
+                 style="transform: rotate(-18deg);"></div>
+
+         <!-- Border at 70% mark (normal/mainstream boundary) -->
             <div class="absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2 bg-brand-text"
                  style="transform: rotate(36deg);"></div>
-
-
-        
-         <!-- Border at 20% mark -->
-            <div class="absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2 bg-brand-text"
-                 style="transform: rotate(-36deg);"></div>
 
 
   
@@ -105,13 +101,13 @@
                     <path id="semicircle" d="M 12,128 A 116,116 0 0,1 244,128" fill="none"/>
                 </defs>
                 <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
-                    <textPath href="#semicircle" startOffset="15%" text-anchor="middle">not very</textPath>
+                    <textPath href="#semicircle" startOffset="20%" text-anchor="middle">niche</textPath>
                 </text>
                 <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
-                    <textPath href="#semicircle" startOffset="50%" text-anchor="middle">kinda</textPath>
+                    <textPath href="#semicircle" startOffset="55%" text-anchor="middle">normal</textPath>
                 </text>
                 <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
-                    <textPath href="#semicircle" startOffset="85%" text-anchor="middle">extremely</textPath>
+                    <textPath href="#semicircle" startOffset="85%" text-anchor="middle">mainstream</textPath>
                 </text>
             </svg>
 
