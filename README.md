@@ -22,6 +22,8 @@ Prioritised
     - profile shared to story
     - ~also want to see how many people drop off after generating step~
 - share to story, several options
+- add lines under subheadings type
+- https://alcovebooks.vercel.app/#/stats
 - show book cover for most niche read
 - email for forgot password, turnstile/captcha
 - save llm vibe against the dna dictionary, cache this for a month and only refetch if dictionary has changed
