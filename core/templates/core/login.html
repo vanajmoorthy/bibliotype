@@ -43,6 +43,14 @@ and book recommendations.{% endblock %}
                             {% endfor %}
                         </div>
                     {% endfor %}
+                    <div class="mt-1 text-right">
+                        <a
+                            href="{% url 'password_reset' %}"
+                            class="hover:bg-brand-yellow text-base font-bold uppercase underline"
+                        >
+                            Forgot Password?
+                        </a>
+                    </div>
                     {% include 'core/partials/buttons/primary_button.html' with text="Log In" %}
                 </form>
             </div>
