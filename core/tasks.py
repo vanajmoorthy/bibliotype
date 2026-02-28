@@ -98,7 +98,7 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str):
         logger.error(f"User with id {user_id} not found. Cannot claim task")
         return
 
-    from .services.recommendation_service import safe_cache_get
+    from .cache_utils import safe_cache_get
 
     cached_dna = safe_cache_get(f"dna_result_{task_id}")
     cached_session_key = safe_cache_get(f"session_key_{task_id}")
@@ -261,7 +261,7 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
             )
 
             if self.request.id:
-                from .services.recommendation_service import safe_cache_set
+                from .cache_utils import safe_cache_set
 
                 safe_cache_set(f"dna_result_{self.request.id}", result_data, timeout=3600)
                 # Also cache the session_key so we can find AnonymousUserSession when claiming
@@ -370,7 +370,7 @@ def run_management_command_task(command_name: str, args: list = None, kwargs: di
     """Run a Django management command and store the output in cache."""
     import io
     from django.core.management import call_command
-    from .services.recommendation_service import safe_cache_set
+    from .cache_utils import safe_cache_set
 
     args = args or []
     kwargs = kwargs or {}
@@ -480,10 +480,9 @@ def generate_recommendations_task(self, user_id: int):
         profile.save(update_fields=["recommendations_data", "recommendations_generated_at"])
 
         # Also clear the cache so fresh data is used
-        from .services.recommendation_service import safe_cache_set
+        from .cache_utils import safe_cache_delete
 
-        cache_key = f"user_recommendations_{user_id}_6"
-        safe_cache_set(cache_key, None, 1)  # Invalidate cache
+        safe_cache_delete(f"user_recommendations_{user_id}")
 
         logger.info(f"Successfully generated and stored {len(processed_recs)} recommendations for user {user_id}")
         return len(processed_recs)

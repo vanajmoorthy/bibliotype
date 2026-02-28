@@ -320,16 +320,15 @@ def _bulk_build_user_contexts(user_ids):
     return contexts
 
 
-def find_similar_users(user, top_n=20, min_similarity=0.2):
+def find_similar_users(user, top_n=30, min_similarity=0.15):
     """
     Find registered users similar to the given user.
     Returns list of (user, similarity_data) tuples sorted by similarity.
     OPTIMIZED: Uses bulk loading to avoid N+1 queries.
     """
-    from .recommendation_service import safe_cache_get, safe_cache_set
+    from ..cache_utils import safe_cache_get, safe_cache_set
 
-    # Cache key for this user's similar users
-    cache_key = f"similar_users_{user.id}_{top_n}_{min_similarity}"
+    cache_key = f"similar_users_{user.id}"
     cached_result = safe_cache_get(cache_key)
     if cached_result is not None:
         return cached_result

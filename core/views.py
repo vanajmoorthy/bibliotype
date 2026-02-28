@@ -11,7 +11,6 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
-from django.core.cache import cache
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -171,6 +170,7 @@ def _enrich_dna_for_display(dna_data):
     if not dna_data:
         return dna_data
 
+    from .cache_utils import safe_cache_get, safe_cache_set
     from .dna_constants import GLOBAL_AVERAGES
     from .percentile_engine import calculate_community_means, calculate_percentiles_from_aggregates
 
@@ -185,8 +185,12 @@ def _enrich_dna_for_display(dna_data):
         "avg_books_per_year": GLOBAL_AVERAGES["avg_books_per_year"],
     }
 
-    # Always compute fresh community averages from current histogram data
-    raw_community = calculate_community_means()
+    # Always compute fresh community averages from current histogram data (cached 10 min)
+    community_cache_key = "community_means"
+    raw_community = safe_cache_get(community_cache_key)
+    if raw_community is None:
+        raw_community = calculate_community_means()
+        safe_cache_set(community_cache_key, raw_community, 600)
     dna_data["community_averages"] = {
         k: v if v is not None else COMMUNITY_FALLBACKS.get(k, 0) for k, v in raw_community.items()
     }
@@ -215,10 +219,10 @@ def _enrich_dna_for_display(dna_data):
     bpy = user_stats.get("avg_books_per_year", 0)
     py = user_stats.get("avg_publish_year", 0)
     cache_key = f"fresh_pct_{bl}_{br}_{bpy}_{py}"
-    fresh_percentiles = cache.get(cache_key)
+    fresh_percentiles = safe_cache_get(cache_key)
     if fresh_percentiles is None:
         fresh_percentiles = calculate_percentiles_from_aggregates(user_stats)
-        cache.set(cache_key, fresh_percentiles or {}, 60)
+        safe_cache_set(cache_key, fresh_percentiles or {}, 600)
     if fresh_percentiles:
         dna_data["bibliotype_percentiles"] = fresh_percentiles
 
@@ -902,7 +906,7 @@ def task_status_view(request, task_id):
 
 def get_task_result_view(request, task_id):
     from .models import AnonymousUserSession
-    from .services.recommendation_service import safe_cache_get
+    from .cache_utils import safe_cache_get
 
     cached_result = safe_cache_get(f"dna_result_{task_id}")
     if cached_result is not None:

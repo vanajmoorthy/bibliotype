@@ -143,6 +143,12 @@ def _save_dna_to_profile(profile, dna_data):
             ]
         )
 
+        # Invalidate stale caches for this user
+        from ..cache_utils import safe_cache_delete
+
+        safe_cache_delete(f"similar_users_{profile.user.id}")
+        safe_cache_delete(f"user_recommendations_{profile.user.id}")
+
         # Trigger async recommendation generation
         # Import here to avoid circular imports
         from ..tasks import generate_recommendations_task

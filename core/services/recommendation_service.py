@@ -1,7 +1,6 @@
 from collections import Counter
 from django.utils import timezone
 from django.db.models import Q
-from django.core.cache import cache
 import math
 import logging
 
@@ -14,46 +13,9 @@ from .user_similarity_service import (
     _bulk_build_user_contexts,
 )
 from ..models import UserBook, Book, User, AnonymousUserSession, AnonymizedReadingProfile, Genre, Author
-from ..analytics.events import track_redis_cache_error
+from ..cache_utils import safe_cache_delete, safe_cache_get, safe_cache_set  # noqa: F401 - re-exported
 
 logger = logging.getLogger(__name__)
-
-
-def safe_cache_get(key, default=None):
-    """
-    Safely get a value from cache, handling Redis connection errors gracefully.
-    Returns default value if cache is unavailable.
-    """
-    try:
-        return cache.get(key, default)
-    except Exception as e:
-        logger.warning(f"Cache get failed for key '{key}': {e}. Continuing without cache.")
-        # Track Redis error in production
-        track_redis_cache_error(
-            operation="get",
-            key=key,
-            error_type=type(e).__name__,
-            error_message=str(e),
-        )
-        return default
-
-
-def safe_cache_set(key, value, timeout=None):
-    """
-    Safely set a value in cache, handling Redis connection errors gracefully.
-    Silently fails if cache is unavailable.
-    """
-    try:
-        cache.set(key, value, timeout)
-    except Exception as e:
-        logger.warning(f"Cache set failed for key '{key}': {e}. Continuing without cache.")
-        # Track Redis error in production
-        track_redis_cache_error(
-            operation="set",
-            key=key,
-            error_type=type(e).__name__,
-            error_message=str(e),
-        )
 
 
 class RecommendationEngine:
@@ -73,7 +35,7 @@ class RecommendationEngine:
         Returns list of dicts with: book, score, confidence, explanation, sources
         """
         # Cache key based on user ID and limit
-        cache_key = f"user_recommendations_{user.id}_{limit}"
+        cache_key = f"user_recommendations_{user.id}"
         cached_result = safe_cache_get(cache_key)
         if cached_result is not None:
             return cached_result
@@ -466,10 +428,10 @@ class RecommendationEngine:
         self._collect_candidates_from_similar_users(similar_users, read_book_ids, candidates)
 
         # Source 2: Anonymized profiles (medium quality)
-        cache_key = f"anon_profiles_sample_{user.id}"
+        cache_key = "anon_profiles_sample"
         anonymized_profiles = safe_cache_get(cache_key)
         if anonymized_profiles is None:
-            anonymized_profiles = list(AnonymizedReadingProfile.objects.all()[:100])
+            anonymized_profiles = list(AnonymizedReadingProfile.objects.order_by("?")[:100])
             safe_cache_set(cache_key, anonymized_profiles, 3600)
 
         user_ctx = _build_user_context_for_similarity(user)
@@ -524,8 +486,12 @@ class RecommendationEngine:
 
         self._collect_candidates_from_similar_users(similar_users, read_book_ids, candidates)
 
-        # Source 2: Anonymized profiles
-        anonymized_profiles = list(AnonymizedReadingProfile.objects.all()[:100])
+        # Source 2: Anonymized profiles (use global cached sample)
+        cache_key = "anon_profiles_sample"
+        anonymized_profiles = safe_cache_get(cache_key)
+        if anonymized_profiles is None:
+            anonymized_profiles = list(AnonymizedReadingProfile.objects.order_by("?")[:100])
+            safe_cache_set(cache_key, anonymized_profiles, 3600)
         matching_profiles = []
         for anon_profile in anonymized_profiles:
             similarity_data = calculate_similarity_with_anonymized(anon_session, anon_profile)
@@ -885,5 +851,12 @@ def get_recommendations_for_user(user, limit=10):
 
 def get_recommendations_for_anonymous(session_key, limit=10):
     """Get recommendations for an anonymous user"""
+    cache_key = f"anon_recommendations_{session_key}"
+    cached_result = safe_cache_get(cache_key)
+    if cached_result is not None:
+        return cached_result
+
     engine = RecommendationEngine()
-    return engine.get_recommendations_for_anonymous(session_key, limit=limit)
+    result = engine.get_recommendations_for_anonymous(session_key, limit=limit)
+    safe_cache_set(cache_key, result, 900)
+    return result
