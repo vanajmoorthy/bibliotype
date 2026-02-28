@@ -15,11 +15,36 @@ Including another URLconf
 
 from django.conf import settings
 from django.contrib import admin
+from django.contrib.auth.views import PasswordResetCompleteView, PasswordResetConfirmView, PasswordResetDoneView
 from django.urls import include, path
-from core.views import handler404
+
+from core.views import CustomPasswordResetView, handler404
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path(
+        "password-reset/",
+        CustomPasswordResetView.as_view(),
+        name="password_reset",
+    ),
+    path(
+        "password-reset/done/",
+        PasswordResetDoneView.as_view(template_name="core/password_reset_done.html"),
+        name="password_reset_done",
+    ),
+    path(
+        "password-reset-confirm/<uidb64>/<token>/",
+        PasswordResetConfirmView.as_view(
+            template_name="core/password_reset_confirm.html",
+            success_url="/password-reset-complete/",
+        ),
+        name="password_reset_confirm",
+    ),
+    path(
+        "password-reset-complete/",
+        PasswordResetCompleteView.as_view(template_name="core/password_reset_complete.html"),
+        name="password_reset_complete",
+    ),
     path("", include("core.urls")),
 ]
 

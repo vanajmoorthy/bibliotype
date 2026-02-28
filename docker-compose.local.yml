@@ -49,6 +49,13 @@ services:
             - POSTGRES_DB=${POSTGRES_DB}
             - POSTGRES_USER=${POSTGRES_USER}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - EMAIL_HOST=${EMAIL_HOST}
+            - EMAIL_PORT=${EMAIL_PORT}
+            - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+            - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+            - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
+            - TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY}
+            - TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY}
         depends_on:
             db:
                 condition: service_healthy

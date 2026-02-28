@@ -88,6 +88,10 @@ account{% endblock %}
                             </div>
                         {% endif %}
                     {% endfor %}
+                    {% if TURNSTILE_SITE_KEY %}
+                        <div class="cf-turnstile" data-sitekey="{{ TURNSTILE_SITE_KEY }}" data-theme="light"></div>
+                        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+                    {% endif %}
                     {% include 'core/partials/buttons/primary_button.html' with text="Create Account & Save Bibliotype" %}
                 </form>
             </div>

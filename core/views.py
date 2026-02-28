@@ -16,9 +16,10 @@ from django.contrib.auth.forms import (
     AuthenticationForm,
 )
 from django.contrib.auth.models import User
+from django.contrib.auth.views import PasswordResetView
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
 from django.conf import settings
 import os
@@ -562,6 +563,14 @@ def signup_view(request):
         form = CustomUserCreationForm(request.POST)
         task_id_to_claim = request.POST.get("task_id_to_claim")
 
+        # Verify Turnstile CAPTCHA
+        from .turnstile import verify_turnstile_token
+
+        turnstile_token = request.POST.get("cf-turnstile-response", "")
+        if not verify_turnstile_token(turnstile_token, remote_ip=request.META.get("REMOTE_ADDR")):
+            messages.error(request, "CAPTCHA verification failed. Please try again.")
+            return render(request, "core/signup.html", {"form": form, "task_id_to_claim": task_id})
+
         if form.is_valid():
             user = form.save()
             login(request, user)
@@ -977,3 +986,20 @@ def catch_all_404_view(request, unused_path):
             username = parts[1]
 
     return render(request, "core/404.html", {"username": username}, status=404)
+
+
+class CustomPasswordResetView(PasswordResetView):
+    template_name = "core/password_reset_form.html"
+    email_template_name = "core/password_reset_email.html"
+    subject_template_name = "core/password_reset_subject.txt"
+    success_url = reverse_lazy("password_reset_done")
+
+    def form_valid(self, form):
+        from .turnstile import verify_turnstile_token
+
+        turnstile_token = self.request.POST.get("cf-turnstile-response", "")
+        if not verify_turnstile_token(turnstile_token, remote_ip=self.request.META.get("REMOTE_ADDR")):
+            form.add_error(None, "CAPTCHA verification failed. Please try again.")
+            return self.form_invalid(form)
+
+        return super().form_valid(form)
