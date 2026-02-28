@@ -1,5 +1,6 @@
 import logging
 
+from django.db import connection, transaction
 from django.db.models import F
 
 from .models import AggregateAnalytics
@@ -16,9 +17,25 @@ def get_bucket(value, bucket_size):
     return f"{lower_bound}-{upper_bound}"
 
 
-def update_analytics_from_stats(user_stats):
-    analytics = AggregateAnalytics.get_instance()
+def _parse_bucket_start(bucket_key):
+    """Safely parse the lower bound from a bucket key like '250-299'. Returns None for malformed keys."""
+    try:
+        return int(bucket_key.split("-")[0])
+    except (ValueError, IndexError):
+        return None
 
+
+def update_analytics_from_stats(user_stats, previous_stats=None):
+    """Updates aggregate analytics histograms with a user's stats.
+
+    Uses select_for_update to prevent concurrent Celery workers from losing
+    histogram updates via interleaved read-modify-write cycles.
+
+    Args:
+        user_stats: Current stats to add to distributions.
+        previous_stats: If provided (re-upload), old stats are subtracted before adding new ones.
+            When None (first upload or anonymous), total_profiles_counted is incremented.
+    """
     distributions = {
         "avg_book_length": ("avg_book_length_dist", 50),
         "avg_publish_year": ("avg_publish_year_dist", 10),
@@ -26,18 +43,35 @@ def update_analytics_from_stats(user_stats):
         "avg_books_per_year": ("avg_books_per_year_dist", 5),
     }
 
-    AggregateAnalytics.objects.filter(pk=1).update(total_profiles_counted=F("total_profiles_counted") + 1)
-    analytics.refresh_from_db()
+    with transaction.atomic():
+        # Lock the singleton row to prevent concurrent workers from interleaving reads/writes.
+        # Gracefully skips locking on SQLite (dev/test) where select_for_update is unsupported.
+        analytics, _ = AggregateAnalytics.objects.get_or_create(pk=1)
+        if connection.features.has_select_for_update:
+            analytics = AggregateAnalytics.objects.select_for_update().get(pk=1)
 
-    for stat_key, (dist_field, bucket_size) in distributions.items():
-        value = user_stats.get(stat_key)
-        if value is not None:
-            bucket = get_bucket(value, bucket_size)
-            current_dist = getattr(analytics, dist_field, {})
-            current_dist[bucket] = current_dist.get(bucket, 0) + 1
+        if previous_stats is None:
+            analytics.total_profiles_counted = F("total_profiles_counted") + 1
+
+        for stat_key, (dist_field, bucket_size) in distributions.items():
+            current_dist = getattr(analytics, dist_field)
+
+            # Subtract old bucket on re-upload
+            if previous_stats is not None:
+                old_value = previous_stats.get(stat_key)
+                if old_value is not None:
+                    old_bucket = get_bucket(old_value, bucket_size)
+                    current_dist[old_bucket] = max(0, current_dist.get(old_bucket, 0) - 1)
+
+            # Add new bucket
+            new_value = user_stats.get(stat_key)
+            if new_value is not None:
+                new_bucket = get_bucket(new_value, bucket_size)
+                current_dist[new_bucket] = current_dist.get(new_bucket, 0) + 1
+
             setattr(analytics, dist_field, current_dist)
 
-    analytics.save()
+        analytics.save()
     logger.debug("Updated global aggregate statistics")
 
 
@@ -57,7 +91,9 @@ def calculate_percentiles_from_aggregates(user_stats):
     user_length_bucket_key = f"{user_length_bucket_start}-{user_length_bucket_start + bucket_size_len - 1}"
 
     lower_buckets_count_len = sum(
-        count for bucket, count in length_dist.items() if int(bucket.split("-")[0]) < user_length_bucket_start
+        count
+        for bucket, count in length_dist.items()
+        if (bs := _parse_bucket_start(bucket)) is not None and bs < user_length_bucket_start
     )
     same_bucket_count_len = length_dist.get(user_length_bucket_key, 0)
     better_than_count_length = lower_buckets_count_len + (same_bucket_count_len / 2)
@@ -71,7 +107,9 @@ def calculate_percentiles_from_aggregates(user_stats):
     user_year_bucket_key = f"{user_year_bucket_start}-{user_year_bucket_start + bucket_size_year - 1}"
 
     higher_buckets_count_year = sum(
-        count for bucket, count in year_dist.items() if int(bucket.split("-")[0]) > user_year_bucket_start
+        count
+        for bucket, count in year_dist.items()
+        if (bs := _parse_bucket_start(bucket)) is not None and bs > user_year_bucket_start
     )
     same_bucket_count_year = year_dist.get(user_year_bucket_key, 0)
     older_than_count = higher_buckets_count_year + (same_bucket_count_year / 2)
@@ -85,7 +123,9 @@ def calculate_percentiles_from_aggregates(user_stats):
     user_books_bucket_key = f"{user_books_bucket_start}-{user_books_bucket_start + bucket_size_books - 1}"
 
     lower_buckets_count_books = sum(
-        count for bucket, count in books_dist.items() if int(bucket.split("-")[0]) < user_books_bucket_start
+        count
+        for bucket, count in books_dist.items()
+        if (bs := _parse_bucket_start(bucket)) is not None and bs < user_books_bucket_start
     )
     same_bucket_count_books = books_dist.get(user_books_bucket_key, 0)
     better_than_count_books = lower_buckets_count_books + (same_bucket_count_books / 2)
@@ -101,7 +141,9 @@ def calculate_percentiles_from_aggregates(user_stats):
     user_bpy_bucket_key = f"{user_bpy_bucket_start}-{user_bpy_bucket_start + bucket_size_bpy - 1}"
 
     lower_buckets_count_bpy = sum(
-        count for bucket, count in bpy_dist.items() if int(bucket.split("-")[0]) < user_bpy_bucket_start
+        count
+        for bucket, count in bpy_dist.items()
+        if (bs := _parse_bucket_start(bucket)) is not None and bs < user_bpy_bucket_start
     )
     same_bucket_count_bpy = bpy_dist.get(user_bpy_bucket_key, 0)
     better_than_count_bpy = lower_buckets_count_bpy + (same_bucket_count_bpy / 2)
@@ -121,15 +163,12 @@ def calculate_community_means():
         total_count = 0
         weighted_sum = 0.0
         for bucket_key, count in dist.items():
-            if bucket_key == "Unknown":
+            lower = _parse_bucket_start(bucket_key)
+            if lower is None:
                 continue
-            try:
-                lower = int(bucket_key.split("-")[0])
-                midpoint = lower + bucket_size / 2
-                weighted_sum += midpoint * count
-                total_count += count
-            except (ValueError, IndexError):
-                continue
+            midpoint = lower + bucket_size / 2
+            weighted_sum += midpoint * count
+            total_count += count
         if total_count == 0:
             return None
         return round(weighted_sum / total_count, 1)

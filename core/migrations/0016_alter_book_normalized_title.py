@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0015_populate_normalized_titles'),
+        ("core", "0015_populate_normalized_titles"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='book',
-            name='normalized_title',
+            model_name="book",
+            name="normalized_title",
             field=models.CharField(db_index=True, editable=False, max_length=255),
         ),
     ]

@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0021_anonymoususersession_book_ratings'),
+        ("core", "0021_anonymoususersession_book_ratings"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='anonymoususersession',
-            name='book_ratings',
+            model_name="anonymoususersession",
+            name="book_ratings",
             field=models.JSONField(default=dict),
         ),
     ]

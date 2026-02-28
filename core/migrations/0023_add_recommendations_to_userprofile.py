@@ -6,19 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0022_alter_anonymoususersession_book_ratings'),
+        ("core", "0022_alter_anonymoususersession_book_ratings"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userprofile',
-            name='recommendations_data',
+            model_name="userprofile",
+            name="recommendations_data",
             field=models.JSONField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='userprofile',
-            name='recommendations_generated_at',
+            model_name="userprofile",
+            name="recommendations_generated_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
     ]
-

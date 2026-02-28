@@ -1,23 +1,26 @@
 import hashlib
 import logging
-
-from django.db import IntegrityError
-from django.db.models import F
-from django.core.cache import cache
 import random
+import re
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 
-from core.services.llm_service import generate_vibe_with_llm
 import pandas as pd
 import requests
-from django.db.models import F
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-logger = logging.getLogger(__name__)
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import IntegrityError
+from django.db.models import F
 
+from core.services.llm_service import generate_vibe_with_llm
+from ..dna_constants import (
+    CANONICAL_GENRE_MAP,
+    GLOBAL_AVERAGES,
+    READER_TYPE_DESCRIPTIONS,
+)
 from ..models import Author, Book, Genre
 from ..percentile_engine import (
     calculate_community_means,
@@ -26,20 +29,18 @@ from ..percentile_engine import (
 )
 from ..services.top_books_service import calculate_and_store_top_books
 
+logger = logging.getLogger(__name__)
 
-from ..book_enrichment_service import enrich_book_from_apis
-import hashlib
-import random
-import time
-from collections import Counter
-from concurrent.futures import ThreadPoolExecutor
-from io import StringIO
-import requests
-from ..dna_constants import (
-    CANONICAL_GENRE_MAP,
-    GLOBAL_AVERAGES,
-    READER_TYPE_DESCRIPTIONS,
-)
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _sanitize_review_text(text):
+    """Strip HTML tags from review text, preserving <br> variants as newlines."""
+    if not text or not isinstance(text, str):
+        return text
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = _HTML_TAG_RE.sub("", text)
+    return text.strip()
 
 
 def assign_reader_type(read_df, enriched_data, all_genres):
@@ -119,28 +120,36 @@ def _save_dna_to_profile(profile, dna_data):
     profile.total_books_read = dna_data.get("user_stats", {}).get("total_books_read")
     profile.reading_vibe = dna_data.get("reading_vibe")
     profile.vibe_data_hash = dna_data.get("vibe_data_hash")
-    
+
     # Clear the pending task ID since we've completed the regeneration
     profile.pending_dna_task_id = None
-    
+
     # Clear old recommendations - they'll be regenerated asynchronously
     profile.recommendations_data = None
     profile.recommendations_generated_at = None
 
     try:
         # Explicitly save all fields including pending_dna_task_id
-        profile.save(update_fields=[
-            'dna_data', 'reader_type', 'total_books_read', 'reading_vibe', 
-            'vibe_data_hash', 'pending_dna_task_id',
-            'recommendations_data', 'recommendations_generated_at'
-        ])
-        
+        profile.save(
+            update_fields=[
+                "dna_data",
+                "reader_type",
+                "total_books_read",
+                "reading_vibe",
+                "vibe_data_hash",
+                "pending_dna_task_id",
+                "recommendations_data",
+                "recommendations_generated_at",
+            ]
+        )
+
         # Trigger async recommendation generation
         # Import here to avoid circular imports
         from ..tasks import generate_recommendations_task
+
         generate_recommendations_task.delay(profile.user.id)
         logger.info(f"Triggered recommendation generation task for user {profile.user.username}")
-        
+
     except Exception as e:
         logger.error(f"Error saving profile for user {profile.user.username}: {e}")
         raise
@@ -151,21 +160,21 @@ def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_d
     from ..models import AnonymousUserSession
     from django.utils import timezone
     from datetime import timedelta
-    
+
     # Extract books and ratings
     books_data = [book.id for book in user_book_objects if book]
     book_ratings = {}  # Store ratings for rating correlation
-    
+
     # Calculate top books for anonymous users based on ratings and reviews
     book_scores = []
     analyzer = SentimentIntensityAnalyzer()
-    
-    for idx, row_dict in enumerate(read_df.to_dict('records')):
+
+    for idx, row_dict in enumerate(read_df.to_dict("records")):
         if idx < len(user_book_objects) and user_book_objects[idx]:
             book = user_book_objects[idx]
             score = 0
-            
-            rating = row_dict.get('My Rating')
+
+            rating = row_dict.get("My Rating")
             if pd.notna(rating) and rating > 0:
                 try:
                     rating_int = int(rating)
@@ -173,39 +182,39 @@ def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_d
                     score += rating_int * 20
                 except (ValueError, TypeError):
                     pass
-            
-            review = str(row_dict.get('My Review', '')).strip()
+
+            review = str(row_dict.get("My Review", "")).strip()
             if review and len(review) > 15:
                 sentiment = analyzer.polarity_scores(review)["compound"]
                 score += sentiment * 30
-            
+
             book_scores.append((book.id, score))
-    
+
     book_scores.sort(key=lambda x: x[1], reverse=True)
     top_books_data = [book_id for book_id, score in book_scores[:5]]
-    
+
     # Extract distributions from DNA
     genre_dist = {}
-    for genre, count in dna_data.get('top_genres', []):
+    for genre, count in dna_data.get("top_genres", []):
         genre_dist[genre] = count
-    
+
     author_dist = {}
-    for author, count in dna_data.get('top_authors', [])[:20]:
+    for author, count in dna_data.get("top_authors", [])[:20]:
         normalized = Author._normalize(author)
         author_dist[normalized] = count
-    
+
     # Save or update session
     AnonymousUserSession.objects.update_or_create(
         session_key=session_key,
         defaults={
-            'dna_data': dna_data,
-            'books_data': books_data,
-            'top_books_data': top_books_data,
-            'genre_distribution': genre_dist,
-            'author_distribution': author_dist,
-            'book_ratings': book_ratings,  # Store ratings for correlation
-            'expires_at': timezone.now() + timedelta(days=7),
-        }
+            "dna_data": dna_data,
+            "books_data": books_data,
+            "top_books_data": top_books_data,
+            "genre_distribution": genre_dist,
+            "author_distribution": author_dist,
+            "book_ratings": book_ratings,  # Store ratings for correlation
+            "expires_at": timezone.now() + timedelta(days=7),
+        },
     )
 
 
@@ -315,12 +324,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     # Use a direct database query that bypasses any instance caching
                     # Query from the Genre side of the relationship to ensure fresh data
                     has_genres = Genre.objects.filter(books__id=book.pk).exists()
-                
+
                 # Dispatch enrichment as a background task to avoid blocking upload
                 if created or not has_genres:
                     from ..tasks import enrich_book_task
 
-                    logger.debug(f"Dispatching enrichment for '{book.title}' (created={created}, has_genres={has_genres})")
+                    logger.debug(
+                        f"Dispatching enrichment for '{book.title}' (created={created}, has_genres={has_genres})"
+                    )
                     enrich_book_task.delay(book.pk)
                 else:
                     logger.debug(f"Book '{book.title}' already enriched. Skipping.")
@@ -345,41 +356,41 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             if book:
                 user_book_objects.append(book)
                 all_raw_genres.extend(genres)
-        
+
         # Store UserBook entries for registered users
         if user and results:
             from ..models import UserBook
-            
+
             # Store book data with ratings and reviews - now we have the original row
             for book, genres, original_row in results:
                 if book:
                     rating_value = None
-                    review_value = ''
-                    
-                    if pd.notna(original_row.get('My Rating')) and original_row['My Rating'] > 0:
+                    review_value = ""
+
+                    if pd.notna(original_row.get("My Rating")) and original_row["My Rating"] > 0:
                         try:
-                            rating_value = int(original_row['My Rating'])
+                            rating_value = int(original_row["My Rating"])
                         except (ValueError, TypeError):
                             rating_value = None
-                    
-                    if pd.notna(original_row.get('My Review')):
-                        review_value = str(original_row['My Review']).strip()
-                    
+
+                    if pd.notna(original_row.get("My Review")):
+                        review_value = str(original_row["My Review"]).strip()
+
                     date_read_value = None
-                    if pd.notna(original_row.get('Date Read')):
-                        date_read_value = pd.to_datetime(original_row['Date Read'], errors='coerce')
+                    if pd.notna(original_row.get("Date Read")):
+                        date_read_value = pd.to_datetime(original_row["Date Read"], errors="coerce")
                         if pd.isna(date_read_value):
                             date_read_value = None
-                    
+
                     # Use update_or_create to handle duplicates better
                     UserBook.objects.update_or_create(
                         user=user,
                         book=book,
                         defaults={
-                            'user_rating': rating_value,
-                            'user_review': review_value,
-                            'date_read': date_read_value,
-                        }
+                            "user_rating": rating_value,
+                            "user_review": review_value,
+                            "date_read": date_read_value,
+                        },
                     )
 
         enriched_data_for_scoring = {
@@ -405,6 +416,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         stats_by_year_list = []
         avg_books_per_year = 0
         num_reading_years = 0
+        books_with_dates = 0
 
         if "Date Read" in read_df.columns and not read_df["Date Read"].dropna().empty:
             yearly_df = read_df.dropna(subset=["Date Read"])
@@ -429,6 +441,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         user_base_stats = {
             "total_books_read": int(len(read_df)),
+            "books_with_dates": books_with_dates,
             "total_pages_read": int(read_df["Number of Pages"].dropna().sum()),
             "avg_book_length": (
                 int(round(read_df["Number of Pages"].dropna().mean()))
@@ -447,8 +460,19 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         logger.info("Calculating community stats...")
 
-        update_analytics_from_stats(user_base_stats)
+        previous_stats = None
+        if user:
+            try:
+                existing_dna = user.userprofile.dna_data
+                if existing_dna:
+                    previous_stats = existing_dna.get("user_stats")
+            except ObjectDoesNotExist:
+                pass
+        update_analytics_from_stats(user_base_stats, previous_stats=previous_stats)
 
+        # Percentiles stored here serve as a fallback for contexts that bypass
+        # _enrich_dna_for_display (API access, data exports). The view recalculates
+        # fresh percentiles at display time so dashboard values are never stale.
         percentiles = calculate_percentiles_from_aggregates(user_base_stats)
 
         community_averages = calculate_community_means()
@@ -525,12 +549,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             ].to_dict()
 
             most_positive_review["sentiment"] = float(most_positive_review["sentiment"])
+            most_positive_review["my_review"] = _sanitize_review_text(most_positive_review.get("my_review", ""))
 
             most_negative_review = neg_review_row.rename({"My Review": "my_review"})[
                 ["Title", "Author", "my_review", "sentiment"]
             ].to_dict()
 
             most_negative_review["sentiment"] = float(most_negative_review["sentiment"])
+            most_negative_review["my_review"] = _sanitize_review_text(most_negative_review.get("my_review", ""))
 
         mainstream_score = 0
         if user_book_objects:
@@ -612,8 +638,6 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             else:
                 logger.info("Vibe data has changed. Generating a new vibe with LLM...")
                 reading_vibe = generate_vibe_with_llm(dna)
-                profile.reading_vibe = reading_vibe
-                profile.vibe_data_hash = new_data_hash
         else:
             logger.info("Anonymous user. Generating a new vibe with LLM...")
             reading_vibe = generate_vibe_with_llm(dna)
@@ -637,10 +661,10 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         if user:
             # Calculate and store top books
             calculate_and_store_top_books(user, limit=5)
-            
+
             _save_dna_to_profile(user.userprofile, dna)
             logger.info(f"Saved DNA for user: {user.username}")
-            return f"DNA saved for user {user.id}"
+            return dna
         else:
             # Save anonymous session data
             if session_key:
@@ -653,49 +677,3 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         user_identifier = user.id if user else "Anonymous"
         logger.error(f"A critical error occurred in DNA calculation for user_id {user_identifier}: {e}", exc_info=True)
         raise
-
-
-def normalize_and_filter_genres(subjects):
-    plausible_genres = []
-    for s in subjects:
-        s_lower = s.lower().strip()
-        if s_lower in EXCLUDED_GENRES:
-            continue
-        if "ps35" in s_lower or "nyt:" in s_lower or "b485" in s_lower:
-            continue
-        if len(s.split()) < 4 and "history" not in s_lower and "accessible" not in s_lower:
-            plausible_genres.append(s_lower)
-
-    return plausible_genres[:5]
-
-
-def analyze_and_print_genres(all_raw_genres, canonical_map):
-    logger.info("=" * 50)
-    logger.info("RUNNING GENRE ANALYSIS")
-    logger.info("=" * 50)
-
-    if not all_raw_genres:
-        logger.info("No genres were found to analyze.")
-        return
-
-    raw_genre_counts = Counter(all_raw_genres)
-    unmapped_genres = {}
-
-    for genre, count in raw_genre_counts.items():
-        if genre not in canonical_map:
-            unmapped_genres[genre] = count
-
-    sorted_unmapped = sorted(unmapped_genres.items(), key=lambda item: item[1], reverse=True)
-
-    logger.info(f"Found {len(raw_genre_counts)} unique raw genre strings in total")
-    logger.info(f"Of those, {len(unmapped_genres)} are currently UNMAPPED")
-
-    logger.info("--- UNMAPPED GENRES (Most Common First) ---")
-
-    if not sorted_unmapped:
-        logger.info("Great news! All genres are already mapped!")
-    else:
-        for genre, count in sorted_unmapped:
-            logger.info(f"  - '{genre}' (appears {count} times)")
-
-    logger.info("=" * 50)

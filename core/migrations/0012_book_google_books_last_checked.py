@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0011_alter_author_normalized_name'),
+        ("core", "0011_alter_author_normalized_name"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='book',
-            name='google_books_last_checked',
+            model_name="book",
+            name="google_books_last_checked",
             field=models.DateTimeField(blank=True, default=None, null=True),
         ),
     ]

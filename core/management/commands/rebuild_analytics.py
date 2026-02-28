@@ -44,7 +44,9 @@ class Command(BaseCommand):
                     if stats_by_year:
                         total_books_with_dates = sum(y.get("count", 0) for y in stats_by_year)
                         num_years = len(stats_by_year)
-                        user_stats["avg_books_per_year"] = round(total_books_with_dates / num_years, 1) if num_years > 0 else 0
+                        user_stats["avg_books_per_year"] = (
+                            round(total_books_with_dates / num_years, 1) if num_years > 0 else 0
+                        )
                         user_stats["num_reading_years"] = num_years
 
                 update_analytics_from_stats(user_stats)

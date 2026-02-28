@@ -1,5 +1,5 @@
 <div
-    x-data="{ recColors: {{ rec_colors_js|default:'[\'#ffb4dd\', \'#40e7aa\', \'#ffa75e\', \'#8bbfff\', \'#FFE9CE\', \'#ff647c\']' }} }"
+    x-data="{ recColors: ['#ffb4dd', '#40e7aa', '#ffa75e', '#8bbfff', '#FFE9CE', '#ff647c'] }"
     class="border-brand-text shadow-neo border-2 bg-white p-6"
 >
     <h2 class="mb-4 text-2xl font-bold uppercase">{{ rec_title|default:"Recommended for You" }}</h2>
@@ -51,12 +51,28 @@
                                 • {{ rec.explanation_components.shared }}
                             </p>{% endif %}
                         {% endif %}
-                        {% if rec.explanation_components.genre %}<p>
-                            • {{ rec.explanation_components.genre }}
-                        </p>{% endif %}
-                        {% if rec.explanation_components.popularity %}<p>
-                            • {{ rec.explanation_components.popularity }}
-                        </p>{% endif %}
+                        {% if is_public_view %}
+                            {% if rec.explanation_components.genre_public %}<p>
+                                • {{ rec.explanation_components.genre_public }}
+                            </p>{% elif rec.explanation_components.genre %}<p>
+                                • {{ rec.explanation_components.genre }}
+                            </p>{% endif %}
+                        {% else %}
+                            {% if rec.explanation_components.genre %}<p>
+                                • {{ rec.explanation_components.genre }}
+                            </p>{% endif %}
+                        {% endif %}
+                        {% if is_public_view %}
+                            {% if rec.explanation_components.popularity_public %}<p>
+                                • {{ rec.explanation_components.popularity_public }}
+                            </p>{% elif rec.explanation_components.popularity %}<p>
+                                • {{ rec.explanation_components.popularity }}
+                            </p>{% endif %}
+                        {% else %}
+                            {% if rec.explanation_components.popularity %}<p>
+                                • {{ rec.explanation_components.popularity }}
+                            </p>{% endif %}
+                        {% endif %}
                         {% if rec.explanation_components.rating %}<p>
                             • {{ rec.explanation_components.rating }}
                         </p>{% endif %}

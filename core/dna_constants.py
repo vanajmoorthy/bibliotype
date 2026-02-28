@@ -5,7 +5,6 @@ This file stores the constant data used by the Reading DNA generator.
 This is the final, comprehensive version incorporating extensive user feedback.
 """
 
-
 READER_TYPE_DESCRIPTIONS = {
     "Fantasy Fanatic": [
         "You have a deep love for worlds of magic, myth, and epic quests. Your reading history is filled with fantasy and science fiction.",
@@ -978,7 +977,7 @@ EXCLUDED_GENRES = {
     "farm family",
     "rural families",
     "rural families--fiction",
-    # Domestic/household themes  
+    # Domestic/household themes
     "epic fiction",
     "novela hogareña",
     # More specific exclusions from enrichment logs

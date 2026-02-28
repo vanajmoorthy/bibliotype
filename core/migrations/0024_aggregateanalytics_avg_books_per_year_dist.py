@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0023_add_recommendations_to_userprofile'),
+        ("core", "0023_add_recommendations_to_userprofile"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='aggregateanalytics',
-            name='avg_books_per_year_dist',
+            model_name="aggregateanalytics",
+            name="avg_books_per_year_dist",
             field=models.JSONField(default=dict),
         ),
     ]

@@ -6,23 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0003_author_popularity_score_book_isbn13_and_more'),
+        ("core", "0003_author_popularity_score_book_isbn13_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='popularbook',
-            name='score_breakdown',
+            model_name="popularbook",
+            name="score_breakdown",
             field=models.JSONField(default=dict),
         ),
         migrations.AlterField(
-            model_name='popularbook',
-            name='isbn13',
+            model_name="popularbook",
+            name="isbn13",
             field=models.CharField(blank=True, max_length=13, null=True, unique=True),
         ),
         migrations.AlterField(
-            model_name='popularbook',
-            name='lookup_key',
+            model_name="popularbook",
+            name="lookup_key",
             field=models.CharField(editable=False, max_length=512, unique=True),
         ),
     ]

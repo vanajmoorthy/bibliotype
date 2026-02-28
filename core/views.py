@@ -1,31 +1,26 @@
 import json
 import logging
 import math
+import os
 from datetime import date
 
-
-import posthog
-
-logger = logging.getLogger(__name__)
-from django.core.cache import cache
 from celery.result import AsyncResult
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import (
-    AuthenticationForm,
-)
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.contrib.auth.views import PasswordResetView
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
-from django.conf import settings
-import os
 
 from .forms import CustomUserCreationForm, UpdateDisplayNameForm
 from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
+
+logger = logging.getLogger(__name__)
 from .analytics.events import (
     track_file_upload_started,
     track_dna_displayed,
@@ -62,15 +57,12 @@ def robots_txt_view(request):
 
 def sitemap_xml_view(request):
     """Generate and serve sitemap.xml."""
-    from django.urls import reverse
     from django.utils import timezone
+
+    from .models import UserProfile
 
     base_url = f"{request.scheme}://{request.get_host()}"
     today = timezone.now().strftime("%Y-%m-%d")
-
-    # Get public profiles (limit to recent/public ones for performance)
-    from django.contrib.auth.models import User
-    from .models import UserProfile
 
     public_profiles = UserProfile.objects.filter(is_public=True, dna_data__isnull=False).select_related("user")[
         :1000
@@ -131,6 +123,7 @@ def sitemap_xml_view(request):
                 }
             )
         except Exception:
+            logger.warning(f"Error generating sitemap entry for user {profile.user.username}", exc_info=True)
             continue
 
     sitemap_xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -179,7 +172,7 @@ def _enrich_dna_for_display(dna_data):
         return dna_data
 
     from .dna_constants import GLOBAL_AVERAGES
-    from .percentile_engine import calculate_community_means
+    from .percentile_engine import calculate_community_means, calculate_percentiles_from_aggregates
 
     # Always use current global averages constant
     dna_data["global_averages"] = GLOBAL_AVERAGES
@@ -195,22 +188,39 @@ def _enrich_dna_for_display(dna_data):
     # Always compute fresh community averages from current histogram data
     raw_community = calculate_community_means()
     dna_data["community_averages"] = {
-        k: v if v is not None else COMMUNITY_FALLBACKS.get(k, 0)
-        for k, v in raw_community.items()
+        k: v if v is not None else COMMUNITY_FALLBACKS.get(k, 0) for k, v in raw_community.items()
     }
 
-    # Backfill avg_books_per_year into user_stats if missing (old DNA)
+    # Backfill missing fields for old DNA data
     user_stats = dna_data.get("user_stats", {})
+    stats_by_year = dna_data.get("stats_by_year", [])
+    dated_book_count = sum(y.get("count", 0) for y in stats_by_year)
+
     if "avg_books_per_year" not in user_stats:
-        stats_by_year = dna_data.get("stats_by_year", [])
         if stats_by_year:
-            total_books_with_dates = sum(y.get("count", 0) for y in stats_by_year)
             num_years = len(stats_by_year)
-            user_stats["avg_books_per_year"] = round(total_books_with_dates / num_years, 1) if num_years > 0 else 0
+            user_stats["avg_books_per_year"] = round(dated_book_count / num_years, 1) if num_years > 0 else 0
             user_stats["num_reading_years"] = num_years
         else:
             user_stats["avg_books_per_year"] = 0
             user_stats["num_reading_years"] = 0
+
+    if "books_with_dates" not in user_stats:
+        user_stats["books_with_dates"] = dated_book_count
+
+    # Recalculate percentiles from current aggregate data so they're never stale.
+    # Cached for 60s to avoid a DB hit on every page load while still staying fresh.
+    bl = user_stats.get("avg_book_length", 0)
+    br = user_stats.get("total_books_read", 0)
+    bpy = user_stats.get("avg_books_per_year", 0)
+    py = user_stats.get("avg_publish_year", 0)
+    cache_key = f"fresh_pct_{bl}_{br}_{bpy}_{py}"
+    fresh_percentiles = cache.get(cache_key)
+    if fresh_percentiles is None:
+        fresh_percentiles = calculate_percentiles_from_aggregates(user_stats)
+        cache.set(cache_key, fresh_percentiles or {}, 60)
+    if fresh_percentiles:
+        dna_data["bibliotype_percentiles"] = fresh_percentiles
 
     # Recompute comparative_text from current percentiles + community averages
     percentiles = dna_data.get("bibliotype_percentiles", {})
@@ -256,9 +266,15 @@ def _enrich_dna_for_display(dna_data):
     # Compute dynamic number line ranges so markers are well-spread
     current_year = date.today().year
 
-    page_vals = [v for v in [
-        user_stats.get("avg_book_length"), community.get("avg_book_length"), GLOBAL_AVERAGES["avg_book_length_pages"]
-    ] if v is not None]
+    page_vals = [
+        v
+        for v in [
+            user_stats.get("avg_book_length"),
+            community.get("avg_book_length"),
+            GLOBAL_AVERAGES["avg_book_length_pages"],
+        ]
+        if v is not None
+    ]
     if page_vals:
         lo, hi = min(page_vals), max(page_vals)
         pages_min = 300 if lo >= 300 else max(0, math.floor(lo / 50) * 50 - 50)
@@ -266,19 +282,36 @@ def _enrich_dna_for_display(dna_data):
     else:
         pages_min, pages_max = 300, 400
 
-    year_vals = [v for v in [
-        user_stats.get("avg_publish_year"), community.get("avg_publish_year"), GLOBAL_AVERAGES["avg_publish_year"]
-    ] if v is not None]
+    year_vals = [
+        v
+        for v in [
+            user_stats.get("avg_publish_year"),
+            community.get("avg_publish_year"),
+            GLOBAL_AVERAGES["avg_publish_year"],
+        ]
+        if v is not None
+    ]
     years_min = min(1980, math.floor(min(year_vals) / 5) * 5) if year_vals else 1980
     years_max = current_year
 
-    bpy_vals = [v for v in [
-        user_stats.get("avg_books_per_year"), community.get("avg_books_per_year"), GLOBAL_AVERAGES["avg_books_per_year"]
-    ] if v is not None]
+    bpy_vals = [
+        v
+        for v in [
+            user_stats.get("avg_books_per_year"),
+            community.get("avg_books_per_year"),
+            GLOBAL_AVERAGES["avg_books_per_year"],
+        ]
+        if v is not None
+    ]
     bpy_max = 10 if (not bpy_vals or max(bpy_vals) <= 10) else math.ceil(max(bpy_vals) / 5) * 5 + 5
 
     dna_data["number_line_ranges"] = {
-        "pages": {"min": pages_min, "max": pages_max, "min_label": f"{pages_min} pages", "max_label": f"{pages_max} pages"},
+        "pages": {
+            "min": pages_min,
+            "max": pages_max,
+            "min_label": f"{pages_min} pages",
+            "max_label": f"{pages_max} pages",
+        },
         "year": {"min": years_min, "max": years_max, "min_label": f"{years_min} CE", "max_label": f"{years_max} CE"},
         "bpy": {"min": 0, "max": bpy_max, "min_label": "0 per year", "max_label": f"{bpy_max} per year"},
     }
@@ -302,27 +335,6 @@ def display_dna_view(request):
     dna_data = request.session.get("dna_data")
     user_profile = None
     recommendations = []
-    rec_error = None
-
-    def get_match_badge_class(confidence_pct):
-        if confidence_pct >= 95:
-            return "bg-match-100"
-        if confidence_pct >= 85:
-            return "bg-match-90"
-        if confidence_pct >= 75:
-            return "bg-match-80"
-        if confidence_pct >= 60:
-            return "bg-match-70"
-        return "bg-match-low"
-
-    # --- NEW: Maps quality label to a tuple of (border_class, text_class) ---
-    quality_badge_class_map = {
-        "Extremely Similar - Literary Twin": ("border-quality-twin", "text-quality-twin", "LITERARY TWIN"),
-        "Very Similar - Kindred Reader": ("border-quality-kindred", "text-quality-kindred", "KINDRED READER"),
-        "Moderately Similar - Shared Tastes": ("border-quality-tastes", "text-quality-tastes", "SHARED TASTES"),
-        "Somewhat Similar - Some Overlap": ("border-quality-overlap", "text-quality-overlap", "SOME OVERLAP"),
-    }
-
 
     if request.user.is_authenticated:
         user_profile = request.user.userprofile
@@ -341,7 +353,7 @@ def display_dna_view(request):
                 # Use stored recommendations if available (generated when DNA was created/updated)
                 if user_profile.recommendations_data:
                     stored_recs = user_profile.recommendations_data
-                    
+
                     # Transform stored format to template-expected format
                     # Template expects rec.book.title, rec.book.author.name, etc.
                     for rec in stored_recs:
@@ -352,24 +364,25 @@ def display_dna_view(request):
                             "author": {"name": rec.get("book_author", "Unknown Author")},
                             "average_rating": rec.get("book_average_rating"),
                         }
-                        
+
                         # Add badge classes for display (these aren't stored in DB)
                         if rec.get("primary_source_user"):
                             match_quality = rec["primary_source_user"].get("match_quality", "")
                             rec["primary_source_user"]["badge_class"] = BADGE_COLOR_MAP.get(
                                 match_quality, "bg-brand-purple"
                             )
-                    
+
                     recommendations = stored_recs
                     logger.info(f"Loaded {len(recommendations)} stored recommendations for user {request.user.id}")
                 else:
                     # No stored recommendations yet - they're being generated asynchronously
                     # Trigger generation if not already in progress (safety net)
                     from .tasks import generate_recommendations_task
+
                     generate_recommendations_task.delay(request.user.id)
                     logger.info(f"No stored recommendations for user {request.user.id}, triggered generation")
                     recommendations = []
-                
+
                 # Track recommendations displayed (only if we have some)
                 if recommendations:
                     track_recommendations_generated(
@@ -379,7 +392,6 @@ def display_dna_view(request):
                     )
             except Exception as e:
                 logger.error(f"Error loading recommendations for user {request.user.id}: {e}", exc_info=True)
-                rec_error = "Unable to load recommendations at this time."
     else:
         # Anonymous user recommendations
         if dna_data and request.session.session_key:
@@ -388,7 +400,6 @@ def display_dna_view(request):
                 from .models import AnonymousUserSession, Author
                 from django.utils import timezone
                 from datetime import timedelta
-                from collections import Counter
 
                 # Check if AnonymousUserSession exists, if not try to recreate it
                 try:
@@ -438,9 +449,6 @@ def display_dna_view(request):
                     except Exception as recreate_error:
                         logger.error(f"Error recreating anonymous session: {recreate_error}", exc_info=True)
                         recommendations = []
-                        rec_error = (
-                            "Unable to load recommendations. Session may have expired. Please upload your file again."
-                        )
 
                 # Process recommendations if we got any
                 if recommendations:
@@ -464,7 +472,6 @@ def display_dna_view(request):
                     )
             except Exception as e:
                 logger.error(f"Error generating recommendations for anonymous user: {e}", exc_info=True)
-                rec_error = "Unable to load recommendations at this time."
 
     if not request.user.is_authenticated and dna_data is None:
         messages.info(request, "First, upload your library file to generate your Bibliotype!")
@@ -499,7 +506,6 @@ def display_dna_view(request):
         "user_profile": user_profile,
         "is_processing": False,
         "recommendations": recommendations,
-        "rec_error": rec_error,
         "title": title,
     }
 
@@ -779,6 +785,13 @@ def check_dna_status_view(request):
     if profile.pending_dna_task_id:
         try:
             result = AsyncResult(profile.pending_dna_task_id)
+
+            # Check for failure first
+            if result.state == "FAILURE":
+                profile.pending_dna_task_id = None
+                profile.save(update_fields=["pending_dna_task_id"])
+                return JsonResponse({"status": "FAILURE", "error": "An error occurred while processing your file."})
+
             info = result.info or {}
             current = info.get("current")
             total = info.get("total")
@@ -829,7 +842,7 @@ def public_profile_view(request, username):
                 # Use stored recommendations if available
                 if profile.recommendations_data:
                     stored_recs = profile.recommendations_data
-                    
+
                     # Transform stored format to template-expected format
                     for rec in stored_recs:
                         rec["book"] = {
@@ -847,7 +860,9 @@ def public_profile_view(request, username):
                             )
 
                     recommendations = stored_recs
-                    logger.info(f"Loaded {len(recommendations)} stored recommendations for public profile {profile_user.username}")
+                    logger.info(
+                        f"Loaded {len(recommendations)} stored recommendations for public profile {profile_user.username}"
+                    )
                 else:
                     # No stored recommendations - they may be generating
                     logger.info(f"No stored recommendations for public profile {profile_user.username}")
@@ -879,7 +894,6 @@ def public_profile_view(request, username):
         context = {
             "dna": enriched_dna,
             "profile_user": profile_user,
-            "user_profile": profile,
             "title": title,
             "heading_name": heading_name,
             "recommendations": recommendations,

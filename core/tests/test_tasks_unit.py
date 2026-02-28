@@ -36,8 +36,6 @@ class TaskUnitTests(TestCase):
         # Assert that the correct winner is chosen
         self.assertEqual(reader_type, "Fantasy Fanatic")
 
-    
-
     @patch("core.tasks.generate_recommendations_task")
     def test_save_dna_to_profile(self, mock_recommendations_task):
         """
