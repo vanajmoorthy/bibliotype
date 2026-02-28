@@ -213,7 +213,7 @@ def _enrich_dna_for_display(dna_data):
         user_stats["books_with_dates"] = dated_book_count
 
     # Recalculate percentiles from current aggregate data so they're never stale.
-    # Cached for 60s to avoid a DB hit on every page load while still staying fresh.
+    # Cached for 10 minutes to avoid a DB hit on every page load while still staying fresh.
     bl = user_stats.get("avg_book_length", 0)
     br = user_stats.get("total_books_read", 0)
     bpy = user_stats.get("avg_books_per_year", 0)

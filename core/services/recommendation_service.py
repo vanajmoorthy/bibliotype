@@ -424,7 +424,7 @@ class RecommendationEngine:
         read_book_ids = user_context["read_book_ids"]
 
         # Source 1: Similar registered users (highest quality)
-        similar_users = find_similar_users(user, top_n=30, min_similarity=self.min_similarity)
+        similar_users = find_similar_users(user, min_similarity=self.min_similarity)
         self._collect_candidates_from_similar_users(similar_users, read_book_ids, candidates)
 
         # Source 2: Anonymized profiles (medium quality)
