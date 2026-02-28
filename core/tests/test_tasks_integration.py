@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.test import TestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 
 from core.tasks import claim_anonymous_dna_task, generate_reading_dna_task
 
@@ -10,20 +10,29 @@ from core.tasks import claim_anonymous_dna_task, generate_reading_dna_task
 # This setting makes Celery tasks run synchronously in the test
 @override_settings(
     CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_EAGER_PROPAGATES=True,
     CELERY_RESULT_BACKEND="django-db",
     CACHES={
         "default": {
-            "BACKEND": "django.core.cache.backends.redis.RedisCache",
-            "LOCATION": "redis://redis:6379/1",
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "task-integration-tests",
         }
     },
 )
-class TaskIntegrationTests(TestCase):
+class TaskIntegrationTests(TransactionTestCase):
+
+    def setUp(self):
+        try:
+            cache.clear()
+        except Exception:
+            pass
 
     # Mock the slow, external network calls
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    def test_generate_dna_for_authenticated_user(self, mock_generate_vibe, mock_enrich_delay):
+    def test_generate_dna_for_authenticated_user(self, mock_generate_vibe, mock_enrich_delay, mock_author_check, mock_rec_task):
         """
         Tests the full DNA generation task for a logged-in user.
         """
@@ -43,9 +52,10 @@ class TaskIntegrationTests(TestCase):
         self.assertIsNotNone(user.userprofile.dna_data)
         self.assertEqual(user.userprofile.reader_type, "Novella Navigator")
 
+    @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    def test_generate_dna_for_anonymous_user(self, mock_generate_vibe, mock_enrich_delay):
+    def test_generate_dna_for_anonymous_user(self, mock_generate_vibe, mock_enrich_delay, mock_author_check):
         """
         Tests that anonymous generation saves its result to the cache.
         """
@@ -62,8 +72,9 @@ class TaskIntegrationTests(TestCase):
         self.assertIsNotNone(cached_data)
         self.assertEqual(cached_data["reader_type"], "Novella Navigator")
 
+    @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.AsyncResult")
-    def test_claim_anonymous_dna_task(self, mock_async_result):
+    def test_claim_anonymous_dna_task(self, mock_async_result, mock_rec_task):
         """
         Tests the claiming task's ability to fetch a result from the Celery backend
         and save it to a profile.
