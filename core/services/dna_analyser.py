@@ -261,7 +261,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     by="Date Added", ascending=False, na_position="last"
                 )
 
-            for _, row in currently_reading_df.head(3).iterrows():
+            for _, row in currently_reading_df.head(5).iterrows():
                 isbn13_raw = row.get("ISBN13")
                 currently_reading_books.append(
                     {

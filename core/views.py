@@ -517,6 +517,16 @@ def display_dna_view(request):
         else:
             title = f"{display_name_lower}'s bibliotype"
 
+    # Nudge users with old DNA data to re-upload for currently-reading features
+    if request.user.is_authenticated and user_profile and user_profile.dna_data:
+        raw_dna = user_profile.dna_data
+        if "currently_reading_count" not in raw_dna:
+            messages.info(
+                request,
+                'Re-upload your library to see your currently-reading books and get better recommendations! '
+                '<a href="/" class="hover:bg-brand-yellow font-bold underline">Upload now</a>',
+            )
+
     dna_data = _enrich_dna_for_display(dna_data)
 
     recommendations_meta = {}

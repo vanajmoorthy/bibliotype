@@ -1,19 +1,22 @@
 <div class="border-brand-text shadow-neo border-2 bg-white p-6">
     <h2 class="mb-1 text-2xl font-bold uppercase">Most Niche Read</h2>
-    {% if dna.niche_books_count %}
-        <p class="mb-4 text-base text-gray-500 italic">
-            We found {{ dna.niche_books_count }} book{{ dna.niche_books_count|pluralize }} in
-            {{ pronoun_pos|default:"your" }} library read by {{ dna.niche_threshold }} or fewer people
-        </p>
-    {% endif %}
     {% if dna.most_niche_book %}
-        <div class="flex items-start gap-4" x-data="{ imgFailed: false }">
+        <p class="mb-4 text-base text-gray-500 italic">
+            Only {{ dna.most_niche_book.read_count }} Bibliotype user{{ dna.most_niche_book.read_count|pluralize }}
+            {{ dna.most_niche_book.read_count|pluralize:"has,have" }}
+            read this
+            {% if dna.niche_books_count %}
+                &mdash; we found {{ dna.niche_books_count }} niche book{{ dna.niche_books_count|pluralize }} in
+                {{ pronoun_pos|default:"your" }} library
+            {% endif %}
+        </p>
+        <div class="flex flex-col items-center" x-data="{ imgFailed: false }">
             {% if dna.most_niche_book.cover_url %}
                 <img
                     x-show="!imgFailed"
                     src="{{ dna.most_niche_book.cover_url }}"
                     alt="Cover of {{ dna.most_niche_book.title }}"
-                    class="border-brand-text h-28 w-20 flex-shrink-0 border-2 object-cover"
+                    class="border-brand-text h-52 w-36 border-2 object-cover"
                     loading="lazy"
                     x-on:error="imgFailed = true"
                     x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
@@ -21,22 +24,19 @@
                 <div
                     x-show="imgFailed"
                     x-cloak
-                    class="bg-brand-purple border-brand-text flex h-28 w-20 flex-shrink-0 items-center justify-center border-2 text-3xl font-bold"
+                    class="bg-brand-purple border-brand-text flex h-52 w-36 items-center justify-center border-2 text-5xl font-bold"
+                >
+                    {{ dna.most_niche_book.title|first|upper }}
+                </div>
+            {% else %}
+                <div
+                    class="bg-brand-purple border-brand-text flex h-52 w-36 items-center justify-center border-2 text-5xl font-bold"
                 >
                     {{ dna.most_niche_book.title|first|upper }}
                 </div>
             {% endif %}
-            <div>
-                <p class="text-xl font-bold">{{ dna.most_niche_book.title }}</p>
-                <p class="text-lg">by {{ dna.most_niche_book.author }}</p>
-                <p class="bg-brand-cyan border-brand-text mt-2 inline-block border-2 px-2 py-1 text-base">
-                    {% if niche_caption %}
-                        {{ niche_caption }}
-                    {% else %}
-                        Only {{ dna.most_niche_book.read_count }} Bibliotype user(s) have read this!
-                    {% endif %}
-                </p>
-            </div>
+            <p class="mt-3 text-center text-xl font-bold">{{ dna.most_niche_book.title }}</p>
+            <p class="text-center text-lg text-gray-600">by {{ dna.most_niche_book.author }}</p>
         </div>
     {% else %}
         <p class="text-lg">Not enough data to determine {{ pronoun_pos|lower|default:"your" }} niche reads yet.</p>
