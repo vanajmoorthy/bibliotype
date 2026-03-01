@@ -124,7 +124,7 @@ jobs:
                       sleep 15
 
                       # Load fixture data with signal-safe command
-                      docker exec $CONTAINER poetry run python manage.py load_fixture_data core/fixtures/initial_data.json
+                      docker exec $CONTAINER poetry run python manage.py load_fixture_data core/fixtures/preview_data.json
 
                       # Set all fixture user passwords to 'preview' so reviewers can log in
                       docker exec $CONTAINER poetry run python manage.py shell -c "
