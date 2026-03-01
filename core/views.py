@@ -533,12 +533,21 @@ def display_dna_view(request):
     if request.user.is_authenticated and user_profile:
         recommendations_meta = user_profile.recommendations_meta or {}
 
+    # Flag to tell the template to poll for recommendations
+    recommendations_pending = (
+        request.user.is_authenticated
+        and user_profile
+        and user_profile.dna_data
+        and not recommendations
+    )
+
     context = {
         "dna": dna_data,
         "user_profile": user_profile,
         "is_processing": False,
         "recommendations": recommendations,
         "recommendations_meta": recommendations_meta,
+        "recommendations_pending": recommendations_pending,
         "title": title,
     }
 
@@ -844,6 +853,17 @@ def check_dna_status_view(request):
         return JsonResponse({"status": "SUCCESS"})
     else:
         return JsonResponse({"status": "PENDING"})
+
+
+@login_required
+def check_recommendations_status_view(request):
+    """AJAX endpoint to check if recommendations have been generated."""
+    profile = request.user.userprofile
+    profile.refresh_from_db()
+
+    if profile.recommendations_data:
+        return JsonResponse({"status": "ready"})
+    return JsonResponse({"status": "pending"})
 
 
 def public_profile_view(request, username):
