@@ -25,7 +25,7 @@ Prioritised
   - add page for this
   - allow similarity comparison with multiple users (only public)
 - sign up form validate password and all on blur
-- long author names and genre names cutting of count when hovering on chart
+- long author names and genre names cutting of count when hovering on chart.
 
 ##  Getting Started (Docker & Poetry)
 
