@@ -186,6 +186,35 @@
 
                 {% if recommendations %}
                     {% include 'core/partials/dna/recommendations_grid.html' with is_public_view=False %}
+                {% elif recommendations_pending %}
+                    {# djlint:off #}
+                    <div
+                        class="border-brand-text shadow-neo border-2 bg-white p-6"
+                        x-data="{
+                            init() {
+                                this.poll();
+                            },
+                            poll() {
+                                const interval = setInterval(async () => {
+                                    try {
+                                        const res = await fetch('{% url "core:api_check_recommendations_status" %}');
+                                        const data = await res.json();
+                                        if (data.status === 'ready') {
+                                            clearInterval(interval);
+                                            window.location.reload();
+                                        }
+                                    } catch (e) {}
+                                }, 3000);
+                            }
+                        }"
+                        x-init="init()"
+                    >
+                    {# djlint:on #}
+                        <h2 class="mb-4 text-2xl font-bold uppercase">Recommended for You</h2>
+                        <p class="text-lg opacity-70">
+                            Generating your recommendations<span x-data="{ dots: '' }" x-init="setInterval(() => dots = dots.length >= 3 ? '' : dots + '.', 500)" x-text="dots"></span>
+                        </p>
+                    </div>
                 {% else %}
                     <div class="border-brand-text shadow-neo border-2 bg-white p-6">
                         <h2 class="mb-4 text-2xl font-bold uppercase">Recommended for You</h2>
