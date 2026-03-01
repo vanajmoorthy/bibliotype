@@ -147,7 +147,7 @@ recommendations, reading insights{% endblock %}
         {% elif dna %}
             <div x-data="shareModalData()" class="space-y-6">
             {{ dna|json_script:"dna-data" }}
-            <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
+            <h1 class="mb-4 text-center text-5xl font-bold tracking-widest uppercase md:mb-8">
                 <span class="relative z-10">
                     {% if user.is_authenticated %}
                         {% include 'core/partials/username_editor.html' %}
@@ -260,7 +260,7 @@ recommendations, reading insights{% endblock %}
         {% else %}
             <div class="flex h-full flex-col p-4">
                 <div class="w-full">
-                    <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
+                    <h1 class="mb-4 text-center text-5xl font-bold tracking-widest uppercase md:mb-8">
                         <span class="relative z-10">
                             {% include 'core/partials/username_editor.html' %}
                         </span>
