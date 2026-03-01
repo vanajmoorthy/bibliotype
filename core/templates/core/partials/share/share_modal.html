@@ -11,94 +11,110 @@
         x-transition:leave-end="opacity-0"
         @keydown.escape.window="shareModalOpen = false"
         @click.self="shareModalOpen = false"
-        class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/80"
-        style="height: 100dvh;"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/80"
+        style="height: 100dvh; height: 100vh;"
     >
-        <div class="flex min-h-full flex-col items-center justify-center p-4 py-8">
-            <div class="flex w-full max-w-5xl flex-col items-center">
-                <div class="mb-4 flex w-full items-center justify-between px-2">
-                    <h2 class="text-2xl font-bold tracking-wider uppercase text-white">Share Your Bibliotype</h2>
+        <div class="flex max-h-full w-full max-w-5xl flex-col items-center overflow-y-auto p-4" @click.self="shareModalOpen = false">
+            <div class="mb-3 flex w-full shrink-0 items-center justify-between px-2">
+                <h2 class="text-2xl font-bold tracking-wider uppercase text-white">Share Your Bibliotype</h2>
+                <button
+                    @click="shareModalOpen = false"
+                    type="button"
+                    class="border-2 border-brand-text bg-white px-3 py-1 text-lg font-bold transition-all hover:bg-brand-pink cursor-pointer"
+                >
+                    &times;
+                </button>
+            </div>
+
+            <div class="flex w-full shrink-0 gap-6 overflow-x-auto pb-3 snap-x snap-mandatory scroll-px-4" style="-webkit-overflow-scrolling: touch;">
+                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                    <div x-ref="cardIdentity">
+                        {% include 'core/partials/share/card_identity.html' %}
+                    </div>
                     <button
-                        @click="shareModalOpen = false"
+                        @click="shareImage($refs.cardIdentity, 'bibliotype-reader-type.png')"
                         type="button"
-                        class="border-2 border-brand-text bg-white px-3 py-1 text-lg font-bold transition-all hover:bg-brand-pink cursor-pointer"
+                        class="bg-brand-purple border-brand-text shadow-neo-sm mt-2 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
                     >
-                        &times;
+                        <span x-text="shareButtonLabel">Share</span>
                     </button>
                 </div>
 
-                <div class="flex w-full gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scroll-px-4" style="-webkit-overflow-scrolling: touch;">
-                    <div class="snap-center shrink-0 flex flex-col items-center">
-                        <div x-ref="cardIdentity">
-                            {% include 'core/partials/share/card_identity.html' %}
-                        </div>
-                        <button
-                            @click="shareImage($refs.cardIdentity, 'bibliotype-reader-type.png')"
-                            type="button"
-                            class="bg-brand-purple border-brand-text shadow-neo-sm mt-3 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                        >
-                            <span x-text="shareButtonLabel">Share</span>
-                        </button>
+                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                    <div x-ref="cardStats">
+                        {% include 'core/partials/share/card_stats.html' %}
                     </div>
-
-                    <div class="snap-center shrink-0 flex flex-col items-center">
-                        <div x-ref="cardStats">
-                            {% include 'core/partials/share/card_stats.html' %}
-                        </div>
-                        <button
-                            @click="shareImage($refs.cardStats, 'bibliotype-stats.png')"
-                            type="button"
-                            class="bg-brand-yellow border-brand-text shadow-neo-sm mt-3 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                        >
-                            <span x-text="shareButtonLabel">Share</span>
-                        </button>
-                    </div>
-
-                    <div class="snap-center shrink-0 flex flex-col items-center">
-                        <div x-ref="cardTaste">
-                            {% include 'core/partials/share/card_taste.html' %}
-                        </div>
-                        <button
-                            @click="shareImage($refs.cardTaste, 'bibliotype-taste.png')"
-                            type="button"
-                            class="bg-brand-green border-brand-text shadow-neo-sm mt-3 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                        >
-                            <span x-text="shareButtonLabel">Share</span>
-                        </button>
-                    </div>
-
-                    <div class="snap-center shrink-0 flex flex-col items-center">
-                        <div x-ref="cardMainstream">
-                            {% include 'core/partials/share/card_mainstream.html' %}
-                        </div>
-                        <button
-                            @click="shareImage($refs.cardMainstream, 'bibliotype-mainstream.png')"
-                            type="button"
-                            class="bg-brand-orange border-brand-text shadow-neo-sm mt-3 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                        >
-                            <span x-text="shareButtonLabel">Share</span>
-                        </button>
-                    </div>
-
-                    <div class="snap-center shrink-0 flex flex-col items-center">
-                        <div x-ref="cardFull">
-                            {% include 'core/partials/share/card_full.html' %}
-                        </div>
-                        <button
-                            @click="shareImage($refs.cardFull, 'bibliotype-full.png')"
-                            type="button"
-                            class="bg-brand-purple border-brand-text shadow-neo-sm mt-3 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
-                        >
-                            <span x-text="shareButtonLabel">Share</span>
-                        </button>
-                    </div>
+                    <button
+                        @click="shareImage($refs.cardStats, 'bibliotype-stats.png')"
+                        type="button"
+                        class="bg-brand-yellow border-brand-text shadow-neo-sm mt-2 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                    >
+                        <span x-text="shareButtonLabel">Share</span>
+                    </button>
                 </div>
 
-                <p class="mt-2 text-center text-sm text-white/60">Swipe to see all cards</p>
+                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                    <div x-ref="cardTaste">
+                        {% include 'core/partials/share/card_taste.html' %}
+                    </div>
+                    <button
+                        @click="shareImage($refs.cardTaste, 'bibliotype-taste.png')"
+                        type="button"
+                        class="bg-brand-green border-brand-text shadow-neo-sm mt-2 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                    >
+                        <span x-text="shareButtonLabel">Share</span>
+                    </button>
+                </div>
+
+                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                    <div x-ref="cardMainstream">
+                        {% include 'core/partials/share/card_mainstream.html' %}
+                    </div>
+                    <button
+                        @click="shareImage($refs.cardMainstream, 'bibliotype-mainstream.png')"
+                        type="button"
+                        class="bg-brand-orange border-brand-text shadow-neo-sm mt-2 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                    >
+                        <span x-text="shareButtonLabel">Share</span>
+                    </button>
+                </div>
+
+                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                    <div x-ref="cardFull">
+                        {% include 'core/partials/share/card_full.html' %}
+                    </div>
+                    <button
+                        @click="shareImage($refs.cardFull, 'bibliotype-full.png')"
+                        type="button"
+                        class="bg-brand-purple border-brand-text shadow-neo-sm mt-2 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                    >
+                        <span x-text="shareButtonLabel">Share</span>
+                    </button>
+                </div>
             </div>
+
+            <p class="mt-1 shrink-0 text-center text-sm text-white/60">Swipe to see all cards</p>
         </div>
     </div>
 </template>
+
+<style>
+    .share-card-wrapper {
+        transform-origin: top center;
+    }
+    @media (max-height: 740px) {
+        .share-card-wrapper {
+            transform: scale(0.85);
+            margin-bottom: -85px;
+        }
+    }
+    @media (max-height: 640px) {
+        .share-card-wrapper {
+            transform: scale(0.75);
+            margin-bottom: -142px;
+        }
+    }
+</style>
 
 <script>
     function shareModalData() {
