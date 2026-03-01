@@ -12,61 +12,22 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 Prioritised 
 - lock down canonical genres and improve mapping
 - update the sources for comparative analytics
-- share to story, several options
-- add lines under subheadings type
-- https://alcovebooks.vercel.app/#/stats
-- show book cover for most niche read
 - save llm vibe against the dna dictionary, cache this for a month and only refetch if dictionary has changed
     - user a uploads a csv, vibe generated
     - user b uploads the same csv, we want to reuse this same vibe instead of hitting gemini again
     - so need to keep a mapping of dictionary hashes to llm vibes and reuse llm vibe when same dictionary is presented again
     - this would prevent several llm vibes being generated during testing
-- adjust reader type calculations, different coour for diff types? pixel square background for banner? animated?
+- adjust reader type calculations, different colour for diff types? pixel square background for banner? animated?
 - allow user to delete profile - settings panel maybe? put make private there too, and opt out of recs, display name can also be there, email update as well? and change password functionality might as well
     - make sure public by default
     - allow users to opt out of recommendations
-- ~tos, privacy policy~ (update maybe)
-- average "contrarian" score under most controversial ratings with phrases like "my, you're contrarian"
 - how similar are you/similarity percentage for 2 or more people
   - add page for this
   - allow similarity comparison with multiple users (only public)
 - sign up form validate password and all on blur
-- think about more animation
 - long author names and genre names cutting of count when hovering on chart
 
-
-## ✨ Features
-
-- ** Data Analysis:** Ingests Goodreads export `.csv` files and performs detailed analysis using Pandas.
-- **AI-Powered Vibe:** Utilizes Google's Gemini API to generate a creative, multi-phrase "vibe" that poetically summarizes the user's reading taste.
-- **Analytics & Dashboard:**
-  - **Reader Archetype:** Assigns users a primary "Reader Type" (e.g., *Classic Collector*, *Tome Tussler*).
-  - **Core Stats:** Total books & pages read, average rating.
-  - **Community Benchmarking:** Compares user stats (like average book length and total books read) against the global Bibliotype user base, showing percentiles.
-  - **Taste Analysis:** Identifies top authors and genres, enriched with data from the Open Library API.
-  - **Niche vs. Mainstream:** Calculates a "Mainstream Meter" score and highlights the user's most niche book based on community read counts.
-  - **Review Insights:** Performs sentiment analysis on user reviews to find their most positive and negative takes.
-- **User Accounts & Sharing:**
-  - Full user authentication (signup with email, login, logout).
-  - Ability to save and update your Bibliotype to your profile.
-  - Publicly shareable profile pages (e.g., `bibliotype.com/u/username`).
-- **Performant & Scalable:**
-  - API calls are cached server-side using Django's cache framework.
-  - Caching logic prevents re-running expensive AI generation for unchanged data.
-  - Important user data is stored in indexed database fields for efficient querying.
-
-## 🛠️ Tech Stack
-
-- **Backend:** Django 5.x, Python 3.13+
-- **Dependency Management:** Poetry
-- **Data Processing:** Pandas
-- **AI Integration:** Gemini
-- **Database:** PostgreSQL (production), SQLite (fallback for non-Docker dev)
-- **Containerization:** Docker, Docker Compose
-- **Frontend:** Tailwind CSS, Alpine.js, Chart.js
-
-
-## 🚀 Getting Started (Docker & Poetry)
+##  Getting Started (Docker & Poetry)
 
 This is the recommended method for local development. It creates a consistent, isolated environment with a dedicated PostgreSQL database, mirroring a production setup.
 
@@ -138,7 +99,7 @@ If you update the book list in `seed_books.py` and want to regenerate the `initi
 6.  `docker-compose -f docker-compose.local.yml exec web poetry run python manage.py dumpdata core.Book core.Author core.Genre core.AggregateAnalytics --indent 2 > core/fixtures/initial_data.json`
 7.  Commit the updated `initial_data.json` file to Git.
 
-## 🚀 Deploying to Production
+## Deploying to Production
 
 This guide outlines the steps to deploy the application to a production environment on a fresh Ubuntu 22.04 server (e.g., a DigitalOcean VPS). The stack uses Docker Compose, Nginx as a reverse proxy, and GitHub Actions for fully automated CI/CD.
 
