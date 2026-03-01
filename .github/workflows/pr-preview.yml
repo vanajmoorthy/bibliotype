@@ -1,0 +1,167 @@
+name: PR Preview
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened, closed]
+
+concurrency:
+    group: preview-${{ github.event.pull_request.number }}
+    cancel-in-progress: true
+
+jobs:
+    deploy-preview:
+        if: github.event.action != 'closed'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out repository code
+              uses: actions/checkout@v4
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Login to Docker Hub
+              uses: docker/login-action@v3
+              with:
+                  username: ${{ secrets.DOCKERHUB_USERNAME }}
+                  password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+            - name: Build and push preview image
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  push: true
+                  tags: ${{ secrets.DOCKERHUB_USERNAME }}/bibliotype:pr-${{ github.event.pull_request.number }}
+                  cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/bibliotype:buildcache
+                  cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/bibliotype:buildcache,mode=max
+
+            - name: Deploy preview to VPS
+              uses: appleboy/ssh-action@v1.0.3
+              env:
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+                  IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/bibliotype:pr-${{ github.event.pull_request.number }}
+              with:
+                  host: ${{ secrets.DO_SSH_HOST }}
+                  username: ${{ secrets.DO_SSH_USERNAME }}
+                  key: ${{ secrets.DO_SSH_KEY }}
+                  envs: PR_NUMBER,IMAGE
+                  script: |
+                      CONTAINER="preview-pr-${PR_NUMBER}"
+                      PORT=$((9000 + PR_NUMBER))
+
+                      # Tear down existing preview if any
+                      docker stop $CONTAINER 2>/dev/null && docker rm $CONTAINER 2>/dev/null || true
+
+                      docker pull $IMAGE
+
+                      # Run a lightweight preview: SQLite, no Redis/Celery, fixture data
+                      docker run -d \
+                        --name $CONTAINER \
+                        --restart unless-stopped \
+                        -p ${PORT}:8000 \
+                        -e SECRET_KEY=preview-insecure-not-for-production \
+                        -e DEBUG=True \
+                        -e "ALLOWED_HOSTS=*" \
+                        -e DJANGO_ENV=development \
+                        -e REDIS_CACHE_URL=locmem:// \
+                        --entrypoint "" \
+                        $IMAGE \
+                        bash -c " \
+                          poetry run python manage.py migrate --run-syncdb && \
+                          poetry run python manage.py load_fixture_data core/fixtures/initial_data.json && \
+                          poetry run python manage.py runserver 0.0.0.0:8000"
+
+                      # Wait for the server to respond
+                      for i in $(seq 1 20); do
+                        if curl -s -o /dev/null -w '%{http_code}' http://localhost:${PORT}/ | grep -qE '200|301|302'; then
+                          echo "Preview is ready on port ${PORT}"
+                          break
+                        fi
+                        echo "Waiting for preview to start... ($i/20)"
+                        sleep 3
+                      done
+
+            - name: Comment preview URL on PR
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const prNumber = context.payload.pull_request.number;
+                      const port = 9000 + prNumber;
+                      const host = '${{ secrets.DO_SSH_HOST }}';
+                      const url = `http://${host}:${port}`;
+                      const marker = '<!-- pr-preview-comment -->';
+                      const body = [
+                        marker,
+                        '## PR Preview',
+                        '',
+                        `**URL:** ${url}`,
+                        '',
+                        'Lightweight preview instance (SQLite, no Celery/Redis).',
+                        'Loaded with sample fixture data. Best for reviewing template, CSS, and layout changes.',
+                        '',
+                        `*Updated: ${new Date().toISOString()}*`,
+                      ].join('\n');
+
+                      const { data: comments } = await github.rest.issues.listComments({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: prNumber,
+                      });
+                      const existing = comments.find(c => c.body?.includes(marker));
+
+                      if (existing) {
+                        await github.rest.issues.updateComment({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          comment_id: existing.id,
+                          body,
+                        });
+                      } else {
+                        await github.rest.issues.createComment({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          issue_number: prNumber,
+                          body,
+                        });
+                      }
+
+    cleanup-preview:
+        if: github.event.action == 'closed'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Tear down preview on VPS
+              uses: appleboy/ssh-action@v1.0.3
+              env:
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+                  IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/bibliotype:pr-${{ github.event.pull_request.number }}
+              with:
+                  host: ${{ secrets.DO_SSH_HOST }}
+                  username: ${{ secrets.DO_SSH_USERNAME }}
+                  key: ${{ secrets.DO_SSH_KEY }}
+                  envs: PR_NUMBER,IMAGE
+                  script: |
+                      CONTAINER="preview-pr-${PR_NUMBER}"
+                      docker stop $CONTAINER 2>/dev/null || true
+                      docker rm $CONTAINER 2>/dev/null || true
+                      docker rmi $IMAGE 2>/dev/null || true
+                      echo "Preview for PR #${PR_NUMBER} cleaned up"
+
+            - name: Update PR comment
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const prNumber = context.payload.pull_request.number;
+                      const marker = '<!-- pr-preview-comment -->';
+                      const { data: comments } = await github.rest.issues.listComments({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: prNumber,
+                      });
+                      const existing = comments.find(c => c.body?.includes(marker));
+                      if (existing) {
+                        await github.rest.issues.updateComment({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          comment_id: existing.id,
+                          body: `${marker}\n## PR Preview\n\n~~Preview has been torn down~~ (PR closed/merged)`,
+                        });
+                      }
