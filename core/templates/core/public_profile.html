@@ -7,12 +7,14 @@
     View {{ title }} and literary personality. Discover their favourite genres, reading statistics, and book
     preferences.
 {% else %}
-    {{ title }} profile.
+    {{ title }}
+    profile.
 {% endif %}{% endblock %}
 
 {% block seo_keywords %}
-    {{ heading_name }} reading DNA, {{ heading_name }} literary personality, reading profile, book analysis, reader
-    type, reading statistics
+    {{ heading_name }}
+    reading DNA, {{ heading_name }} literary personality, reading profile, book analysis, reader type, reading
+    statistics
 {% endblock %}
 
 {% block og_title %}{{ title }}{% endblock %}
@@ -20,7 +22,8 @@
 {% block og_description %}{% if dna %}
     Discover {{ title }} and their unique reading DNA, literary personality, favourite genres, and reading insights.
 {% else %}
-    {{ title }} profile.
+    {{ title }}
+    profile.
 {% endif %}{% endblock %}
 
 {% block twitter_title %}{{ title }}{% endblock %}
@@ -28,7 +31,8 @@
 {% block twitter_description %}{% if dna %}
     View {{ title }} and discover their literary personality.
 {% else %}
-    {{ title }} profile.
+    {{ title }}
+    profile.
 {% endif %}{% endblock %}
 
 {% block extra_head_js %}
@@ -77,15 +81,15 @@
         {# Check if DNA data exists for this user #}
         {% if dna %}
             <div x-data="shareModalData()" class="space-y-6">
-            {# This script tag is still needed for the charts to work #}
-            {{ dna|json_script:"dna-data" }}
-            <!-- The main header, personalised with the profile owner's name -->
-            <h1
-                class="mb-4 flex flex-col items-center justify-center gap-x-4 text-center text-4xl font-bold tracking-widest uppercase sm:text-5xl md:mb-8 md:flex-row"
-            >
-                <span>{{ heading_name }}</span>
-                <span class="whitespace-nowrap">Bibliotype</span>
-            </h1>
+                {# This script tag is still needed for the charts to work #}
+                {{ dna|json_script:"dna-data" }}
+                <!-- The main header, personalised with the profile owner's name -->
+                <h1
+                    class="mb-4 flex flex-col items-center justify-center gap-x-4 text-center text-4xl font-bold tracking-widest uppercase sm:text-5xl md:mb-8 md:flex-row"
+                >
+                    <span>{{ heading_name }}</span>
+                    <span class="whitespace-nowrap">Bibliotype</span>
+                </h1>
 
                 {% include 'core/partials/dna/vibe_display.html' %}
 
@@ -111,6 +115,17 @@
 
                 {% include 'core/partials/dna/top_genres_authors_row.html' with use_rainbow=True pronoun_pos="their" %}
                 {% include 'core/partials/dna/review_analysis_card.html' %}
+
+                {% if dna.fiction_nonfiction_split or dna.longest_book %}
+                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        {% if dna.fiction_nonfiction_split %}
+                            {% include 'core/partials/dna/fiction_nonfiction_card.html' %}
+                        {% endif %}
+                        {% if dna.longest_book %}
+                            {% include 'core/partials/dna/book_extremes_card.html' %}
+                        {% endif %}
+                    </div>
+                {% endif %}
                 {% include 'core/partials/dna/controversial_ratings_card.html' with controversial_title='Most Controversial Ratings' pronoun_pos="their" pronoun_sub="them" %}
                 {% include 'core/partials/dna/currently_reading_card.html' with pronoun_sub="they're" %}
 

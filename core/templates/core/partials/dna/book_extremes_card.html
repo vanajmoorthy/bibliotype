@@ -1,0 +1,88 @@
+<div class="border-brand-text shadow-neo border-2 bg-white p-6">
+    <h2 class="mb-4 text-center text-2xl font-bold uppercase">Book Extremes</h2>
+    <div class="flex flex-col gap-6">
+        {% if dna.longest_book %}
+            <div class="flex items-center gap-4">
+                <div class="shrink-0" x-data="{ imgFailed: false }">
+                    {% if dna.longest_book.cover_url %}
+                        <div x-show="!imgFailed" class="border-brand-text h-40 w-[6.75rem] overflow-hidden border-2">
+                            <img
+                                src="{{ dna.longest_book.cover_url }}"
+                                alt="Cover of {{ dna.longest_book.title }}"
+                                class="h-full w-full object-cover"
+                                loading="lazy"
+                                x-on:error="imgFailed = true"
+                                x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
+                            />
+                        </div>
+                        <div
+                            x-show="imgFailed"
+                            x-cloak
+                            class="bg-brand-orange border-brand-text flex h-40 w-[6.75rem] items-center justify-center border-2 text-5xl font-bold"
+                        >
+                            {{ dna.longest_book.title|first|upper }}
+                        </div>
+                    {% else %}
+                        <div
+                            class="bg-brand-orange border-brand-text flex h-40 w-[6.75rem] items-center justify-center border-2 text-5xl font-bold"
+                        >
+                            {{ dna.longest_book.title|first|upper }}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="min-w-0 flex-1">
+                    <span
+                        class="bg-brand-orange border-brand-text mb-2 inline-block border-2 px-2 py-0.5 text-sm font-bold uppercase"
+                    >
+                        Longest
+                    </span>
+                    <p class="truncate text-xl font-bold">{{ dna.longest_book.title }}</p>
+                    <p class="truncate text-lg text-gray-600">by {{ dna.longest_book.author }}</p>
+                    <p class="text-lg font-bold">{{ dna.longest_book.page_count }} pages</p>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if dna.shortest_book %}
+            <div class="flex items-center gap-4">
+                <div class="shrink-0" x-data="{ imgFailed: false }">
+                    {% if dna.shortest_book.cover_url %}
+                        <div x-show="!imgFailed" class="border-brand-text h-40 w-[6.75rem] overflow-hidden border-2">
+                            <img
+                                src="{{ dna.shortest_book.cover_url }}"
+                                alt="Cover of {{ dna.shortest_book.title }}"
+                                class="h-full w-full object-cover"
+                                loading="lazy"
+                                x-on:error="imgFailed = true"
+                                x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
+                            />
+                        </div>
+                        <div
+                            x-show="imgFailed"
+                            x-cloak
+                            class="bg-brand-green border-brand-text flex h-40 w-[6.75rem] items-center justify-center border-2 text-5xl font-bold"
+                        >
+                            {{ dna.shortest_book.title|first|upper }}
+                        </div>
+                    {% else %}
+                        <div
+                            class="bg-brand-green border-brand-text flex h-40 w-[6.75rem] items-center justify-center border-2 text-5xl font-bold"
+                        >
+                            {{ dna.shortest_book.title|first|upper }}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="min-w-0 flex-1">
+                    <span
+                        class="bg-brand-green border-brand-text mb-2 inline-block border-2 px-2 py-0.5 text-sm font-bold uppercase"
+                    >
+                        Shortest
+                    </span>
+                    <p class="truncate text-xl font-bold">{{ dna.shortest_book.title }}</p>
+                    <p class="truncate text-lg text-gray-600">by {{ dna.shortest_book.author }}</p>
+                    <p class="text-lg font-bold">{{ dna.shortest_book.page_count }} pages</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>

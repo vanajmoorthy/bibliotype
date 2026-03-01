@@ -28,29 +28,40 @@
 
     document.addEventListener("DOMContentLoaded", function () {
         updateVibeSeparators();
-        
+
         const dnaDataScript = document.getElementById("dna-data");
         if (!dnaDataScript) return;
-        
+
         const dnaData = JSON.parse(dnaDataScript.textContent);
 
         Chart.defaults.font.family = "VT323";
         Chart.defaults.font.size = 16;
         Chart.defaults.color = "#1f2937";
 
-        const chartColors = ['#ffb4dd', '#40e7aa', '#ffa75e', '#8bbfff', '#FFE9CE', '#ff647c', '#ffe56c', '#A1CDF1', '#9af6d4', '#fe9393'];
+        const chartColors = [
+            "#ffb4dd",
+            "#40e7aa",
+            "#ffa75e",
+            "#8bbfff",
+            "#FFE9CE",
+            "#ff647c",
+            "#ffe56c",
+            "#A1CDF1",
+            "#9af6d4",
+            "#fe9393",
+        ];
 
         // --- Helper to parse data (Array of tuples vs Object) ---
         function parseChartData(data) {
             if (Array.isArray(data)) {
                 return {
-                    labels: data.map(item => item[0]),
-                    values: data.map(item => item[1])
+                    labels: data.map((item) => item[0]),
+                    values: data.map((item) => item[1]),
                 };
-            } else if (typeof data === 'object' && data !== null) {
+            } else if (typeof data === "object" && data !== null) {
                 return {
                     labels: Object.keys(data),
-                    values: Object.values(data)
+                    values: Object.values(data),
                 };
             }
             return { labels: [], values: [] };
@@ -60,7 +71,7 @@
         const topGenresCtx = document.getElementById("topGenresChart")?.getContext("2d");
         if (topGenresCtx && dnaData.top_genres) {
             const { labels: genreLabels, values: genreValues } = parseChartData(dnaData.top_genres);
-            
+
             new Chart(topGenresCtx, {
                 type: "doughnut",
                 data: {
@@ -70,7 +81,7 @@
                             label: "Genres",
                             data: genreValues,
                             backgroundColor: chartColors,
-                            borderColor: '#1f2937', 
+                            borderColor: "#1f2937",
                             borderWidth: 2,
                         },
                     ],
@@ -113,7 +124,7 @@
                             label: "Authors",
                             data: authorValues,
                             backgroundColor: chartColors,
-                            borderColor: '#1f2937',
+                            borderColor: "#1f2937",
                             borderWidth: 2,
                         },
                     ],
@@ -141,8 +152,43 @@
                 },
             });
         }
+
+        // --- Fiction vs Nonfiction Chart ---
+        const fictionCtx = document.getElementById("fictionNonfictionChart")?.getContext("2d");
+        if (fictionCtx && dnaData.fiction_nonfiction_split) {
+            const split = dnaData.fiction_nonfiction_split;
+            new Chart(fictionCtx, {
+                type: "pie",
+                data: {
+                    labels: ["Fiction", "Nonfiction"],
+                    datasets: [
+                        {
+                            data: [split.fiction_count, split.nonfiction_count],
+                            backgroundColor: ["#ffb4dd", "#8bbfff"],
+                            borderColor: "#1f2937",
+                            borderWidth: 2,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    const total = split.fiction_count + split.nonfiction_count;
+                                    const pct = Math.round((context.parsed / total) * 100);
+                                    return context.label + ": " + pct + "%";
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+        }
     });
 
     window.addEventListener("resize", updateVibeSeparators);
 </script>
-
