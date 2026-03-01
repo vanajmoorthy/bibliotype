@@ -2,11 +2,14 @@
 
 {% block seo_title %}Sign Up - Bibliotype{% endblock %}
 
-{% block seo_description %}Create a free Bibliotype account to save your Reading DNA, share your literary personality
-profile, and get personalised book recommendations.{% endblock %}
+{% block seo_description %}
+    Create a free Bibliotype account to save your Reading DNA, share your literary personality profile, and get
+    personalised book recommendations.
+{% endblock %}
 
-{% block seo_keywords %}Bibliotype sign up, create reading DNA account, save literary personality, free book analysis
-account{% endblock %}
+{% block seo_keywords %}
+    Bibliotype sign up, create reading DNA account, save literary personality, free book analysis account
+{% endblock %}
 
 {% block content %}
     <div class="flex h-full flex-col justify-center">
@@ -20,7 +23,53 @@ account{% endblock %}
                 <form
                     method="post"
                     class="mt-8 space-y-6 text-left"
-                    x-data="{ displayName: '{{ form.username.value|default:''|escapejs }}' }"
+                    x-data="{
+                        displayName: '{{ form.username.value|default:''|escapejs }}',
+                        email: '{{ form.email.value|default:''|escapejs }}',
+                        password1: '',
+                        password2: '',
+                        emailError: '',
+                        password1Error: '',
+                        password2Error: '',
+                        emailTouched: false,
+                        password1Touched: false,
+                        password2Touched: false,
+                        _emailTimer: null,
+                        _password1Timer: null,
+                        _password2Timer: null,
+                        validateEmail() {
+                            if (!this.email) { this.emailError = ''; return; }
+                            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                            this.emailError = re.test(this.email) ? '' : 'Enter a valid email address.';
+                        },
+                        validatePassword1() {
+                            if (!this.password1) { this.password1Error = ''; return; }
+                            if (this.password1.length < 8) {
+                                this.password1Error = 'This password is too short. It must contain at least 8 characters.';
+                            } else if (/^\d+$/.test(this.password1)) {
+                                this.password1Error = 'This password is entirely numeric.';
+                            } else {
+                                this.password1Error = '';
+                            }
+                            if (this.password2Touched) { this.validatePassword2(); }
+                        },
+                        validatePassword2() {
+                            if (!this.password2) { this.password2Error = ''; return; }
+                            this.password2Error = this.password1 !== this.password2 ? 'The two password fields didn\u2019t match.' : '';
+                        },
+                        blurEmail() {
+                            clearTimeout(this._emailTimer);
+                            this._emailTimer = setTimeout(() => { this.emailTouched = true; this.validateEmail(); }, 300);
+                        },
+                        blurPassword1() {
+                            clearTimeout(this._password1Timer);
+                            this._password1Timer = setTimeout(() => { this.password1Touched = true; this.validatePassword1(); }, 300);
+                        },
+                        blurPassword2() {
+                            clearTimeout(this._password2Timer);
+                            this._password2Timer = setTimeout(() => { this.password2Touched = true; this.validatePassword2(); }, 300);
+                        },
+                    }"
                     novalidate
                 >
                     {% csrf_token %}
@@ -64,30 +113,92 @@ account{% endblock %}
                         {% endfor %}
                     </div>
 
-                    {% for field in form %}
-                        {% if field.name != 'username' %}
-                            <div>
-                                <label for="{{ field.id_for_label }}" class="mb-1 block text-xl font-bold uppercase"
-                                    >{{ field.label }}</label
-                                >
-                                <input
-                                    type="{{ field.field.widget.input_type }}"
-                                    name="{{ field.name }}"
-                                    id="{{ field.id_for_label }}"
-                                    class="border-brand-text focus:ring-brand-purple w-full border-2 bg-white p-3 text-lg focus:ring-2 focus:outline-none"
-                                    placeholder="{{ field.label }}..."
-                                    value="{{ field.value|default:'' }}"
-                                    required
-                                />
-                                {% if field.help_text %}
-                                    <p class="mt-2 text-lg text-gray-600">{{ field.help_text|safe }}</p>
-                                {% endif %}
-                                {% for error in field.errors %}
-                                    <p class="mt-2 text-lg font-bold text-red-600 uppercase">{{ error }}</p>
-                                {% endfor %}
-                            </div>
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="mb-1 block text-xl font-bold uppercase">
+                            {{ form.email.label }}
+                        </label>
+                        <input
+                            type="email"
+                            name="{{ form.email.name }}"
+                            id="{{ form.email.id_for_label }}"
+                            class="border-brand-text focus:ring-brand-purple w-full border-2 bg-white p-3 text-lg focus:ring-2 focus:outline-none"
+                            placeholder="{{ form.email.label }}..."
+                            x-model="email"
+                            @blur="blurEmail()"
+                            @focus="emailError = ''; clearTimeout(_emailTimer)"
+                            required
+                        />
+                        {% if form.email.help_text %}
+                            <p class="mt-2 text-lg text-gray-600">{{ form.email.help_text|safe }}</p>
                         {% endif %}
-                    {% endfor %}
+                        <p
+                            x-show="emailTouched && emailError"
+                            x-text="emailError"
+                            x-cloak
+                            class="mt-2 text-lg font-bold text-red-600 uppercase"
+                        ></p>
+                        {% for error in form.email.errors %}
+                            <p class="mt-2 text-lg font-bold text-red-600 uppercase">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.password1.id_for_label }}" class="mb-1 block text-xl font-bold uppercase">
+                            {{ form.password1.label }}
+                        </label>
+                        <input
+                            type="password"
+                            name="{{ form.password1.name }}"
+                            id="{{ form.password1.id_for_label }}"
+                            class="border-brand-text focus:ring-brand-purple w-full border-2 bg-white p-3 text-lg focus:ring-2 focus:outline-none"
+                            placeholder="{{ form.password1.label }}..."
+                            x-model="password1"
+                            @blur="blurPassword1()"
+                            @focus="password1Error = ''; clearTimeout(_password1Timer)"
+                            required
+                        />
+                        {% if form.password1.help_text %}
+                            <p class="mt-2 text-lg text-gray-600">{{ form.password1.help_text|safe }}</p>
+                        {% endif %}
+                        <p
+                            x-show="password1Touched && password1Error"
+                            x-text="password1Error"
+                            x-cloak
+                            class="mt-2 text-lg font-bold text-red-600 uppercase"
+                        ></p>
+                        {% for error in form.password1.errors %}
+                            <p class="mt-2 text-lg font-bold text-red-600 uppercase">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.password2.id_for_label }}" class="mb-1 block text-xl font-bold uppercase">
+                            {{ form.password2.label }}
+                        </label>
+                        <input
+                            type="password"
+                            name="{{ form.password2.name }}"
+                            id="{{ form.password2.id_for_label }}"
+                            class="border-brand-text focus:ring-brand-purple w-full border-2 bg-white p-3 text-lg focus:ring-2 focus:outline-none"
+                            placeholder="{{ form.password2.label }}..."
+                            x-model="password2"
+                            @blur="blurPassword2()"
+                            @focus="password2Error = ''; clearTimeout(_password2Timer)"
+                            required
+                        />
+                        {% if form.password2.help_text %}
+                            <p class="mt-2 text-lg text-gray-600">{{ form.password2.help_text|safe }}</p>
+                        {% endif %}
+                        <p
+                            x-show="password2Touched && password2Error"
+                            x-text="password2Error"
+                            x-cloak
+                            class="mt-2 text-lg font-bold text-red-600 uppercase"
+                        ></p>
+                        {% for error in form.password2.errors %}
+                            <p class="mt-2 text-lg font-bold text-red-600 uppercase">{{ error }}</p>
+                        {% endfor %}
+                    </div>
                     {% if TURNSTILE_SITE_KEY %}
                         <div class="flex justify-center">
                             <div class="cf-turnstile" data-sitekey="{{ TURNSTILE_SITE_KEY }}" data-theme="light"></div>
