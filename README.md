@@ -12,7 +12,6 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 Prioritised 
 - lock down canonical genres and improve mapping
 - update the sources for comparative analytics
-- edit mainstream meter percentages and text to "niche, normal, mainstream"
 - share to story, several options
 - add lines under subheadings type
 - https://alcovebooks.vercel.app/#/stats
