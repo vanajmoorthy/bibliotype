@@ -39,7 +39,6 @@ Optional:
 
          hasAnimated: false,
          animProgress: 0,
-         wiggleOffset: 0,
 
          clamp(v) { return Math.max(this.min, Math.min(this.max, v)); },
          pct(v)   { return ((this.clamp(v) - this.min) / (this.max - this.min)) * 100; },
@@ -50,9 +49,9 @@ Optional:
          get hasThird()  { return this.thirdVal !== null; },
          get thirdPct()  { return this.hasThird ? this.pct(this.thirdVal) : 0; },
 
-         get animUserPct()  { return this.userPct  * this.animProgress + this.wiggleOffset; },
-         get animCompPct()  { return this.compPct  * this.animProgress + this.wiggleOffset; },
-         get animThirdPct() { return this.thirdPct * this.animProgress + this.wiggleOffset; },
+         get animUserPct()  { return this.userPct  * (0.75 + 0.25 * this.animProgress); },
+         get animCompPct()  { return this.compPct  * (0.75 + 0.25 * this.animProgress); },
+         get animThirdPct() { return this.thirdPct * (0.75 + 0.25 * this.animProgress); },
 
          get animBands() {
              let items = [
@@ -91,11 +90,11 @@ Optional:
                  const mainProgress = Math.min(elapsed / duration, 1);
                  this.animProgress = 0.5 - Math.cos(mainProgress * Math.PI) / 2;
 
-                 const w1 = Math.sin(timestamp / 320) * 0.25;
-                 const w2 = Math.sin(timestamp / 130) * 0.15;
-                 this.wiggleOffset = (w1 + w2) * this.animProgress;
-
-                 window.requestAnimationFrame(step);
+                 if (mainProgress < 1) {
+                     window.requestAnimationFrame(step);
+                 } else {
+                     this.animProgress = 1;
+                 }
              };
              window.requestAnimationFrame(step);
          },
