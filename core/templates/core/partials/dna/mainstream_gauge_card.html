@@ -98,8 +98,8 @@
             <!-- Layer 2: SVG for Text (Not clipped, sits on top) -->
             <svg class="absolute top-0 left-0 h-64 w-64 z-10" viewBox="0 0 256 256" overflow="visible">
                 <defs>
-                    <!-- Smaller radius (95 vs 116) to bring labels inward from the arc edge -->
-                    <path id="semicircle" d="M 33,128 A 95,95 0 0,1 223,128" fill="none"/>
+                    <!-- Slightly smaller radius (110 vs 116) to bring labels ~5px inward from the arc edge -->
+                    <path id="semicircle" d="M 18,128 A 110,110 0 0,1 238,128" fill="none"/>
                 </defs>
                 <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
                     <textPath href="#semicircle" startOffset="15%" text-anchor="middle">niche</textPath>
@@ -114,7 +114,7 @@
 
 
             <div class="absolute -bottom-4 border-brand-text border-4 left-0 w-full h-4 z-[15]"
-                 style="background: repeating-linear-gradient(45deg, #9ca3af 0px, #9ca3af 2px, #4b5563 2px, #4b5563 6px);"></div>
+                 style="background: repeating-linear-gradient(45deg, #6b7280 0px, #6b7280 3px, #4b5563 3px, #4b5563 8px);"></div>
 
             <!-- Note: Increased width to w-3 to make the taper more visible -->
             <div class="absolute bottom-0 left-1/2 h-24 w-3 origin-bottom  z-20"
