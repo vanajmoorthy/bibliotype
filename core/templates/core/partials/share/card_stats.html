@@ -1,25 +1,23 @@
 {% load humanize %}
-<div class="flex h-[568px] w-[320px] flex-col border-2 border-brand-text">
-    <div class="bg-brand-pink p-6 pb-4">
+<div class="flex h-[568px] w-[320px] flex-col justify-between border-2 border-brand-text bg-brand-yellow p-6">
+    <div>
         <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
         <p class="mt-1 text-center text-lg font-bold uppercase">By The Numbers</p>
-        <div class="mt-4 border-2 border-brand-text bg-white p-3 text-center">
-            <div class="text-4xl font-bold">{{ dna.user_stats.total_books_read }}</div>
-            <div class="text-sm uppercase">Books Read</div>
-        </div>
-        <div class="mt-2 grid grid-cols-2 gap-2">
-            <div class="border-2 border-brand-text bg-white p-2 text-center">
-                <div class="text-2xl font-bold">{{ dna.user_stats.total_pages_read|intcomma }}</div>
-                <div class="text-xs uppercase">Pages</div>
+        <div class="mt-4 space-y-2">
+            <div class="border-2 border-brand-text bg-brand-green p-3 text-center">
+                <div class="text-4xl font-bold">{{ dna.user_stats.total_books_read }}</div>
+                <div class="text-sm uppercase">Books Read</div>
             </div>
-            <div class="border-2 border-brand-text bg-white p-2 text-center">
-                <div class="text-2xl font-bold">{{ dna.average_rating_overall }}</div>
-                <div class="text-xs uppercase">Avg Rating</div>
+            <div class="grid grid-cols-2 gap-2">
+                <div class="border-2 border-brand-text bg-brand-cyan p-2 text-center">
+                    <div class="text-2xl font-bold">{{ dna.user_stats.total_pages_read|intcomma }}</div>
+                    <div class="text-xs uppercase">Pages</div>
+                </div>
+                <div class="border-2 border-brand-text bg-brand-green p-2 text-center">
+                    <div class="text-2xl font-bold">{{ dna.average_rating_overall }}</div>
+                    <div class="text-xs uppercase">Avg Rating</div>
+                </div>
             </div>
-        </div>
-    </div>
-    <div class="flex flex-1 flex-col justify-between bg-white p-6 pt-4">
-        <div class="space-y-2">
             <div class="grid grid-cols-2 gap-2">
                 <div class="border-2 border-brand-text bg-brand-cyan p-2 text-center">
                     <div class="text-2xl font-bold">{{ dna.user_stats.avg_book_length }}</div>
@@ -46,7 +44,7 @@
                 </div>
             </div>
             {% if dna.stats_by_year %}
-                <div class="border-2 border-brand-text bg-brand-yellow p-2">
+                <div class="border-2 border-brand-text bg-brand-cyan p-2">
                     <div class="mb-1 flex items-center justify-between text-xs">
                         <span class="font-bold">{{ dna.stats_by_year.0.year }}</span>
                         <span class="text-[10px] font-bold uppercase">Reading Timeline</span>
@@ -60,6 +58,6 @@
                 </div>
             {% endif %}
         </div>
-        <p class="text-center text-xs font-bold tracking-wider uppercase opacity-60">{{ share_url|default:"bibliotype.app" }}</p>
     </div>
+    <p class="text-center text-xs font-bold tracking-wider uppercase opacity-60">{{ share_url|default:"bibliotype.app" }}</p>
 </div>
