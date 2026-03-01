@@ -35,7 +35,7 @@
                 <div>
                     <p class="text-[10px] font-bold uppercase">Top Genres</p>
                     {% for genre, count in dna.top_genres|slice:":3" %}
-                        <p class="mt-0.5 text-xs">
+                        <p class="mt-1.5 text-xs">
                             <span class="inline-block border border-brand-text bg-brand-green px-1 font-bold capitalize shadow-neo-sm">{{ genre }}</span>
                         </p>
                     {% endfor %}
@@ -45,7 +45,7 @@
                 <div>
                     <p class="text-[10px] font-bold uppercase">Top Authors</p>
                     {% for author, count in dna.top_authors|slice:":3" %}
-                        <p class="mt-0.5 text-xs">
+                        <p class="mt-1.5 text-xs">
                             <span class="inline-block border border-brand-text bg-brand-orange px-1 font-bold shadow-neo-sm">{{ author|truncatewords:3 }}</span>
                         </p>
                     {% endfor %}
