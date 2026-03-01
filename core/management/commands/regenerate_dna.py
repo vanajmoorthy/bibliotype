@@ -6,26 +6,9 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 
 from core.models import UserProfile, UserBook
-from core.dna_constants import CANONICAL_GENRE_MAP, READER_TYPE_DESCRIPTIONS
+from core.dna_constants import CANONICAL_GENRE_MAP, NICHE_THRESHOLD, READER_TYPE_DESCRIPTIONS, compute_contrariness
 
 logger = logging.getLogger(__name__)
-
-NICHE_THRESHOLD = 5
-
-CONTRARINESS_SCALE = [
-    (1.5, "Wildly contrarian", "bg-brand-pink"),
-    (1.0, "Very contrarian", "bg-brand-orange"),
-    (0.6, "Moderately contrarian", "bg-brand-yellow"),
-    (0.3, "Mildly contrarian", "bg-brand-cyan"),
-    (0.0, "Aligned with consensus", "bg-brand-green"),
-]
-
-
-def _compute_contrariness(avg_diff):
-    for threshold, label, color in CONTRARINESS_SCALE:
-        if avg_diff >= threshold:
-            return label, color
-    return "Aligned with consensus", "bg-brand-green"
 
 
 class Command(BaseCommand):
@@ -158,7 +141,7 @@ class Command(BaseCommand):
                     controversial_books_count += 1
                     total_diff += abs(ub.user_rating - ub.book.average_rating)
             new_avg_rating_diff = round(total_diff / controversial_books_count, 2) if controversial_books_count > 0 else 0.0
-            new_contrariness_label, new_contrariness_color = _compute_contrariness(new_avg_rating_diff)
+            new_contrariness_label, new_contrariness_color = compute_contrariness(new_avg_rating_diff)
 
             total_reviews_count = 0
             positive_reviews_count = 0
@@ -194,8 +177,14 @@ class Command(BaseCommand):
                 changes.append(f"mainstream: {old_mainstream}% -> {new_mainstream_score}%")
             if profile.dna_data.get("unique_authors_count") != new_unique_authors_count:
                 changes.append(f"unique_authors: {new_unique_authors_count}")
+            if profile.dna_data.get("unique_genres_count") != new_unique_genres_count:
+                changes.append(f"unique_genres: {new_unique_genres_count}")
             if profile.dna_data.get("contrariness_label") != new_contrariness_label:
                 changes.append(f"contrariness: {new_contrariness_label}")
+            if profile.dna_data.get("niche_books_count") != niche_books_count:
+                changes.append(f"niche_books: {niche_books_count}")
+            if profile.dna_data.get("total_reviews_count") != total_reviews_count:
+                changes.append(f"reviews: {total_reviews_count} ({positive_reviews_count}+/{negative_reviews_count}-)")
 
             if not changes:
                 self._log(f"  {user.username}: no changes needed.")

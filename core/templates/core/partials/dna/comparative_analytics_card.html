@@ -28,7 +28,7 @@
                     <strong>{{ dna.user_stats.avg_publish_year|floatformat:0 }}</strong>.
                 </p>
                 <p class="mt-1 text-base">
-                    {{ pronoun_pos|default:"Your" }} reading tastes are <strong>{{ dna.comparative_text.age_direction }}</strong> than
+                    {{ pronoun_pos|default:"your"|capfirst }} reading tastes are <strong>{{ dna.comparative_text.age_direction }}</strong> than
                     <strong>{{ dna.comparative_text.age_pct }}%</strong> of
                     other Bibliotype readers.
                 </p>

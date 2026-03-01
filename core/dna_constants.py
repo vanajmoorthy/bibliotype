@@ -1514,6 +1514,25 @@ GLOBAL_AVERAGES = {
     "avg_publish_year": 2009,
 }
 
+NICHE_THRESHOLD = 5
+
+CONTRARINESS_SCALE = [
+    (1.5, "Wildly contrarian", "bg-brand-pink"),
+    (1.0, "Very contrarian", "bg-brand-orange"),
+    (0.6, "Moderately contrarian", "bg-brand-yellow"),
+    (0.3, "Mildly contrarian", "bg-brand-cyan"),
+    (0.0, "Aligned with consensus", "bg-brand-green"),
+]
+
+
+def compute_contrariness(avg_diff):
+    """Return (label, color) for the given average rating difference."""
+    for threshold, label, color in CONTRARINESS_SCALE:
+        if avg_diff >= threshold:
+            return label, color
+    return "Aligned with consensus", "bg-brand-green"
+
+
 # Create a reverse mapping for fast lookups (alias -> canonical).
 CANONICAL_GENRE_MAP = {}
 for canonical, aliases in GENRE_ALIASES.items():

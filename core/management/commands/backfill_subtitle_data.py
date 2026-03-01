@@ -2,27 +2,10 @@ import logging
 
 from django.core.management.base import BaseCommand
 
-from core.dna_constants import CANONICAL_GENRE_MAP
+from core.dna_constants import CANONICAL_GENRE_MAP, NICHE_THRESHOLD, compute_contrariness
 from core.models import UserProfile, UserBook
 
 logger = logging.getLogger(__name__)
-
-NICHE_THRESHOLD = 5
-
-CONTRARINESS_SCALE = [
-    (1.5, "Wildly contrarian", "bg-brand-pink"),
-    (1.0, "Very contrarian", "bg-brand-orange"),
-    (0.6, "Moderately contrarian", "bg-brand-yellow"),
-    (0.3, "Mildly contrarian", "bg-brand-cyan"),
-    (0.0, "Aligned with consensus", "bg-brand-green"),
-]
-
-
-def _compute_contrariness(avg_diff):
-    for threshold, label, color in CONTRARINESS_SCALE:
-        if avg_diff >= threshold:
-            return label, color
-    return "Aligned with consensus", "bg-brand-green"
 
 
 class Command(BaseCommand):
@@ -124,7 +107,7 @@ class Command(BaseCommand):
                     total_diff += abs(ub.user_rating - ub.book.average_rating)
 
             avg_rating_difference = round(total_diff / controversial_books_count, 2) if controversial_books_count > 0 else 0.0
-            contrariness_label, contrariness_color = _compute_contrariness(avg_rating_difference)
+            contrariness_label, contrariness_color = compute_contrariness(avg_rating_difference)
 
             # --- Review sentiment counts ---
             # We need VADER for sentiment, but reviews are stored in UserBook.user_review

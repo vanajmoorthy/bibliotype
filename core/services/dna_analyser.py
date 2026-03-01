@@ -19,7 +19,9 @@ from core.services.llm_service import generate_vibe_with_llm
 from ..dna_constants import (
     CANONICAL_GENRE_MAP,
     GLOBAL_AVERAGES,
+    NICHE_THRESHOLD,
     READER_TYPE_DESCRIPTIONS,
+    compute_contrariness,
 )
 from ..models import Author, Book, Genre
 from ..percentile_engine import (
@@ -486,7 +488,6 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         most_niche_book = None
 
         niche_books_count = 0
-        niche_threshold = 5
         if user_book_objects:
             user_book_objects.sort(key=lambda b: b.global_read_count)
             most_niche_book = {
@@ -494,7 +495,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 "author": user_book_objects[0].author.name,
                 "read_count": user_book_objects[0].global_read_count,
             }
-            niche_books_count = sum(1 for b in user_book_objects if b.global_read_count <= niche_threshold)
+            niche_books_count = sum(1 for b in user_book_objects if b.global_read_count <= NICHE_THRESHOLD)
 
         top_authors = list(read_df["Author"].value_counts().head(10).items())
         unique_authors_count = int(read_df["Author"].nunique())
@@ -532,18 +533,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         contrariness_color = "bg-brand-green"
         if not controversial_df.empty:
             avg_rating_difference = round(float(controversial_df["Rating Difference"].mean()), 2)
-            if avg_rating_difference >= 1.5:
-                contrariness_label = "Wildly contrarian"
-                contrariness_color = "bg-brand-pink"
-            elif avg_rating_difference >= 1.0:
-                contrariness_label = "Very contrarian"
-                contrariness_color = "bg-brand-orange"
-            elif avg_rating_difference >= 0.6:
-                contrariness_label = "Moderately contrarian"
-                contrariness_color = "bg-brand-yellow"
-            elif avg_rating_difference >= 0.3:
-                contrariness_label = "Mildly contrarian"
-                contrariness_color = "bg-brand-cyan"
+            contrariness_label, contrariness_color = compute_contrariness(avg_rating_difference)
 
         reviews_df = df[
             (df["My Review"].str.strip().ne(""))
@@ -675,7 +665,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             "unique_authors_count": unique_authors_count,
             "unique_genres_count": unique_genres_count,
             "niche_books_count": niche_books_count,
-            "niche_threshold": niche_threshold,
+            "niche_threshold": NICHE_THRESHOLD,
         }
         logger.debug(f"DNA data generated")
 
