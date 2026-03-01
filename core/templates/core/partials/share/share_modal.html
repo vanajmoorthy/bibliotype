@@ -20,7 +20,7 @@
                 {% include 'core/partials/buttons/icon_button.html' with color="pink" extra_classes="cursor-pointer" extra_attrs='@click="shareModalOpen = false"' icon_svg='<svg class="text-brand-text h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>' %}
             </div>
 
-            <div class="flex w-full shrink-0 gap-6 overflow-x-auto pb-3 snap-x snap-mandatory scroll-px-4" style="-webkit-overflow-scrolling: touch;">
+            <div class="flex w-full shrink-0 gap-4 overflow-x-auto pb-3 snap-x snap-mandatory px-[calc(50%-160px)]" style="-webkit-overflow-scrolling: touch; scroll-padding-inline: calc(50% - 160px);">
                 <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
                     <div x-ref="cardIdentity">
                         {% include 'core/partials/share/card_identity.html' %}
