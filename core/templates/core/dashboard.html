@@ -18,7 +18,7 @@ recommendations, reading insights{% endblock %}
 {% block content %}
     <div class="mx-auto h-full max-w-4xl space-y-8 p-2">
         {% if is_processing %}
-            <div id="processing-container" class="flex h-full flex-col items-center justify-center p-4" x-data="{ status: 'PENDING' }">
+            <div id="processing-container" class="flex flex-col items-center p-4 py-12 md:py-24" x-data="{ status: 'PENDING' }">
                 <div class="w-full max-w-2xl text-center" x-show="status !== 'FAILURE'">
                     {% include 'core/partials/cycling_messages.html' %}
                     <p class="mb-8 text-lg text-gray-600">
