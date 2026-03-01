@@ -36,7 +36,7 @@
             {% if dna.stats_by_year %}
                 <div class="border-2 border-brand-text bg-white p-2.5 text-center">
                     <div class="text-lg font-bold">
-                        {{ dna.stats_by_year.0.year }} &mdash; {{ dna.stats_by_year|last|default:"" }}
+                        {{ dna.stats_by_year.0.year }} &mdash; {% with last_year=dna.stats_by_year|last %}{{ last_year.year }}{% endwith %}
                     </div>
                     <div class="text-xs uppercase">Reading Timeline</div>
                 </div>

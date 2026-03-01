@@ -13,7 +13,7 @@ recommendations, reading insights{% endblock %}
 
 {% block extra_head_js %}
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -160,11 +160,10 @@ recommendations, reading insights{% endblock %}
             {% include 'core/partials/dna/vibe_display.html' %}
             {% include 'core/partials/dna/reader_type_card.html' %}
 
+            {% include 'core/partials/share/share_button.html' %}
             {% if user.is_authenticated %}
-                {% include 'core/partials/share/share_button.html' %}
                 {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app/u/"|add:user.username %}
             {% else %}
-                {% include 'core/partials/share/share_button.html' %}
                 {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app" %}
             {% endif %}
 
