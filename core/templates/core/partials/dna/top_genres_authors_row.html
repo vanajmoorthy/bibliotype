@@ -4,11 +4,11 @@
          class="border-brand-text shadow-neo relative overflow-hidden border-2 bg-white p-6">
         <h2 class="mb-1 text-2xl font-bold uppercase md:pr-36">Top Genres</h2>
         {% if dna.top_genres %}
-            <div class="flex max-h-[5rem] items-start justify-between md:block md:max-h-none">
+            <div class="flex items-start justify-between md:!block md:!max-h-none" style="max-height: 5rem;">
                 {% if dna.unique_genres_count %}
                     <p class="mb-2 text-base italic text-gray-500 md:mb-6 md:pr-36">We found {{ dna.unique_genres_count }} unique genre{{ dna.unique_genres_count|pluralize }} in {{ pronoun_pos|default:"your" }} library</p>
                 {% endif %}
-                <div class="relative -top-10 -right-[0.6rem] h-28 w-28 flex-shrink-0 md:absolute md:top-2 md:right-2 md:h-32 md:w-32">
+                <div class="h-28 w-28 flex-shrink-0 md:!absolute md:!top-2 md:!right-2 md:!h-32 md:!w-32" style="position: relative; top: -2.5rem; right: -0.6rem;">
                     <canvas id="topGenresChart"></canvas>
                 </div>
             </div>
@@ -32,11 +32,11 @@
          class="border-brand-text shadow-neo relative overflow-hidden border-2 bg-white p-6">
         <h2 class="mb-1 text-2xl font-bold uppercase md:pr-36">Top Authors</h2>
         {% if dna.top_authors %}
-            <div class="flex max-h-[5rem] items-start justify-between md:block md:max-h-none">
+            <div class="flex items-start justify-between md:!block md:!max-h-none" style="max-height: 5rem;">
                 {% if dna.unique_authors_count %}
                     <p class="mb-2 text-base italic text-gray-500 md:mb-6 md:pr-36">We found {{ dna.unique_authors_count }} unique author{{ dna.unique_authors_count|pluralize }} in {{ pronoun_pos|default:"your" }} library</p>
                 {% endif %}
-                <div class="relative -top-10 -right-[0.6rem] h-28 w-28 flex-shrink-0 md:absolute md:top-2 md:right-2 md:h-32 md:w-32">
+                <div class="h-28 w-28 flex-shrink-0 md:!absolute md:!top-2 md:!right-2 md:!h-32 md:!w-32" style="position: relative; top: -2.5rem; right: -0.6rem;">
                     <canvas id="topAuthorsChart"></canvas>
                 </div>
             </div>
