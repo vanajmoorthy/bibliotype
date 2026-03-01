@@ -145,7 +145,7 @@ recommendations, reading insights{% endblock %}
                 });
             </script>
         {% elif dna %}
-            <div x-data="shareModalData()">
+            <div x-data="shareModalData()" class="space-y-8">
             {{ dna|json_script:"dna-data" }}
             <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
                 <span class="relative z-10">
