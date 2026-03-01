@@ -16,7 +16,7 @@
                     x-show="!imgFailed"
                     src="{{ dna.most_niche_book.cover_url }}"
                     alt="Cover of {{ dna.most_niche_book.title }}"
-                    class="border-brand-pink h-40 w-[6.75rem] border-4 object-cover"
+                    class="border-brand-pink h-28 w-20 border-4 object-cover"
                     loading="lazy"
                     x-on:error="imgFailed = true"
                     x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
@@ -24,13 +24,13 @@
                 <div
                     x-show="imgFailed"
                     x-cloak
-                    class="bg-brand-purple border-brand-pink flex h-40 w-[6.75rem] items-center justify-center border-4 text-5xl font-bold"
+                    class="bg-brand-purple border-brand-pink flex h-28 w-20 items-center justify-center border-4 text-4xl font-bold"
                 >
                     {{ dna.most_niche_book.title|first|upper }}
                 </div>
             {% else %}
                 <div
-                    class="bg-brand-purple border-brand-pink flex h-40 w-[6.75rem] items-center justify-center border-4 text-5xl font-bold"
+                    class="bg-brand-purple border-brand-pink flex h-28 w-20 items-center justify-center border-4 text-4xl font-bold"
                 >
                     {{ dna.most_niche_book.title|first|upper }}
                 </div>

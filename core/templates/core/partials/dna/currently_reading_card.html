@@ -15,13 +15,13 @@
                 max-w-sm mx-auto{% else %}grid-cols-3{% endif %} grid gap-6"
             >
                 {% for book in dna.currently_reading_books %}
-                    <div class="flex flex-col text-center" x-data="{ imgFailed: false }">
+                    <div class="flex flex-col items-center text-center" x-data="{ imgFailed: false }">
                         {% if book.cover_url %}
                             <img
                                 x-show="!imgFailed"
                                 src="{{ book.cover_url }}"
                                 alt="Cover of {{ book.title }}"
-                                class="{% if forloop.counter0 == 0 %}border-brand-pink{% elif forloop.counter0 == 1 %}border-brand-cyan{% else %}border-brand-green{% endif %} mx-auto h-40 w-[6.75rem] border-4 object-cover"
+                                class="{% if forloop.counter0 == 0 %}border-brand-pink{% elif forloop.counter0 == 1 %}border-brand-cyan{% else %}border-brand-green{% endif %} mx-auto h-44 w-[7rem] shrink-0 border-4 object-cover"
                                 loading="lazy"
                                 x-on:error="imgFailed = true"
                                 x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
@@ -30,7 +30,7 @@
                         <div
                             {% if book.cover_url %}x-show="imgFailed" x-cloak{% endif %}
                             class="{% if forloop.counter0 == 0 %}bg-brand-pink border-brand-pink{% elif forloop.counter0 == 1 %}bg-brand-cyan
-                            border-brand-cyan{% else %}bg-brand-green border-brand-green{% endif %} mx-auto flex h-40 w-[6.75rem] items-center justify-center border-4 text-4xl font-bold"
+                            border-brand-cyan{% else %}bg-brand-green border-brand-green{% endif %} mx-auto flex h-44 w-[7rem] shrink-0 items-center justify-center border-4 text-4xl font-bold"
                         >
                             {{ book.title|first|upper }}
                         </div>
