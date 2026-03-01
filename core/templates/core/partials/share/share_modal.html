@@ -1,6 +1,7 @@
 <div
     x-show="shareModalOpen"
     x-cloak
+    x-effect="document.body.classList.toggle('overflow-hidden', shareModalOpen)"
     x-transition:enter="transition ease-out duration-200"
     x-transition:enter-start="opacity-0"
     x-transition:enter-end="opacity-100"
@@ -8,8 +9,9 @@
     x-transition:leave-start="opacity-100"
     x-transition:leave-end="opacity-0"
     @keydown.escape.window="shareModalOpen = false"
-    class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-900/80 p-4"
+    class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/80"
 >
+    <div class="flex min-h-full flex-col items-center justify-center p-4">
     <div class="flex w-full max-w-5xl flex-col items-center">
         <div class="mb-4 flex w-full items-center justify-between px-2">
             <h2 class="text-2xl font-bold tracking-wider uppercase text-white">Share Your Bibliotype</h2>
@@ -90,6 +92,7 @@
         </div>
 
         <p class="mt-2 text-center text-sm text-white/60">Swipe to see all cards</p>
+    </div>
     </div>
 </div>
 

@@ -1,7 +1,7 @@
 <div class="flex h-[568px] w-[320px] flex-col justify-between border-2 border-brand-text bg-brand-orange p-6">
     <div>
         <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
-        <p class="mt-1 text-center text-lg font-bold uppercase">How Mainstream?</p>
+        <p class="mt-1 text-center text-lg font-bold uppercase">Mainstream Meter</p>
         <div class="mt-4 text-center">
             <div class="text-7xl font-bold">{{ dna.mainstream_score_percent }}%</div>
             <p class="mt-1 text-sm">of my books are considered mainstream</p>
@@ -30,9 +30,17 @@
                 {% for book in dna.top_controversial_books|slice:":2" %}
                     <div class="mt-1.5 border-2 border-brand-text bg-white p-2">
                         <p class="text-xs font-bold">{{ book.Title|truncatewords:6 }}</p>
-                        <div class="flex gap-3 text-xs">
-                            <span>Mine: {{ book.my_rating }}</span>
-                            <span>Avg: {{ book.average_rating }}</span>
+                        <div class="mt-1 flex items-center gap-1 text-[10px]">
+                            <span class="font-bold">Mine: {{ book.my_rating }}</span>
+                            <div class="flex-1 h-3 border border-brand-text bg-gray-100 relative">
+                                <div class="absolute top-0 left-0 h-full bg-brand-pink" style="width: {% widthratio book.my_rating 5 100 %}%;"></div>
+                            </div>
+                        </div>
+                        <div class="mt-0.5 flex items-center gap-1 text-[10px]">
+                            <span class="font-bold">Avg: {{ book.average_rating }}</span>
+                            <div class="flex-1 h-3 border border-brand-text bg-gray-100 relative">
+                                <div class="absolute top-0 left-0 h-full bg-brand-cyan" style="width: {% widthratio book.average_rating 5 100 %}%;"></div>
+                            </div>
                         </div>
                     </div>
                 {% endfor %}

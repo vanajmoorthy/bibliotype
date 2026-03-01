@@ -1,5 +1,5 @@
 {% load humanize %}
-<div class="flex h-[568px] w-[320px] flex-col justify-between border-2 border-brand-text bg-brand-pink p-5">
+<div class="flex h-[568px] w-[320px] flex-col justify-between border-2 border-brand-text bg-brand-purple p-5">
     <div>
         <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
         <div class="mt-3 border-2 border-brand-text bg-white p-2.5 text-center">
@@ -9,20 +9,20 @@
         {% if dna.reading_vibe %}
             <div class="mt-2.5 flex flex-wrap justify-center gap-1">
                 {% for phrase in dna.reading_vibe %}
-                    <span class="border border-brand-text px-1.5 py-0.5 text-xs font-bold" style="background-color: {% cycle '#40e7aa' '#ffb4dd' '#ffa75e' '#8bbfff' %};">{{ phrase }}</span>
+                    <span class="border border-brand-text bg-white px-1.5 py-0.5 text-xs font-bold">{{ phrase }}</span>
                 {% endfor %}
             </div>
         {% endif %}
         <div class="mt-3 grid grid-cols-3 gap-1.5">
-            <div class="border-2 border-brand-text bg-brand-yellow p-1.5 text-center">
+            <div class="border-2 border-brand-text bg-white p-1.5 text-center">
                 <div class="text-lg font-bold">{{ dna.user_stats.total_books_read }}</div>
                 <div class="text-[10px] uppercase">Books</div>
             </div>
-            <div class="border-2 border-brand-text bg-brand-cyan p-1.5 text-center">
+            <div class="border-2 border-brand-text bg-white p-1.5 text-center">
                 <div class="text-lg font-bold">{{ dna.user_stats.total_pages_read|intcomma }}</div>
                 <div class="text-[10px] uppercase">Pages</div>
             </div>
-            <div class="border-2 border-brand-text bg-brand-green p-1.5 text-center">
+            <div class="border-2 border-brand-text bg-white p-1.5 text-center">
                 <div class="text-lg font-bold">{{ dna.average_rating_overall }}</div>
                 <div class="text-[10px] uppercase">Avg Rating</div>
             </div>
@@ -33,7 +33,7 @@
                     <p class="text-[10px] font-bold uppercase">Top Genres</p>
                     {% for genre, count in dna.top_genres|slice:":3" %}
                         <p class="mt-0.5 text-xs">
-                            <span class="inline-block border border-brand-text px-1 font-bold capitalize" style="background-color: {% cycle '#ffb4dd' '#40e7aa' '#ffa75e' %};">{{ genre }}</span>
+                            <span class="inline-block border border-brand-text bg-white px-1 font-bold capitalize">{{ genre }}</span>
                         </p>
                     {% endfor %}
                 </div>
@@ -43,21 +43,28 @@
                     <p class="text-[10px] font-bold uppercase">Top Authors</p>
                     {% for author, count in dna.top_authors|slice:":3" %}
                         <p class="mt-0.5 text-xs">
-                            <span class="inline-block border border-brand-text px-1 font-bold" style="background-color: {% cycle '#8bbfff' '#FFE9CE' '#ff647c' %};">{{ author|truncatewords:3 }}</span>
+                            <span class="inline-block border border-brand-text bg-white px-1 font-bold">{{ author|truncatewords:3 }}</span>
                         </p>
                     {% endfor %}
                 </div>
             {% endif %}
         </div>
-        <div class="mt-2.5 flex items-center gap-2 border-2 border-brand-text bg-brand-orange p-2">
+        <div class="mt-2.5 flex items-center gap-2 border-2 border-brand-text bg-white p-2">
             <div class="text-2xl font-bold">{{ dna.mainstream_score_percent }}%</div>
             <div class="text-xs">
                 <p class="font-bold uppercase">Mainstream</p>
                 {% if dna.most_niche_book %}
-                    <p class="mt-0.5 leading-tight opacity-80">Nichest: {{ dna.most_niche_book.title|truncatewords:4 }}</p>
+                    <p class="mt-0.5 leading-tight opacity-80">Nichest: {{ dna.most_niche_book.title|truncatewords:6 }}</p>
                 {% endif %}
             </div>
         </div>
+        {% if dna.top_reader_types %}
+            <div class="mt-2.5 flex flex-wrap gap-1">
+                {% for item in dna.top_reader_types %}
+                    <span class="border border-brand-text bg-white px-1.5 py-0.5 text-[10px] font-bold">{{ item.type }}</span>
+                {% endfor %}
+            </div>
+        {% endif %}
     </div>
     <p class="text-center text-xs font-bold tracking-wider uppercase opacity-60">{{ share_url|default:"bibliotype.app" }}</p>
 </div>
