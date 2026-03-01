@@ -512,15 +512,14 @@ class EmptyStateRecommendationsViewTestCase(TestCase):
         self.user.userprofile.save()
 
     @patch("core.tasks.generate_recommendations_task")
-    def test_dashboard_shows_empty_state_when_no_recommendations(self, mock_rec_task):
-        """Dashboard shows fallback message when recommendations_data is None."""
+    def test_dashboard_shows_pending_state_when_no_recommendations(self, mock_rec_task):
+        """Dashboard shows polling/generating state when DNA exists but recommendations are pending."""
         mock_rec_task.delay = MagicMock()
         self.client.login(username="emptyrecuser", password="test123")
 
         response = self.client.get("/dashboard/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "No recommended books yet")
-        self.assertContains(response, "upload an updated CSV")
+        self.assertContains(response, "Generating your recommendations")
 
     @patch("core.tasks.generate_recommendations_task")
     def test_dashboard_shows_recommendations_when_present(self, mock_rec_task):
