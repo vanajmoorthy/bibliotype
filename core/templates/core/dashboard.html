@@ -17,9 +17,9 @@ recommendations, reading insights{% endblock %}
 {% endblock %}
 
 {% block content %}
-    <div class="mx-auto h-full max-w-4xl space-y-8 p-2">
+    <div class="mx-auto h-full max-w-4xl space-y-6 p-2">
         {% if is_processing %}
-            <div id="processing-container" class="flex h-full flex-col items-center justify-center p-4" x-data="{ status: 'PENDING' }">
+            <div id="processing-container" class="flex flex-col items-center p-4 py-12 md:py-24" x-data="{ status: 'PENDING' }">
                 <div class="w-full max-w-2xl text-center" x-show="status !== 'FAILURE'">
                     {% include 'core/partials/cycling_messages.html' %}
                     <p class="mb-8 text-lg text-gray-600">
@@ -145,9 +145,9 @@ recommendations, reading insights{% endblock %}
                 });
             </script>
         {% elif dna %}
-            <div x-data="shareModalData()" class="space-y-8">
+            <div x-data="shareModalData()" class="space-y-6">
             {{ dna|json_script:"dna-data" }}
-            <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
+            <h1 class="mb-4 text-center text-5xl font-bold tracking-widest uppercase md:mb-8">
                 <span class="relative z-10">
                     {% if user.is_authenticated %}
                         {% include 'core/partials/username_editor.html' %}
@@ -256,11 +256,47 @@ recommendations, reading insights{% endblock %}
                 </div>
             {% endif %}
             {% include 'core/partials/dna/charts_scripts.html' %}
+            <style>
+                .fade-in-section {
+                    opacity: 0;
+                    transform: translateY(6px);
+                    transition: opacity 0.45s ease-out, transform 0.45s ease-out;
+                }
+                .fade-in-section.is-visible {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            </style>
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    const container = document.querySelector('[x-data="shareModalData()"]');
+                    if (!container) return;
+                    const sections = container.querySelectorAll(":scope > *");
+                    const observer = new IntersectionObserver(
+                        (entries) => {
+                            entries.forEach((entry) => {
+                                if (entry.isIntersecting) {
+                                    entry.target.classList.add("is-visible");
+                                    observer.unobserve(entry.target);
+                                }
+                            });
+                        },
+                        { threshold: 0.05 }
+                    );
+                    sections.forEach((s) => {
+                        if (s.tagName === "SCRIPT" || s.tagName === "STYLE") return;
+                        const rect = s.getBoundingClientRect();
+                        if (rect.top < window.innerHeight) return;
+                        s.classList.add("fade-in-section");
+                        observer.observe(s);
+                    });
+                });
+            </script>
             </div>
         {% else %}
             <div class="flex h-full flex-col p-4">
                 <div class="w-full">
-                    <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
+                    <h1 class="mb-4 text-center text-5xl font-bold tracking-widest uppercase md:mb-8">
                         <span class="relative z-10">
                             {% include 'core/partials/username_editor.html' %}
                         </span>

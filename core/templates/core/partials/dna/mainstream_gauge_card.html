@@ -16,46 +16,27 @@
             return (clampedScore / 100) * 180 - 90;
         },
 
-        // --- METHODS ---
-        // The animate method now handles both the main animation AND the continuous wiggle.
         animate() {
-            const duration = 1000; // Main animation duration
+            const duration = 1000;
             let startTimestamp = null;
 
             const step = (timestamp) => {
                 if (!startTimestamp) startTimestamp = timestamp;
                 const elapsed = timestamp - startTimestamp;
-
-                // 1. Calculate the main progress of the animation (caps at 1)
                 const mainProgress = Math.min(elapsed / duration, 1);
                 const easedMainProgress = 0.5 - Math.cos(mainProgress * Math.PI) / 2;
 
-                // 2. Calculate the continuous wiggle value based on the current time
-                const wiggle1 = Math.sin(timestamp / 280) * 0.4; // Slower wiggle
-                const wiggle2 = Math.sin(timestamp / 110) * 0.25; // Faster wiggle
-                const totalWiggle = wiggle1 + wiggle2;
+                this.animatedScore = this.score * easedMainProgress;
+                this.displayedScore = Math.round(this.score * easedMainProgress);
 
-                // 3. Scale the wiggle's intensity by the main animation's progress.
-                // This makes the wiggle start small and grow to full strength.
-                const scaledWiggle = totalWiggle * easedMainProgress;
-
-                // 4. Set the final needle position.
-                // It's the main eased position plus the scaled, continuous wiggle.
-                this.animatedScore = (this.score * easedMainProgress) + scaledWiggle;
-
-                // 5. Update the displayed score text, but only during the main animation.
-                // After it's done, lock it to the final score so the text doesn't wiggle.
                 if (mainProgress < 1) {
-                    this.displayedScore = Math.round(this.score * easedMainProgress);
+                    window.requestAnimationFrame(step);
                 } else {
+                    this.animatedScore = this.score;
                     this.displayedScore = Math.round(this.score);
                 }
-                
-                // 6. Keep the animation loop running forever to maintain the wiggle.
-                window.requestAnimationFrame(step);
             };
 
-            // Start the single, continuous animation loop.
             window.requestAnimationFrame(step);
         },
 
@@ -78,20 +59,20 @@
                 <div class="absolute top-0 left-0 h-64 w-64 rounded-full border-4 border-brand-text"
                     style="background-image: conic-gradient(
                         from 180deg,
-                        #00c27a 0% 40%,      /* Niche: score 0-30% → conic 25-40% visible */
-                        #ffc107 40% 60%,     /* Normal: score 30-70% → conic 40-60% visible */
-                        #ff5c5c 60% 100%     /* Mainstream: score 70-100% → conic 60-75% visible */
+                        #00c27a 0% 37.5%,    /* Niche: score 0-25% → conic 25-37.5% visible */
+                        #ffc107 37.5% 62.5%, /* Normal: score 25-75% → conic 37.5-62.5% visible */
+                        #ff5c5c 62.5% 100%   /* Mainstream: score 75-100% → conic 62.5-75% visible */
                         );">
                 </div>
             </div>
 
-         <!-- Border at 30% mark (niche/normal boundary) -->
+         <!-- Border at 25% mark (niche/normal boundary) -->
             <div class="absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2 bg-brand-text"
-                 style="transform: rotate(-36deg);"></div>
+                 style="transform: rotate(-45deg);"></div>
 
-         <!-- Border at 70% mark (normal/mainstream boundary) -->
+         <!-- Border at 75% mark (normal/mainstream boundary) -->
             <div class="absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2 bg-brand-text"
-                 style="transform: rotate(36deg);"></div>
+                 style="transform: rotate(45deg);"></div>
 
             <!-- Layer 2: SVG for Text (Not clipped, sits on top) -->
             <svg class="absolute top-0 left-0 h-64 w-64 z-10" viewBox="0 0 256 256" overflow="visible">
@@ -100,13 +81,13 @@
                     <path id="semicircle" d="M 18,128 A 110,110 0 0,1 238,128" fill="none"/>
                 </defs>
                 <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
-                    <textPath href="#semicircle" startOffset="15%" text-anchor="middle">niche</textPath>
+                    <textPath href="#semicircle" startOffset="12%" text-anchor="middle">niche</textPath>
                 </text>
                 <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
                     <textPath href="#semicircle" startOffset="50%" text-anchor="middle">normal</textPath>
                 </text>
                 <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
-                    <textPath href="#semicircle" startOffset="85%" text-anchor="middle">mainstream</textPath>
+                    <textPath href="#semicircle" startOffset="88%" text-anchor="middle">mainstream</textPath>
                 </text>
             </svg>
 

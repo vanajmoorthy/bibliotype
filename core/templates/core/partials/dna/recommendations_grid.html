@@ -1,7 +1,31 @@
+{# djlint:off #}
 <div
-    x-data="{ recColors: ['#ffb4dd', '#40e7aa', '#ffa75e', '#8bbfff', '#FFE9CE', '#ff647c'] }"
+    x-data="{
+        recColors: ['#ffb4dd', '#40e7aa', '#ffa75e', '#8bbfff', '#FFE9CE', '#ff647c'],
+        init() {
+            const cards = this.$refs.recGrid.children;
+            Array.from(cards).forEach((card, i) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(8px)';
+                card.style.transition = 'opacity 0.4s ease-out, transform 0.4s ease-out';
+                card.style.transitionDelay = (i * 100) + 'ms';
+            });
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    Array.from(cards).forEach((card) => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    });
+                    observer.unobserve(this.$refs.recGrid);
+                }
+            }, { threshold: 0.1 });
+            observer.observe(this.$refs.recGrid);
+        }
+    }"
+    x-init="init()"
     class="border-brand-text shadow-neo border-2 bg-white p-6"
 >
+{# djlint:on #}
     <h2 class="mb-1 text-2xl font-bold uppercase">{{ rec_title|default:"Recommended for You" }}</h2>
     {% if recommendations_meta.similar_users_count %}
         <p class="mb-4 text-base italic text-gray-500">
@@ -10,7 +34,7 @@
     {% else %}
         <p class="mb-4 text-base italic text-gray-500">Based on readers with similar taste</p>
     {% endif %}
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3" x-ref="recGrid">
         {% for rec in recommendations %}
             <div
                 class="border-brand-text shadow-neo-sm flex h-full flex-col border-2 p-4"

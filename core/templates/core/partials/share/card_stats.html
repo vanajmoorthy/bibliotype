@@ -9,21 +9,21 @@
                 <div class="text-sm uppercase">Books Read</div>
             </div>
             <div class="grid grid-cols-2 gap-2">
-                <div class="border-2 border-brand-text bg-white p-2 text-center">
+                <div class="border-2 border-brand-text bg-brand-green p-2 text-center">
                     <div class="text-2xl font-bold">{{ dna.user_stats.total_pages_read|intcomma }}</div>
                     <div class="text-xs uppercase">Pages</div>
                 </div>
-                <div class="border-2 border-brand-text bg-white p-2 text-center">
+                <div class="border-2 border-brand-text bg-brand-cyan p-2 text-center">
                     <div class="text-2xl font-bold">{{ dna.average_rating_overall }}</div>
                     <div class="text-xs uppercase">Avg Rating</div>
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-2">
-                <div class="border-2 border-brand-text bg-white p-2 text-center">
+                <div class="border-2 border-brand-text bg-brand-cyan p-2 text-center">
                     <div class="text-2xl font-bold">{{ dna.user_stats.avg_book_length }}</div>
                     <div class="text-xs uppercase">Avg Pages</div>
                 </div>
-                <div class="border-2 border-brand-text bg-white p-2 text-center">
+                <div class="border-2 border-brand-text bg-brand-green p-2 text-center">
                     {% if dna.user_stats.avg_books_per_year %}
                         <div class="text-2xl font-bold">{{ dna.user_stats.avg_books_per_year }}</div>
                         <div class="text-xs uppercase">Books/Year</div>
