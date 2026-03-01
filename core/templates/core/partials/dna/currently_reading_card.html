@@ -16,27 +16,25 @@
             >
                 {% for book in dna.currently_reading_books %}
                     <div class="flex flex-col text-center" x-data="{ imgFailed: false }">
-                        <div class="flex flex-1 items-end justify-center">
-                            {% if book.cover_url %}
-                                <img
-                                    x-show="!imgFailed"
-                                    src="{{ book.cover_url }}"
-                                    alt="Cover of {{ book.title }}"
-                                    class="{% if forloop.counter0 == 0 %}border-brand-pink{% elif forloop.counter0 == 1 %}border-brand-cyan{% else %}border-brand-green{% endif %} max-h-48 w-auto max-w-full border-4 object-contain"
-                                    loading="lazy"
-                                    x-on:error="imgFailed = true"
-                                    x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
-                                />
-                            {% endif %}
-                            <div
-                                {% if book.cover_url %}x-show="imgFailed" x-cloak{% endif %}
-                                class="{% if forloop.counter0 == 0 %}bg-brand-pink border-brand-pink{% elif forloop.counter0 == 1 %}bg-brand-cyan
-                                border-brand-cyan{% else %}bg-brand-green border-brand-green{% endif %} flex h-40 w-[6.75rem] items-center justify-center border-4 text-4xl font-bold"
-                            >
-                                {{ book.title|first|upper }}
-                            </div>
+                        {% if book.cover_url %}
+                            <img
+                                x-show="!imgFailed"
+                                src="{{ book.cover_url }}"
+                                alt="Cover of {{ book.title }}"
+                                class="{% if forloop.counter0 == 0 %}border-brand-pink{% elif forloop.counter0 == 1 %}border-brand-cyan{% else %}border-brand-green{% endif %} mx-auto h-40 w-[6.75rem] border-4 object-cover"
+                                loading="lazy"
+                                x-on:error="imgFailed = true"
+                                x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
+                            />
+                        {% endif %}
+                        <div
+                            {% if book.cover_url %}x-show="imgFailed" x-cloak{% endif %}
+                            class="{% if forloop.counter0 == 0 %}bg-brand-pink border-brand-pink{% elif forloop.counter0 == 1 %}bg-brand-cyan
+                            border-brand-cyan{% else %}bg-brand-green border-brand-green{% endif %} mx-auto flex h-40 w-[6.75rem] items-center justify-center border-4 text-4xl font-bold"
+                        >
+                            {{ book.title|first|upper }}
                         </div>
-                        <div class="mt-2">
+                        <div class="mt-auto pt-2">
                             <p class="line-clamp-2 text-base leading-tight font-bold">{{ book.title }}</p>
                             <p class="text-sm leading-tight text-gray-600">{{ book.author }}</p>
                         </div>
