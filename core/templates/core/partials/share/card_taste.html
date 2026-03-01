@@ -1,0 +1,46 @@
+<div class="flex h-[568px] w-[320px] flex-col justify-between border-2 border-brand-text bg-brand-green p-6">
+    <div>
+        <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
+        <p class="mt-1 text-center text-lg font-bold uppercase">My Taste</p>
+        {% if dna.top_genres %}
+            <div class="mt-4">
+                <p class="text-xs font-bold uppercase">Top Genres</p>
+                <div class="mt-1.5 space-y-1">
+                    {% for genre, count in dna.top_genres|slice:":5" %}
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center border-2 border-brand-text text-xs font-bold" style="background-color: {% cycle '#ffb4dd' '#40e7aa' '#ffa75e' '#8bbfff' '#FFE9CE' %};">{{ forloop.counter }}</span>
+                            <span class="font-bold capitalize">{{ genre }}</span>
+                            <span class="ml-auto text-xs opacity-70">{{ count }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+        {% if dna.top_authors %}
+            <div class="mt-4">
+                <p class="text-xs font-bold uppercase">Top Authors</p>
+                <div class="mt-1.5 space-y-1">
+                    {% for author, count in dna.top_authors|slice:":5" %}
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center border-2 border-brand-text text-xs font-bold" style="background-color: {% cycle '#ffb4dd' '#40e7aa' '#ffa75e' '#8bbfff' '#FFE9CE' %};">{{ forloop.counter }}</span>
+                            <span class="font-bold">{{ author }}</span>
+                            <span class="ml-auto text-xs opacity-70">{{ count }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+        {% if dna.unique_genres_count or dna.unique_authors_count %}
+            <div class="mt-4 border-t-2 border-brand-text pt-2 text-center text-xs">
+                {% if dna.unique_genres_count %}
+                    <span class="font-bold">{{ dna.unique_genres_count }}</span> genres
+                {% endif %}
+                {% if dna.unique_genres_count and dna.unique_authors_count %} · {% endif %}
+                {% if dna.unique_authors_count %}
+                    <span class="font-bold">{{ dna.unique_authors_count }}</span> authors
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+    <p class="text-center text-xs font-bold tracking-wider uppercase opacity-60">{{ share_url|default:"bibliotype.app" }}</p>
+</div>

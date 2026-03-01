@@ -21,6 +21,7 @@ profile.{% endif %}{% endblock %}
 
 {% block extra_head_js %}
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
 {% endblock %}
 
 {% block structured_data %}
@@ -63,6 +64,7 @@ profile.{% endif %}{% endblock %}
     <div class="mx-auto max-w-4xl space-y-8 p-4">
         {# Check if DNA data exists for this user #}
         {% if dna %}
+            <div x-data="shareModalData()">
             {# This script tag is still needed for the charts to work #}
             {{ dna|json_script:"dna-data" }}
             <!-- The main header, personalised with the profile owner's name -->
@@ -78,6 +80,10 @@ profile.{% endif %}{% endblock %}
             {% with owner_pos=profile_user.first_name|default:profile_user.username|add:"'s" %}
                 {% include 'core/partials/dna/reader_type_card.html' %}
             {% endwith %}
+
+            {% include 'core/partials/share/share_button.html' %}
+            {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app/u/"|add:profile_user.username %}
+
             {% include 'core/partials/dna/top_traits_list.html' %}
             {% include 'core/partials/dna/key_stats_row.html' %}
             {% include 'core/partials/dna/comparative_analytics_card.html' with pronoun_pos="their" pronoun_sub="they" is_public=True %}
@@ -112,6 +118,7 @@ profile.{% endif %}{% endblock %}
                 </div>
             {% endif %}
             {% include 'core/partials/dna/charts_scripts.html' %}
+            </div>
         {% else %}
             <div class="border-brand-text shadow-neo border-2 bg-white p-8 text-center">
                 <h2 class="text-2xl font-bold tracking-tight text-gray-900 uppercase">No Bibliotype Found</h2>

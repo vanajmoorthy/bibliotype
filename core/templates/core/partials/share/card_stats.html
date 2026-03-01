@@ -1,0 +1,47 @@
+{% load humanize %}
+<div class="flex h-[568px] w-[320px] flex-col justify-between border-2 border-brand-text bg-brand-yellow p-6">
+    <div>
+        <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
+        <p class="mt-1 text-center text-lg font-bold uppercase">By The Numbers</p>
+        <div class="mt-4 space-y-2.5">
+            <div class="border-2 border-brand-text bg-white p-3 text-center">
+                <div class="text-4xl font-bold">{{ dna.user_stats.total_books_read }}</div>
+                <div class="text-sm uppercase">Books Read</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+                <div class="border-2 border-brand-text bg-white p-2.5 text-center">
+                    <div class="text-2xl font-bold">{{ dna.user_stats.total_pages_read|intcomma }}</div>
+                    <div class="text-xs uppercase">Pages</div>
+                </div>
+                <div class="border-2 border-brand-text bg-white p-2.5 text-center">
+                    <div class="text-2xl font-bold">{{ dna.average_rating_overall }}</div>
+                    <div class="text-xs uppercase">Avg Rating</div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+                <div class="border-2 border-brand-text bg-white p-2.5 text-center">
+                    <div class="text-2xl font-bold">{{ dna.user_stats.avg_book_length }}</div>
+                    <div class="text-xs uppercase">Avg Pages</div>
+                </div>
+                <div class="border-2 border-brand-text bg-white p-2.5 text-center">
+                    {% if dna.user_stats.avg_books_per_year %}
+                        <div class="text-2xl font-bold">{{ dna.user_stats.avg_books_per_year }}</div>
+                        <div class="text-xs uppercase">Books/Year</div>
+                    {% else %}
+                        <div class="text-2xl font-bold">{{ dna.user_stats.avg_publish_year|floatformat:0 }}</div>
+                        <div class="text-xs uppercase">Avg Pub Year</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% if dna.stats_by_year %}
+                <div class="border-2 border-brand-text bg-white p-2.5 text-center">
+                    <div class="text-lg font-bold">
+                        {{ dna.stats_by_year.0.year }} &mdash; {{ dna.stats_by_year|last|default:"" }}
+                    </div>
+                    <div class="text-xs uppercase">Reading Timeline</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <p class="text-center text-xs font-bold tracking-wider uppercase opacity-60">{{ share_url|default:"bibliotype.app" }}</p>
+</div>
