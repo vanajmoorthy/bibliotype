@@ -11,15 +11,14 @@
         </p>
         {% if dna.currently_reading_books %}
             <div
-                class="{% if dna.currently_reading_books|length == 1 %}md:grid-cols-1 max-w-[8.75rem] mx-auto{% elif dna.currently_reading_books|length == 2 %}md:grid-cols-2
-                max-w-sm mx-auto{% else %}md:grid-cols-3{% endif %} grid grid-cols-1 gap-6"
+                class="flex gap-6 overflow-x-auto pb-2 md:grid {% if dna.currently_reading_books|length == 1 %}md:max-w-[10rem] md:mx-auto md:grid-cols-1{% elif dna.currently_reading_books|length == 2 %}md:max-w-sm md:mx-auto md:grid-cols-2{% else %}md:grid-cols-3{% endif %} md:overflow-x-visible md:pb-0"
             >
                 {% for book in dna.currently_reading_books %}
-                    <div class="flex flex-col items-center text-center" x-data="{ imgFailed: false }">
+                    <div class="flex w-32 shrink-0 flex-col items-center text-center md:w-auto md:shrink" x-data="{ imgFailed: false }">
                         {% if book.cover_url %}
                             <div
                                 x-show="!imgFailed"
-                                class="border-brand-text mx-auto h-52 w-[8rem] shrink-0 overflow-hidden border-2"
+                                class="border-brand-text h-44 w-32 shrink-0 overflow-hidden border-2 md:mx-auto md:h-64 md:w-[10rem]"
                             >
                                 <img
                                     src="{{ book.cover_url }}"
@@ -33,7 +32,7 @@
                         {% endif %}
                         <div
                             {% if book.cover_url %}x-show="imgFailed" x-cloak{% endif %}
-                            class="{% if forloop.counter0 == 0 %}bg-brand-pink{% elif forloop.counter0 == 1 %}bg-brand-cyan{% else %}bg-brand-green{% endif %} border-brand-text mx-auto flex h-52 w-[8rem] shrink-0 items-center justify-center border-2 text-4xl font-bold"
+                            class="{% if forloop.counter0 == 0 %}bg-brand-pink{% elif forloop.counter0 == 1 %}bg-brand-cyan{% else %}bg-brand-green{% endif %} border-brand-text flex h-44 w-32 shrink-0 items-center justify-center border-2 text-4xl font-bold md:mx-auto md:h-64 md:w-[10rem]"
                         >
                             {{ book.title|first|upper }}
                         </div>
