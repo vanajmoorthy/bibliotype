@@ -1,16 +1,65 @@
 {% load humanize %}
-<div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+{# djlint:off #}
+<div class="grid grid-cols-1 gap-6 md:grid-cols-3"
+     x-data="{
+         hasAnimated: false,
+         books: 0,
+         pages: 0,
+         rating: 0,
+         targetBooks: {{ dna.user_stats.total_books_read }},
+         targetPages: {{ dna.user_stats.total_pages_read }},
+         targetRating: {{ dna.average_rating_overall }},
+
+         fmtPages(v) { return Math.round(v).toLocaleString(); },
+         fmtRating(v) { return v.toFixed(1); },
+
+         animate() {
+             const duration = 800;
+             let startTimestamp = null;
+             const step = (timestamp) => {
+                 if (!startTimestamp) startTimestamp = timestamp;
+                 const elapsed = timestamp - startTimestamp;
+                 const progress = Math.min(elapsed / duration, 1);
+                 const eased = 0.5 - Math.cos(progress * Math.PI) / 2;
+
+                 this.books = Math.round(this.targetBooks * eased);
+                 this.pages = Math.round(this.targetPages * eased);
+                 this.rating = this.targetRating * eased;
+
+                 if (progress < 1) {
+                     window.requestAnimationFrame(step);
+                 } else {
+                     this.books = this.targetBooks;
+                     this.pages = this.targetPages;
+                     this.rating = this.targetRating;
+                 }
+             };
+             window.requestAnimationFrame(step);
+         },
+
+         init() {
+             const observer = new IntersectionObserver((entries) => {
+                 if (entries[0].isIntersecting && !this.hasAnimated) {
+                     this.hasAnimated = true;
+                     this.animate();
+                     observer.unobserve(this.$el);
+                 }
+             }, { threshold: 0.3 });
+             observer.observe(this.$el);
+         }
+     }"
+     x-init="init()">
     <div class="bg-brand-yellow border-brand-text shadow-neo border-2 p-6 text-center">
-        <div class="text-5xl font-bold">{{ dna.user_stats.total_books_read }}</div>
+        <div class="text-5xl font-bold" x-text="books">{{ dna.user_stats.total_books_read }}</div>
         <div class="mt-2 text-lg uppercase">Total Books Read</div>
     </div>
     <div class="bg-brand-pink border-brand-text shadow-neo border-2 p-6 text-center">
-        <div class="text-5xl font-bold">{{ dna.user_stats.total_pages_read|intcomma }}</div>
+        <div class="text-5xl font-bold" x-text="fmtPages(pages)">{{ dna.user_stats.total_pages_read|intcomma }}</div>
         <div class="mt-2 text-lg uppercase">Total Pages Read</div>
     </div>
     <div class="bg-brand-cyan border-brand-text shadow-neo border-2 p-6 text-center">
-        <div class="text-5xl font-bold">{{ dna.average_rating_overall }}</div>
+        <div class="text-5xl font-bold" x-text="fmtRating(rating)">{{ dna.average_rating_overall }}</div>
         <div class="mt-2 text-lg uppercase">Overall Rating</div>
     </div>
 </div>
-
+{# djlint:on #}

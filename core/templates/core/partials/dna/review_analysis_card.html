@@ -11,7 +11,7 @@
             {% if dna.most_positive_review %}
                 <p class="mt-2 font-bold">{{ dna.most_positive_review.Title }}</p>
                 {# Review text is sanitized at ingestion - never use |safe here #}
-                <blockquote class="border-brand-text shadow-neo-sm mt-2 border-2 bg-gray-100 p-3">
+                <blockquote class="border-brand-text shadow-neo-sm mt-2 border-2 bg-brand-green p-3">
                     "{{ dna.most_positive_review.my_review|linebreaksbr }}"
                 </blockquote>
             {% else %}
@@ -23,7 +23,7 @@
             {% if dna.most_negative_review %}
                 <p class="mt-2 font-bold">{{ dna.most_negative_review.Title }}</p>
                 {# Review text is sanitized at ingestion - never use |safe here #}
-                <blockquote class="border-brand-text shadow-neo-sm mt-2 border-2 bg-gray-100 p-3">
+                <blockquote class="border-brand-text shadow-neo-sm mt-2 border-2 bg-brand-orange p-3">
                     "{{ dna.most_negative_review.my_review|linebreaksbr }}"
                 </blockquote>
             {% else %}
