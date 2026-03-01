@@ -1,13 +1,13 @@
 <div class="flex h-[568px] w-[320px] flex-col justify-between border-2 border-brand-text bg-brand-purple p-6">
     <div>
         <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
-        <div class="mt-6 text-center">
+        <div class="mt-4 text-center">
             <p class="text-base uppercase">My Reader Type is...</p>
-            <p class="mt-2 text-3xl font-bold tracking-wider uppercase">{{ dna.reader_type }}</p>
+            <p class="mt-1 text-3xl font-bold tracking-wider uppercase">{{ dna.reader_type }}</p>
         </div>
         {% if dna.reading_vibe %}
-            <div class="mt-5">
-                <p class="mb-1.5 text-center text-xs font-bold uppercase opacity-70">Reading Vibes</p>
+            <div class="mt-4">
+                <p class="mb-2 text-center text-xs font-bold uppercase opacity-70">Reading Vibes</p>
                 <div class="flex flex-wrap justify-center gap-1.5">
                     {% for phrase in dna.reading_vibe %}
                         <span class="border-2 border-brand-text px-2 py-0.5 text-sm font-bold" style="background-color: {% cycle '#40e7aa' '#ffb4dd' '#ffa75e' '#8bbfff' %};">{{ phrase }}</span>
@@ -16,7 +16,7 @@
             </div>
         {% endif %}
         {% if dna.top_reader_types %}
-            <div class="mt-5 space-y-1.5">
+            <div class="mt-8 space-y-1.5">
                 <p class="text-xs font-bold uppercase">Top Traits</p>
                 {% for item in dna.top_reader_types %}
                     <div class="flex items-center gap-2 text-sm">

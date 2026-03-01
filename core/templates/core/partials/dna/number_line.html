@@ -23,6 +23,7 @@ Optional:
   nl_show_diff     — if truthy, show a "diff: X" badge between user and compare legends
 {% endcomment %}
 
+{# djlint:off #}
 <div class="number-line-wrap mt-2 mb-1"
      x-data="{
          min: {{ nl_min }},
@@ -35,20 +36,30 @@ Optional:
          userCssColor: 'var(--color-{{ nl_user_color|default:'bg-brand-pink'|cut:'bg-' }})',
          compCssColor: 'var(--color-{{ nl_compare_color|default:'bg-brand-cyan'|cut:'bg-' }})',
          thirdCssColor: 'var(--color-{{ nl_third_color|default:'bg-brand-green'|cut:'bg-' }})',
+
+         hasAnimated: false,
+         animProgress: 0,
+
          clamp(v) { return Math.max(this.min, Math.min(this.max, v)); },
          pct(v)   { return ((this.clamp(v) - this.min) / (this.max - this.min)) * 100; },
          fmt(v)   { return this.decimals > 0 ? Number(v).toFixed(this.decimals) : Math.round(v); },
+
          get userPct()   { return this.pct(this.userVal); },
          get compPct()   { return this.pct(this.compVal); },
          get hasThird()  { return this.thirdVal !== null; },
          get thirdPct()  { return this.hasThird ? this.pct(this.thirdVal) : 0; },
-         get bands() {
+
+         get animUserPct()  { return this.userPct  * (0.75 + 0.25 * this.animProgress); },
+         get animCompPct()  { return this.compPct  * (0.75 + 0.25 * this.animProgress); },
+         get animThirdPct() { return this.thirdPct * (0.75 + 0.25 * this.animProgress); },
+
+         get animBands() {
              let items = [
-                 { pct: this.userPct, color: this.userCssColor },
-                 { pct: this.compPct, color: this.compCssColor },
+                 { pct: this.animUserPct, color: this.userCssColor },
+                 { pct: this.animCompPct, color: this.compCssColor },
              ];
              if (this.hasThird) {
-                 items.push({ pct: this.thirdPct, color: this.thirdCssColor });
+                 items.push({ pct: this.animThirdPct, color: this.thirdCssColor });
              }
              items.sort((a, b) => a.pct - b.pct);
              let result = [];
@@ -62,26 +73,57 @@ Optional:
              }
              return result;
          },
+
          bandStyle(band) {
              return 'background:linear-gradient(to right,' + band.colorL + ',' + band.colorR + ');' +
                     'opacity:0.5;' +
                     '-webkit-mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);' +
                     'mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);';
          },
-     }">
+
+         animate() {
+             const duration = 600;
+             let startTimestamp = null;
+             const step = (timestamp) => {
+                 if (!startTimestamp) startTimestamp = timestamp;
+                 const elapsed = timestamp - startTimestamp;
+                 const mainProgress = Math.min(elapsed / duration, 1);
+                 this.animProgress = 0.5 - Math.cos(mainProgress * Math.PI) / 2;
+
+                 if (mainProgress < 1) {
+                     window.requestAnimationFrame(step);
+                 } else {
+                     this.animProgress = 1;
+                 }
+             };
+             window.requestAnimationFrame(step);
+         },
+
+         init() {
+             const observer = new IntersectionObserver((entries) => {
+                 if (entries[0].isIntersecting && !this.hasAnimated) {
+                     this.hasAnimated = true;
+                     this.animate();
+                     observer.unobserve(this.$el);
+                 }
+             }, { threshold: 0.3 });
+             observer.observe(this.$el);
+         }
+     }"
+     x-init="init()">
 
     <!-- ── TRACK ── -->
     <div class="relative" style="height: 32px;">
         <div class="border-brand-text absolute inset-x-0 bottom-0 h-3 border-2 bg-gray-100">
             <!-- Gradient-hatched bands between each pair of adjacent markers -->
-            <template x-for="(band, idx) in bands" :key="idx">
+            <template x-for="(band, idx) in animBands" :key="idx">
                 <div class="absolute top-0 h-full"
                      :style="'left:' + band.left + '%; width:' + band.width + '%;' + bandStyle(band)"></div>
             </template>
         </div>
 
         <!-- User tick stem + diamond -->
-        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + userPct + '%'">
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animUserPct + '%'">
             <div class="{{ nl_user_color|default:'bg-brand-pink' }} border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
             <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
                 <div class="border-brand-text {{ nl_user_color|default:'bg-brand-pink' }} h-4 w-4 rotate-45 border-2"></div>
@@ -89,7 +131,7 @@ Optional:
         </div>
 
         <!-- Compare tick stem + square -->
-        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + compPct + '%'">
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animCompPct + '%'">
             <div class="{{ nl_compare_color|default:'bg-brand-cyan' }} border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
             <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
                 <div class="border-brand-text {{ nl_compare_color|default:'bg-brand-cyan' }} h-4 w-4 border-2"></div>
@@ -98,7 +140,7 @@ Optional:
 
         {% if nl_third_value %}
         <!-- Third tick stem + circle -->
-        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + thirdPct + '%'">
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animThirdPct + '%'">
             <div class="{{ nl_third_color|default:'bg-brand-green' }} border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
             <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
                 <div class="border-brand-text {{ nl_third_color|default:'bg-brand-green' }} h-4 w-4 rounded-full border-2"></div>
@@ -136,3 +178,4 @@ Optional:
         <span class="text-gray-500">{{ nl_max_label }}</span>
     </div>
 </div>
+{# djlint:on #}

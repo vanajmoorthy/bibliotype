@@ -1,15 +1,11 @@
-<div class="border-brand-text shadow-neo flex h-full flex-col border-2 bg-white p-6">
-    <h2 class="mb-1 text-center text-2xl font-bold uppercase">Most Niche Read</h2>
+<div class="border-brand-text shadow-neo border-2 bg-white p-6">
+    <h2 class="mb-1 text-2xl font-bold uppercase">Most Niche Read</h2>
+    {% if dna.niche_books_count %}
+        <p class="mb-4 text-base italic text-gray-500">We found {{ dna.niche_books_count }} book{{ dna.niche_books_count|pluralize }} in {{ pronoun_pos|default:"your" }} library read by {{ dna.niche_threshold }} or fewer people</p>
+    {% elif dna.most_niche_book %}
+        <p class="mb-4 text-base italic text-gray-500">{{ pronoun_pos|default:"Your"|capfirst }} rarest find on Bibliotype — read by only {{ dna.most_niche_book.read_count }} people</p>
+    {% endif %}
     {% if dna.most_niche_book %}
-        <p class="mb-4 text-center text-base text-gray-500 italic">
-            Only {{ dna.most_niche_book.read_count }} Bibliotype user{{ dna.most_niche_book.read_count|pluralize }}
-            {{ dna.most_niche_book.read_count|pluralize:"has,have" }}
-            read this
-            {% if dna.niche_books_count %}
-                &mdash; we found {{ dna.niche_books_count }} niche book{{ dna.niche_books_count|pluralize }} in
-                {{ pronoun_pos|default:"your" }} library
-            {% endif %}
-        </p>
         <div class="flex flex-1 flex-col items-center justify-center" x-data="{ imgFailed: false }">
             {% if dna.most_niche_book.cover_url %}
                 <div

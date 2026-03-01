@@ -73,19 +73,19 @@
 {% endblock %}
 
 {% block content %}
-    <div class="mx-auto max-w-4xl space-y-8 p-4">
+    <div class="mx-auto max-w-4xl space-y-6 p-4">
         {# Check if DNA data exists for this user #}
         {% if dna %}
-            <div x-data="shareModalData()" class="space-y-8">
-                {# This script tag is still needed for the charts to work #}
-                {{ dna|json_script:"dna-data" }}
-                <!-- The main header, personalised with the profile owner's name -->
-                <h1
-                    class="mb-8 flex flex-col items-center justify-center gap-x-4 text-center text-4xl font-bold tracking-widest uppercase sm:text-5xl md:flex-row"
-                >
-                    <span>{{ heading_name }}</span>
-                    <span class="whitespace-nowrap">Bibliotype</span>
-                </h1>
+            <div x-data="shareModalData()" class="space-y-6">
+            {# This script tag is still needed for the charts to work #}
+            {{ dna|json_script:"dna-data" }}
+            <!-- The main header, personalised with the profile owner's name -->
+            <h1
+                class="mb-4 flex flex-col items-center justify-center gap-x-4 text-center text-4xl font-bold tracking-widest uppercase sm:text-5xl md:mb-8 md:flex-row"
+            >
+                <span>{{ heading_name }}</span>
+                <span class="whitespace-nowrap">Bibliotype</span>
+            </h1>
 
                 {% include 'core/partials/dna/vibe_display.html' %}
 
