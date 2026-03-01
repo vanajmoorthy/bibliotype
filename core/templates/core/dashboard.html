@@ -13,10 +13,11 @@ recommendations, reading insights{% endblock %}
 
 {% block extra_head_js %}
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
 {% endblock %}
 
 {% block content %}
-    <div class="mx-auto h-full max-w-4xl space-y-8 p-2">
+    <div class="mx-auto h-full max-w-4xl space-y-6 p-2">
         {% if is_processing %}
             <div id="processing-container" class="flex flex-col items-center p-4 py-12 md:py-24" x-data="{ status: 'PENDING' }">
                 <div class="w-full max-w-2xl text-center" x-show="status !== 'FAILURE'">
@@ -144,8 +145,9 @@ recommendations, reading insights{% endblock %}
                 });
             </script>
         {% elif dna %}
+            <div x-data="shareModalData()" class="space-y-6">
             {{ dna|json_script:"dna-data" }}
-            <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
+            <h1 class="mb-4 text-center text-5xl font-bold tracking-widest uppercase md:mb-8">
                 <span class="relative z-10">
                     {% if user.is_authenticated %}
                         {% include 'core/partials/username_editor.html' %}
@@ -157,6 +159,14 @@ recommendations, reading insights{% endblock %}
 
             {% include 'core/partials/dna/vibe_display.html' %}
             {% include 'core/partials/dna/reader_type_card.html' %}
+
+            {% include 'core/partials/share/share_button.html' %}
+            {% if user.is_authenticated %}
+                {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app/u/"|add:user.username %}
+            {% else %}
+                {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app" %}
+            {% endif %}
+
             {% include 'core/partials/dna/top_traits_list.html' %}
             {% include 'core/partials/dna/key_stats_row.html' %}
             {% include 'core/partials/dna/comparative_analytics_card.html' %}
@@ -246,10 +256,11 @@ recommendations, reading insights{% endblock %}
                 </div>
             {% endif %}
             {% include 'core/partials/dna/charts_scripts.html' %}
+            </div>
         {% else %}
             <div class="flex h-full flex-col p-4">
                 <div class="w-full">
-                    <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
+                    <h1 class="mb-4 text-center text-5xl font-bold tracking-widest uppercase md:mb-8">
                         <span class="relative z-10">
                             {% include 'core/partials/username_editor.html' %}
                         </span>
