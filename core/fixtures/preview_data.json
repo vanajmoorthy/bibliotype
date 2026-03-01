@@ -1,6 +1,42 @@
 [
   {
     "model": "auth.user",
+    "pk": 24,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$kaeoKS3UYDWfCat4y0IT4z$vk/aBvxKm97C8VRbv3i1qMpCLmX9djtz0x2nkBjeRA4=",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "synthetic_harsh_rater",
+      "first_name": "Synthetic Harsh Rater",
+      "last_name": "",
+      "email": "synthetic_harsh_rater@test.bibliotype.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2025-11-10T18:23:30.375Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 26,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$kaeoKS3UYDWfCat4y0IT4z$vk/aBvxKm97C8VRbv3i1qMpCLmX9djtz0x2nkBjeRA4=",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "synthetic_lit_fiction1",
+      "first_name": "Synthetic Lit Fiction1",
+      "last_name": "",
+      "email": "synthetic_lit_fiction1@test.bibliotype.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2025-11-10T18:23:52.241Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "auth.user",
     "pk": 29,
     "fields": {
       "password": "pbkdf2_sha256$1000000$kaeoKS3UYDWfCat4y0IT4z$vk/aBvxKm97C8VRbv3i1qMpCLmX9djtz0x2nkBjeRA4=",
@@ -19,908 +55,274 @@
   },
   {
     "model": "auth.user",
-    "pk": 4,
+    "pk": 30,
     "fields": {
       "password": "pbkdf2_sha256$1000000$kaeoKS3UYDWfCat4y0IT4z$vk/aBvxKm97C8VRbv3i1qMpCLmX9djtz0x2nkBjeRA4=",
-      "last_login": "2025-10-26T20:54:44.240Z",
+      "last_login": null,
       "is_superuser": false,
-      "username": "anya",
-      "first_name": "",
+      "username": "synthetic_sf_fan1",
+      "first_name": "Synthetic Sf Fan1",
       "last_name": "",
-      "email": "anya@test.bibliotype.com",
+      "email": "synthetic_sf_fan1@test.bibliotype.com",
       "is_staff": false,
       "is_active": true,
-      "date_joined": "2025-10-26T20:54:43.948Z",
+      "date_joined": "2025-11-10T18:24:27.034Z",
       "groups": [],
       "user_permissions": []
     }
   },
   {
-    "model": "core.genre",
-    "pk": 1,
-    "fields": {
-      "name": "art & music"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 4,
-    "fields": {
-      "name": "social science"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 5,
-    "fields": {
-      "name": "thriller"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 6,
-    "fields": {
-      "name": "young adult"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 7,
-    "fields": {
-      "name": "psychology"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 9,
-    "fields": {
-      "name": "historical fiction"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 10,
-    "fields": {
-      "name": "humorous fiction"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 11,
-    "fields": {
-      "name": "romance"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 12,
-    "fields": {
-      "name": "classics"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 13,
-    "fields": {
-      "name": "philosophy"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 14,
-    "fields": {
-      "name": "comics & graphic novels"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 19,
-    "fields": {
-      "name": "fantasy"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 21,
-    "fields": {
-      "name": "horror"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 25,
-    "fields": {
-      "name": "science fiction"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 26,
-    "fields": {
-      "name": "self-help"
-    }
-  },
-  {
-    "model": "core.genre",
-    "pk": 29,
-    "fields": {
-      "name": "food & cooking"
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 184,
-    "fields": {
-      "name": "Albin Michel",
-      "normalized_name": "albinmichel",
-      "is_mainstream": false,
-      "parent": null,
-      "mainstream_last_checked": "2025-10-02T00:21:45.244Z"
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 9,
-    "fields": {
-      "name": "Audible Studios on Brilliance",
-      "normalized_name": "audiblestudiosonbrilliance",
-      "is_mainstream": false,
-      "parent": null,
-      "mainstream_last_checked": "2025-10-02T00:22:29.545Z"
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 179,
-    "fields": {
-      "name": "Balzer + Bray",
-      "normalized_name": "balzerbray",
-      "is_mainstream": true,
-      "parent": 79,
-      "mainstream_last_checked": "2025-10-02T00:23:04.608Z"
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 28,
-    "fields": {
-      "name": "Bloomsbury Publishing",
-      "normalized_name": "bloomsburypublishing",
-      "is_mainstream": false,
-      "parent": null,
-      "mainstream_last_checked": "2025-10-02T00:23:28.307Z"
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 174,
-    "fields": {
-      "name": "Colleen Hoover",
-      "normalized_name": "colleenhoover",
-      "is_mainstream": false,
-      "parent": null,
-      "mainstream_last_checked": "2025-10-02T00:24:08.565Z"
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 101,
-    "fields": {
-      "name": "CreateSpace Independent Publishing Platform",
-      "normalized_name": "createspaceindependentpublishingplatform",
-      "is_mainstream": false,
-      "parent": null,
-      "mainstream_last_checked": "2025-10-02T00:24:50.973Z"
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 14,
-    "fields": {
-      "name": "Europa Editions",
-      "normalized_name": "europaeditions",
-      "is_mainstream": false,
-      "parent": null,
-      "mainstream_last_checked": "2025-10-02T00:27:06.051Z"
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 75,
-    "fields": {
-      "name": "Grand Central Publishing",
-      "normalized_name": "grandcentralpublishing",
-      "is_mainstream": true,
-      "parent": 73,
-      "mainstream_last_checked": null
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 11,
-    "fields": {
-      "name": "Grove Press, Black Cat",
-      "normalized_name": "grovepressblackcat",
-      "is_mainstream": false,
-      "parent": null,
-      "mainstream_last_checked": null
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 73,
-    "fields": {
-      "name": "Hachette Livre",
-      "normalized_name": "hachettelivre",
-      "is_mainstream": true,
-      "parent": null,
-      "mainstream_last_checked": null
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 79,
-    "fields": {
-      "name": "HarperCollins",
-      "normalized_name": "harpercollins",
-      "is_mainstream": true,
-      "parent": null,
-      "mainstream_last_checked": null
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 229,
-    "fields": {
-      "name": "HarperCollinsChildren\u2019sBooks",
-      "normalized_name": "harpercollinschildrensbooks",
-      "is_mainstream": false,
-      "parent": null,
-      "mainstream_last_checked": null
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 230,
-    "fields": {
-      "name": "Harper Collins Publishers India",
-      "normalized_name": "harpercollinspublishersindia",
-      "is_mainstream": false,
-      "parent": null,
-      "mainstream_last_checked": null
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 53,
-    "fields": {
-      "name": "Hogarth",
-      "normalized_name": "hogarth",
-      "is_mainstream": false,
-      "parent": null,
-      "mainstream_last_checked": null
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 194,
-    "fields": {
-      "name": "James Clear",
-      "normalized_name": "jamesclear",
-      "is_mainstream": false,
-      "parent": null,
-      "mainstream_last_checked": null
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 150,
-    "fields": {
-      "name": "Orbit",
-      "normalized_name": "orbit",
-      "is_mainstream": false,
-      "parent": null,
-      "mainstream_last_checked": null
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 173,
-    "fields": {
-      "name": "Pamela Dorman Books",
-      "normalized_name": "pameladormanbooks",
-      "is_mainstream": false,
-      "parent": null,
-      "mainstream_last_checked": null
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 88,
-    "fields": {
-      "name": "Simon and Schuster",
-      "normalized_name": "simonandschuster",
-      "is_mainstream": true,
-      "parent": 87,
-      "mainstream_last_checked": null
-    }
-  },
-  {
-    "model": "core.publisher",
-    "pk": 87,
-    "fields": {
-      "name": "Simon & Schuster",
-      "normalized_name": "simonschuster",
-      "is_mainstream": true,
-      "parent": null,
-      "mainstream_last_checked": null
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 249,
-    "fields": {
-      "name": "N. K. Jemisin",
-      "normalized_name": "nkjemisin",
-      "popularity_score": 0,
-      "is_mainstream": true,
-      "mainstream_last_checked": "2026-02-17T12:51:37.660Z"
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 277,
-    "fields": {
-      "name": "Min Jin Lee",
-      "normalized_name": "minjinlee",
-      "popularity_score": 0,
-      "is_mainstream": false,
-      "mainstream_last_checked": "2026-02-17T12:52:19.421Z"
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 279,
-    "fields": {
-      "name": "Sally Rooney",
-      "normalized_name": "sallyrooney",
-      "popularity_score": 0,
-      "is_mainstream": false,
-      "mainstream_last_checked": "2026-02-17T12:52:21.187Z"
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 287,
-    "fields": {
-      "name": "Colleen Hoover",
-      "normalized_name": "colleenhoover",
-      "popularity_score": 0,
-      "is_mainstream": true,
-      "mainstream_last_checked": "2026-02-17T12:52:32.046Z"
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 293,
-    "fields": {
-      "name": "Angie Thomas",
-      "normalized_name": "angiethomas",
-      "popularity_score": 0,
-      "is_mainstream": true,
-      "mainstream_last_checked": "2026-02-17T12:52:42.164Z"
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 197,
-    "fields": {
-      "name": "Fyodor Dostoevsky",
-      "normalized_name": "fyodordostoevsky",
-      "popularity_score": 0,
-      "is_mainstream": true,
-      "mainstream_last_checked": "2026-02-17T12:53:11.278Z"
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 250,
-    "fields": {
-      "name": "Susanna Clarke",
-      "normalized_name": "susannaclarke",
-      "popularity_score": 0,
-      "is_mainstream": false,
-      "mainstream_last_checked": "2026-02-17T12:53:22.914Z"
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 284,
-    "fields": {
-      "name": "Gail Honeyman",
-      "normalized_name": "gailhoneyman",
-      "popularity_score": 0,
-      "is_mainstream": false,
-      "mainstream_last_checked": "2026-02-17T12:53:30.489Z"
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 300,
-    "fields": {
-      "name": "Yuval Noah Harari",
-      "normalized_name": "yuvalnoahharari",
-      "popularity_score": 0,
-      "is_mainstream": true,
-      "mainstream_last_checked": "2026-02-17T12:53:36.343Z"
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 325,
-    "fields": {
-      "name": "James Clear",
-      "normalized_name": "jamesclear",
-      "popularity_score": 0,
-      "is_mainstream": false,
-      "mainstream_last_checked": "2026-02-17T12:54:02.151Z"
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 339,
-    "fields": {
-      "name": "Shola von Reinhold",
-      "normalized_name": "sholavonreinhold",
-      "popularity_score": 0,
-      "is_mainstream": false,
-      "mainstream_last_checked": "2026-02-17T12:54:25.439Z"
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 341,
-    "fields": {
-      "name": "Caleb Azumah Nelson",
-      "normalized_name": "calebazumahnelson",
-      "popularity_score": 0,
-      "is_mainstream": false,
-      "mainstream_last_checked": "2026-02-17T12:54:28.817Z"
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 343,
-    "fields": {
-      "name": "Elena Ferrante",
-      "normalized_name": "elenaferrante",
-      "popularity_score": 0,
-      "is_mainstream": true,
-      "mainstream_last_checked": "2026-02-17T12:54:31.865Z"
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 401,
-    "fields": {
-      "name": "Samin Nosrat",
-      "normalized_name": "saminnosrat",
-      "popularity_score": 0,
-      "is_mainstream": false,
-      "mainstream_last_checked": "2026-02-17T12:56:14.505Z"
-    }
-  },
-  {
-    "model": "core.author",
-    "pk": 427,
-    "fields": {
-      "name": "Derek Landy",
-      "normalized_name": "dereklandy",
-      "popularity_score": 0,
-      "is_mainstream": false,
-      "mainstream_last_checked": "2026-02-17T12:56:59.727Z"
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 262,
-    "fields": {
-      "title": "The Brothers Karamazov",
-      "author": 197,
-      "normalized_title": "thebrotherskaramazov",
-      "average_rating": 3.5,
-      "page_count": 536,
-      "publish_year": 2015,
-      "publisher": 101,
-      "global_read_count": 450,
-      "isbn13": "9781530117505",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:44.174Z",
-      "genres": [
-        7
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 372,
-    "fields": {
-      "title": "Pachinko",
-      "author": 277,
-      "normalized_title": "pachinko",
-      "average_rating": 3.5,
-      "page_count": 490,
-      "publish_year": 2017,
-      "publisher": 75,
-      "global_read_count": 244,
-      "isbn13": "9781455563937",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:44.694Z",
-      "genres": [
-        9
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 333,
-    "fields": {
-      "title": "The Fifth Season",
-      "author": 249,
-      "normalized_title": "thefifthseason",
-      "average_rating": 3.5,
-      "page_count": 498,
-      "publish_year": 2015,
-      "publisher": 150,
-      "global_read_count": 364,
-      "isbn13": "9780316229296",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:44.364Z",
-      "genres": [
-        19,
-        25
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 387,
-    "fields": {
-      "title": "Verity",
-      "author": 287,
-      "normalized_title": "verity",
-      "average_rating": 4.0,
-      "page_count": 314,
-      "publish_year": 2018,
-      "publisher": 174,
-      "global_read_count": 377,
-      "isbn13": "9781791392796",
-      "google_books_average_rating": 4.0,
-      "google_books_ratings_count": 5,
-      "google_books_last_checked": "2025-10-26T18:33:44.778Z",
-      "genres": [
-        11
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 405,
-    "fields": {
-      "title": "Homo Deus: A Brief History of Tomorrow",
-      "author": 300,
-      "normalized_title": "homodeusabriefhistoryoftomorrow",
-      "average_rating": 3.5,
-      "page_count": 300,
-      "publish_year": 2017,
-      "publisher": 184,
-      "global_read_count": 387,
-      "isbn13": "2226479813",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:45.223Z",
-      "genres": []
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 397,
-    "fields": {
-      "title": "The Hate U Give",
-      "author": 293,
-      "normalized_title": "thehateugive",
-      "average_rating": 3.5,
-      "page_count": 453,
-      "publish_year": 2017,
-      "publisher": 179,
-      "global_read_count": 415,
-      "isbn13": "9780062498533",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:45.065Z",
-      "genres": [
-        4,
-        6
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 613,
-    "fields": {
-      "title": "Midnight (Skulduggery Pleasant, #11)",
-      "author": 427,
-      "normalized_title": "midnight",
-      "average_rating": 4.21,
-      "page_count": 432,
-      "publish_year": 2019,
-      "publisher": 229,
-      "global_read_count": 55,
-      "isbn13": "9780008303938",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:46.479Z",
-      "genres": [
-        21
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 432,
-    "fields": {
-      "title": "Atomic Habits",
-      "author": 325,
-      "normalized_title": "atomichabits",
-      "average_rating": 3.5,
-      "page_count": 168,
-      "publish_year": 2016,
-      "publisher": 194,
-      "global_read_count": 345,
-      "isbn13": "9781804220207",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:45.007Z",
-      "genres": [
-        7,
-        26
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 611,
-    "fields": {
-      "title": "Resurrection (Skulduggery Pleasant, #10)",
-      "author": 427,
-      "normalized_title": "resurrection",
-      "average_rating": 4.28,
-      "page_count": 424,
-      "publish_year": 2017,
-      "publisher": 230,
-      "global_read_count": 54,
-      "isbn13": "9780008219604",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:47.795Z",
-      "genres": [
-        19
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 610,
-    "fields": {
-      "title": "Seasons of War (Skulduggery Pleasant, #13)",
-      "author": 427,
-      "normalized_title": "seasonsofwar",
-      "average_rating": 4.43,
-      "page_count": 592,
-      "publish_year": 2020,
-      "publisher": 229,
-      "global_read_count": 47,
-      "isbn13": "9780008386160",
-      "google_books_average_rating": 5.0,
-      "google_books_ratings_count": 1,
-      "google_books_last_checked": "2025-10-26T18:33:48.849Z",
-      "genres": [
-        5,
-        10,
-        19,
-        25
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 615,
-    "fields": {
-      "title": "Last Stand of Dead Men (Skulduggery Pleasant, #8)",
-      "author": 427,
-      "normalized_title": "laststandofdeadmen",
-      "average_rating": 4.57,
-      "page_count": 604,
-      "publish_year": 2019,
-      "publisher": 229,
-      "global_read_count": 60,
-      "isbn13": "9780008266424",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:48.864Z",
-      "genres": [
-        6,
-        13,
-        19
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 335,
-    "fields": {
-      "title": "Piranesi",
-      "author": 250,
-      "normalized_title": "piranesi",
-      "average_rating": 4.22,
-      "page_count": 272,
-      "publish_year": 2020,
-      "publisher": 28,
-      "global_read_count": 596,
-      "isbn13": "9781635575637",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:49.433Z",
-      "genres": [
-        19
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 555,
-    "fields": {
-      "title": "Salt, Fat, Acid, Heat: Mastering the Elements of Good Cooking",
-      "author": 401,
-      "normalized_title": "saltfatacidheatmasteringtheelementsofgoodcooking",
-      "average_rating": 4.4,
-      "page_count": 480,
-      "publish_year": 2017,
-      "publisher": 88,
-      "global_read_count": 58,
-      "isbn13": "9781476753836",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:45.768Z",
-      "genres": [
-        29
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 374,
-    "fields": {
-      "title": "Normal People",
-      "author": 279,
-      "normalized_title": "normalpeople",
-      "average_rating": 3.81,
-      "page_count": 279,
-      "publish_year": 2018,
-      "publisher": 53,
-      "global_read_count": 465,
-      "isbn13": "9781984822178",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:49.992Z",
-      "genres": [
-        6,
-        7,
-        11
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 455,
-    "fields": {
-      "title": "My Brilliant Friend (Neapolitan Novels, #1)",
-      "author": 343,
-      "normalized_title": "mybrilliantfriend",
-      "average_rating": 4.05,
-      "page_count": 331,
-      "publish_year": 2023,
-      "publisher": 14,
-      "global_read_count": 98,
-      "isbn13": "9781609459468",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:50.717Z",
-      "genres": [
-        14
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 382,
-    "fields": {
-      "title": "Eleanor Oliphant Is Completely Fine",
-      "author": 284,
-      "normalized_title": "eleanoroliphantiscompletelyfine",
-      "average_rating": 3.5,
-      "page_count": 336,
-      "publish_year": 2017,
-      "publisher": 173,
-      "global_read_count": 354,
-      "isbn13": "9780735220683",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:50.371Z",
-      "genres": [
-        7,
-        11,
-        12
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 452,
-    "fields": {
-      "title": "Open Water",
-      "author": 341,
-      "normalized_title": "openwater",
-      "average_rating": 4.01,
-      "page_count": 145,
-      "publish_year": 2021,
-      "publisher": 11,
-      "global_read_count": 47,
-      "isbn13": "9780802157942",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:51.270Z",
-      "genres": [
-        11
-      ]
-    }
-  },
-  {
-    "model": "core.book",
-    "pk": 449,
-    "fields": {
-      "title": "Lote",
-      "author": 339,
-      "normalized_title": "lote",
-      "average_rating": 4.05,
-      "page_count": 384,
-      "publish_year": 2020,
-      "publisher": 9,
-      "global_read_count": 38,
-      "isbn13": "9781713539018",
-      "google_books_average_rating": null,
-      "google_books_ratings_count": 0,
-      "google_books_last_checked": "2025-10-26T18:33:51.258Z",
-      "genres": [
-        1
-      ]
+    "model": "auth.user",
+    "pk": 16,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$kaeoKS3UYDWfCat4y0IT4z$vk/aBvxKm97C8VRbv3i1qMpCLmX9djtz0x2nkBjeRA4=",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "synthetic_eclectic1",
+      "first_name": "Synthetic Eclectic1",
+      "last_name": "",
+      "email": "synthetic_eclectic1@test.bibliotype.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2025-11-10T18:22:28.240Z",
+      "groups": [],
+      "user_permissions": []
     }
   },
   {
     "model": "core.userprofile",
-    "pk": 4,
+    "pk": 16,
     "fields": {
-      "user": 4,
-      "last_updated": "2025-10-26T20:54:44.241Z",
+      "user": 16,
+      "last_updated": "2025-11-10T18:22:28.461Z",
       "is_public": false,
-      "dna_data": null,
-      "reader_type": null,
-      "total_books_read": null,
-      "reading_vibe": null,
-      "vibe_data_hash": null,
+      "dna_data": {
+        "top_genres": [
+          [
+            "psychology",
+            3
+          ],
+          [
+            "fantasy",
+            3
+          ],
+          [
+            "science fiction",
+            3
+          ],
+          [
+            "science",
+            2
+          ],
+          [
+            "social science",
+            2
+          ],
+          [
+            "humorous fiction",
+            2
+          ],
+          [
+            "plays & drama",
+            2
+          ],
+          [
+            "nature",
+            2
+          ],
+          [
+            "history",
+            2
+          ],
+          [
+            "food & cooking",
+            2
+          ]
+        ],
+        "user_stats": {
+          "avg_book_length": 392,
+          "avg_publish_year": 2002,
+          "total_books_read": 29,
+          "total_pages_read": 11363
+        },
+        "reader_type": "Versatile Valedictorian",
+        "top_authors": [
+          [
+            "Fyodor Dostoevsky",
+            1
+          ],
+          [
+            "James Clear",
+            1
+          ],
+          [
+            "Richard Matheson",
+            1
+          ],
+          [
+            "Stephen King",
+            1
+          ],
+          [
+            "Madeline Miller",
+            1
+          ],
+          [
+            "Michael Morpurgo",
+            1
+          ],
+          [
+            "Bill Bryson",
+            1
+          ],
+          [
+            "Antonio Moresco",
+            1
+          ],
+          [
+            "Susan Cain",
+            1
+          ],
+          [
+            "Terry Pratchett",
+            1
+          ]
+        ],
+        "reading_vibe": [
+          "navigating inner worlds",
+          "where tomorrow takes shape",
+          "crafting the self",
+          "seeking universal truths"
+        ],
+        "stats_by_year": [
+          {
+            "year": 2021,
+            "count": 4,
+            "avg_rating": 1.5
+          },
+          {
+            "year": 2022,
+            "count": 2,
+            "avg_rating": 5.0
+          },
+          {
+            "year": 2023,
+            "count": 9,
+            "avg_rating": 3.56
+          },
+          {
+            "year": 2024,
+            "count": 6,
+            "avg_rating": 3.5
+          },
+          {
+            "year": 2025,
+            "count": 1,
+            "avg_rating": 4.0
+          },
+          {
+            "year": 2026,
+            "count": 1,
+            "avg_rating": 0.0
+          }
+        ],
+        "vibe_data_hash": "1f8469ac027aa9e64b2adc8c61d33aa5281a47fe879587f9a7e8c24ec37b1deb",
+        "global_averages": {
+          "avg_publish_year": 2009,
+          "avg_books_per_year": 7,
+          "avg_book_length_pages": 340
+        },
+        "most_niche_book": {
+          "title": "Sense and Nonsense: Evolutionary Perspectives on Human Behaviour",
+          "author": "Kevin N. Laland",
+          "read_count": 33
+        },
+        "top_reader_types": [
+          {
+            "type": "Versatile Valedictorian",
+            "score": 15
+          },
+          {
+            "type": "Tome Tussler",
+            "score": 14
+          },
+          {
+            "type": "Small Press Supporter",
+            "score": 14
+          }
+        ],
+        "reader_type_scores": {
+          "Tome Tussler": 14,
+          "Social Savant": 2,
+          "Fantasy Fanatic": 6,
+          "Nature Nut Case": 2,
+          "Classic Collector": 2,
+          "Non-Fiction Ninja": 1,
+          "Novella Navigator": 6,
+          "Self Help Scholar": 0,
+          "Small Press Supporter": 14,
+          "Philosophical Philomath": 1,
+          "Versatile Valedictorian": 15
+        },
+        "most_negative_review": {
+          "Title": "The Emperor of All Maladies: A Biography of Cancer",
+          "Author": "Siddhartha Mukherjee",
+          "my_review": "Didn't connect with the characters.",
+          "sentiment": 0.0
+        },
+        "most_positive_review": {
+          "Title": "The Help",
+          "Author": "Kathryn Stockett",
+          "my_review": "Amazing book! Really enjoyed the writing style.",
+          "sentiment": 0.8264
+        },
+        "ratings_distribution": {
+          "1": 2,
+          "2": 6,
+          "4": 7,
+          "5": 8
+        },
+        "average_rating_overall": 3.57,
+        "bibliotype_percentiles": {
+          "avg_book_length": 75.37993920972644,
+          "avg_publish_year": 39.05775075987842,
+          "total_books_read": 19.756838905775076
+        },
+        "reader_type_explanation": "You are a true literary explorer. Your results show you've read from more than ten distinct canonical genres.",
+        "top_controversial_books": [
+          {
+            "Title": "The Silence of the Lambs",
+            "Author": "Thomas Harris",
+            "my_rating": 2.0,
+            "average_rating": 5.0,
+            "rating_difference": 3.0
+          },
+          {
+            "Title": "The Emperor of All Maladies: A Biography of Cancer",
+            "Author": "Siddhartha Mukherjee",
+            "my_rating": 1.0,
+            "average_rating": 3.5,
+            "rating_difference": 2.5
+          },
+          {
+            "Title": "Ubik",
+            "Author": "Philip K. Dick",
+            "my_rating": 2.0,
+            "average_rating": 4.11,
+            "rating_difference": 2.1100000000000003
+          }
+        ],
+        "mainstream_score_percent": 83
+      },
+      "reader_type": "Versatile Valedictorian",
+      "total_books_read": 29,
+      "reading_vibe": [
+        "navigating inner worlds",
+        "where tomorrow takes shape",
+        "crafting the self",
+        "seeking universal truths"
+      ],
+      "vibe_data_hash": "1f8469ac027aa9e64b2adc8c61d33aa5281a47fe879587f9a7e8c24ec37b1deb",
       "pending_dna_task_id": null,
       "recommendations_data": null,
       "recommendations_generated_at": null,
@@ -1141,6 +543,1428 @@
       "recommendations_data": null,
       "recommendations_generated_at": null,
       "visible_in_recommendations": true
+    }
+  },
+  {
+    "model": "core.userprofile",
+    "pk": 30,
+    "fields": {
+      "user": 30,
+      "last_updated": "2025-11-10T18:24:27.247Z",
+      "is_public": false,
+      "dna_data": {
+        "top_genres": [
+          [
+            "fantasy",
+            17
+          ],
+          [
+            "science fiction",
+            12
+          ],
+          [
+            "humorous fiction",
+            10
+          ],
+          [
+            "young adult",
+            5
+          ],
+          [
+            "horror",
+            4
+          ],
+          [
+            "thriller",
+            4
+          ],
+          [
+            "history",
+            3
+          ],
+          [
+            "comics & graphic novels",
+            3
+          ],
+          [
+            "psychology",
+            2
+          ],
+          [
+            "historical fiction",
+            2
+          ]
+        ],
+        "user_stats": {
+          "avg_book_length": 371,
+          "avg_publish_year": 1999,
+          "total_books_read": 21,
+          "total_pages_read": 7785
+        },
+        "reader_type": "Fantasy Fanatic",
+        "top_authors": [
+          [
+            "Terry Pratchett",
+            7
+          ],
+          [
+            "Derek Landy",
+            3
+          ],
+          [
+            "Frank Herbert",
+            1
+          ],
+          [
+            "Kazuo Ishiguro",
+            1
+          ],
+          [
+            "Ursula K. Le Guin",
+            1
+          ],
+          [
+            "Neil Gaiman",
+            1
+          ],
+          [
+            "Andrea Lawlor",
+            1
+          ],
+          [
+            "F. Scott Fitzgerald",
+            1
+          ],
+          [
+            "Toshikazu Kawaguchi",
+            1
+          ],
+          [
+            "Mary Wollstonecraft Shelley",
+            1
+          ]
+        ],
+        "reading_vibe": [
+          "worlds both vast and wry",
+          "magic meets clever banter",
+          "deep lore and dry wit",
+          "cosmic jokes, grand quests"
+        ],
+        "stats_by_year": [
+          {
+            "year": 2022,
+            "count": 1,
+            "avg_rating": 2.0
+          },
+          {
+            "year": 2023,
+            "count": 7,
+            "avg_rating": 2.43
+          },
+          {
+            "year": 2024,
+            "count": 4,
+            "avg_rating": 1.75
+          },
+          {
+            "year": 2025,
+            "count": 4,
+            "avg_rating": 1.25
+          }
+        ],
+        "vibe_data_hash": "41ac04c035a54f4e3676943bf308a7c53c4f5583264680864b1e9d1ec2dd8f86",
+        "global_averages": {
+          "avg_publish_year": 2009,
+          "avg_books_per_year": 7,
+          "avg_book_length_pages": 340
+        },
+        "most_niche_book": {
+          "title": "The Last Hero (Discworld, #27; Rincewind, #7)",
+          "author": "Terry Pratchett",
+          "read_count": 21
+        },
+        "top_reader_types": [
+          {
+            "type": "Fantasy Fanatic",
+            "score": 29
+          },
+          {
+            "type": "Small Press Supporter",
+            "score": 15
+          },
+          {
+            "type": "Versatile Valedictorian",
+            "score": 15
+          }
+        ],
+        "reader_type_scores": {
+          "Tome Tussler": 10,
+          "Social Savant": 2,
+          "Fantasy Fanatic": 29,
+          "Modern Maverick": 3,
+          "Nature Nut Case": 1,
+          "Classic Collector": 2,
+          "Non-Fiction Ninja": 0,
+          "Novella Navigator": 3,
+          "Self Help Scholar": 0,
+          "Small Press Supporter": 15,
+          "Philosophical Philomath": 2,
+          "Versatile Valedictorian": 15
+        },
+        "most_negative_review": {
+          "Title": "Mort (Discworld, #4; Death, #1)",
+          "Author": "Terry Pratchett",
+          "my_review": "Captivating from start to finish.",
+          "sentiment": 0.0
+        },
+        "most_positive_review": {
+          "Title": "Eric (Discworld, #9; Rincewind, #4)",
+          "Author": "Terry Pratchett",
+          "my_review": "Thought-provoking and well-written.",
+          "sentiment": 0.0
+        },
+        "ratings_distribution": {
+          "2": 1,
+          "3": 4,
+          "4": 5,
+          "5": 3
+        },
+        "average_rating_overall": 3.77,
+        "bibliotype_percentiles": {
+          "avg_book_length": 75.18573551263002,
+          "avg_publish_year": 61.144130757800895,
+          "total_books_read": 6.092124814264487
+        },
+        "reader_type_explanation": "You have a deep love for worlds of magic, myth, and epic quests. Your reading history is filled with fantasy and science fiction.",
+        "top_controversial_books": [
+          {
+            "Title": "Interesting Times (Discworld, #17; Rincewind, #5)",
+            "Author": "Terry Pratchett",
+            "my_rating": 2.0,
+            "average_rating": 4.15,
+            "rating_difference": 2.1500000000000004
+          },
+          {
+            "Title": "Small Gods (Discworld, #13)",
+            "Author": "Terry Pratchett",
+            "my_rating": 3.0,
+            "average_rating": 4.32,
+            "rating_difference": 1.3200000000000003
+          },
+          {
+            "Title": "Skulduggery Pleasant (Skulduggery Pleasant, #1)",
+            "Author": "Derek Landy",
+            "my_rating": 3.0,
+            "average_rating": 4.18,
+            "rating_difference": 1.1799999999999997
+          }
+        ],
+        "mainstream_score_percent": 76
+      },
+      "reader_type": "Fantasy Fanatic",
+      "total_books_read": 21,
+      "reading_vibe": [
+        "worlds both vast and wry",
+        "magic meets clever banter",
+        "deep lore and dry wit",
+        "cosmic jokes, grand quests"
+      ],
+      "vibe_data_hash": "41ac04c035a54f4e3676943bf308a7c53c4f5583264680864b1e9d1ec2dd8f86",
+      "pending_dna_task_id": null,
+      "recommendations_data": null,
+      "recommendations_generated_at": null,
+      "visible_in_recommendations": true
+    }
+  },
+  {
+    "model": "core.userprofile",
+    "pk": 24,
+    "fields": {
+      "user": 24,
+      "last_updated": "2025-11-10T18:23:30.587Z",
+      "is_public": false,
+      "dna_data": {
+        "top_genres": [
+          [
+            "fantasy",
+            6
+          ],
+          [
+            "humorous fiction",
+            4
+          ],
+          [
+            "science fiction",
+            4
+          ],
+          [
+            "romance",
+            4
+          ],
+          [
+            "young adult",
+            3
+          ],
+          [
+            "history",
+            3
+          ],
+          [
+            "psychology",
+            3
+          ],
+          [
+            "thriller",
+            3
+          ],
+          [
+            "historical fiction",
+            2
+          ],
+          [
+            "plays & drama",
+            2
+          ]
+        ],
+        "user_stats": {
+          "avg_book_length": 348,
+          "avg_publish_year": 1996,
+          "total_books_read": 23,
+          "total_pages_read": 8013
+        },
+        "reader_type": "Versatile Valedictorian",
+        "top_authors": [
+          [
+            "Neil Gaiman",
+            2
+          ],
+          [
+            "Terry Pratchett",
+            2
+          ],
+          [
+            "Michael Morpurgo",
+            1
+          ],
+          [
+            "Jon Krakauer",
+            1
+          ],
+          [
+            "Hilary Mantel",
+            1
+          ],
+          [
+            "James Clear",
+            1
+          ],
+          [
+            "Michael Chabon",
+            1
+          ],
+          [
+            "Kevin N. Laland",
+            1
+          ],
+          [
+            "William Golding",
+            1
+          ],
+          [
+            "F. Scott Fitzgerald",
+            1
+          ]
+        ],
+        "reading_vibe": [
+          "a universe of knowing smiles",
+          "clever truths wild tales",
+          "laughter across impossible lands",
+          "where myth meets tomorrow"
+        ],
+        "stats_by_year": [
+          {
+            "year": 2022,
+            "count": 1,
+            "avg_rating": 5.0
+          },
+          {
+            "year": 2023,
+            "count": 9,
+            "avg_rating": 1.0
+          },
+          {
+            "year": 2024,
+            "count": 8,
+            "avg_rating": 2.25
+          },
+          {
+            "year": 2025,
+            "count": 3,
+            "avg_rating": 3.33
+          }
+        ],
+        "vibe_data_hash": "b286b405da68e52be56009e79afba80dde342e3e63f71a8856a9b62da9f2d3ac",
+        "global_averages": {
+          "avg_publish_year": 2009,
+          "avg_books_per_year": 7,
+          "avg_book_length_pages": 340
+        },
+        "most_niche_book": {
+          "title": "The Graveyard Book",
+          "author": "Neil Gaiman",
+          "read_count": 28
+        },
+        "top_reader_types": [
+          {
+            "type": "Versatile Valedictorian",
+            "score": 15
+          },
+          {
+            "type": "Small Press Supporter",
+            "score": 11
+          },
+          {
+            "type": "Fantasy Fanatic",
+            "score": 10
+          }
+        ],
+        "reader_type_scores": {
+          "Tome Tussler": 6,
+          "Social Savant": 2,
+          "Fantasy Fanatic": 10,
+          "Modern Maverick": 4,
+          "Nature Nut Case": 0,
+          "Classic Collector": 4,
+          "Non-Fiction Ninja": 1,
+          "Novella Navigator": 2,
+          "Self Help Scholar": 0,
+          "Small Press Supporter": 11,
+          "Philosophical Philomath": 0,
+          "Versatile Valedictorian": 15
+        },
+        "most_negative_review": {
+          "Title": "Feet of Clay (Discworld, #19; City Watch, #3)",
+          "Author": "Terry Pratchett",
+          "my_review": "Not my cup of tea. Found it boring.",
+          "sentiment": -0.3182
+        },
+        "most_positive_review": {
+          "Title": "I Am Legend",
+          "Author": "Richard Matheson",
+          "my_review": "Captivating from start to finish.",
+          "sentiment": 0.0
+        },
+        "ratings_distribution": {
+          "2": 7,
+          "3": 6,
+          "4": 2,
+          "5": 1
+        },
+        "average_rating_overall": 2.81,
+        "bibliotype_percentiles": {
+          "avg_book_length": 50.750750750750754,
+          "avg_publish_year": 61.186186186186184,
+          "total_books_read": 5.7807807807807805
+        },
+        "reader_type_explanation": "Your library is a testament to your curiosity, spanning a broad and impressive range of different literary categories.",
+        "top_controversial_books": [
+          {
+            "Title": "The Silence of the Lambs",
+            "Author": "Thomas Harris",
+            "my_rating": 2.0,
+            "average_rating": 5.0,
+            "rating_difference": 3.0
+          },
+          {
+            "Title": "The Graveyard Book",
+            "Author": "Neil Gaiman",
+            "my_rating": 2.0,
+            "average_rating": 4.16,
+            "rating_difference": 2.16
+          },
+          {
+            "Title": "Drug Use for Grown-Ups: Chasing Liberty in the Land of Fear",
+            "Author": "Carl L. Hart",
+            "my_rating": 2.0,
+            "average_rating": 4.01,
+            "rating_difference": 2.01
+          }
+        ],
+        "mainstream_score_percent": 91
+      },
+      "reader_type": "Versatile Valedictorian",
+      "total_books_read": 23,
+      "reading_vibe": [
+        "a universe of knowing smiles",
+        "clever truths wild tales",
+        "laughter across impossible lands",
+        "where myth meets tomorrow"
+      ],
+      "vibe_data_hash": "b286b405da68e52be56009e79afba80dde342e3e63f71a8856a9b62da9f2d3ac",
+      "pending_dna_task_id": null,
+      "recommendations_data": null,
+      "recommendations_generated_at": null,
+      "visible_in_recommendations": true
+    }
+  },
+  {
+    "model": "core.userprofile",
+    "pk": 26,
+    "fields": {
+      "user": 26,
+      "last_updated": "2025-11-10T18:23:52.461Z",
+      "is_public": false,
+      "dna_data": {
+        "top_genres": [
+          [
+            "fantasy",
+            9
+          ],
+          [
+            "psychology",
+            8
+          ],
+          [
+            "humorous fiction",
+            8
+          ],
+          [
+            "non-fiction",
+            7
+          ],
+          [
+            "science fiction",
+            7
+          ],
+          [
+            "history",
+            6
+          ],
+          [
+            "social science",
+            5
+          ],
+          [
+            "young adult",
+            4
+          ],
+          [
+            "comics & graphic novels",
+            4
+          ],
+          [
+            "plays & drama",
+            4
+          ]
+        ],
+        "user_stats": {
+          "avg_book_length": 340,
+          "avg_publish_year": 2004,
+          "total_books_read": 23,
+          "total_pages_read": 7809
+        },
+        "reader_type": "Fantasy Fanatic",
+        "top_authors": [
+          [
+            "Terry Pratchett",
+            6
+          ],
+          [
+            "Michael Morpurgo",
+            2
+          ],
+          [
+            "Jon Ronson",
+            2
+          ],
+          [
+            "Michael Pollan",
+            2
+          ],
+          [
+            "Oscar Wilde",
+            1
+          ],
+          [
+            "Yuval Noah Harari",
+            1
+          ],
+          [
+            "Kazuo Ishiguro",
+            1
+          ],
+          [
+            "Robert Louis Stevenson",
+            1
+          ],
+          [
+            "Frank Herbert",
+            1
+          ],
+          [
+            "bell hooks",
+            1
+          ]
+        ],
+        "reading_vibe": [
+          "wit among the wild magic",
+          "the strange dance of minds",
+          "a whisper from another realm",
+          "a knowing smirk at reality"
+        ],
+        "stats_by_year": [
+          {
+            "year": 2022,
+            "count": 3,
+            "avg_rating": 1.33
+          },
+          {
+            "year": 2023,
+            "count": 4,
+            "avg_rating": 2.25
+          },
+          {
+            "year": 2024,
+            "count": 8,
+            "avg_rating": 2.5
+          },
+          {
+            "year": 2025,
+            "count": 6,
+            "avg_rating": 2.33
+          }
+        ],
+        "vibe_data_hash": "7c2543d2a29ad49a461173c4549ff0a95914abbcd5dd5f58c03b17717b359653",
+        "global_averages": {
+          "avg_publish_year": 2009,
+          "avg_books_per_year": 7,
+          "avg_book_length_pages": 340
+        },
+        "most_niche_book": {
+          "title": "Food Rules: An Eater's Manual",
+          "author": "Michael Pollan",
+          "read_count": 32
+        },
+        "top_reader_types": [
+          {
+            "type": "Fantasy Fanatic",
+            "score": 16
+          },
+          {
+            "type": "Versatile Valedictorian",
+            "score": 15
+          },
+          {
+            "type": "Small Press Supporter",
+            "score": 14
+          }
+        ],
+        "reader_type_scores": {
+          "Tome Tussler": 4,
+          "Social Savant": 5,
+          "Fantasy Fanatic": 16,
+          "Modern Maverick": 4,
+          "Nature Nut Case": 1,
+          "Classic Collector": 1,
+          "Non-Fiction Ninja": 7,
+          "Novella Navigator": 4,
+          "Self Help Scholar": 0,
+          "Small Press Supporter": 14,
+          "Philosophical Philomath": 1,
+          "Versatile Valedictorian": 15
+        },
+        "most_negative_review": {
+          "Title": "Musicophilia: Tales of Music and the Brain",
+          "Author": "Oliver Sacks",
+          "my_review": "Not my cup of tea. Found it boring.",
+          "sentiment": -0.3182
+        },
+        "most_positive_review": {
+          "Title": "Galatea",
+          "Author": "Madeline Miller",
+          "my_review": "Amazing book! Really enjoyed the writing style.",
+          "sentiment": 0.8264
+        },
+        "ratings_distribution": {
+          "1": 1,
+          "2": 6,
+          "3": 4,
+          "4": 5,
+          "5": 2
+        },
+        "average_rating_overall": 3.06,
+        "bibliotype_percentiles": {
+          "avg_book_length": 50.67365269461078,
+          "avg_publish_year": 38.622754491017965,
+          "total_books_read": 5.913173652694611
+        },
+        "reader_type_explanation": "From dragons to distant galaxies, your reading habits show a clear preference for the imaginative and the speculative.",
+        "top_controversial_books": [
+          {
+            "Title": "Everything I Know About Love",
+            "Author": "Dolly Alderton",
+            "my_rating": 1.0,
+            "average_rating": 3.96,
+            "rating_difference": 2.96
+          },
+          {
+            "Title": "Thud! (Discworld, #34; City Watch, #7)",
+            "Author": "Terry Pratchett",
+            "my_rating": 2.0,
+            "average_rating": 4.35,
+            "rating_difference": 2.3499999999999996
+          },
+          {
+            "Title": "Small Gods (Discworld, #13)",
+            "Author": "Terry Pratchett",
+            "my_rating": 2.0,
+            "average_rating": 4.32,
+            "rating_difference": 2.3200000000000003
+          }
+        ],
+        "mainstream_score_percent": 91
+      },
+      "reader_type": "Fantasy Fanatic",
+      "total_books_read": 23,
+      "reading_vibe": [
+        "wit among the wild magic",
+        "the strange dance of minds",
+        "a whisper from another realm",
+        "a knowing smirk at reality"
+      ],
+      "vibe_data_hash": "7c2543d2a29ad49a461173c4549ff0a95914abbcd5dd5f58c03b17717b359653",
+      "pending_dna_task_id": null,
+      "recommendations_data": null,
+      "recommendations_generated_at": null,
+      "visible_in_recommendations": true
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2296,
+    "fields": {
+      "user": 26,
+      "book": 537,
+      "user_rating": 3,
+      "user_review": "",
+      "date_read": "2025-11-17T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.551Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2295,
+    "fields": {
+      "user": 26,
+      "book": 478,
+      "user_rating": 4,
+      "user_review": "One of my favorites. Highly recommend!",
+      "date_read": "2022-02-13T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.550Z",
+      "is_top_book": true,
+      "top_book_position": 2
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2297,
+    "fields": {
+      "user": 26,
+      "book": 404,
+      "user_rating": 5,
+      "user_review": "",
+      "date_read": "2025-07-28T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.553Z",
+      "is_top_book": true,
+      "top_book_position": 3
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2298,
+    "fields": {
+      "user": 26,
+      "book": 375,
+      "user_rating": 2,
+      "user_review": "Didn't connect with the characters.",
+      "date_read": "2023-05-06T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.555Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2299,
+    "fields": {
+      "user": 26,
+      "book": 503,
+      "user_rating": null,
+      "user_review": "Not my cup of tea. Found it boring.",
+      "date_read": "2025-08-04T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.556Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2300,
+    "fields": {
+      "user": 26,
+      "book": 599,
+      "user_rating": null,
+      "user_review": "Too slow for my taste.",
+      "date_read": "2023-09-04T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.557Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2303,
+    "fields": {
+      "user": 26,
+      "book": 583,
+      "user_rating": 2,
+      "user_review": "Too slow for my taste.",
+      "date_read": "2024-01-30T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.562Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2304,
+    "fields": {
+      "user": 26,
+      "book": 474,
+      "user_rating": 2,
+      "user_review": "",
+      "date_read": "2024-10-17T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.564Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2305,
+    "fields": {
+      "user": 26,
+      "book": 461,
+      "user_rating": 1,
+      "user_review": "",
+      "date_read": "2025-11-28T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.565Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2306,
+    "fields": {
+      "user": 26,
+      "book": 318,
+      "user_rating": null,
+      "user_review": "",
+      "date_read": "2022-05-22T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.567Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2307,
+    "fields": {
+      "user": 26,
+      "book": 530,
+      "user_rating": 2,
+      "user_review": "",
+      "date_read": "2025-10-31T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.569Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2308,
+    "fields": {
+      "user": 26,
+      "book": 493,
+      "user_rating": 3,
+      "user_review": "",
+      "date_read": "2025-12-20T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.570Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2310,
+    "fields": {
+      "user": 26,
+      "book": 385,
+      "user_rating": null,
+      "user_review": "Too slow for my taste.",
+      "date_read": "2022-02-26T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.573Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2309,
+    "fields": {
+      "user": 26,
+      "book": 575,
+      "user_rating": 5,
+      "user_review": "Captivating from start to finish.",
+      "date_read": null,
+      "date_added": "2025-11-10T18:23:52.572Z",
+      "is_top_book": true,
+      "top_book_position": 4
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2301,
+    "fields": {
+      "user": 26,
+      "book": 291,
+      "user_rating": 4,
+      "user_review": "",
+      "date_read": "2023-12-18T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.559Z",
+      "is_top_book": true,
+      "top_book_position": 5
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2311,
+    "fields": {
+      "user": 26,
+      "book": 606,
+      "user_rating": 4,
+      "user_review": "",
+      "date_read": "2024-03-21T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.575Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2312,
+    "fields": {
+      "user": 26,
+      "book": 523,
+      "user_rating": 2,
+      "user_review": "Not my cup of tea. Found it boring.",
+      "date_read": "2024-08-17T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.577Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2313,
+    "fields": {
+      "user": 26,
+      "book": 324,
+      "user_rating": null,
+      "user_review": "Not my cup of tea. Found it boring.",
+      "date_read": "2024-12-28T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.578Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2314,
+    "fields": {
+      "user": 26,
+      "book": 605,
+      "user_rating": 2,
+      "user_review": "",
+      "date_read": "2024-02-12T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.580Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2315,
+    "fields": {
+      "user": 26,
+      "book": 517,
+      "user_rating": 4,
+      "user_review": "",
+      "date_read": "2024-05-20T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.581Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2316,
+    "fields": {
+      "user": 26,
+      "book": 540,
+      "user_rating": 3,
+      "user_review": "",
+      "date_read": "2023-09-17T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.583Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2317,
+    "fields": {
+      "user": 26,
+      "book": 600,
+      "user_rating": 3,
+      "user_review": "",
+      "date_read": null,
+      "date_added": "2025-11-10T18:23:52.584Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2302,
+    "fields": {
+      "user": 26,
+      "book": 588,
+      "user_rating": 4,
+      "user_review": "Beautiful prose and engaging characters.",
+      "date_read": "2024-04-22T00:00:00Z",
+      "date_added": "2025-11-10T18:23:52.561Z",
+      "is_top_book": true,
+      "top_book_position": 1
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1556,
+    "fields": {
+      "user": 16,
+      "book": 262,
+      "user_rating": 2,
+      "user_review": "Too slow for my taste.",
+      "date_read": null,
+      "date_added": "2025-11-10T18:22:28.573Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1558,
+    "fields": {
+      "user": 16,
+      "book": 428,
+      "user_rating": 1,
+      "user_review": "Didn't connect with the characters.",
+      "date_read": "2023-02-03T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.576Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1559,
+    "fields": {
+      "user": 16,
+      "book": 479,
+      "user_rating": 5,
+      "user_review": "Captivating from start to finish.",
+      "date_read": "2022-06-21T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.577Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1560,
+    "fields": {
+      "user": 16,
+      "book": 596,
+      "user_rating": null,
+      "user_review": "",
+      "date_read": "2021-03-13T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.578Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1561,
+    "fields": {
+      "user": 16,
+      "book": 323,
+      "user_rating": null,
+      "user_review": "Didn't connect with the characters.",
+      "date_read": null,
+      "date_added": "2025-11-10T18:22:28.580Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1562,
+    "fields": {
+      "user": 16,
+      "book": 458,
+      "user_rating": null,
+      "user_review": "",
+      "date_read": null,
+      "date_added": "2025-11-10T18:22:28.581Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1563,
+    "fields": {
+      "user": 16,
+      "book": 358,
+      "user_rating": 2,
+      "user_review": "",
+      "date_read": null,
+      "date_added": "2025-11-10T18:22:28.582Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1564,
+    "fields": {
+      "user": 16,
+      "book": 359,
+      "user_rating": 2,
+      "user_review": "Didn't connect with the characters.",
+      "date_read": "2021-06-18T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.583Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1565,
+    "fields": {
+      "user": 16,
+      "book": 343,
+      "user_rating": 2,
+      "user_review": "",
+      "date_read": "2024-10-05T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.584Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1566,
+    "fields": {
+      "user": 16,
+      "book": 334,
+      "user_rating": null,
+      "user_review": "Not my cup of tea. Found it boring.",
+      "date_read": "2026-01-01T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.586Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1567,
+    "fields": {
+      "user": 16,
+      "book": 454,
+      "user_rating": 2,
+      "user_review": "",
+      "date_read": "2023-03-22T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.587Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1568,
+    "fields": {
+      "user": 16,
+      "book": 393,
+      "user_rating": 5,
+      "user_review": "",
+      "date_read": "2023-04-28T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.588Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1570,
+    "fields": {
+      "user": 16,
+      "book": 591,
+      "user_rating": 4,
+      "user_review": "",
+      "date_read": "2023-06-30T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.591Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1571,
+    "fields": {
+      "user": 16,
+      "book": 432,
+      "user_rating": 4,
+      "user_review": "Captivating from start to finish.",
+      "date_read": "2025-06-14T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.592Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1572,
+    "fields": {
+      "user": 16,
+      "book": 476,
+      "user_rating": 1,
+      "user_review": "",
+      "date_read": "2024-05-13T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.593Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1573,
+    "fields": {
+      "user": 16,
+      "book": 531,
+      "user_rating": null,
+      "user_review": "Too slow for my taste.",
+      "date_read": null,
+      "date_added": "2025-11-10T18:22:28.594Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1574,
+    "fields": {
+      "user": 16,
+      "book": 586,
+      "user_rating": 2,
+      "user_review": "Too slow for my taste.",
+      "date_read": "2023-06-02T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.595Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1575,
+    "fields": {
+      "user": 16,
+      "book": 431,
+      "user_rating": 5,
+      "user_review": "Thought-provoking and well-written.",
+      "date_read": "2022-10-26T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.597Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1576,
+    "fields": {
+      "user": 16,
+      "book": 526,
+      "user_rating": null,
+      "user_review": "Didn't connect with the characters.",
+      "date_read": "2021-08-07T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.598Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1578,
+    "fields": {
+      "user": 16,
+      "book": 511,
+      "user_rating": 5,
+      "user_review": "",
+      "date_read": "2023-04-08T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.601Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1579,
+    "fields": {
+      "user": 16,
+      "book": 626,
+      "user_rating": 4,
+      "user_review": "",
+      "date_read": "2023-05-10T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.602Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1580,
+    "fields": {
+      "user": 16,
+      "book": 537,
+      "user_rating": 5,
+      "user_review": "",
+      "date_read": null,
+      "date_added": "2025-11-10T18:22:28.603Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1581,
+    "fields": {
+      "user": 16,
+      "book": 379,
+      "user_rating": 4,
+      "user_review": "",
+      "date_read": "2024-01-05T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.604Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1582,
+    "fields": {
+      "user": 16,
+      "book": 338,
+      "user_rating": 4,
+      "user_review": "Captivating from start to finish.",
+      "date_read": "2021-05-22T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.606Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1569,
+    "fields": {
+      "user": 16,
+      "book": 370,
+      "user_rating": 5,
+      "user_review": "Amazing book! Really enjoyed the writing style.",
+      "date_read": "2024-11-22T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.589Z",
+      "is_top_book": true,
+      "top_book_position": 1
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1577,
+    "fields": {
+      "user": 16,
+      "book": 417,
+      "user_rating": 5,
+      "user_review": "One of my favorites. Highly recommend!",
+      "date_read": "2024-10-10T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.599Z",
+      "is_top_book": true,
+      "top_book_position": 2
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1583,
+    "fields": {
+      "user": 16,
+      "book": 342,
+      "user_rating": 5,
+      "user_review": "One of my favorites. Highly recommend!",
+      "date_read": "2023-09-27T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.607Z",
+      "is_top_book": true,
+      "top_book_position": 3
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1557,
+    "fields": {
+      "user": 16,
+      "book": 364,
+      "user_rating": 4,
+      "user_review": "One of my favorites. Highly recommend!",
+      "date_read": "2023-10-12T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.574Z",
+      "is_top_book": true,
+      "top_book_position": 4
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 1584,
+    "fields": {
+      "user": 16,
+      "book": 555,
+      "user_rating": 4,
+      "user_review": "One of my favorites. Highly recommend!",
+      "date_read": "2024-10-14T00:00:00Z",
+      "date_added": "2025-11-10T18:22:28.609Z",
+      "is_top_book": true,
+      "top_book_position": 5
     }
   },
   {
@@ -1393,6 +2217,4369 @@
       "date_added": "2025-11-10T18:24:16.229Z",
       "is_top_book": true,
       "top_book_position": 3
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2382,
+    "fields": {
+      "user": 30,
+      "book": 631,
+      "user_rating": 4,
+      "user_review": "",
+      "date_read": "2023-08-10T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.317Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2384,
+    "fields": {
+      "user": 30,
+      "book": 614,
+      "user_rating": null,
+      "user_review": "Too slow for my taste.",
+      "date_read": "2025-08-27T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.319Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2385,
+    "fields": {
+      "user": 30,
+      "book": 486,
+      "user_rating": 3,
+      "user_review": "",
+      "date_read": "2023-11-05T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.320Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2386,
+    "fields": {
+      "user": 30,
+      "book": 587,
+      "user_rating": 2,
+      "user_review": "",
+      "date_read": "2022-12-29T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.321Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2387,
+    "fields": {
+      "user": 30,
+      "book": 522,
+      "user_rating": 4,
+      "user_review": "Captivating from start to finish.",
+      "date_read": null,
+      "date_added": "2025-11-10T18:24:27.322Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2388,
+    "fields": {
+      "user": 30,
+      "book": 507,
+      "user_rating": null,
+      "user_review": "Not my cup of tea. Found it boring.",
+      "date_read": "2024-04-13T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.323Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2389,
+    "fields": {
+      "user": 30,
+      "book": 318,
+      "user_rating": 3,
+      "user_review": "",
+      "date_read": "2023-02-09T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.324Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2392,
+    "fields": {
+      "user": 30,
+      "book": 523,
+      "user_rating": 3,
+      "user_review": "",
+      "date_read": "2024-06-20T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.328Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2393,
+    "fields": {
+      "user": 30,
+      "book": 494,
+      "user_rating": null,
+      "user_review": "Didn't connect with the characters.",
+      "date_read": "2023-05-13T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.329Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2395,
+    "fields": {
+      "user": 30,
+      "book": 480,
+      "user_rating": null,
+      "user_review": "",
+      "date_read": "2025-04-26T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.331Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2396,
+    "fields": {
+      "user": 30,
+      "book": 501,
+      "user_rating": 4,
+      "user_review": "",
+      "date_read": "2024-08-14T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.333Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2398,
+    "fields": {
+      "user": 30,
+      "book": 254,
+      "user_rating": null,
+      "user_review": "",
+      "date_read": "2023-09-17T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.335Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2399,
+    "fields": {
+      "user": 30,
+      "book": 586,
+      "user_rating": null,
+      "user_review": "Didn't connect with the characters.",
+      "date_read": "2025-10-13T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.335Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2400,
+    "fields": {
+      "user": 30,
+      "book": 323,
+      "user_rating": null,
+      "user_review": "Didn't connect with the characters.",
+      "date_read": "2024-11-14T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.336Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2401,
+    "fields": {
+      "user": 30,
+      "book": 609,
+      "user_rating": null,
+      "user_review": "Too slow for my taste.",
+      "date_read": null,
+      "date_added": "2025-11-10T18:24:27.337Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2402,
+    "fields": {
+      "user": 30,
+      "book": 622,
+      "user_rating": 3,
+      "user_review": "",
+      "date_read": "2023-06-23T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.338Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2383,
+    "fields": {
+      "user": 30,
+      "book": 291,
+      "user_rating": 4,
+      "user_review": "One of my favorites. Highly recommend!",
+      "date_read": "2023-02-08T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.318Z",
+      "is_top_book": true,
+      "top_book_position": 1
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2391,
+    "fields": {
+      "user": 30,
+      "book": 584,
+      "user_rating": 5,
+      "user_review": "",
+      "date_read": "2025-02-04T00:00:00Z",
+      "date_added": "2025-11-10T18:24:27.327Z",
+      "is_top_book": true,
+      "top_book_position": 2
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2397,
+    "fields": {
+      "user": 30,
+      "book": 629,
+      "user_rating": 5,
+      "user_review": "Captivating from start to finish.",
+      "date_read": null,
+      "date_added": "2025-11-10T18:24:27.334Z",
+      "is_top_book": true,
+      "top_book_position": 3
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2390,
+    "fields": {
+      "user": 30,
+      "book": 630,
+      "user_rating": 5,
+      "user_review": "",
+      "date_read": null,
+      "date_added": "2025-11-10T18:24:27.325Z",
+      "is_top_book": true,
+      "top_book_position": 4
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2394,
+    "fields": {
+      "user": 30,
+      "book": 255,
+      "user_rating": 4,
+      "user_review": "Thought-provoking and well-written.",
+      "date_read": null,
+      "date_added": "2025-11-10T18:24:27.330Z",
+      "is_top_book": true,
+      "top_book_position": 5
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2251,
+    "fields": {
+      "user": 24,
+      "book": 343,
+      "user_rating": 2,
+      "user_review": "",
+      "date_read": "2024-03-20T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.669Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2252,
+    "fields": {
+      "user": 24,
+      "book": 358,
+      "user_rating": 2,
+      "user_review": "",
+      "date_read": "2023-11-25T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.671Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2253,
+    "fields": {
+      "user": 24,
+      "book": 428,
+      "user_rating": null,
+      "user_review": "Too slow for my taste.",
+      "date_read": null,
+      "date_added": "2025-11-10T18:23:30.672Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2254,
+    "fields": {
+      "user": 24,
+      "book": 542,
+      "user_rating": 2,
+      "user_review": "Didn't connect with the characters.",
+      "date_read": "2023-03-29T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.673Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2255,
+    "fields": {
+      "user": 24,
+      "book": 526,
+      "user_rating": null,
+      "user_review": "",
+      "date_read": "2023-07-31T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.674Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2256,
+    "fields": {
+      "user": 24,
+      "book": 586,
+      "user_rating": 3,
+      "user_review": "",
+      "date_read": "2024-02-24T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.676Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2257,
+    "fields": {
+      "user": 24,
+      "book": 279,
+      "user_rating": null,
+      "user_review": "Not my cup of tea. Found it boring.",
+      "date_read": "2024-11-05T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.677Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2258,
+    "fields": {
+      "user": 24,
+      "book": 625,
+      "user_rating": 2,
+      "user_review": "Not my cup of tea. Found it boring.",
+      "date_read": "2024-12-17T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.678Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2259,
+    "fields": {
+      "user": 24,
+      "book": 375,
+      "user_rating": 2,
+      "user_review": "Not my cup of tea. Found it boring.",
+      "date_read": "2023-01-01T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.680Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2260,
+    "fields": {
+      "user": 24,
+      "book": 581,
+      "user_rating": null,
+      "user_review": "",
+      "date_read": "2023-11-18T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.681Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2261,
+    "fields": {
+      "user": 24,
+      "book": 384,
+      "user_rating": null,
+      "user_review": "Not my cup of tea. Found it boring.",
+      "date_read": "2023-02-06T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.682Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2262,
+    "fields": {
+      "user": 24,
+      "book": 425,
+      "user_rating": null,
+      "user_review": "",
+      "date_read": "2023-02-18T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.683Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2263,
+    "fields": {
+      "user": 24,
+      "book": 514,
+      "user_rating": 2,
+      "user_review": "Too slow for my taste.",
+      "date_read": "2024-08-23T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.685Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2264,
+    "fields": {
+      "user": 24,
+      "book": 255,
+      "user_rating": 3,
+      "user_review": "",
+      "date_read": "2024-02-19T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.686Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2265,
+    "fields": {
+      "user": 24,
+      "book": 353,
+      "user_rating": null,
+      "user_review": "",
+      "date_read": "2023-07-19T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.687Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2267,
+    "fields": {
+      "user": 24,
+      "book": 318,
+      "user_rating": 3,
+      "user_review": "",
+      "date_read": null,
+      "date_added": "2025-11-10T18:23:30.690Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2270,
+    "fields": {
+      "user": 24,
+      "book": 368,
+      "user_rating": 3,
+      "user_review": "",
+      "date_read": "2025-02-20T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.693Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2271,
+    "fields": {
+      "user": 24,
+      "book": 480,
+      "user_rating": 2,
+      "user_review": "Too slow for my taste.",
+      "date_read": "2024-10-15T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.695Z",
+      "is_top_book": false,
+      "top_book_position": null
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2269,
+    "fields": {
+      "user": 24,
+      "book": 432,
+      "user_rating": 5,
+      "user_review": "",
+      "date_read": "2022-12-20T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.692Z",
+      "is_top_book": true,
+      "top_book_position": 1
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2266,
+    "fields": {
+      "user": 24,
+      "book": 531,
+      "user_rating": 4,
+      "user_review": "",
+      "date_read": "2024-12-13T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.688Z",
+      "is_top_book": true,
+      "top_book_position": 2
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2268,
+    "fields": {
+      "user": 24,
+      "book": 364,
+      "user_rating": 4,
+      "user_review": "",
+      "date_read": "2025-07-19T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.691Z",
+      "is_top_book": true,
+      "top_book_position": 3
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2249,
+    "fields": {
+      "user": 24,
+      "book": 537,
+      "user_rating": 3,
+      "user_review": "",
+      "date_read": "2025-03-22T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.666Z",
+      "is_top_book": true,
+      "top_book_position": 4
+    }
+  },
+  {
+    "model": "core.userbook",
+    "pk": 2250,
+    "fields": {
+      "user": 24,
+      "book": 600,
+      "user_rating": 3,
+      "user_review": "",
+      "date_read": "2023-04-20T00:00:00Z",
+      "date_added": "2025-11-10T18:23:30.668Z",
+      "is_top_book": true,
+      "top_book_position": 5
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 517,
+    "fields": {
+      "title": "How to Change Your Mind: The New Science of Psychedelics",
+      "author": 387,
+      "normalized_title": "howtochangeyourmindthenewscienceofpsychedelics",
+      "average_rating": 4.27,
+      "page_count": 480,
+      "publish_year": 2019,
+      "publisher": 52,
+      "global_read_count": 47,
+      "isbn13": "9780735224155",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:46.210Z",
+      "genres": [
+        2,
+        3,
+        7,
+        27
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 530,
+    "fields": {
+      "title": "Soul Music (Discworld, #16; Death, #3)",
+      "author": 237,
+      "normalized_title": "soulmusic",
+      "average_rating": 4.06,
+      "page_count": 288,
+      "publish_year": 1995,
+      "publisher": 204,
+      "global_read_count": 88,
+      "isbn13": "9780061054891",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:46.794Z",
+      "genres": [
+        10,
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 318,
+    "fields": {
+      "title": "Good Omens",
+      "author": 236,
+      "normalized_title": "goodomens",
+      "average_rating": 4.0,
+      "page_count": 354,
+      "publish_year": 1990,
+      "publisher": 139,
+      "global_read_count": 479,
+      "isbn13": "0894808532",
+      "google_books_average_rating": 4.0,
+      "google_books_ratings_count": 83,
+      "google_books_last_checked": "2025-10-26T18:04:50.218Z",
+      "genres": [
+        10,
+        19,
+        20,
+        21,
+        28
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 262,
+    "fields": {
+      "title": "The Brothers Karamazov",
+      "author": 197,
+      "normalized_title": "thebrotherskaramazov",
+      "average_rating": 3.5,
+      "page_count": 536,
+      "publish_year": 2015,
+      "publisher": 101,
+      "global_read_count": 450,
+      "isbn13": "9781530117505",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:44.174Z",
+      "genres": [
+        7
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 507,
+    "fields": {
+      "title": "The Word for World Is Forest",
+      "author": 223,
+      "normalized_title": "thewordforworldisforest",
+      "average_rating": 4.06,
+      "page_count": 160,
+      "publish_year": 1995,
+      "publisher": 124,
+      "global_read_count": 81,
+      "isbn13": "9788445070581",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:44.542Z",
+      "genres": [
+        23,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 343,
+    "fields": {
+      "title": "The Silence of the Lambs",
+      "author": 254,
+      "normalized_title": "thesilenceofthelambs",
+      "average_rating": 5.0,
+      "page_count": 338,
+      "publish_year": 1988,
+      "publisher": 85,
+      "global_read_count": 412,
+      "isbn13": "9780312022822",
+      "google_books_average_rating": 5.0,
+      "google_books_ratings_count": 1,
+      "google_books_last_checked": "2025-10-26T18:33:44.443Z",
+      "genres": [
+        5,
+        7,
+        21
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 370,
+    "fields": {
+      "title": "The Help",
+      "author": 275,
+      "normalized_title": "thehelp",
+      "average_rating": 3.5,
+      "page_count": 451,
+      "publish_year": 2009,
+      "publisher": 168,
+      "global_read_count": 418,
+      "isbn13": "9780399155345",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:44.305Z",
+      "genres": [
+        8,
+        9
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 372,
+    "fields": {
+      "title": "Pachinko",
+      "author": 277,
+      "normalized_title": "pachinko",
+      "average_rating": 3.5,
+      "page_count": 490,
+      "publish_year": 2017,
+      "publisher": 75,
+      "global_read_count": 244,
+      "isbn13": "9781455563937",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:44.694Z",
+      "genres": [
+        9
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 333,
+    "fields": {
+      "title": "The Fifth Season",
+      "author": 249,
+      "normalized_title": "thefifthseason",
+      "average_rating": 3.5,
+      "page_count": 498,
+      "publish_year": 2015,
+      "publisher": 150,
+      "global_read_count": 364,
+      "isbn13": "9780316229296",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:44.364Z",
+      "genres": [
+        19,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 338,
+    "fields": {
+      "title": "The Shining",
+      "author": 251,
+      "normalized_title": "theshining",
+      "average_rating": 3.5,
+      "page_count": 447,
+      "publish_year": 1977,
+      "publisher": 151,
+      "global_read_count": 192,
+      "isbn13": "9780450032202",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:44.405Z",
+      "genres": [
+        5,
+        8,
+        17,
+        21
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 387,
+    "fields": {
+      "title": "Verity",
+      "author": 287,
+      "normalized_title": "verity",
+      "average_rating": 4.0,
+      "page_count": 314,
+      "publish_year": 2018,
+      "publisher": 174,
+      "global_read_count": 377,
+      "isbn13": "9781791392796",
+      "google_books_average_rating": 4.0,
+      "google_books_ratings_count": 5,
+      "google_books_last_checked": "2025-10-26T18:33:44.778Z",
+      "genres": [
+        11
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 359,
+    "fields": {
+      "title": "The Road",
+      "author": 266,
+      "normalized_title": "theroad",
+      "average_rating": 4.0,
+      "page_count": 241,
+      "publish_year": 2006,
+      "publisher": 162,
+      "global_read_count": 463,
+      "isbn13": "9780330447553",
+      "google_books_average_rating": 1.0,
+      "google_books_ratings_count": 1,
+      "google_books_last_checked": "2025-10-26T18:33:44.588Z",
+      "genres": [
+        13,
+        15,
+        21,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 417,
+    "fields": {
+      "title": "Quiet: The Power of Introverts in a World That Can't Stop Talking",
+      "author": 311,
+      "normalized_title": "quietthepowerofintrovertsinaworldthatcantstoptalking",
+      "average_rating": 4.0,
+      "page_count": 333,
+      "publish_year": 2012,
+      "publisher": 154,
+      "global_read_count": 186,
+      "isbn13": "9780307352149",
+      "google_books_average_rating": 4.0,
+      "google_books_ratings_count": 5,
+      "google_books_last_checked": "2025-10-26T18:33:45.917Z",
+      "genres": [
+        2,
+        7
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 358,
+    "fields": {
+      "title": "A Thousand Splendid Suns",
+      "author": 265,
+      "normalized_title": "athousandsplendidsuns",
+      "average_rating": 3.5,
+      "page_count": 372,
+      "publish_year": 2007,
+      "publisher": 70,
+      "global_read_count": 202,
+      "isbn13": "9780739489505",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:44.576Z",
+      "genres": [
+        7
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 342,
+    "fields": {
+      "title": "I Am Legend",
+      "author": 253,
+      "normalized_title": "iamlegend",
+      "average_rating": 4.0,
+      "page_count": 160,
+      "publish_year": 1954,
+      "publisher": 133,
+      "global_read_count": 286,
+      "isbn13": "9781857988093",
+      "google_books_average_rating": 4.0,
+      "google_books_ratings_count": 1,
+      "google_books_last_checked": "2025-10-26T18:33:44.434Z",
+      "genres": [
+        21,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 368,
+    "fields": {
+      "title": "Wolf Hall",
+      "author": 273,
+      "normalized_title": "wolfhall",
+      "average_rating": 3.5,
+      "page_count": 532,
+      "publish_year": 2009,
+      "publisher": 167,
+      "global_read_count": 287,
+      "isbn13": "9780805080681",
+      "google_books_average_rating": 4.0,
+      "google_books_ratings_count": 6,
+      "google_books_last_checked": "2025-10-26T18:33:44.672Z",
+      "genres": [
+        8,
+        9
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 353,
+    "fields": {
+      "title": "Lord of the Flies",
+      "author": 262,
+      "normalized_title": "lordoftheflies",
+      "average_rating": 3.7,
+      "page_count": 240,
+      "publish_year": 1954,
+      "publisher": 159,
+      "global_read_count": 424,
+      "isbn13": "0571056865",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:44.531Z",
+      "genres": [
+        5,
+        7,
+        8,
+        11,
+        13
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 630,
+    "fields": {
+      "title": "The Last Hero (Discworld, #27; Rincewind, #7)",
+      "author": 237,
+      "normalized_title": "thelasthero",
+      "average_rating": 4.18,
+      "page_count": 176,
+      "publish_year": 2001,
+      "publisher": 79,
+      "global_read_count": 41,
+      "isbn13": "0061040967",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T20:35:49.826Z",
+      "genres": [
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 405,
+    "fields": {
+      "title": "Homo Deus: A Brief History of Tomorrow",
+      "author": 300,
+      "normalized_title": "homodeusabriefhistoryoftomorrow",
+      "average_rating": 3.5,
+      "page_count": 300,
+      "publish_year": 2017,
+      "publisher": 184,
+      "global_read_count": 387,
+      "isbn13": "2226479813",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:45.223Z",
+      "genres": []
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 581,
+    "fields": {
+      "title": "The Last Continent (Discworld, #22; Rincewind, #6)",
+      "author": 237,
+      "normalized_title": "thelastcontinent",
+      "average_rating": 4.0,
+      "page_count": 416,
+      "publish_year": 1999,
+      "publisher": 204,
+      "global_read_count": 61,
+      "isbn13": "0061050482",
+      "google_books_average_rating": 3.5,
+      "google_books_ratings_count": 4,
+      "google_books_last_checked": "2025-10-26T18:33:48.440Z",
+      "genres": [
+        5,
+        10,
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 531,
+    "fields": {
+      "title": "Sense and Nonsense: Evolutionary Perspectives on Human Behaviour",
+      "author": 390,
+      "normalized_title": "senseandnonsenseevolutionaryperspectivesonhumanbehaviour",
+      "average_rating": 4.01,
+      "page_count": 384,
+      "publish_year": 2002,
+      "publisher": 54,
+      "global_read_count": 50,
+      "isbn13": "0198508840",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:46.339Z",
+      "genres": [
+        7,
+        27
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 324,
+    "fields": {
+      "title": "A Clash of Kings (A Song of Ice and Fire, #2)",
+      "author": 241,
+      "normalized_title": "aclashofkings",
+      "average_rating": 4.42,
+      "page_count": 1042,
+      "publish_year": 2003,
+      "publisher": 143,
+      "global_read_count": 377,
+      "isbn13": "0553108034",
+      "google_books_average_rating": 4.5,
+      "google_books_ratings_count": 65,
+      "google_books_last_checked": "2025-10-26T18:05:07.673Z",
+      "genres": [
+        15,
+        19,
+        25,
+        28
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 397,
+    "fields": {
+      "title": "The Hate U Give",
+      "author": 293,
+      "normalized_title": "thehateugive",
+      "average_rating": 3.5,
+      "page_count": 453,
+      "publish_year": 2017,
+      "publisher": 179,
+      "global_read_count": 415,
+      "isbn13": "9780062498533",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:45.065Z",
+      "genres": [
+        4,
+        6
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 393,
+    "fields": {
+      "title": "Harry Potter and the Goblet of Fire",
+      "author": 289,
+      "normalized_title": "harrypotterandthegobletoffire",
+      "average_rating": 3.5,
+      "page_count": 636,
+      "publish_year": 1993,
+      "publisher": 90,
+      "global_read_count": 210,
+      "isbn13": "9780747546245",
+      "google_books_average_rating": 5.0,
+      "google_books_ratings_count": 2,
+      "google_books_last_checked": "2025-10-26T18:33:44.826Z",
+      "genres": [
+        5,
+        6,
+        18,
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 425,
+    "fields": {
+      "title": "Into Thin Air",
+      "author": 318,
+      "normalized_title": "intothinair",
+      "average_rating": 3.5,
+      "page_count": 378,
+      "publish_year": 1996,
+      "publisher": 191,
+      "global_read_count": 431,
+      "isbn13": "0385492081",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:44.941Z",
+      "genres": [
+        2,
+        3,
+        8,
+        23
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 631,
+    "fields": {
+      "title": "Raising Steam (Discworld, #40; Moist von Lipwig, #3)",
+      "author": 237,
+      "normalized_title": "raisingsteam",
+      "average_rating": 4.02,
+      "page_count": 377,
+      "publish_year": 2013,
+      "publisher": 51,
+      "global_read_count": 53,
+      "isbn13": "9780857522276",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T20:35:49.326Z",
+      "genres": [
+        10,
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 613,
+    "fields": {
+      "title": "Midnight (Skulduggery Pleasant, #11)",
+      "author": 427,
+      "normalized_title": "midnight",
+      "average_rating": 4.21,
+      "page_count": 432,
+      "publish_year": 2019,
+      "publisher": 229,
+      "global_read_count": 55,
+      "isbn13": "9780008303938",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:46.479Z",
+      "genres": [
+        21
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 622,
+    "fields": {
+      "title": "Skulduggery Pleasant (Skulduggery Pleasant, #1)",
+      "author": 427,
+      "normalized_title": "skulduggerypleasant",
+      "average_rating": 4.18,
+      "page_count": 392,
+      "publish_year": 2007,
+      "publisher": 233,
+      "global_read_count": 74,
+      "isbn13": "9780061341045",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:45.974Z",
+      "genres": [
+        5,
+        10,
+        19,
+        21
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 404,
+    "fields": {
+      "title": "Sapiens: A Brief History of Humankind",
+      "author": 300,
+      "normalized_title": "sapiensabriefhistoryofhumankind",
+      "average_rating": 4.34,
+      "page_count": 414,
+      "publish_year": 2011,
+      "publisher": 8,
+      "global_read_count": 443,
+      "isbn13": "9780099590088",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:45.862Z",
+      "genres": [
+        2,
+        4,
+        7,
+        8,
+        14,
+        27
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 432,
+    "fields": {
+      "title": "Atomic Habits",
+      "author": 325,
+      "normalized_title": "atomichabits",
+      "average_rating": 3.5,
+      "page_count": 168,
+      "publish_year": 2016,
+      "publisher": 194,
+      "global_read_count": 345,
+      "isbn13": "9781804220207",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:45.007Z",
+      "genres": [
+        7,
+        26
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 279,
+    "fields": {
+      "title": "For Whom the Bell Tolls",
+      "author": 210,
+      "normalized_title": "forwhomthebelltolls",
+      "average_rating": 3.99,
+      "page_count": 471,
+      "publish_year": 1940,
+      "publisher": 111,
+      "global_read_count": 341,
+      "isbn13": "9780736657013",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:46.038Z",
+      "genres": [
+        8,
+        9,
+        12
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 537,
+    "fields": {
+      "title": "Private Peaceful",
+      "author": 393,
+      "normalized_title": "privatepeaceful",
+      "average_rating": 4.15,
+      "page_count": 208,
+      "publish_year": 2003,
+      "publisher": 140,
+      "global_read_count": 53,
+      "isbn13": "9780007150069",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:48.147Z",
+      "genres": [
+        6,
+        8,
+        9,
+        17,
+        18
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 600,
+    "fields": {
+      "title": "The Psychopath Test: A Journey Through the Madness Industry",
+      "author": 425,
+      "normalized_title": "thepsychopathtestajourneythroughthemadnessindustry",
+      "average_rating": 3.95,
+      "page_count": 275,
+      "publish_year": 2012,
+      "publisher": 40,
+      "global_read_count": 54,
+      "isbn13": "9780330492270",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:46.318Z",
+      "genres": [
+        2,
+        3,
+        4,
+        7,
+        8
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 588,
+    "fields": {
+      "title": "Sourcery (Discworld, #5; Rincewind, #3)",
+      "author": 237,
+      "normalized_title": "sourcery",
+      "average_rating": 3.91,
+      "page_count": 276,
+      "publish_year": 1989,
+      "publisher": 134,
+      "global_read_count": 49,
+      "isbn13": "9780451162335",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:47.078Z",
+      "genres": [
+        10,
+        17,
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 583,
+    "fields": {
+      "title": "Making Money (Discworld, #36; Moist Von Lipwig, #2)",
+      "author": 237,
+      "normalized_title": "makingmoney",
+      "average_rating": 4.27,
+      "page_count": 394,
+      "publish_year": 2007,
+      "publisher": 19,
+      "global_read_count": 66,
+      "isbn13": "9780061161643",
+      "google_books_average_rating": 4.0,
+      "google_books_ratings_count": 9,
+      "google_books_last_checked": "2025-10-26T18:33:46.740Z",
+      "genres": [
+        10,
+        19,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 431,
+    "fields": {
+      "title": "Wild: From Lost to Found on the Pacific Crest Trail",
+      "author": 324,
+      "normalized_title": "wildfromlosttofoundonthepacificcresttrail",
+      "average_rating": 3.5,
+      "page_count": 315,
+      "publish_year": 2012,
+      "publisher": 31,
+      "global_read_count": 251,
+      "isbn13": "9780307592736",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:46.526Z",
+      "genres": [
+        2,
+        3,
+        7,
+        15,
+        23
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 629,
+    "fields": {
+      "title": "Equal Rites (Discworld, #3; Witches, #1)",
+      "author": 237,
+      "normalized_title": "equalrites",
+      "average_rating": 4.07,
+      "page_count": 228,
+      "publish_year": 1988,
+      "publisher": 134,
+      "global_read_count": 47,
+      "isbn13": "9780451157041",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T20:35:48.886Z",
+      "genres": [
+        10,
+        19,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 599,
+    "fields": {
+      "title": "So You've Been Publicly Shamed",
+      "author": 425,
+      "normalized_title": "soyouvebeenpubliclyshamed",
+      "average_rating": 3.93,
+      "page_count": 290,
+      "publish_year": 2015,
+      "publisher": 40,
+      "global_read_count": 54,
+      "isbn13": "9780330492287",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:47.709Z",
+      "genres": [
+        2,
+        4,
+        7
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 511,
+    "fields": {
+      "title": "Distant Light",
+      "author": 382,
+      "normalized_title": "distantlight",
+      "average_rating": 3.66,
+      "page_count": 140,
+      "publish_year": 2016,
+      "publisher": 237,
+      "global_read_count": 53,
+      "isbn13": "9780914671428",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:43.704Z",
+      "genres": [
+        23
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 611,
+    "fields": {
+      "title": "Resurrection (Skulduggery Pleasant, #10)",
+      "author": 427,
+      "normalized_title": "resurrection",
+      "average_rating": 4.28,
+      "page_count": 424,
+      "publish_year": 2017,
+      "publisher": 230,
+      "global_read_count": 54,
+      "isbn13": "9780008219604",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:47.795Z",
+      "genres": [
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 428,
+    "fields": {
+      "title": "The Emperor of All Maladies: A Biography of Cancer",
+      "author": 321,
+      "normalized_title": "theemperorofallmaladiesabiographyofcancer",
+      "average_rating": 3.5,
+      "page_count": 571,
+      "publish_year": 2010,
+      "publisher": 5,
+      "global_read_count": 238,
+      "isbn13": "9781439107959",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:44.966Z",
+      "genres": [
+        8
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 596,
+    "fields": {
+      "title": "Hallucinations",
+      "author": 424,
+      "normalized_title": "hallucinations",
+      "average_rating": 3.93,
+      "page_count": 326,
+      "publish_year": 2012,
+      "publisher": 31,
+      "global_read_count": 57,
+      "isbn13": "9780307957245",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:48.240Z",
+      "genres": [
+        7,
+        27
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 591,
+    "fields": {
+      "title": "Saki: Short Stories",
+      "author": 420,
+      "normalized_title": "sakishortstories",
+      "average_rating": 4.07,
+      "page_count": 352,
+      "publish_year": 1976,
+      "publisher": 51,
+      "global_read_count": 60,
+      "isbn13": "0385053738",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:48.059Z",
+      "genres": [
+        16
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 614,
+    "fields": {
+      "title": "The Dying of the Light (Skulduggery Pleasant, #9)",
+      "author": 427,
+      "normalized_title": "thedyingofthelight",
+      "average_rating": 4.59,
+      "page_count": 605,
+      "publish_year": 2014,
+      "publisher": 231,
+      "global_read_count": 58,
+      "isbn13": "9780007489251",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:48.498Z",
+      "genres": [
+        6,
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 609,
+    "fields": {
+      "title": "Dead or Alive (Skulduggery Pleasant, #14)",
+      "author": 427,
+      "normalized_title": "deadoralive",
+      "average_rating": 4.37,
+      "page_count": 608,
+      "publish_year": 2021,
+      "publisher": 229,
+      "global_read_count": 57,
+      "isbn13": "9780008420017",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:48.469Z",
+      "genres": [
+        5,
+        10,
+        19,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 605,
+    "fields": {
+      "title": "Thud! (Discworld, #34; City Watch, #7)",
+      "author": 237,
+      "normalized_title": "thud",
+      "average_rating": 4.35,
+      "page_count": 439,
+      "publish_year": 2005,
+      "publisher": 3,
+      "global_read_count": 49,
+      "isbn13": "0060815221",
+      "google_books_average_rating": 5.0,
+      "google_books_ratings_count": 2,
+      "google_books_last_checked": "2025-10-26T18:33:48.347Z",
+      "genres": [
+        10,
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 586,
+    "fields": {
+      "title": "Ubik",
+      "author": 232,
+      "normalized_title": "ubik",
+      "average_rating": 4.11,
+      "page_count": 288,
+      "publish_year": null,
+      "publisher": null,
+      "global_read_count": 80,
+      "isbn13": "9788498003185",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:47.982Z",
+      "genres": [
+        5,
+        10,
+        17,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 514,
+    "fields": {
+      "title": "You Dreamed of Empires",
+      "author": 385,
+      "normalized_title": "youdreamedofempires",
+      "average_rating": 3.76,
+      "page_count": 220,
+      "publish_year": 2023,
+      "publisher": 63,
+      "global_read_count": 87,
+      "isbn13": "9781787303805",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:47.412Z",
+      "genres": []
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 606,
+    "fields": {
+      "title": "Night Watch (Discworld, #29; City Watch, #6)",
+      "author": 237,
+      "normalized_title": "nightwatch",
+      "average_rating": 4.5,
+      "page_count": 480,
+      "publish_year": 2002,
+      "publisher": 79,
+      "global_read_count": 49,
+      "isbn13": "0060013117",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:48.833Z",
+      "genres": [
+        10,
+        19,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 610,
+    "fields": {
+      "title": "Seasons of War (Skulduggery Pleasant, #13)",
+      "author": 427,
+      "normalized_title": "seasonsofwar",
+      "average_rating": 4.43,
+      "page_count": 592,
+      "publish_year": 2020,
+      "publisher": 229,
+      "global_read_count": 47,
+      "isbn13": "9780008386160",
+      "google_books_average_rating": 5.0,
+      "google_books_ratings_count": 1,
+      "google_books_last_checked": "2025-10-26T18:33:48.849Z",
+      "genres": [
+        5,
+        10,
+        19,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 584,
+    "fields": {
+      "title": "Monstrous Regiment (Discworld, #31; Industrial Revolution, #3)",
+      "author": 237,
+      "normalized_title": "monstrousregiment",
+      "average_rating": 4.27,
+      "page_count": 496,
+      "publish_year": 2003,
+      "publisher": 51,
+      "global_read_count": 53,
+      "isbn13": "9780385603409",
+      "google_books_average_rating": 4.0,
+      "google_books_ratings_count": 1,
+      "google_books_last_checked": "2025-10-26T18:33:47.500Z",
+      "genres": [
+        10,
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 587,
+    "fields": {
+      "title": "Interesting Times (Discworld, #17; Rincewind, #5)",
+      "author": 237,
+      "normalized_title": "interestingtimes",
+      "average_rating": 4.15,
+      "page_count": 368,
+      "publish_year": 1997,
+      "publisher": 204,
+      "global_read_count": 58,
+      "isbn13": "9780061052521",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:48.705Z",
+      "genres": [
+        10,
+        19,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 615,
+    "fields": {
+      "title": "Last Stand of Dead Men (Skulduggery Pleasant, #8)",
+      "author": 427,
+      "normalized_title": "laststandofdeadmen",
+      "average_rating": 4.57,
+      "page_count": 604,
+      "publish_year": 2019,
+      "publisher": 229,
+      "global_read_count": 60,
+      "isbn13": "9780008266424",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:48.864Z",
+      "genres": [
+        6,
+        13,
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 379,
+    "fields": {
+      "title": "Circe",
+      "author": 282,
+      "normalized_title": "circe",
+      "average_rating": 4.22,
+      "page_count": 393,
+      "publish_year": 2018,
+      "publisher": 15,
+      "global_read_count": 300,
+      "isbn13": "9780316556330",
+      "google_books_average_rating": 4.5,
+      "google_books_ratings_count": 4,
+      "google_books_last_checked": "2025-10-26T18:33:46.601Z",
+      "genres": [
+        9,
+        19,
+        23,
+        28
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 625,
+    "fields": {
+      "title": "Drug Use for Grown-Ups: Chasing Liberty in the Land of Fear",
+      "author": 430,
+      "normalized_title": "druguseforgrownupschasinglibertyinthelandoffear",
+      "average_rating": 4.01,
+      "page_count": 304,
+      "publish_year": 2019,
+      "publisher": 235,
+      "global_read_count": 55,
+      "isbn13": "9786559790050",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:47.110Z",
+      "genres": [
+        4
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 375,
+    "fields": {
+      "title": "Klara and the Sun",
+      "author": 280,
+      "normalized_title": "klaraandthesun",
+      "average_rating": 3.74,
+      "page_count": 303,
+      "publish_year": 2019,
+      "publisher": 169,
+      "global_read_count": 162,
+      "isbn13": "9780571364886",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:44.735Z",
+      "genres": [
+        11,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 291,
+    "fields": {
+      "title": "Dune (Dune, #1)",
+      "author": 220,
+      "normalized_title": "dune",
+      "average_rating": 4.28,
+      "page_count": 658,
+      "publish_year": 1965,
+      "publisher": 119,
+      "global_read_count": 222,
+      "isbn13": "9781444738209",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:47.386Z",
+      "genres": [
+        19,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 526,
+    "fields": {
+      "title": "Thief of Time (Discworld, #26; Death, #5)",
+      "author": 237,
+      "normalized_title": "thiefoftime",
+      "average_rating": 4.28,
+      "page_count": 378,
+      "publish_year": 2001,
+      "publisher": 79,
+      "global_read_count": 112,
+      "isbn13": "0060199563",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:47.326Z",
+      "genres": [
+        10,
+        19,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 522,
+    "fields": {
+      "title": "Mort (Discworld, #4; Death, #1)",
+      "author": 237,
+      "normalized_title": "mort",
+      "average_rating": 4.24,
+      "page_count": 243,
+      "publish_year": 1996,
+      "publisher": 133,
+      "global_read_count": 89,
+      "isbn13": "9780304364244",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:48.955Z",
+      "genres": [
+        10,
+        19,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 523,
+    "fields": {
+      "title": "Small Gods (Discworld, #13)",
+      "author": 237,
+      "normalized_title": "smallgods",
+      "average_rating": 4.32,
+      "page_count": 389,
+      "publish_year": 1994,
+      "publisher": 3,
+      "global_read_count": 111,
+      "isbn13": "9780060177508",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:46.119Z",
+      "genres": [
+        10,
+        14,
+        19,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 254,
+    "fields": {
+      "title": "1984",
+      "author": 191,
+      "normalized_title": "1984",
+      "average_rating": 4.2,
+      "page_count": 368,
+      "publish_year": 2003,
+      "publisher": 29,
+      "global_read_count": 568,
+      "isbn13": "9780582777316",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:49.490Z",
+      "genres": [
+        4,
+        6,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 384,
+    "fields": {
+      "title": "The Seven Husbands of Evelyn Hugo",
+      "author": 286,
+      "normalized_title": "thesevenhusbandsofevelynhugo",
+      "average_rating": 4.4,
+      "page_count": 389,
+      "publish_year": 2017,
+      "publisher": 48,
+      "global_read_count": 178,
+      "isbn13": "1501139231",
+      "google_books_average_rating": 4.5,
+      "google_books_ratings_count": 3,
+      "google_books_last_checked": "2025-10-26T18:33:49.180Z",
+      "genres": [
+        3,
+        11
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 626,
+    "fields": {
+      "title": "At Home: A Short History of Private Life",
+      "author": 308,
+      "normalized_title": "athomeashorthistoryofprivatelife",
+      "average_rating": 3.99,
+      "page_count": 497,
+      "publish_year": 2010,
+      "publisher": 51,
+      "global_read_count": 60,
+      "isbn13": "9780767919388",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:47.891Z",
+      "genres": [
+        2,
+        4,
+        7,
+        8,
+        29
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 454,
+    "fields": {
+      "title": "Swing Time",
+      "author": 268,
+      "normalized_title": "swingtime",
+      "average_rating": 3.56,
+      "page_count": 453,
+      "publish_year": 2016,
+      "publisher": 12,
+      "global_read_count": 99,
+      "isbn13": "9780241144152",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:49.264Z",
+      "genres": []
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 335,
+    "fields": {
+      "title": "Piranesi",
+      "author": 250,
+      "normalized_title": "piranesi",
+      "average_rating": 4.22,
+      "page_count": 272,
+      "publish_year": 2020,
+      "publisher": 28,
+      "global_read_count": 596,
+      "isbn13": "9781635575637",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:49.433Z",
+      "genres": [
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 476,
+    "fields": {
+      "title": "Stoning Mary",
+      "author": 358,
+      "normalized_title": "stoningmary",
+      "average_rating": 3.05,
+      "page_count": 73,
+      "publish_year": 2005,
+      "publisher": 35,
+      "global_read_count": 50,
+      "isbn13": "9781854598561",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:49.121Z",
+      "genres": []
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 540,
+    "fields": {
+      "title": "Toro! Toro!",
+      "author": 393,
+      "normalized_title": "torotoro",
+      "average_rating": 3.67,
+      "page_count": 128,
+      "publish_year": 2005,
+      "publisher": 206,
+      "global_read_count": 46,
+      "isbn13": "9781405660778",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:45.684Z",
+      "genres": [
+        6,
+        8,
+        9,
+        23
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 474,
+    "fields": {
+      "title": "All About Love: New Visions",
+      "author": 356,
+      "normalized_title": "allaboutlovenewvisions",
+      "average_rating": 4.02,
+      "page_count": 240,
+      "publish_year": 2001,
+      "publisher": 32,
+      "global_read_count": 69,
+      "isbn13": "9780060959470",
+      "google_books_average_rating": 3.0,
+      "google_books_ratings_count": 1,
+      "google_books_last_checked": "2025-10-26T18:33:49.551Z",
+      "genres": [
+        2,
+        4,
+        7
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 542,
+    "fields": {
+      "title": "The Graveyard Book",
+      "author": 236,
+      "normalized_title": "thegraveyardbook",
+      "average_rating": 4.16,
+      "page_count": 312,
+      "publish_year": 2008,
+      "publisher": 207,
+      "global_read_count": 47,
+      "isbn13": "9780060530921",
+      "google_books_average_rating": 4.0,
+      "google_books_ratings_count": 75,
+      "google_books_last_checked": "2025-10-26T18:33:47.555Z",
+      "genres": [
+        6,
+        19,
+        21
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 385,
+    "fields": {
+      "title": "Daisy Jones & The Six",
+      "author": 286,
+      "normalized_title": "daisyjonesthesix",
+      "average_rating": 4.2,
+      "page_count": 368,
+      "publish_year": 2019,
+      "publisher": 50,
+      "global_read_count": 252,
+      "isbn13": "9781524798628",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:49.461Z",
+      "genres": [
+        9
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 478,
+    "fields": {
+      "title": "The Importance of Being Earnest",
+      "author": 213,
+      "normalized_title": "theimportanceofbeingearnest",
+      "average_rating": 4.17,
+      "page_count": 89,
+      "publish_year": 2006,
+      "publisher": 37,
+      "global_read_count": 47,
+      "isbn13": "9780497256616",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:50.220Z",
+      "genres": [
+        6,
+        7,
+        8,
+        10,
+        11,
+        12,
+        14,
+        17
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 493,
+    "fields": {
+      "title": "The Curious Incident of the Dog in the Night-Time",
+      "author": 370,
+      "normalized_title": "thecuriousincidentofthedoginthenighttime",
+      "average_rating": 3.89,
+      "page_count": 226,
+      "publish_year": 2003,
+      "publisher": 51,
+      "global_read_count": 87,
+      "isbn13": "0385509456",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:49.792Z",
+      "genres": [
+        5,
+        6,
+        7,
+        17,
+        18
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 555,
+    "fields": {
+      "title": "Salt, Fat, Acid, Heat: Mastering the Elements of Good Cooking",
+      "author": 401,
+      "normalized_title": "saltfatacidheatmasteringtheelementsofgoodcooking",
+      "average_rating": 4.4,
+      "page_count": 480,
+      "publish_year": 2017,
+      "publisher": 88,
+      "global_read_count": 58,
+      "isbn13": "9781476753836",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:45.768Z",
+      "genres": [
+        29
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 494,
+    "fields": {
+      "title": "Paul Takes the Form of a Mortal Girl",
+      "author": 371,
+      "normalized_title": "paultakestheformofamortalgirl",
+      "average_rating": 3.84,
+      "page_count": 354,
+      "publish_year": 2019,
+      "publisher": 40,
+      "global_read_count": 63,
+      "isbn13": "9781529007664",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:49.871Z",
+      "genres": [
+        6,
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 255,
+    "fields": {
+      "title": "The Great Gatsby",
+      "author": 192,
+      "normalized_title": "thegreatgatsby",
+      "average_rating": 3.93,
+      "page_count": 180,
+      "publish_year": 1920,
+      "publisher": 54,
+      "global_read_count": 210,
+      "isbn13": "9780199536405",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:50.128Z",
+      "genres": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        11,
+        12,
+        14,
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 458,
+    "fields": {
+      "title": "The Fall",
+      "author": 345,
+      "normalized_title": "thefall",
+      "average_rating": 4.03,
+      "page_count": 147,
+      "publish_year": 2004,
+      "publisher": 17,
+      "global_read_count": 46,
+      "isbn13": "9781400042555",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:50.149Z",
+      "genres": []
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 374,
+    "fields": {
+      "title": "Normal People",
+      "author": 279,
+      "normalized_title": "normalpeople",
+      "average_rating": 3.81,
+      "page_count": 279,
+      "publish_year": 2018,
+      "publisher": 53,
+      "global_read_count": 465,
+      "isbn13": "9781984822178",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:49.992Z",
+      "genres": [
+        6,
+        7,
+        11
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 334,
+    "fields": {
+      "title": "Jonathan Strange & Mr Norrell",
+      "author": 250,
+      "normalized_title": "jonathanstrangemrnorrell",
+      "average_rating": 4.0,
+      "page_count": 1024,
+      "publish_year": 2001,
+      "publisher": 86,
+      "global_read_count": 480,
+      "isbn13": "9780765356154",
+      "google_books_average_rating": 4.0,
+      "google_books_ratings_count": 73,
+      "google_books_last_checked": "2025-10-26T18:33:49.751Z",
+      "genres": [
+        8,
+        9,
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 461,
+    "fields": {
+      "title": "Everything I Know About Love",
+      "author": 348,
+      "normalized_title": "everythingiknowaboutlove",
+      "average_rating": 3.96,
+      "page_count": 368,
+      "publish_year": 2020,
+      "publisher": 19,
+      "global_read_count": 39,
+      "isbn13": "9780062968784",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:50.829Z",
+      "genres": [
+        2
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 486,
+    "fields": {
+      "title": "The Buried Giant",
+      "author": 280,
+      "normalized_title": "theburiedgiant",
+      "average_rating": 3.59,
+      "page_count": 317,
+      "publish_year": 2015,
+      "publisher": 44,
+      "global_read_count": 135,
+      "isbn13": "9780571315031",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:50.953Z",
+      "genres": [
+        8,
+        19
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 479,
+    "fields": {
+      "title": "The Tragedy of Mariam",
+      "author": 360,
+      "normalized_title": "thetragedyofmariam",
+      "average_rating": 3.16,
+      "page_count": 194,
+      "publish_year": 2018,
+      "publisher": 38,
+      "global_read_count": 41,
+      "isbn13": "9780342785186",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:50.696Z",
+      "genres": []
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 364,
+    "fields": {
+      "title": "The Amazing Adventures of Kavalier & Clay",
+      "author": 270,
+      "normalized_title": "theamazingadventuresofkavalierclay",
+      "average_rating": 4.0,
+      "page_count": 639,
+      "publish_year": 1957,
+      "publisher": 1,
+      "global_read_count": 407,
+      "isbn13": "0679450041",
+      "google_books_average_rating": 4.0,
+      "google_books_ratings_count": 53,
+      "google_books_last_checked": "2025-10-26T18:33:50.307Z",
+      "genres": [
+        1,
+        6,
+        10,
+        14
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 455,
+    "fields": {
+      "title": "My Brilliant Friend (Neapolitan Novels, #1)",
+      "author": 343,
+      "normalized_title": "mybrilliantfriend",
+      "average_rating": 4.05,
+      "page_count": 331,
+      "publish_year": 2023,
+      "publisher": 14,
+      "global_read_count": 98,
+      "isbn13": "9781609459468",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:50.717Z",
+      "genres": [
+        14
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 382,
+    "fields": {
+      "title": "Eleanor Oliphant Is Completely Fine",
+      "author": 284,
+      "normalized_title": "eleanoroliphantiscompletelyfine",
+      "average_rating": 3.5,
+      "page_count": 336,
+      "publish_year": 2017,
+      "publisher": 173,
+      "global_read_count": 354,
+      "isbn13": "9780735220683",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:50.371Z",
+      "genres": [
+        7,
+        11,
+        12
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 452,
+    "fields": {
+      "title": "Open Water",
+      "author": 341,
+      "normalized_title": "openwater",
+      "average_rating": 4.01,
+      "page_count": 145,
+      "publish_year": 2021,
+      "publisher": 11,
+      "global_read_count": 47,
+      "isbn13": "9780802157942",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:51.270Z",
+      "genres": [
+        11
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 449,
+    "fields": {
+      "title": "Lote",
+      "author": 339,
+      "normalized_title": "lote",
+      "average_rating": 4.05,
+      "page_count": 384,
+      "publish_year": 2020,
+      "publisher": 9,
+      "global_read_count": 38,
+      "isbn13": "9781713539018",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:51.258Z",
+      "genres": [
+        1
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 575,
+    "fields": {
+      "title": "Food Rules: An Eater's Manual",
+      "author": 387,
+      "normalized_title": "foodrulesaneatersmanual",
+      "average_rating": 3.99,
+      "page_count": 152,
+      "publish_year": 2009,
+      "publisher": 52,
+      "global_read_count": 43,
+      "isbn13": "9780143116387",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:46.383Z",
+      "genres": [
+        2,
+        4,
+        29
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 501,
+    "fields": {
+      "title": "Frankenstein: The 1818 Text",
+      "author": 376,
+      "normalized_title": "frankensteinthe1818text",
+      "average_rating": 3.89,
+      "page_count": 260,
+      "publish_year": 2016,
+      "publisher": 58,
+      "global_read_count": 45,
+      "isbn13": "9789944184939",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:51:01.414Z",
+      "genres": [
+        6,
+        7,
+        8,
+        9,
+        12,
+        13,
+        14,
+        15,
+        18,
+        21,
+        25,
+        27
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 503,
+    "fields": {
+      "title": "The Strange Case of Dr. Jekyll and Mr. Hyde",
+      "author": 378,
+      "normalized_title": "thestrangecaseofdrjekyllandmrhyde",
+      "average_rating": 3.83,
+      "page_count": 96,
+      "publish_year": 2003,
+      "publisher": 60,
+      "global_read_count": 40,
+      "isbn13": "0451528956",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:51:01.477Z",
+      "genres": [
+        5,
+        7,
+        8,
+        12,
+        13,
+        14,
+        16,
+        21,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 480,
+    "fields": {
+      "title": "Before the Coffee Gets Cold (Before the Coffee Gets Cold, #1)",
+      "author": 361,
+      "normalized_title": "beforethecoffeegetscold",
+      "average_rating": 3.66,
+      "page_count": 293,
+      "publish_year": 2019,
+      "publisher": 40,
+      "global_read_count": 99,
+      "isbn13": "9781529029581",
+      "google_books_average_rating": null,
+      "google_books_ratings_count": 0,
+      "google_books_last_checked": "2025-10-26T18:33:51.087Z",
+      "genres": [
+        11,
+        19,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.book",
+    "pk": 323,
+    "fields": {
+      "title": "A Game of Thrones (A Song of Ice and Fire, #1)",
+      "author": 241,
+      "normalized_title": "agameofthrones",
+      "average_rating": 4.45,
+      "page_count": 835,
+      "publish_year": 2000,
+      "publisher": 142,
+      "global_read_count": 366,
+      "isbn13": "9780553573404",
+      "google_books_average_rating": 4.5,
+      "google_books_ratings_count": 131,
+      "google_books_last_checked": "2025-10-26T18:33:46.762Z",
+      "genres": [
+        4,
+        13,
+        15,
+        19,
+        21,
+        25
+      ]
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 210,
+    "fields": {
+      "name": "Ernest Hemingway",
+      "normalized_name": "ernesthemingway",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:50:39.320Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 213,
+    "fields": {
+      "name": "Oscar Wilde",
+      "normalized_name": "oscarwilde",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:50:42.620Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 220,
+    "fields": {
+      "name": "Frank Herbert",
+      "normalized_name": "frankherbert",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:50:53.622Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 223,
+    "fields": {
+      "name": "Ursula K. Le Guin",
+      "normalized_name": "ursulakleguin",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:50:58.462Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 232,
+    "fields": {
+      "name": "Philip K. Dick",
+      "normalized_name": "philipkdick",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:51:13.438Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 236,
+    "fields": {
+      "name": "Neil Gaiman",
+      "normalized_name": "neilgaiman",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:51:18.623Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 237,
+    "fields": {
+      "name": "Terry Pratchett",
+      "normalized_name": "terrypratchett",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:51:20.198Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 241,
+    "fields": {
+      "name": "George R.R. Martin",
+      "normalized_name": "georgerrmartin",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:51:26.650Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 249,
+    "fields": {
+      "name": "N. K. Jemisin",
+      "normalized_name": "nkjemisin",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:51:37.660Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 251,
+    "fields": {
+      "name": "Stephen King",
+      "normalized_name": "stephenking",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:51:39.754Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 253,
+    "fields": {
+      "name": "Richard Matheson",
+      "normalized_name": "richardmatheson",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:51:42.923Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 254,
+    "fields": {
+      "name": "Thomas Harris",
+      "normalized_name": "thomasharris",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:51:44.772Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 262,
+    "fields": {
+      "name": "William Golding",
+      "normalized_name": "williamgolding",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:51:56.654Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 265,
+    "fields": {
+      "name": "Khaled Hosseini",
+      "normalized_name": "khaledhosseini",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:51:59.680Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 266,
+    "fields": {
+      "name": "Cormac McCarthy",
+      "normalized_name": "cormacmccarthy",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:52:01.258Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 268,
+    "fields": {
+      "name": "Zadie Smith",
+      "normalized_name": "zadiesmith",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:52:05.344Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 273,
+    "fields": {
+      "name": "Hilary Mantel",
+      "normalized_name": "hilarymantel",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:52:12.908Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 275,
+    "fields": {
+      "name": "Kathryn Stockett",
+      "normalized_name": "kathrynstockett",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:52:16.364Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 277,
+    "fields": {
+      "name": "Min Jin Lee",
+      "normalized_name": "minjinlee",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:52:19.421Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 279,
+    "fields": {
+      "name": "Sally Rooney",
+      "normalized_name": "sallyrooney",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:52:21.187Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 280,
+    "fields": {
+      "name": "Kazuo Ishiguro",
+      "normalized_name": "kazuoishiguro",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:52:22.748Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 282,
+    "fields": {
+      "name": "Madeline Miller",
+      "normalized_name": "madelinemiller",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:52:25.788Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 286,
+    "fields": {
+      "name": "Taylor Jenkins Reid",
+      "normalized_name": "taylorjenkinsreid",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:52:30.411Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 287,
+    "fields": {
+      "name": "Colleen Hoover",
+      "normalized_name": "colleenhoover",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:52:32.046Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 289,
+    "fields": {
+      "name": "J.K. Rowling",
+      "normalized_name": "jkrowling",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:52:35.545Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 293,
+    "fields": {
+      "name": "Angie Thomas",
+      "normalized_name": "angiethomas",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:52:42.164Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 318,
+    "fields": {
+      "name": "Jon Krakauer",
+      "normalized_name": "jonkrakauer",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:53:06.604Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 311,
+    "fields": {
+      "name": "Susan Cain",
+      "normalized_name": "susancain",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:52:53.709Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 191,
+    "fields": {
+      "name": "George Orwell",
+      "normalized_name": "georgeorwell",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:53:09.733Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 197,
+    "fields": {
+      "name": "Fyodor Dostoevsky",
+      "normalized_name": "fyodordostoevsky",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:53:11.278Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 250,
+    "fields": {
+      "name": "Susanna Clarke",
+      "normalized_name": "susannaclarke",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:53:22.914Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 270,
+    "fields": {
+      "name": "Michael Chabon",
+      "normalized_name": "michaelchabon",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:53:27.496Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 284,
+    "fields": {
+      "name": "Gail Honeyman",
+      "normalized_name": "gailhoneyman",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:53:30.489Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 300,
+    "fields": {
+      "name": "Yuval Noah Harari",
+      "normalized_name": "yuvalnoahharari",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:53:36.343Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 308,
+    "fields": {
+      "name": "Bill Bryson",
+      "normalized_name": "billbryson",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:53:49.299Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 321,
+    "fields": {
+      "name": "Siddhartha Mukherjee",
+      "normalized_name": "siddharthamukherjee",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:53:55.435Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 324,
+    "fields": {
+      "name": "Cheryl Strayed",
+      "normalized_name": "cherylstrayed",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:54:00.500Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 325,
+    "fields": {
+      "name": "James Clear",
+      "normalized_name": "jamesclear",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:54:02.151Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 339,
+    "fields": {
+      "name": "Shola von Reinhold",
+      "normalized_name": "sholavonreinhold",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:54:25.439Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 341,
+    "fields": {
+      "name": "Caleb Azumah Nelson",
+      "normalized_name": "calebazumahnelson",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:54:28.817Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 348,
+    "fields": {
+      "name": "Dolly Alderton",
+      "normalized_name": "dollyalderton",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:54:39.060Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 358,
+    "fields": {
+      "name": "debbie tucker green",
+      "normalized_name": "debbietuckergreen",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:54:52.689Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 361,
+    "fields": {
+      "name": "Toshikazu Kawaguchi",
+      "normalized_name": "toshikazukawaguchi",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:54:57.970Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 370,
+    "fields": {
+      "name": "Mark Haddon",
+      "normalized_name": "markhaddon",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:55:12.274Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 343,
+    "fields": {
+      "name": "Elena Ferrante",
+      "normalized_name": "elenaferrante",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:54:31.865Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 345,
+    "fields": {
+      "name": "Albert Camus",
+      "normalized_name": "albertcamus",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:54:33.855Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 356,
+    "fields": {
+      "name": "bell hooks",
+      "normalized_name": "bellhooks",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:54:51.010Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 360,
+    "fields": {
+      "name": "Elizabeth Cary",
+      "normalized_name": "elizabethcary",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:54:56.121Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 371,
+    "fields": {
+      "name": "Andrea Lawlor",
+      "normalized_name": "andrealawlor",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:55:13.963Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 376,
+    "fields": {
+      "name": "Mary Wollstonecraft Shelley",
+      "normalized_name": "marywollstonecraftshelley",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:55:21.237Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 378,
+    "fields": {
+      "name": "Robert Louis Stevenson",
+      "normalized_name": "robertlouisstevenson",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:55:25.729Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 192,
+    "fields": {
+      "name": "F. Scott Fitzgerald",
+      "normalized_name": "fscottfitzgerald",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:49:50.313Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 382,
+    "fields": {
+      "name": "Antonio Moresco",
+      "normalized_name": "antoniomoresco",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:55:42.847Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 385,
+    "fields": {
+      "name": "\u00c1lvaro Enrigue",
+      "normalized_name": "\u00e1lvaroenrigue",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:55:47.527Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 387,
+    "fields": {
+      "name": "Michael Pollan",
+      "normalized_name": "michaelpollan",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:55:53.508Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 390,
+    "fields": {
+      "name": "Kevin N. Laland",
+      "normalized_name": "kevinnlaland",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:55:58.133Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 393,
+    "fields": {
+      "name": "Michael Morpurgo",
+      "normalized_name": "michaelmorpurgo",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:56:03.033Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 401,
+    "fields": {
+      "name": "Samin Nosrat",
+      "normalized_name": "saminnosrat",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:56:14.505Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 420,
+    "fields": {
+      "name": "Saki",
+      "normalized_name": "saki",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:56:48.018Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 424,
+    "fields": {
+      "name": "Oliver Sacks",
+      "normalized_name": "oliversacks",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:56:53.650Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 425,
+    "fields": {
+      "name": "Jon Ronson",
+      "normalized_name": "jonronson",
+      "popularity_score": 0,
+      "is_mainstream": true,
+      "mainstream_last_checked": "2026-02-17T12:56:55.228Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 427,
+    "fields": {
+      "name": "Derek Landy",
+      "normalized_name": "dereklandy",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:56:59.727Z"
+    }
+  },
+  {
+    "model": "core.author",
+    "pk": 430,
+    "fields": {
+      "name": "Carl L. Hart",
+      "normalized_name": "carllhart",
+      "popularity_score": 0,
+      "is_mainstream": false,
+      "mainstream_last_checked": "2026-02-17T12:57:02.944Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 184,
+    "fields": {
+      "name": "Albin Michel",
+      "normalized_name": "albinmichel",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": "2025-10-02T00:21:45.244Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 31,
+    "fields": {
+      "name": "Alfred A. Knopf",
+      "normalized_name": "alfredaknopf",
+      "is_mainstream": true,
+      "parent": 63,
+      "mainstream_last_checked": "2025-10-02T00:21:51.166Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 168,
+    "fields": {
+      "name": "Amy Einhorn Books",
+      "normalized_name": "amyeinhornbooks",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": "2025-10-02T00:22:01.256Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 191,
+    "fields": {
+      "name": "Anchor Books/Doubleday",
+      "normalized_name": "anchorbooksdoubleday",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": "2025-10-02T00:22:09.846Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 58,
+    "fields": {
+      "name": "Antik Kitap",
+      "normalized_name": "antikkitap",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": "2025-10-02T00:22:22.796Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 237,
+    "fields": {
+      "name": "Archipelago Books",
+      "normalized_name": "archipelagobooks",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 48,
+    "fields": {
+      "name": "Atria Books",
+      "normalized_name": "atriabooks",
+      "is_mainstream": true,
+      "parent": 87,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 9,
+    "fields": {
+      "name": "Audible Studios on Brilliance",
+      "normalized_name": "audiblestudiosonbrilliance",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": "2025-10-02T00:22:29.545Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 50,
+    "fields": {
+      "name": "Ballantine Books",
+      "normalized_name": "ballantinebooks",
+      "is_mainstream": true,
+      "parent": 63,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 179,
+    "fields": {
+      "name": "Balzer + Bray",
+      "normalized_name": "balzerbray",
+      "is_mainstream": true,
+      "parent": 79,
+      "mainstream_last_checked": "2025-10-02T00:23:04.608Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 90,
+    "fields": {
+      "name": "Bloomsbury",
+      "normalized_name": "bloomsbury",
+      "is_mainstream": true,
+      "parent": 28,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 28,
+    "fields": {
+      "name": "Bloomsbury Publishing",
+      "normalized_name": "bloomsburypublishing",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": "2025-10-02T00:23:28.307Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 111,
+    "fields": {
+      "name": "Books on Tape",
+      "normalized_name": "booksontape",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": "2025-10-02T00:23:35.691Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 174,
+    "fields": {
+      "name": "Colleen Hoover",
+      "normalized_name": "colleenhoover",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": "2025-10-02T00:24:08.565Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 140,
+    "fields": {
+      "name": "Collins",
+      "normalized_name": "collins",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": "2025-10-02T00:24:11.608Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 101,
+    "fields": {
+      "name": "CreateSpace Independent Publishing Platform",
+      "normalized_name": "createspaceindependentpublishingplatform",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": "2025-10-02T00:24:50.973Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 154,
+    "fields": {
+      "name": "Crown Publishers",
+      "normalized_name": "crownpublishers",
+      "is_mainstream": true,
+      "parent": 63,
+      "mainstream_last_checked": "2025-10-02T00:25:09.593Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 51,
+    "fields": {
+      "name": "Doubleday",
+      "normalized_name": "doubleday",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": "2025-10-02T00:25:57.906Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 14,
+    "fields": {
+      "name": "Europa Editions",
+      "normalized_name": "europaeditions",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": "2025-10-02T00:27:06.051Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 17,
+    "fields": {
+      "name": "Everyman's Library",
+      "normalized_name": "everymanslibrary",
+      "is_mainstream": true,
+      "parent": 63,
+      "mainstream_last_checked": "2025-10-02T00:27:15.931Z"
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 159,
+    "fields": {
+      "name": "Faber and Faber",
+      "normalized_name": "faberandfaber",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 169,
+    "fields": {
+      "name": "FABER ET FABER",
+      "normalized_name": "faberetfaber",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 44,
+    "fields": {
+      "name": "Faber & Faber, London, England",
+      "normalized_name": "faberfaberlondonengland",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 38,
+    "fields": {
+      "name": "Franklin Classics",
+      "normalized_name": "franklinclassics",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 206,
+    "fields": {
+      "name": "Galaxy",
+      "normalized_name": "galaxy",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 133,
+    "fields": {
+      "name": "Gollancz",
+      "normalized_name": "gollancz",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 75,
+    "fields": {
+      "name": "Grand Central Publishing",
+      "normalized_name": "grandcentralpublishing",
+      "is_mainstream": true,
+      "parent": 73,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 11,
+    "fields": {
+      "name": "Grove Press, Black Cat",
+      "normalized_name": "grovepressblackcat",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 73,
+    "fields": {
+      "name": "Hachette Livre",
+      "normalized_name": "hachettelivre",
+      "is_mainstream": true,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 19,
+    "fields": {
+      "name": "Harper",
+      "normalized_name": "harper",
+      "is_mainstream": true,
+      "parent": 79,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 233,
+    "fields": {
+      "name": "HarperChildrensAudio",
+      "normalized_name": "harperchildrensaudio",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 79,
+    "fields": {
+      "name": "HarperCollins",
+      "normalized_name": "harpercollins",
+      "is_mainstream": true,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 229,
+    "fields": {
+      "name": "HarperCollinsChildren\u2019sBooks",
+      "normalized_name": "harpercollinschildrensbooks",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 207,
+    "fields": {
+      "name": "HarperCollins Pub.",
+      "normalized_name": "harpercollinspub",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 3,
+    "fields": {
+      "name": "HarperCollins Publishers",
+      "normalized_name": "harpercollinspublishers",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 230,
+    "fields": {
+      "name": "Harper Collins Publishers India",
+      "normalized_name": "harpercollinspublishersindia",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 231,
+    "fields": {
+      "name": "HarperCollins UK",
+      "normalized_name": "harpercollinsuk",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 32,
+    "fields": {
+      "name": "Harper Paperbacks",
+      "normalized_name": "harperpaperbacks",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 204,
+    "fields": {
+      "name": "HarperPrism",
+      "normalized_name": "harperprism",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 143,
+    "fields": {
+      "name": "Harper Voyage",
+      "normalized_name": "harpervoyage",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 167,
+    "fields": {
+      "name": "Henry Holt and Co.",
+      "normalized_name": "henryholtandco",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 119,
+    "fields": {
+      "name": "Hodder",
+      "normalized_name": "hodder",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 53,
+    "fields": {
+      "name": "Hogarth",
+      "normalized_name": "hogarth",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 37,
+    "fields": {
+      "name": "ICON Reference",
+      "normalized_name": "iconreference",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 194,
+    "fields": {
+      "name": "James Clear",
+      "normalized_name": "jamesclear",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 15,
+    "fields": {
+      "name": "Little, Brown and Company",
+      "normalized_name": "littlebrownandcompany",
+      "is_mainstream": true,
+      "parent": 73,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 84,
+    "fields": {
+      "name": "Macmillan Publishers",
+      "normalized_name": "macmillanpublishers",
+      "is_mainstream": true,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 124,
+    "fields": {
+      "name": "Minotauro",
+      "normalized_name": "minotauro",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 134,
+    "fields": {
+      "name": "New American Library",
+      "normalized_name": "newamericanlibrary",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 151,
+    "fields": {
+      "name": "New English Library",
+      "normalized_name": "newenglishlibrary",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 35,
+    "fields": {
+      "name": "Nick Hern Books",
+      "normalized_name": "nickhernbooks",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 150,
+    "fields": {
+      "name": "Orbit",
+      "normalized_name": "orbit",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 54,
+    "fields": {
+      "name": "Oxford University Press",
+      "normalized_name": "oxforduniversitypress",
+      "is_mainstream": true,
+      "parent": 54,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 173,
+    "fields": {
+      "name": "Pamela Dorman Books",
+      "normalized_name": "pameladormanbooks",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 29,
+    "fields": {
+      "name": "Pearson Education",
+      "normalized_name": "pearsoneducation",
+      "is_mainstream": true,
+      "parent": 29,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 52,
+    "fields": {
+      "name": "Penguin Books",
+      "normalized_name": "penguinbooks",
+      "is_mainstream": true,
+      "parent": 63,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 12,
+    "fields": {
+      "name": "Penguin Press",
+      "normalized_name": "penguinpress",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 63,
+    "fields": {
+      "name": "Penguin Random House",
+      "normalized_name": "penguinrandomhouse",
+      "is_mainstream": true,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 40,
+    "fields": {
+      "name": "Picador",
+      "normalized_name": "picador",
+      "is_mainstream": true,
+      "parent": 84,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 235,
+    "fields": {
+      "name": "Publisher",
+      "normalized_name": "publisher",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 1,
+    "fields": {
+      "name": "Random House",
+      "normalized_name": "randomhouse",
+      "is_mainstream": true,
+      "parent": 63,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 70,
+    "fields": {
+      "name": "Riverhead Books",
+      "normalized_name": "riverheadbooks",
+      "is_mainstream": true,
+      "parent": 63,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 5,
+    "fields": {
+      "name": "Scribner",
+      "normalized_name": "scribner",
+      "is_mainstream": true,
+      "parent": 87,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 60,
+    "fields": {
+      "name": "Signet Classic",
+      "normalized_name": "signetclassic",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 88,
+    "fields": {
+      "name": "Simon and Schuster",
+      "normalized_name": "simonandschuster",
+      "is_mainstream": true,
+      "parent": 87,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 87,
+    "fields": {
+      "name": "Simon & Schuster",
+      "normalized_name": "simonschuster",
+      "is_mainstream": true,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 85,
+    "fields": {
+      "name": "St. Martin's Press",
+      "normalized_name": "stmartinspress",
+      "is_mainstream": true,
+      "parent": 84,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 86,
+    "fields": {
+      "name": "Tor Books",
+      "normalized_name": "torbooks",
+      "is_mainstream": true,
+      "parent": 84,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 8,
+    "fields": {
+      "name": "Vintage Books",
+      "normalized_name": "vintagebooks",
+      "is_mainstream": true,
+      "parent": 63,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 162,
+    "fields": {
+      "name": "vintage International",
+      "normalized_name": "vintageinternational",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 142,
+    "fields": {
+      "name": "Voyager",
+      "normalized_name": "voyager",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.publisher",
+    "pk": 139,
+    "fields": {
+      "name": "Workman Publishing",
+      "normalized_name": "workmanpublishing",
+      "is_mainstream": false,
+      "parent": null,
+      "mainstream_last_checked": null
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 1,
+    "fields": {
+      "name": "art & music"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 2,
+    "fields": {
+      "name": "non-fiction"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 3,
+    "fields": {
+      "name": "biography"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 4,
+    "fields": {
+      "name": "social science"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 5,
+    "fields": {
+      "name": "thriller"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 6,
+    "fields": {
+      "name": "young adult"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 7,
+    "fields": {
+      "name": "psychology"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 8,
+    "fields": {
+      "name": "history"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 9,
+    "fields": {
+      "name": "historical fiction"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 10,
+    "fields": {
+      "name": "humorous fiction"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 11,
+    "fields": {
+      "name": "romance"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 12,
+    "fields": {
+      "name": "classics"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 13,
+    "fields": {
+      "name": "philosophy"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 14,
+    "fields": {
+      "name": "comics & graphic novels"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 15,
+    "fields": {
+      "name": "travel"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 16,
+    "fields": {
+      "name": "short stories"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 17,
+    "fields": {
+      "name": "plays & drama"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 18,
+    "fields": {
+      "name": "children's literature"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 19,
+    "fields": {
+      "name": "fantasy"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 20,
+    "fields": {
+      "name": "religion & spirituality"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 21,
+    "fields": {
+      "name": "horror"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 23,
+    "fields": {
+      "name": "nature"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 25,
+    "fields": {
+      "name": "science fiction"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 26,
+    "fields": {
+      "name": "self-help"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 27,
+    "fields": {
+      "name": "science"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 28,
+    "fields": {
+      "name": "mythology & folklore"
+    }
+  },
+  {
+    "model": "core.genre",
+    "pk": 29,
+    "fields": {
+      "name": "food & cooking"
     }
   },
   {
