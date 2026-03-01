@@ -17,7 +17,7 @@ recommendations, reading insights{% endblock %}
 {% endblock %}
 
 {% block content %}
-    <div class="mx-auto h-full max-w-4xl space-y-8 p-2">
+    <div class="mx-auto h-full max-w-4xl space-y-6 p-2">
         {% if is_processing %}
             <div id="processing-container" class="flex h-full flex-col items-center justify-center p-4" x-data="{ status: 'PENDING' }">
                 <div class="w-full max-w-2xl text-center" x-show="status !== 'FAILURE'">
@@ -145,7 +145,7 @@ recommendations, reading insights{% endblock %}
                 });
             </script>
         {% elif dna %}
-            <div x-data="shareModalData()" class="space-y-8">
+            <div x-data="shareModalData()" class="space-y-6">
             {{ dna|json_script:"dna-data" }}
             <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
                 <span class="relative z-10">
