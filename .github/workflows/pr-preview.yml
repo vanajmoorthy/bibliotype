@@ -8,6 +8,10 @@ on:
     pull_request:
         types: [closed]
 
+concurrency:
+    group: preview-${{ github.event.issue.number || github.event.pull_request.number }}
+    cancel-in-progress: true
+
 jobs:
     deploy-preview:
         # Only runs when a collaborator comments /preview on a PR
@@ -88,7 +92,7 @@ jobs:
                       PORT=$((9000 + PR_NUMBER))
 
                       # Enforce concurrent preview limit (excluding this PR if it already has one)
-                      RUNNING=$(docker ps --filter "name=preview-pr-" --format '{{.Names}}' | grep -cv "^${CONTAINER}$" 2>/dev/null || echo 0)
+                      RUNNING=$(docker ps --filter "name=preview-pr-" --format '{{.Names}}' | grep -v "^${CONTAINER}$" | wc -l)
                       if [ "$RUNNING" -ge "$MAX_PREVIEWS" ]; then
                         echo "ERROR: ${RUNNING} previews already running (max ${MAX_PREVIEWS})."
                         echo "Active previews:"
