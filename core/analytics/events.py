@@ -292,6 +292,20 @@ def track_recommendations_generated(user_id=None, recommendation_count=0, is_aut
     )
 
 
+def track_account_deleted(user_id):
+    """Track when a user deletes their account."""
+    environment = get_environment()
+
+    capture_event(
+        distinct_id=str(user_id),
+        event_name="account_deleted",
+        properties={
+            "user_id": user_id,
+        },
+        environment=environment,
+    )
+
+
 def track_settings_updated(user_id, setting_type):
     """
     Track when user updates settings.

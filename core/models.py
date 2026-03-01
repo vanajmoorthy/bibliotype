@@ -122,7 +122,7 @@ class UserBook(models.Model):
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     last_updated = models.DateTimeField(auto_now=True)
-    is_public = models.BooleanField(default=False)
+    is_public = models.BooleanField(default=True)
 
     dna_data = models.JSONField(null=True, blank=True)
     reader_type = models.CharField(max_length=100, blank=True, null=True, db_index=True)

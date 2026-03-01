@@ -17,11 +17,12 @@ from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
 
-from .forms import CustomUserCreationForm, UpdateDisplayNameForm
+from .forms import ChangePasswordForm, CustomUserCreationForm, UpdateDisplayNameForm, UpdateEmailForm
 from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
 
 logger = logging.getLogger(__name__)
 from .analytics.events import (
+    track_account_deleted,
     track_file_upload_started,
     track_dna_displayed,
     track_anonymous_dna_displayed,
@@ -697,15 +698,30 @@ def logout_view(request):
 @login_required
 @require_POST
 def update_privacy_view(request):
-    is_public = request.POST.get("is_public") == "true"
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+    if is_ajax:
+        try:
+            data = json.loads(request.body)
+            is_public = data.get("is_public", False)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({"status": "error", "message": "Invalid request."}, status=400)
+    else:
+        is_public = request.POST.get("is_public") == "true"
+
     profile = request.user.userprofile
     profile.is_public = is_public
     profile.save()
 
     if is_public:
-        # Track profile made public
         track_profile_made_public(request.user.id)
 
+    track_settings_updated(request.user.id, setting_type="privacy")
+
+    if is_ajax:
+        return JsonResponse({"status": "success", "is_public": is_public})
+
+    if is_public:
         public_url = request.build_absolute_uri(
             reverse("core:public_profile", kwargs={"username": request.user.username})
         )
@@ -767,13 +783,25 @@ def update_username_api(request):
 @require_POST
 def update_recommendation_visibility(request):
     """Toggle visibility in recommendations"""
-    is_visible = request.POST.get("visible_in_recommendations") == "true"
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+    if is_ajax:
+        try:
+            data = json.loads(request.body)
+            is_visible = data.get("visible_in_recommendations", True)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({"status": "error", "message": "Invalid request."}, status=400)
+    else:
+        is_visible = request.POST.get("visible_in_recommendations") == "true"
+
     profile = request.user.userprofile
     profile.visible_in_recommendations = is_visible
     profile.save()
 
-    # Track settings update
     track_settings_updated(request.user.id, setting_type="recommendation_visibility")
+
+    if is_ajax:
+        return JsonResponse({"status": "success", "visible_in_recommendations": is_visible})
 
     if is_visible:
         messages.success(request, "You are now visible as a recommendation source to similar readers!")
@@ -781,6 +809,63 @@ def update_recommendation_visibility(request):
         messages.success(request, "You've opted out of being shown as a recommendation source.")
 
     return redirect("core:display_dna")
+
+
+@login_required
+@require_POST
+def update_email_view(request):
+    form = UpdateEmailForm(request.POST, user=request.user)
+    if form.is_valid():
+        request.user.email = form.cleaned_data["email"]
+        request.user.save()
+        track_settings_updated(request.user.id, setting_type="email")
+        messages.success(request, "Your email has been updated!")
+    else:
+        for error in form.errors.values():
+            messages.error(request, error)
+
+    return redirect("core:display_dna")
+
+
+@login_required
+@require_POST
+def change_password_view(request):
+    form = ChangePasswordForm(request.POST, user=request.user)
+    if form.is_valid():
+        request.user.set_password(form.cleaned_data["new_password1"])
+        request.user.save()
+        # Re-authenticate so the user doesn't get logged out
+        login(request, request.user)
+        track_settings_updated(request.user.id, setting_type="password")
+        messages.success(request, "Your password has been changed!")
+    else:
+        for field_errors in form.errors.values():
+            for error in field_errors:
+                messages.error(request, error)
+
+    return redirect("core:display_dna")
+
+
+@login_required
+@require_POST
+def delete_account_view(request):
+    password = request.POST.get("password", "")
+    confirmation = request.POST.get("confirmation", "")
+
+    if confirmation != "DELETE":
+        messages.error(request, "Please type DELETE to confirm account deletion.")
+        return redirect("core:display_dna")
+
+    if not request.user.check_password(password):
+        messages.error(request, "Incorrect password. Account was not deleted.")
+        return redirect("core:display_dna")
+
+    user_id = request.user.id
+    track_account_deleted(user_id)
+    request.user.delete()
+    logout(request)
+    messages.success(request, "Your account and all associated data have been permanently deleted.")
+    return redirect("core:home")
 
 
 def check_dna_status_view(request):
