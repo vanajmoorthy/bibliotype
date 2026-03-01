@@ -134,6 +134,7 @@ class UserProfile(models.Model):
     # Stored recommendations (generated once when DNA is created/updated)
     recommendations_data = models.JSONField(null=True, blank=True)
     recommendations_generated_at = models.DateTimeField(null=True, blank=True)
+    recommendations_meta = models.JSONField(default=dict, blank=True)
 
     # New field for privacy setting
     visible_in_recommendations = models.BooleanField(

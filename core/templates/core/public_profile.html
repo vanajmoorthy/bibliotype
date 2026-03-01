@@ -80,28 +80,28 @@ profile.{% endif %}{% endblock %}
             {% endwith %}
             {% include 'core/partials/dna/top_traits_list.html' %}
             {% include 'core/partials/dna/key_stats_row.html' %}
-            {% include 'core/partials/dna/comparative_analytics_card.html' with pronoun_pos="Their" pronoun_sub="they" is_public=True %}
+            {% include 'core/partials/dna/comparative_analytics_card.html' with pronoun_pos="their" pronoun_sub="they" is_public=True %}
 
             <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                 {% if dna.most_niche_book %}
-                    {% with niche_caption="Read by only "|add:dna.most_niche_book.read_count|stringformat:"s"|add:" Bibliotype user(s)!" pronoun_pos="Their" %}
+                    {% with niche_caption="Read by only "|add:dna.most_niche_book.read_count|stringformat:"s"|add:" Bibliotype user(s)!" pronoun_pos="their" %}
                         {% include 'core/partials/dna/niche_read_card.html' %}
                     {% endwith %}
                 {% else %}
-                    {% include 'core/partials/dna/niche_read_card.html' with pronoun_pos="Their" %}
+                    {% include 'core/partials/dna/niche_read_card.html' with pronoun_pos="their" %}
                 {% endif %}
-                {% include 'core/partials/dna/mainstream_gauge_card.html' with pronoun_pos="Their" %}
+                {% include 'core/partials/dna/mainstream_gauge_card.html' with pronoun_pos="their" %}
             </div>
 
-            {% include 'core/partials/dna/top_genres_authors_row.html' with use_rainbow=True %}
+            {% include 'core/partials/dna/top_genres_authors_row.html' with use_rainbow=True pronoun_pos="their" %}
 
             {% include 'core/partials/dna/review_analysis_card.html' %}
 
-            {% include 'core/partials/dna/controversial_ratings_card.html' with controversial_title='Most Controversial Ratings' pronoun_pos="their" %}
+            {% include 'core/partials/dna/controversial_ratings_card.html' with controversial_title='Most Controversial Ratings' pronoun_pos="their" pronoun_sub="them" %}
 
             {% if recommendations %}
                 {% with name=profile_user.first_name|default:profile_user.username %}
-                    {% include 'core/partials/dna/recommendations_grid.html' with rec_title="Recommended for "|add:name is_public_view=True %}
+                    {% include 'core/partials/dna/recommendations_grid.html' with rec_title="Recommended for "|add:name is_public_view=True pronoun_pos="their" %}
                 {% endwith %}
             {% else %}
                 <div class="border-brand-text shadow-neo border-2 bg-white p-6">

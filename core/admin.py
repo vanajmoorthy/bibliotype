@@ -214,6 +214,16 @@ ADMIN_COMMANDS = [
         "arguments": [],
     },
     {
+        "name": "backfill_subtitle_data",
+        "description": "Backfill subtitle stats (contrariness, review counts, niche counts) into existing DNA data.",
+        "arguments": [
+            {"name": "--dry-run", "type": "flag", "label": "Dry run", "help": "Show changes without saving"},
+            {"name": "--limit", "type": "int", "label": "Limit", "help": "Max profiles to process"},
+            {"name": "--username", "type": "str", "label": "Username", "help": "Process a single user"},
+            {"name": "--force", "type": "flag", "label": "Force", "help": "Overwrite existing subtitle fields"},
+        ],
+    },
+    {
         "name": "regenerate_dna",
         "description": "Regenerate genre/reader-type DNA fields from current enriched Book data. Run after enrichment backfills.",
         "arguments": [

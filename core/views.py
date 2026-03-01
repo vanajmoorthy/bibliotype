@@ -506,11 +506,16 @@ def display_dna_view(request):
 
     dna_data = _enrich_dna_for_display(dna_data)
 
+    recommendations_meta = {}
+    if request.user.is_authenticated and user_profile:
+        recommendations_meta = user_profile.recommendations_meta or {}
+
     context = {
         "dna": dna_data,
         "user_profile": user_profile,
         "is_processing": False,
         "recommendations": recommendations,
+        "recommendations_meta": recommendations_meta,
         "title": title,
     }
 
@@ -902,6 +907,7 @@ def public_profile_view(request, username):
             "title": title,
             "heading_name": heading_name,
             "recommendations": recommendations,
+            "recommendations_meta": profile.recommendations_meta or {},
         }
         return render(request, "core/public_profile.html", context)
     except User.DoesNotExist:

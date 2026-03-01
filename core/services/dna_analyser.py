@@ -19,7 +19,9 @@ from core.services.llm_service import generate_vibe_with_llm
 from ..dna_constants import (
     CANONICAL_GENRE_MAP,
     GLOBAL_AVERAGES,
+    NICHE_THRESHOLD,
     READER_TYPE_DESCRIPTIONS,
+    compute_contrariness,
 )
 from ..models import Author, Book, Genre
 from ..percentile_engine import (
@@ -485,6 +487,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         most_niche_book = None
 
+        niche_books_count = 0
         if user_book_objects:
             user_book_objects.sort(key=lambda b: b.global_read_count)
             most_niche_book = {
@@ -492,8 +495,11 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 "author": user_book_objects[0].author.name,
                 "read_count": user_book_objects[0].global_read_count,
             }
+            niche_books_count = sum(1 for b in user_book_objects if b.global_read_count <= NICHE_THRESHOLD)
 
         top_authors = list(read_df["Author"].value_counts().head(10).items())
+        unique_authors_count = int(read_df["Author"].nunique())
+        unique_genres_count = len(set(mapped_genres))
 
         ratings_df = read_df[read_df["My Rating"] > 0].dropna(subset=["My Rating"])
         average_rating_overall = float(round(ratings_df["My Rating"].mean(), 2)) if not ratings_df.empty else "N/A"
@@ -519,6 +525,15 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             top_controversial_list = top_books.rename(columns={"Title": "Title", "Author": "Author"})[
                 ["Title", "Author", "my_rating", "average_rating", "rating_difference"]
             ].to_dict("records")
+
+        # Calculate contrariness stats across ALL rated books with average ratings
+        controversial_books_count = int(len(controversial_df)) if not controversial_df.empty else 0
+        avg_rating_difference = 0.0
+        contrariness_label = "Aligned with consensus"
+        contrariness_color = "bg-brand-green"
+        if not controversial_df.empty:
+            avg_rating_difference = round(float(controversial_df["Rating Difference"].mean()), 2)
+            contrariness_label, contrariness_color = compute_contrariness(avg_rating_difference)
 
         reviews_df = df[
             (df["My Review"].str.strip().ne(""))
@@ -563,6 +578,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
             most_negative_review["sentiment"] = float(most_negative_review["sentiment"])
             most_negative_review["my_review"] = _sanitize_review_text(most_negative_review.get("my_review", ""))
+
+        # Review sentiment counts
+        total_reviews_count = int(len(reviews_df)) if not reviews_df.empty else 0
+        positive_reviews_count = 0
+        negative_reviews_count = 0
+        if not reviews_df.empty and "sentiment" in reviews_df.columns:
+            positive_reviews_count = int((reviews_df["sentiment"] > 0).sum())
+            negative_reviews_count = int((reviews_df["sentiment"] < 0).sum())
 
         mainstream_score = 0
         if user_book_objects:
@@ -628,10 +651,21 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             "average_rating_overall": average_rating_overall,
             "ratings_distribution": ratings_dist,
             "top_controversial_books": top_controversial_list,
+            "controversial_books_count": controversial_books_count,
+            "avg_rating_difference": avg_rating_difference,
+            "contrariness_label": contrariness_label,
+            "contrariness_color": contrariness_color,
             "most_positive_review": most_positive_review,
             "most_negative_review": most_negative_review,
+            "total_reviews_count": total_reviews_count,
+            "positive_reviews_count": positive_reviews_count,
+            "negative_reviews_count": negative_reviews_count,
             "stats_by_year": stats_by_year_list,
             "mainstream_score_percent": mainstream_score,
+            "unique_authors_count": unique_authors_count,
+            "unique_genres_count": unique_genres_count,
+            "niche_books_count": niche_books_count,
+            "niche_threshold": NICHE_THRESHOLD,
         }
         logger.debug(f"DNA data generated")
 
