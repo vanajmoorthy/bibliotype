@@ -10,10 +10,27 @@ from core.dna_constants import CANONICAL_GENRE_MAP, READER_TYPE_DESCRIPTIONS
 
 logger = logging.getLogger(__name__)
 
+NICHE_THRESHOLD = 5
+
+CONTRARINESS_SCALE = [
+    (1.5, "Wildly contrarian", "bg-brand-pink"),
+    (1.0, "Very contrarian", "bg-brand-orange"),
+    (0.6, "Moderately contrarian", "bg-brand-yellow"),
+    (0.3, "Mildly contrarian", "bg-brand-cyan"),
+    (0.0, "Aligned with consensus", "bg-brand-green"),
+]
+
+
+def _compute_contrariness(avg_diff):
+    for threshold, label, color in CONTRARINESS_SCALE:
+        if avg_diff >= threshold:
+            return label, color
+    return "Aligned with consensus", "bg-brand-green"
+
 
 class Command(BaseCommand):
     help = (
-        "Regenerate genre-dependent DNA fields (top_genres, reader_type, mainstream_score) "
+        "Regenerate genre-dependent DNA fields (top_genres, reader_type, mainstream_score, subtitle stats) "
         "for users from their current Book data. Use after enrichment backfills."
     )
 
@@ -127,6 +144,43 @@ class Command(BaseCommand):
             )
             new_mainstream_score = round((mainstream_count / total) * 100) if total > 0 else 0
 
+            # --- Subtitle fields ---
+            unique_authors = set()
+            for ub in user_books:
+                unique_authors.add(ub.book.author.name)
+            new_unique_authors_count = len(unique_authors)
+            new_unique_genres_count = len(set(mapped_genres))
+
+            controversial_books_count = 0
+            total_diff = 0.0
+            for ub in user_books:
+                if ub.user_rating and ub.user_rating > 0 and ub.book.average_rating:
+                    controversial_books_count += 1
+                    total_diff += abs(ub.user_rating - ub.book.average_rating)
+            new_avg_rating_diff = round(total_diff / controversial_books_count, 2) if controversial_books_count > 0 else 0.0
+            new_contrariness_label, new_contrariness_color = _compute_contrariness(new_avg_rating_diff)
+
+            total_reviews_count = 0
+            positive_reviews_count = 0
+            negative_reviews_count = 0
+            try:
+                from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
+                analyzer = SentimentIntensityAnalyzer()
+                for ub in user_books:
+                    review = ub.user_review
+                    if review and len(review.strip()) > 15 and ub.user_rating and ub.user_rating > 0:
+                        total_reviews_count += 1
+                        sentiment = analyzer.polarity_scores(review)["compound"]
+                        if sentiment > 0:
+                            positive_reviews_count += 1
+                        elif sentiment < 0:
+                            negative_reviews_count += 1
+            except ImportError:
+                self._warn(f"  {user.username}: vaderSentiment not available, skipping review counts.")
+
+            niche_books_count = sum(1 for ub in user_books if ub.book.global_read_count <= NICHE_THRESHOLD)
+
             old_type = profile.dna_data.get("reader_type", "")
             old_genres = profile.dna_data.get("top_genres", [])
             old_mainstream = profile.dna_data.get("mainstream_score_percent", 0)
@@ -138,6 +192,10 @@ class Command(BaseCommand):
                 changes.append(f"top_genres: {len(old_genres)} -> {len(new_top_genres_serializable)} entries")
             if old_mainstream != new_mainstream_score:
                 changes.append(f"mainstream: {old_mainstream}% -> {new_mainstream_score}%")
+            if profile.dna_data.get("unique_authors_count") != new_unique_authors_count:
+                changes.append(f"unique_authors: {new_unique_authors_count}")
+            if profile.dna_data.get("contrariness_label") != new_contrariness_label:
+                changes.append(f"contrariness: {new_contrariness_label}")
 
             if not changes:
                 self._log(f"  {user.username}: no changes needed.")
@@ -155,6 +213,18 @@ class Command(BaseCommand):
                     READER_TYPE_DESCRIPTIONS.get(new_reader_type, [dna.get("reader_type_explanation", "")])
                 )
                 dna["mainstream_score_percent"] = new_mainstream_score
+                # Subtitle fields
+                dna["unique_authors_count"] = new_unique_authors_count
+                dna["unique_genres_count"] = new_unique_genres_count
+                dna["controversial_books_count"] = controversial_books_count
+                dna["avg_rating_difference"] = new_avg_rating_diff
+                dna["contrariness_label"] = new_contrariness_label
+                dna["contrariness_color"] = new_contrariness_color
+                dna["total_reviews_count"] = total_reviews_count
+                dna["positive_reviews_count"] = positive_reviews_count
+                dna["negative_reviews_count"] = negative_reviews_count
+                dna["niche_books_count"] = niche_books_count
+                dna["niche_threshold"] = NICHE_THRESHOLD
                 profile.dna_data = dna
                 profile.reader_type = new_reader_type
                 profile.save(update_fields=["dna_data", "reader_type"])
