@@ -137,6 +137,37 @@
 </style>
 
 <script>
+    var _cachedFontEmbedCSS = null;
+
+    async function getEmbeddedFontCSS() {
+        if (_cachedFontEmbedCSS) return _cachedFontEmbedCSS;
+
+        try {
+            const cssResponse = await fetch("https://fonts.googleapis.com/css2?family=VT323&display=swap");
+            let css = await cssResponse.text();
+
+            const urlRegex = /url\((https:\/\/fonts\.gstatic\.com[^)]+)\)/g;
+            const matches = [...css.matchAll(urlRegex)];
+
+            for (const match of matches) {
+                const fontResponse = await fetch(match[1]);
+                const fontBlob = await fontResponse.blob();
+                const base64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(fontBlob);
+                });
+                css = css.replace(match[0], `url(${base64})`);
+            }
+
+            _cachedFontEmbedCSS = css;
+            return css;
+        } catch (e) {
+            console.error("Failed to embed font:", e);
+            return null;
+        }
+    }
+
     function shareModalData() {
         return {
             shareModalOpen: false,
@@ -149,11 +180,15 @@
                 }
 
                 await document.fonts.ready;
+                const fontEmbedCSS = await getEmbeddedFontCSS();
 
                 try {
-                    const blob = await htmlToImage.toBlob(cardEl, {
-                        pixelRatio: 2,
-                    });
+                    const options = { pixelRatio: 2 };
+                    if (fontEmbedCSS) {
+                        options.fontEmbedCSS = fontEmbedCSS;
+                    }
+
+                    const blob = await htmlToImage.toBlob(cardEl, options);
 
                     if (!blob) return;
 
