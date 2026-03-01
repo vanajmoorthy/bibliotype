@@ -2,6 +2,8 @@
     <h2 class="mb-1 text-2xl font-bold uppercase">Most Niche Read</h2>
     {% if dna.niche_books_count %}
         <p class="mb-4 text-base italic text-gray-500">We found {{ dna.niche_books_count }} book{{ dna.niche_books_count|pluralize }} in {{ pronoun_pos|default:"your" }} library read by {{ dna.niche_threshold }} or fewer people</p>
+    {% elif dna.most_niche_book %}
+        <p class="mb-4 text-base italic text-gray-500">{{ pronoun_pos|default:"Your"|capfirst }} rarest find on Bibliotype — read by only {{ dna.most_niche_book.read_count }} people</p>
     {% endif %}
     {% if dna.most_niche_book %}
         <p class="text-xl font-bold">{{ dna.most_niche_book.title }}</p>
