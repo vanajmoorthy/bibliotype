@@ -166,13 +166,18 @@
                             data: [split.fiction_count, split.nonfiction_count],
                             backgroundColor: ["#ffb4dd", "#8bbfff"],
                             borderColor: "#1f2937",
-                            borderWidth: 2,
+                            borderWidth: 3,
                         },
                     ],
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: {
+                        animateRotate: true,
+                        duration: 1200,
+                        easing: "easeOutQuart",
+                    },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
