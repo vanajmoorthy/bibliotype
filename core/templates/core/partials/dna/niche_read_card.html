@@ -1,7 +1,7 @@
-<div class="border-brand-text shadow-neo border-2 bg-white p-6">
-    <h2 class="mb-1 text-2xl font-bold uppercase">Most Niche Read</h2>
+<div class="border-brand-text shadow-neo flex h-full flex-col border-2 bg-white p-6">
+    <h2 class="mb-1 text-center text-2xl font-bold uppercase">Most Niche Read</h2>
     {% if dna.most_niche_book %}
-        <p class="mb-4 text-base text-gray-500 italic">
+        <p class="mb-4 text-center text-base text-gray-500 italic">
             Only {{ dna.most_niche_book.read_count }} Bibliotype user{{ dna.most_niche_book.read_count|pluralize }}
             {{ dna.most_niche_book.read_count|pluralize:"has,have" }}
             read this
@@ -10,13 +10,13 @@
                 {{ pronoun_pos|default:"your" }} library
             {% endif %}
         </p>
-        <div class="flex flex-col items-center" x-data="{ imgFailed: false }">
+        <div class="flex flex-1 flex-col items-center justify-center" x-data="{ imgFailed: false }">
             {% if dna.most_niche_book.cover_url %}
                 <img
                     x-show="!imgFailed"
                     src="{{ dna.most_niche_book.cover_url }}"
                     alt="Cover of {{ dna.most_niche_book.title }}"
-                    class="border-brand-text h-52 w-36 border-2 object-cover"
+                    class="border-brand-pink h-40 w-[6.75rem] border-4 object-cover"
                     loading="lazy"
                     x-on:error="imgFailed = true"
                     x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
@@ -24,13 +24,13 @@
                 <div
                     x-show="imgFailed"
                     x-cloak
-                    class="bg-brand-purple border-brand-text flex h-52 w-36 items-center justify-center border-2 text-5xl font-bold"
+                    class="bg-brand-purple border-brand-pink flex h-40 w-[6.75rem] items-center justify-center border-4 text-5xl font-bold"
                 >
                     {{ dna.most_niche_book.title|first|upper }}
                 </div>
             {% else %}
                 <div
-                    class="bg-brand-purple border-brand-text flex h-52 w-36 items-center justify-center border-2 text-5xl font-bold"
+                    class="bg-brand-purple border-brand-pink flex h-40 w-[6.75rem] items-center justify-center border-4 text-5xl font-bold"
                 >
                     {{ dna.most_niche_book.title|first|upper }}
                 </div>

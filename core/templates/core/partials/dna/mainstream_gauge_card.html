@@ -1,9 +1,13 @@
-<div class="border-brand-text shadow-neo border-2 bg-white p-6">
+<div class="border-brand-text shadow-neo flex h-full flex-col border-2 bg-white p-6">
     <h2 class="mb-1 text-center text-2xl font-bold uppercase">Mainstream Meter</h2>
-    <p class="mb-4 text-center text-base italic text-gray-500">How mainstream is {{ pronoun_pos|default:"your" }} taste?</p>
+    <p class="mb-4 text-center text-base text-gray-500 italic">
+        How mainstream is {{ pronoun_pos|default:"your" }} taste?
+    </p>
     <!-- Alpine.js component for the gauge logic -->
     {# djlint:off #}
-    <div x-data="{
+    <div
+        class="flex flex-1 flex-col justify-center"
+        x-data="{
         // --- STATE ---
         score: {{ dna.mainstream_score_percent }},
         animatedScore: 0,
@@ -69,35 +73,41 @@
             }, { threshold: 0.5 });
             observer.observe(this.$el);
         }
-    }" x-init="init()">
+    }"
+        x-init="init()"
+    >
         <div class="relative mx-auto h-32 w-64">
-
             <!-- Layer 1: The Semicircle Container (with the necessary clipping) -->
             <div class="absolute top-0 left-0 h-full w-full overflow-hidden">
                 <!-- The actual gradient circle that gets clipped -->
-                <div class="absolute top-0 left-0 h-64 w-64 rounded-full border-4 border-brand-text"
+                <div
+                    class="border-brand-text absolute top-0 left-0 h-64 w-64 rounded-full border-4"
                     style="background-image: conic-gradient(
                         from 180deg,
                         #00c27a 0% 40%,      /* Niche: score 0-30% → conic 25-40% visible */
                         #ffc107 40% 60%,     /* Normal: score 30-70% → conic 40-60% visible */
                         #ff5c5c 60% 100%     /* Mainstream: score 70-100% → conic 60-75% visible */
-                        );">
-                </div>
+                        );"
+                ></div>
             </div>
 
-         <!-- Border at 30% mark (niche/normal boundary) -->
-            <div class="absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2 bg-brand-text"
-                 style="transform: rotate(-36deg);"></div>
+            <!-- Border at 30% mark (niche/normal boundary) -->
+            <div
+                class="bg-brand-text absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2"
+                style="transform: rotate(-36deg);"
+            ></div>
 
-         <!-- Border at 70% mark (normal/mainstream boundary) -->
-            <div class="absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2 bg-brand-text"
-                 style="transform: rotate(36deg);"></div>
+            <!-- Border at 70% mark (normal/mainstream boundary) -->
+            <div
+                class="bg-brand-text absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2"
+                style="transform: rotate(36deg);"
+            ></div>
 
             <!-- Layer 2: SVG for Text (Not clipped, sits on top) -->
-            <svg class="absolute top-0 left-0 h-64 w-64 z-10" viewBox="0 0 256 256" overflow="visible">
+            <svg class="absolute top-0 left-0 z-10 h-64 w-64" viewBox="0 0 256 256" overflow="visible">
                 <defs>
                     <!-- Slightly smaller radius (110 vs 116) to bring labels ~5px inward from the arc edge -->
-                    <path id="semicircle" d="M 18,128 A 110,110 0 0,1 238,128" fill="none"/>
+                    <path id="semicircle" d="M 18,128 A 110,110 0 0,1 238,128" fill="none" />
                 </defs>
                 <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
                     <textPath href="#semicircle" startOffset="15%" text-anchor="middle">niche</textPath>
@@ -110,38 +120,48 @@
                 </text>
             </svg>
 
-
-            <div class="absolute -bottom-4 border-brand-text border-4 left-0 w-full h-4 z-[15]"
-                 style="background: repeating-linear-gradient(45deg, #6b7280 0px, #6b7280 4px, #4b5563 4px, #4b5563 7px);"></div>
+            <div
+                class="border-brand-text absolute -bottom-4 left-0 z-[15] h-4 w-full border-4"
+                style="background: repeating-linear-gradient(45deg, #6b7280 0px, #6b7280 4px, #4b5563 4px, #4b5563 7px);"
+            ></div>
 
             <!-- Note: Increased width to w-3 to make the taper more visible -->
-            <div class="absolute bottom-0 left-1/2 h-24 w-3 origin-bottom z-20"
-                 :style="`transform: translateX(-50%) rotate(${rotation}deg);`">
-
+            <div
+                class="absolute bottom-0 left-1/2 z-20 h-24 w-3 origin-bottom"
+                :style="`transform: translateX(-50%) rotate(${rotation}deg);`"
+            >
                 <!-- The SVG element defines the shape and its appearance -->
-                <svg width="100%" height="100%" viewBox="0 0 12 96" preserveAspectRatio="none"
-                     xmlns="http://www.w3.org/2000/svg">
-
+                <svg
+                    width="100%"
+                    height="100%"
+                    viewBox="0 0 12 96"
+                    preserveAspectRatio="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                >
                     <!-- The polygon's points are calculated based on the 12x96 viewBox -->
-                    <polygon points="0,96 12,96 6,0"
-                             class="fill-gray-200 stroke-brand-text"
-                             stroke-width="2"
-                             stroke-linejoin="miter" />
+                    <polygon
+                        points="0,96 12,96 6,0"
+                        class="stroke-brand-text fill-gray-200"
+                        stroke-width="2"
+                        stroke-linejoin="miter"
+                    />
                 </svg>
             </div>
 
             <!-- Layer 4: The Pivot Point (Not clipped, sits on the very top) -->
 
-            <div class="absolute bottom-0 left-1/2 h-7 w-7 -translate-x-1/2 translate-y-1/2 rounded-full border-2 border-brand-text bg-gray-200 z-29"></div>
-            <div class="absolute bottom-0 left-1/2 h-4 w-4 -translate-x-1/2 translate-y-1/2 rounded-full  bg-brand-text z-30"></div>
-
-
+            <div
+                class="border-brand-text absolute bottom-0 left-1/2 z-29 h-7 w-7 -translate-x-1/2 translate-y-1/2 rounded-full border-2 bg-gray-200"
+            ></div>
+            <div
+                class="bg-brand-text absolute bottom-0 left-1/2 z-30 h-4 w-4 -translate-x-1/2 translate-y-1/2 rounded-full"
+            ></div>
         </div>
 
         <!-- The descriptive text below the meter -->
         <p class="mt-6 text-center text-lg">
-            <strong x-text="displayedScore + '%'"></strong> of the books in {{ pronoun_pos|lower|default:"your" }} library are considered
-            "mainstream," based on author and publisher popularity.
+            <strong x-text="displayedScore + '%'"></strong> of the books in {{ pronoun_pos|lower|default:"your" }}
+            library are considered "mainstream," based on author and publisher popularity.
         </p>
     </div>
 </div>

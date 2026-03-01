@@ -11,9 +11,8 @@
         </p>
         {% if dna.currently_reading_books %}
             <div
-                class="{% if dna.currently_reading_books|length == 1 %}grid-cols-1 max-w-[10rem] mx-auto{% elif dna.currently_reading_books|length == 2 %}grid-cols-2
-                max-w-sm mx-auto{% elif dna.currently_reading_books|length == 3 %}grid-cols-3{% elif dna.currently_reading_books|length == 4 %}grid-cols-2
-                sm:grid-cols-4{% else %}grid-cols-3 sm:grid-cols-5{% endif %} grid gap-6"
+                class="{% if dna.currently_reading_books|length == 1 %}grid-cols-1 max-w-[8.75rem] mx-auto{% elif dna.currently_reading_books|length == 2 %}grid-cols-2
+                max-w-sm mx-auto{% else %}grid-cols-3{% endif %} grid gap-6"
             >
                 {% for book in dna.currently_reading_books %}
                     <div class="text-center" x-data="{ imgFailed: false }">
@@ -22,7 +21,7 @@
                                 x-show="!imgFailed"
                                 src="{{ book.cover_url }}"
                                 alt="Cover of {{ book.title }}"
-                                class="border-brand-text mx-auto h-44 w-[7.5rem] border-2 object-cover"
+                                class="{% if forloop.counter0 == 0 %}border-brand-pink{% elif forloop.counter0 == 1 %}border-brand-cyan{% else %}border-brand-green{% endif %} mx-auto h-40 w-[6.75rem] border-4 object-cover"
                                 loading="lazy"
                                 x-on:error="imgFailed = true"
                                 x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
@@ -30,7 +29,8 @@
                         {% endif %}
                         <div
                             {% if book.cover_url %}x-show="imgFailed" x-cloak{% endif %}
-                            class="{% if forloop.counter0 == 0 %}bg-brand-pink{% elif forloop.counter0 == 1 %}bg-brand-cyan{% elif forloop.counter0 == 2 %}bg-brand-green{% elif forloop.counter0 == 3 %}bg-brand-yellow{% else %}bg-brand-purple{% endif %} border-brand-text mx-auto flex h-44 w-[7.5rem] items-center justify-center border-2 text-4xl font-bold"
+                            class="{% if forloop.counter0 == 0 %}bg-brand-pink border-brand-pink{% elif forloop.counter0 == 1 %}bg-brand-cyan
+                            border-brand-cyan{% else %}bg-brand-green border-brand-green{% endif %} mx-auto flex h-44 w-[7.5rem] items-center justify-center border-4 text-4xl font-bold"
                         >
                             {{ book.title|first|upper }}
                         </div>
