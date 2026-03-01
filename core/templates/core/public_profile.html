@@ -3,24 +3,37 @@
 
 {% block seo_title %}Bibliotype – {{ heading_name }} Reading DNA{% endblock %}
 
-{% block seo_description %}{% if dna %}View {{ title }} and literary personality. Discover their favourite genres,
-reading statistics, and book preferences.{% else %}{{ title }} profile.{% endif %}{% endblock %}
+{% block seo_description %}{% if dna %}
+    View {{ title }} and literary personality. Discover their favourite genres, reading statistics, and book
+    preferences.
+{% else %}
+    {{ title }} profile.
+{% endif %}{% endblock %}
 
-{% block seo_keywords %}{{ heading_name }} reading DNA, {{ heading_name }} literary personality, reading profile, book
-analysis, reader type, reading statistics{% endblock %}
+{% block seo_keywords %}
+    {{ heading_name }} reading DNA, {{ heading_name }} literary personality, reading profile, book analysis, reader
+    type, reading statistics
+{% endblock %}
 
 {% block og_title %}{{ title }}{% endblock %}
 
-{% block og_description %}{% if dna %}Discover {{ title }} and their unique reading DNA, literary personality, favourite
-genres, and reading insights.{% else %}{{ title }} profile.{% endif %}{% endblock %}
+{% block og_description %}{% if dna %}
+    Discover {{ title }} and their unique reading DNA, literary personality, favourite genres, and reading insights.
+{% else %}
+    {{ title }} profile.
+{% endif %}{% endblock %}
 
 {% block twitter_title %}{{ title }}{% endblock %}
 
-{% block twitter_description %}{% if dna %}View {{ title }} and discover their literary personality.{% else %}{{ title }}
-profile.{% endif %}{% endblock %}
+{% block twitter_description %}{% if dna %}
+    View {{ title }} and discover their literary personality.
+{% else %}
+    {{ title }} profile.
+{% endif %}{% endblock %}
 
 {% block extra_head_js %}
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
 {% endblock %}
 
 {% block structured_data %}
@@ -63,7 +76,7 @@ profile.{% endif %}{% endblock %}
     <div class="mx-auto max-w-4xl space-y-6 p-4">
         {# Check if DNA data exists for this user #}
         {% if dna %}
-            <div class="space-y-6">
+            <div x-data="shareModalData()" class="space-y-6">
             {# This script tag is still needed for the charts to work #}
             {{ dna|json_script:"dna-data" }}
             <!-- The main header, personalised with the profile owner's name -->
@@ -74,46 +87,46 @@ profile.{% endif %}{% endblock %}
                 <span class="whitespace-nowrap">Bibliotype</span>
             </h1>
 
-            {% include 'core/partials/dna/vibe_display.html' %}
+                {% include 'core/partials/dna/vibe_display.html' %}
 
-            {% with owner_pos=profile_user.first_name|default:profile_user.username|add:"'s" %}
-                {% include 'core/partials/dna/reader_type_card.html' %}
-            {% endwith %}
+                {% with owner_pos=profile_user.first_name|default:profile_user.username|add:"'s" %}
+                    {% include 'core/partials/dna/reader_type_card.html' %}
+                {% endwith %}
+                {% include 'core/partials/share/share_button.html' %}
+                {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app/u/"|add:profile_user.username %}
+                {% include 'core/partials/dna/top_traits_list.html' %}
+                {% include 'core/partials/dna/key_stats_row.html' %}
+                {% include 'core/partials/dna/comparative_analytics_card.html' with pronoun_pos="their" pronoun_sub="they" is_public=True %}
 
-            {% include 'core/partials/dna/top_traits_list.html' %}
-            {% include 'core/partials/dna/key_stats_row.html' %}
-            {% include 'core/partials/dna/comparative_analytics_card.html' with pronoun_pos="their" pronoun_sub="they" is_public=True %}
+                <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+                    {% if dna.most_niche_book %}
+                        {% with niche_caption="Read by only "|add:dna.most_niche_book.read_count|stringformat:"s"|add:" Bibliotype user(s)!" pronoun_pos="their" %}
+                            {% include 'core/partials/dna/niche_read_card.html' %}
+                        {% endwith %}
+                    {% else %}
+                        {% include 'core/partials/dna/niche_read_card.html' with pronoun_pos="their" %}
+                    {% endif %}
+                    {% include 'core/partials/dna/mainstream_gauge_card.html' with pronoun_pos="their" %}
+                </div>
 
-            <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
-                {% if dna.most_niche_book %}
-                    {% with niche_caption="Read by only "|add:dna.most_niche_book.read_count|stringformat:"s"|add:" Bibliotype user(s)!" pronoun_pos="their" %}
-                        {% include 'core/partials/dna/niche_read_card.html' %}
+                {% include 'core/partials/dna/top_genres_authors_row.html' with use_rainbow=True pronoun_pos="their" %}
+                {% include 'core/partials/dna/review_analysis_card.html' %}
+                {% include 'core/partials/dna/controversial_ratings_card.html' with controversial_title='Most Controversial Ratings' pronoun_pos="their" pronoun_sub="them" %}
+                {% include 'core/partials/dna/currently_reading_card.html' with pronoun_sub="they're" %}
+
+                {% if recommendations %}
+                    {% with name=profile_user.first_name|default:profile_user.username %}
+                        {% include 'core/partials/dna/recommendations_grid.html' with rec_title="Recommended for "|add:name is_public_view=True pronoun_pos="their" %}
                     {% endwith %}
                 {% else %}
-                    {% include 'core/partials/dna/niche_read_card.html' with pronoun_pos="their" %}
+                    <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+                        <h2 class="mb-4 text-2xl font-bold uppercase">Book Recommendations</h2>
+                        <p class="text-lg opacity-70">
+                            No recommended books yet. Recommendations get better as more readers join Bibliotype.
+                        </p>
+                    </div>
                 {% endif %}
-                {% include 'core/partials/dna/mainstream_gauge_card.html' with pronoun_pos="their" %}
-            </div>
-
-            {% include 'core/partials/dna/top_genres_authors_row.html' with use_rainbow=True pronoun_pos="their" %}
-
-            {% include 'core/partials/dna/review_analysis_card.html' %}
-
-            {% include 'core/partials/dna/controversial_ratings_card.html' with controversial_title='Most Controversial Ratings' pronoun_pos="their" pronoun_sub="them" %}
-
-            {% if recommendations %}
-                {% with name=profile_user.first_name|default:profile_user.username %}
-                    {% include 'core/partials/dna/recommendations_grid.html' with rec_title="Recommended for "|add:name is_public_view=True pronoun_pos="their" %}
-                {% endwith %}
-            {% else %}
-                <div class="border-brand-text shadow-neo border-2 bg-white p-6">
-                    <h2 class="mb-4 text-2xl font-bold uppercase">Book Recommendations</h2>
-                    <p class="text-lg opacity-70">
-                        No recommended books yet. Recommendations get better as more readers join Bibliotype.
-                    </p>
-                </div>
-            {% endif %}
-            {% include 'core/partials/dna/charts_scripts.html' %}
+                {% include 'core/partials/dna/charts_scripts.html' %}
             </div>
         {% else %}
             <div class="border-brand-text shadow-neo border-2 bg-white p-8 text-center">

@@ -1,19 +1,20 @@
-from collections import Counter
-from django.utils import timezone
-from django.db.models import Q
-import math
 import logging
+import math
+from collections import Counter
 
+from django.db.models import Q
+from django.utils import timezone
+
+from ..cache_utils import safe_cache_delete, safe_cache_get, safe_cache_set  # noqa: F401 - re-exported
+from ..models import AnonymizedReadingProfile, AnonymousUserSession, Author, Book, Genre, User, UserBook
 from .user_similarity_service import (
-    find_similar_users,
-    calculate_anonymous_similarity_with_context,
-    calculate_similarity_with_anonymized,
-    get_match_quality_label,
     _build_user_context_for_similarity,
     _bulk_build_user_contexts,
+    calculate_anonymous_similarity_with_context,
+    calculate_similarity_with_anonymized,
+    find_similar_users,
+    get_match_quality_label,
 )
-from ..models import UserBook, Book, User, AnonymousUserSession, AnonymizedReadingProfile, Genre, Author
-from ..cache_utils import safe_cache_delete, safe_cache_get, safe_cache_set  # noqa: F401 - re-exported
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +165,32 @@ class RecommendationEngine:
         # Get DNA data for additional context
         dna = user.userprofile.dna_data if hasattr(user, "userprofile") else {}
 
+        # Extract currently-reading genres/authors for recommendation boosting
+        currently_reading_genres = set()
+        currently_reading_authors = set()
+        if dna and dna.get("currently_reading_books"):
+            for cr_book in dna["currently_reading_books"]:
+                cr_author = cr_book.get("author", "")
+                cr_title = cr_book.get("title", "")
+                if cr_author:
+                    normalized = Author._normalize(cr_author)
+                    try:
+                        author_obj = Author.objects.get(normalized_name=normalized)
+                        currently_reading_authors.add(author_obj.id)
+                    except Author.DoesNotExist:
+                        pass
+                if cr_title and cr_author:
+                    normalized_title = Book._normalize_title(cr_title)
+                    normalized_author = Author._normalize(cr_author)
+                    try:
+                        book_obj = Book.objects.get(
+                            normalized_title=normalized_title, author__normalized_name=normalized_author
+                        )
+                        for genre in book_obj.genres.all():
+                            currently_reading_genres.add(genre.name)
+                    except Book.DoesNotExist:
+                        pass
+
         return {
             "user": user,
             "read_book_ids": read_book_ids,
@@ -175,6 +202,8 @@ class RecommendationEngine:
             "author_saturation": author_saturation,
             "dna": dna,
             "total_books_read": len(read_book_ids),
+            "currently_reading_genres": currently_reading_genres,
+            "currently_reading_authors": currently_reading_authors,
         }
 
     def _build_anonymous_context(self, anon_session):
@@ -249,6 +278,31 @@ class RecommendationEngine:
                     author_weights[author.id] = count
             else:
                 author_weights[author.id] = count
+        # Extract currently-reading genres/authors for recommendation boosting
+        currently_reading_genres = set()
+        currently_reading_authors = set()
+        anon_dna = anon_session.dna_data or {}
+        if anon_dna.get("currently_reading_books"):
+            for cr_book in anon_dna["currently_reading_books"]:
+                cr_author = cr_book.get("author", "")
+                cr_title = cr_book.get("title", "")
+                if cr_author:
+                    normalized = Author._normalize(cr_author)
+                    author = authors_dict.get(normalized)
+                    if author:
+                        currently_reading_authors.add(author.id)
+                if cr_title and cr_author:
+                    normalized_title = Book._normalize_title(cr_title)
+                    normalized_author = Author._normalize(cr_author)
+                    try:
+                        book_obj = Book.objects.get(
+                            normalized_title=normalized_title, author__normalized_name=normalized_author
+                        )
+                        for genre in book_obj.genres.all():
+                            currently_reading_genres.add(genre.name)
+                    except Book.DoesNotExist:
+                        pass
+
         context = {
             "session": anon_session,
             "read_book_ids": read_book_ids,
@@ -258,8 +312,10 @@ class RecommendationEngine:
             "genre_preferences": genre_preferences,
             "author_weights": author_weights,
             "author_saturation": {},  # Could compute from books if needed
-            "dna": {},
+            "dna": anon_dna,
             "total_books_read": len(read_book_ids),
+            "currently_reading_genres": currently_reading_genres,
+            "currently_reading_authors": currently_reading_authors,
         }
         return context
 
@@ -535,9 +591,17 @@ class RecommendationEngine:
             # Recency penalty: Slightly prefer newer books
             recency_factor = self._calculate_recency_factor(book)
 
+            # Currently-reading alignment boost
+            currently_reading_boost = self._calculate_currently_reading_boost(book, context)
+
             # Final score calculation
             final_score = (
-                base_score * 1.0 + popularity_boost + quality_score + genre_alignment * 0.3 + recency_factor * 0.1
+                base_score * 1.0
+                + popularity_boost
+                + quality_score
+                + genre_alignment * 0.3
+                + recency_factor * 0.1
+                + currently_reading_boost * 0.5
             )
 
             base_confidence = candidate_data["max_similarity"]
@@ -636,6 +700,22 @@ class RecommendationEngine:
             return 0.05
         else:
             return 0
+
+    def _calculate_currently_reading_boost(self, book, context):
+        """Give a small boost to books matching genres/authors of currently-reading books. Returns 0-0.15."""
+        boost = 0.0
+        cr_genres = context.get("currently_reading_genres", set())
+        cr_authors = context.get("currently_reading_authors", set())
+
+        if book.author.id in cr_authors:
+            boost += 0.10
+
+        book_genres = {genre.name for genre in book.genres.all()}
+        matching_genres = book_genres & cr_genres
+        if matching_genres:
+            boost += min(len(matching_genres) * 0.05, 0.10)
+
+        return min(boost, 0.15)
 
     def _apply_diversity_filter(self, ranked_candidates, context, limit):
         """
