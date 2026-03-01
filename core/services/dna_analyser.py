@@ -9,13 +9,13 @@ from io import StringIO
 
 import pandas as pd
 import requests
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django.db.models import F
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from core.services.llm_service import generate_vibe_with_llm
+
 from ..dna_constants import (
     CANONICAL_GENRE_MAP,
     GLOBAL_AVERAGES,
@@ -43,6 +43,19 @@ def _sanitize_review_text(text):
     text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
     text = _HTML_TAG_RE.sub("", text)
     return text.strip()
+
+
+OPEN_LIBRARY_COVER_URL = "https://covers.openlibrary.org/b/isbn/{isbn}-M.jpg"
+
+
+def _build_cover_url(isbn13: str | None) -> str | None:
+    """Construct an Open Library Covers API URL from an ISBN13. No HTTP request needed."""
+    if not isbn13:
+        return None
+    cleaned = str(isbn13).strip().strip('="')
+    if not cleaned or len(cleaned) < 10:
+        return None
+    return OPEN_LIBRARY_COVER_URL.format(isbn=cleaned[:13])
 
 
 def assign_reader_type(read_df, enriched_data, all_genres):
@@ -165,9 +178,11 @@ def _save_dna_to_profile(profile, dna_data):
 
 def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_df):
     """Save anonymous user data to temporary session storage"""
-    from ..models import AnonymousUserSession
-    from django.utils import timezone
     from datetime import timedelta
+
+    from django.utils import timezone
+
+    from ..models import AnonymousUserSession
 
     # Extract books and ratings
     books_data = [book.id for book in user_book_objects if book]
@@ -230,6 +245,36 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
     try:
         df = pd.read_csv(StringIO(csv_file_content))
         read_df = df[df["Exclusive Shelf"] == "read"].copy()
+
+        # --- Extract currently-reading and custom shelf data ---
+        currently_reading_df = df[df["Exclusive Shelf"] == "currently-reading"].copy()
+        currently_reading_count = int(len(currently_reading_df))
+
+        standard_shelves = {"read", "currently-reading", "to-read"}
+        custom_shelf_count = int(len(df[~df["Exclusive Shelf"].isin(standard_shelves)]))
+
+        currently_reading_books = []
+        if not currently_reading_df.empty:
+            if "Date Added" in currently_reading_df.columns:
+                currently_reading_df["Date Added"] = pd.to_datetime(currently_reading_df["Date Added"], errors="coerce")
+                currently_reading_df = currently_reading_df.sort_values(
+                    by="Date Added", ascending=False, na_position="last"
+                )
+
+            for _, row in currently_reading_df.head(3).iterrows():
+                isbn13_raw = row.get("ISBN13")
+                currently_reading_books.append(
+                    {
+                        "title": str(row.get("Title", "")).strip(),
+                        "author": str(row.get("Author", "")).strip(),
+                        "cover_url": _build_cover_url(isbn13_raw if pd.notna(isbn13_raw) else None),
+                        "page_count": int(row["Number of Pages"]) if pd.notna(row.get("Number of Pages")) else None,
+                    }
+                )
+
+            logger.info(
+                f"Found {currently_reading_count} currently-reading books, {custom_shelf_count} on custom shelves"
+            )
 
         total_books = int(len(read_df))
         if progress_cb:
@@ -365,6 +410,44 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 user_book_objects.append(book)
                 all_raw_genres.extend(genres)
 
+        # Sync currently-reading books to DB (Book/Author only, no UserBook, no global_read_count)
+        if currently_reading_books:
+            for cr_book in currently_reading_books:
+                cr_author_name = cr_book.get("author", "").strip()
+                cr_title = cr_book.get("title", "").strip()
+                if not cr_author_name or not cr_title:
+                    continue
+
+                normalized_author_name = Author._normalize(cr_author_name)
+                author, created = Author.objects.get_or_create(
+                    normalized_name=normalized_author_name, defaults={"name": cr_author_name}
+                )
+                if created:
+                    from ..tasks import check_author_mainstream_status_task
+
+                    check_author_mainstream_status_task.delay(author.id)
+
+                normalized_title = Book._normalize_title(cr_title)
+                isbn13_value = None
+                cover_url = cr_book.get("cover_url")
+                if cover_url:
+                    # Extract ISBN from the cover URL we already built
+                    isbn13_value = cover_url.split("/isbn/")[1].split("-")[0] if "/isbn/" in cover_url else None
+
+                cr_book_defaults = {"title": cr_title}
+                if isbn13_value:
+                    cr_book_defaults["isbn13"] = isbn13_value
+
+                try:
+                    Book.objects.update_or_create(
+                        normalized_title=normalized_title, author=author, defaults=cr_book_defaults
+                    )
+                except IntegrityError:
+                    cr_book_defaults.pop("isbn13", None)
+                    Book.objects.update_or_create(
+                        normalized_title=normalized_title, author=author, defaults=cr_book_defaults
+                    )
+
         # Store UserBook entries for registered users
         if user and results:
             from ..models import UserBook
@@ -494,6 +577,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 "title": user_book_objects[0].title,
                 "author": user_book_objects[0].author.name,
                 "read_count": user_book_objects[0].global_read_count,
+                "cover_url": _build_cover_url(user_book_objects[0].isbn13),
             }
             niche_books_count = sum(1 for b in user_book_objects if b.global_read_count <= NICHE_THRESHOLD)
 
@@ -666,6 +750,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             "unique_genres_count": unique_genres_count,
             "niche_books_count": niche_books_count,
             "niche_threshold": NICHE_THRESHOLD,
+            "currently_reading_books": currently_reading_books,
+            "currently_reading_count": currently_reading_count,
+            "custom_shelf_count": custom_shelf_count,
         }
         logger.debug(f"DNA data generated")
 

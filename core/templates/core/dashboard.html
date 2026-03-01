@@ -3,11 +3,15 @@
 
 {% block seo_title %}Bibliotype – Dashboard{% endblock %}
 
-{% block seo_description %}View your personalised reading DNA dashboard with insights into your literary personality,
-favourite genres, reading statistics, and book recommendations.{% endblock %}
+{% block seo_description %}
+    View your personalised reading DNA dashboard with insights into your literary personality, favourite genres, reading
+    statistics, and book recommendations.
+{% endblock %}
 
-{% block seo_keywords %}reading DNA dashboard, literary personality results, reading statistics, genre analysis, book
-recommendations, reading insights{% endblock %}
+{% block seo_keywords %}
+    reading DNA dashboard, literary personality results, reading statistics, genre analysis, book recommendations,
+    reading insights
+{% endblock %}
 
 {% block seo_robots %}noindex, nofollow{% endblock %}
 
@@ -19,7 +23,11 @@ recommendations, reading insights{% endblock %}
 {% block content %}
     <div class="mx-auto h-full max-w-4xl space-y-8 p-2">
         {% if is_processing %}
-            <div id="processing-container" class="flex h-full flex-col items-center justify-center p-4" x-data="{ status: 'PENDING' }">
+            <div
+                id="processing-container"
+                class="flex h-full flex-col items-center justify-center p-4"
+                x-data="{ status: 'PENDING' }"
+            >
                 <div class="w-full max-w-2xl text-center" x-show="status !== 'FAILURE'">
                     {% include 'core/partials/cycling_messages.html' %}
                     <p class="mb-8 text-lg text-gray-600">
@@ -53,17 +61,16 @@ recommendations, reading insights{% endblock %}
                         {% include 'core/partials/progress_bar.html' %}
                     </div>
                 </div>
-                <div
-                    x-show="status === 'FAILURE'"
-                    x-cloak
-                    class="w-full max-w-2xl text-center"
-                >
+                <div x-show="status === 'FAILURE'" x-cloak class="w-full max-w-2xl text-center">
                     <h1 class="title-underline relative mb-4 inline-block text-4xl font-bold">Something Went Wrong</h1>
                     <div class="border-brand-text shadow-neo mt-4 border-2 bg-red-500 p-6 font-bold text-white">
                         <p class="text-xl">Sorry, something went wrong while processing your file.</p>
                         <p class="mt-2">Please try uploading it again.</p>
                     </div>
-                    <a href="{% url 'core:home' %}" class="shadow-neo border-brand-text mt-6 inline-block border-2 bg-brand-yellow px-6 py-3 text-lg font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1">
+                    <a
+                        href="{% url 'core:home' %}"
+                        class="shadow-neo border-brand-text bg-brand-yellow mt-6 inline-block border-2 px-6 py-3 text-lg font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1"
+                    >
                         Try Again
                     </a>
                 </div>
@@ -127,7 +134,7 @@ recommendations, reading insights{% endblock %}
                                 return;
                             }
                             if (data.status === "FAILURE") {
-                                Alpine.$data(document.getElementById('processing-container')).status = 'FAILURE';
+                                Alpine.$data(document.getElementById("processing-container")).status = "FAILURE";
                                 return;
                             }
                             updateTargetsFromServer(data);
@@ -146,124 +153,120 @@ recommendations, reading insights{% endblock %}
             </script>
         {% elif dna %}
             <div x-data="shareModalData()" class="space-y-8">
-            {{ dna|json_script:"dna-data" }}
-            <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
-                <span class="relative z-10">
-                    {% if user.is_authenticated %}
-                        {% include 'core/partials/username_editor.html' %}
-                    {% else %}
-                        Your Bibliotype
-                    {% endif %}
-                </span>
-            </h1>
+                {{ dna|json_script:"dna-data" }}
+                <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
+                    <span class="relative z-10">
+                        {% if user.is_authenticated %}
+                            {% include 'core/partials/username_editor.html' %}
+                        {% else %}
+                            Your Bibliotype
+                        {% endif %}
+                    </span>
+                </h1>
 
-            {% include 'core/partials/dna/vibe_display.html' %}
-            {% include 'core/partials/dna/reader_type_card.html' %}
+                {% include 'core/partials/dna/vibe_display.html' %}
+                {% include 'core/partials/dna/reader_type_card.html' %}
+                {% include 'core/partials/share/share_button.html' %}
+                {% if user.is_authenticated %}
+                    {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app/u/"|add:user.username %}
+                {% else %}
+                    {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app" %}
+                {% endif %}
+                {% include 'core/partials/dna/top_traits_list.html' %}
+                {% include 'core/partials/dna/key_stats_row.html' %}
+                {% include 'core/partials/dna/comparative_analytics_card.html' %}
 
-            {% include 'core/partials/share/share_button.html' %}
-            {% if user.is_authenticated %}
-                {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app/u/"|add:user.username %}
-            {% else %}
-                {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app" %}
-            {% endif %}
-
-            {% include 'core/partials/dna/top_traits_list.html' %}
-            {% include 'core/partials/dna/key_stats_row.html' %}
-            {% include 'core/partials/dna/comparative_analytics_card.html' %}
-
-            <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
-                {% include 'core/partials/dna/niche_read_card.html' %}
-                {% include 'core/partials/dna/mainstream_gauge_card.html' %}
-            </div>
-
-            {% include 'core/partials/dna/top_genres_authors_row.html' with use_rainbow=True %}
-
-            {% include 'core/partials/dna/review_analysis_card.html' %}
-
-            {% include 'core/partials/dna/controversial_ratings_card.html' %}
-
-            {% if recommendations %}
-                {% include 'core/partials/dna/recommendations_grid.html' with is_public_view=False %}
-            {% else %}
-                <div class="border-brand-text shadow-neo border-2 bg-white p-6">
-                    <h2 class="mb-4 text-2xl font-bold uppercase">Recommended for You</h2>
-                    <p class="text-lg opacity-70">
-                        No recommended books yet. Recommendations get better as more readers join Bibliotype. Please
-                        upload an updated CSV to generate recommendations.
-                    </p>
+                <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+                    {% include 'core/partials/dna/niche_read_card.html' %}
+                    {% include 'core/partials/dna/mainstream_gauge_card.html' %}
                 </div>
-            {% endif %}
 
-            {% if user.is_authenticated %}
-                <div class="grid grid-cols-1 items-center gap-6 md:grid-cols-3">
-                    <div
-                        class="border-brand-text shadow-neo flex h-full items-center border-2 bg-white p-4 md:col-span-2"
-                    >
-                        <div class="flex-grow">
-                            {% if user_profile.is_public %}
-                                <h3 class="text-xl font-bold uppercase">
-                                    <span class="flex flex-col md:flex-row md:items-center md:gap-2">
-                                        <span>
-                                            Your profile is
-                                            <span class="bg-brand-green border-brand-text border-2 px-2 py-1 font-bold"
-                                                >Public</span
+                {% include 'core/partials/dna/top_genres_authors_row.html' with use_rainbow=True %}
+                {% include 'core/partials/dna/review_analysis_card.html' %}
+                {% include 'core/partials/dna/controversial_ratings_card.html' %}
+                {% include 'core/partials/dna/currently_reading_card.html' %}
+
+                {% if recommendations %}
+                    {% include 'core/partials/dna/recommendations_grid.html' with is_public_view=False %}
+                {% else %}
+                    <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+                        <h2 class="mb-4 text-2xl font-bold uppercase">Recommended for You</h2>
+                        <p class="text-lg opacity-70">
+                            No recommended books yet. Recommendations get better as more readers join Bibliotype. Please
+                            upload an updated CSV to generate recommendations.
+                        </p>
+                    </div>
+                {% endif %}
+
+                {% if user.is_authenticated %}
+                    <div class="grid grid-cols-1 items-center gap-6 md:grid-cols-3">
+                        <div
+                            class="border-brand-text shadow-neo flex h-full items-center border-2 bg-white p-4 md:col-span-2"
+                        >
+                            <div class="flex-grow">
+                                {% if user_profile.is_public %}
+                                    <h3 class="text-xl font-bold uppercase">
+                                        <span class="flex flex-col md:flex-row md:items-center md:gap-2">
+                                            <span>
+                                                Your profile is
+                                                <span
+                                                    class="bg-brand-green border-brand-text border-2 px-2 py-1 font-bold"
+                                                    >Public</span
+                                                >
+                                            </span>
+                                            <a
+                                                href="{% url 'core:public_profile' username=user.username %}"
+                                                class="hover:bg-brand-yellow mt-2 ml-0 block underline sm:!mt-0 sm:ml-4 md:inline-block"
+                                                target="_blank"
+                                                >/u/{{ user.username }}</a
                                             >
                                         </span>
-                                        <a
-                                            href="{% url 'core:public_profile' username=user.username %}"
-                                            class="hover:bg-brand-yellow mt-2 ml-0 block underline sm:!mt-0 sm:ml-4 md:inline-block"
-                                            target="_blank"
-                                            >/u/{{ user.username }}</a
+                                    </h3>
+                                {% else %}
+                                    <h3 class="text-xl font-bold uppercase">
+                                        Your profile is
+                                        <span class="bg-brand-pink border-brand-text border-2 px-2 py-1 font-bold"
+                                            >Private</span
                                         >
-                                    </span>
-                                </h3>
-                            {% else %}
-                                <h3 class="text-xl font-bold uppercase">
-                                    Your profile is
-                                    <span class="bg-brand-pink border-brand-text border-2 px-2 py-1 font-bold"
-                                        >Private</span
-                                    >
-                                </h3>
-                            {% endif %}
+                                    </h3>
+                                {% endif %}
+                            </div>
+                            <form action="{% url 'core:update_privacy' %}" method="post" class="ml-4">
+                                {% csrf_token %}
+                                {% if user_profile.is_public %}
+                                    <input type="hidden" name="is_public" value="false" />
+                                    {% include 'core/partials/buttons/small_button.html' with text="Make Private" color="pink" hover_color="yellow" %}
+                                {% else %}
+                                    <input type="hidden" name="is_public" value="true" />
+                                    {% include 'core/partials/buttons/small_button.html' with text="Make Public" color="green" hover_color="yellow" %}
+                                {% endif %}
+                            </form>
                         </div>
-                        <form action="{% url 'core:update_privacy' %}" method="post" class="ml-4">
-                            {% csrf_token %}
-                            {% if user_profile.is_public %}
-                                <input type="hidden" name="is_public" value="false" />
-                                {% include 'core/partials/buttons/small_button.html' with text="Make Private" color="pink" hover_color="yellow" %}
-                            {% else %}
-                                <input type="hidden" name="is_public" value="true" />
-                                {% include 'core/partials/buttons/small_button.html' with text="Make Public" color="green" hover_color="yellow" %}
-                            {% endif %}
-                        </form>
-                    </div>
-                    <div
-                        class="border-brand-text shadow-neo flex h-full items-center justify-center border-2 bg-white p-4"
-                    >
-                        {% url 'core:home' as home_url %}
-                        {% include 'core/partials/buttons/small_link_button.html' with href=home_url text="Update Bibliotype" color="purple" %}
-                    </div>
-                </div>
-            {% else %}
-                <div class="bg-brand-purple border-brand-text shadow-neo border-2 p-6 text-center">
-                    <h2 class="text-2xl font-bold uppercase">Enjoying Your Bibliotype?</h2>
-                    <p class="mt-2 text-lg">
-                        <a href="{% url 'core:signup' %}" class="hover:bg-brand-yellow underline"
-                            >Create a free account</a
+                        <div
+                            class="border-brand-text shadow-neo flex h-full items-center justify-center border-2 bg-white p-4"
                         >
-                        to save your Bibliotype, track your history, and share it with friends.
-                    </p>
-                </div>
-            {% endif %}
-            {% include 'core/partials/dna/charts_scripts.html' %}
+                            {% url 'core:home' as home_url %}
+                            {% include 'core/partials/buttons/small_link_button.html' with href=home_url text="Update Bibliotype" color="purple" %}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="bg-brand-purple border-brand-text shadow-neo border-2 p-6 text-center">
+                        <h2 class="text-2xl font-bold uppercase">Enjoying Your Bibliotype?</h2>
+                        <p class="mt-2 text-lg">
+                            <a href="{% url 'core:signup' %}" class="hover:bg-brand-yellow underline"
+                                >Create a free account</a
+                            >
+                            to save your Bibliotype, track your history, and share it with friends.
+                        </p>
+                    </div>
+                {% endif %}
+                {% include 'core/partials/dna/charts_scripts.html' %}
             </div>
         {% else %}
             <div class="flex h-full flex-col p-4">
                 <div class="w-full">
                     <h1 class="mb-8 text-center text-5xl font-bold tracking-widest uppercase">
-                        <span class="relative z-10">
-                            {% include 'core/partials/username_editor.html' %}
-                        </span>
+                        <span class="relative z-10"> {% include 'core/partials/username_editor.html' %} </span>
                     </h1>
                 </div>
                 <div class="flex flex-grow items-center justify-center">

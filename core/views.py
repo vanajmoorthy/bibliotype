@@ -22,17 +22,17 @@ from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_read
 
 logger = logging.getLogger(__name__)
 from .analytics.events import (
-    track_file_upload_started,
-    track_dna_displayed,
-    track_anonymous_dna_displayed,
-    track_recommendations_generated,
-    track_user_signed_up,
     track_anonymous_dna_claimed,
-    track_user_logged_in,
+    track_anonymous_dna_displayed,
+    track_dna_displayed,
+    track_file_upload_started,
     track_profile_made_public,
     track_public_profile_viewed,
-    track_settings_updated,
     track_recommendation_error,
+    track_recommendations_generated,
+    track_settings_updated,
+    track_user_logged_in,
+    track_user_signed_up,
 )
 
 
@@ -212,6 +212,17 @@ def _enrich_dna_for_display(dna_data):
 
     if "books_with_dates" not in user_stats:
         user_stats["books_with_dates"] = dated_book_count
+
+    # Backfill currently-reading fields for old DNA data
+    if "currently_reading_books" not in dna_data:
+        dna_data["currently_reading_books"] = []
+    if "currently_reading_count" not in dna_data:
+        dna_data["currently_reading_count"] = 0
+    if "custom_shelf_count" not in dna_data:
+        dna_data["custom_shelf_count"] = 0
+    niche_book = dna_data.get("most_niche_book")
+    if niche_book and "cover_url" not in niche_book:
+        niche_book["cover_url"] = None
 
     # Recalculate percentiles from current aggregate data so they're never stale.
     # Cached for 10 minutes to avoid a DB hit on every page load while still staying fresh.
@@ -401,10 +412,12 @@ def display_dna_view(request):
         # Anonymous user recommendations
         if dna_data and request.session.session_key:
             try:
-                from .services.recommendation_service import get_recommendations_for_anonymous
-                from .models import AnonymousUserSession, Author
-                from django.utils import timezone
                 from datetime import timedelta
+
+                from django.utils import timezone
+
+                from .models import AnonymousUserSession, Author
+                from .services.recommendation_service import get_recommendations_for_anonymous
 
                 # Check if AnonymousUserSession exists, if not try to recreate it
                 try:
@@ -920,8 +933,8 @@ def task_status_view(request, task_id):
 
 
 def get_task_result_view(request, task_id):
-    from .models import AnonymousUserSession
     from .cache_utils import safe_cache_get
+    from .models import AnonymousUserSession
 
     cached_result = safe_cache_get(f"dna_result_{task_id}")
     if cached_result is not None:
