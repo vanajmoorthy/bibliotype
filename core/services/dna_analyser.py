@@ -452,6 +452,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         if user and results:
             from ..models import UserBook
 
+            # Collect current book IDs from this upload
+            current_book_ids = {book.id for book, genres, original_row in results if book}
+
+            # Delete stale UserBook records from previous uploads that are no longer in the CSV
+            stale_count, _ = UserBook.objects.filter(user=user).exclude(book_id__in=current_book_ids).delete()
+            if stale_count:
+                logger.info(f"Removed {stale_count} stale UserBook records for user {user.id}")
+
             # Store book data with ratings and reviews - now we have the original row
             for book, genres, original_row in results:
                 if book:
