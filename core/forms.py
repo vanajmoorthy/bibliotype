@@ -89,5 +89,8 @@ class ChangePasswordForm(forms.Form):
         if p1 and p2 and p1 != p2:
             self.add_error("new_password2", "The two password fields didn't match.")
         if p1:
-            password_validation.validate_password(p1, self.user)
+            try:
+                password_validation.validate_password(p1, self.user)
+            except forms.ValidationError as e:
+                self.add_error("new_password1", e)
         return cleaned_data

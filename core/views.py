@@ -7,7 +7,7 @@ from datetime import date
 from celery.result import AsyncResult
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
@@ -711,7 +711,7 @@ def update_privacy_view(request):
 
     profile = request.user.userprofile
     profile.is_public = is_public
-    profile.save()
+    profile.save(update_fields=["is_public"])
 
     if is_public:
         track_profile_made_public(request.user.id)
@@ -729,9 +729,6 @@ def update_privacy_view(request):
         messages.success(request, message_text)
     else:
         messages.success(request, "Your profile is now private.")
-
-    if "dna_data" in request.session:
-        request.session.pop("dna_data", None)
 
     return redirect("core:display_dna")
 
@@ -796,7 +793,7 @@ def update_recommendation_visibility(request):
 
     profile = request.user.userprofile
     profile.visible_in_recommendations = is_visible
-    profile.save()
+    profile.save(update_fields=["visible_in_recommendations"])
 
     track_settings_updated(request.user.id, setting_type="recommendation_visibility")
 
@@ -817,12 +814,13 @@ def update_email_view(request):
     form = UpdateEmailForm(request.POST, user=request.user)
     if form.is_valid():
         request.user.email = form.cleaned_data["email"]
-        request.user.save()
+        request.user.save(update_fields=["email"])
         track_settings_updated(request.user.id, setting_type="email")
         messages.success(request, "Your email has been updated!")
     else:
-        for error in form.errors.values():
-            messages.error(request, error)
+        for field_errors in form.errors.values():
+            for error in field_errors:
+                messages.error(request, error)
 
     return redirect("core:display_dna")
 
@@ -833,9 +831,8 @@ def change_password_view(request):
     form = ChangePasswordForm(request.POST, user=request.user)
     if form.is_valid():
         request.user.set_password(form.cleaned_data["new_password1"])
-        request.user.save()
-        # Re-authenticate so the user doesn't get logged out
-        login(request, request.user)
+        request.user.save(update_fields=["password"])
+        update_session_auth_hash(request, request.user)
         track_settings_updated(request.user.id, setting_type="password")
         messages.success(request, "Your password has been changed!")
     else:
@@ -861,8 +858,8 @@ def delete_account_view(request):
         return redirect("core:display_dna")
 
     user_id = request.user.id
-    track_account_deleted(user_id)
     request.user.delete()
+    track_account_deleted(user_id)
     logout(request)
     messages.success(request, "Your account and all associated data have been permanently deleted.")
     return redirect("core:home")
