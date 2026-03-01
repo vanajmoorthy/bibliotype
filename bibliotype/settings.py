@@ -98,12 +98,20 @@ DATABASES = {"default": dj_database_url.config(default=f'sqlite:///{os.path.join
 # - Local Redis server running on localhost
 # - Docker Redis container exposed on port 6379 (via docker-compose port mapping)
 # Override with REDIS_CACHE_URL environment variable if needed
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": os.environ.get("REDIS_CACHE_URL", "redis://localhost:6379/1"),
+REDIS_CACHE_URL = os.environ.get("REDIS_CACHE_URL", "redis://localhost:6379/1")
+if REDIS_CACHE_URL == "locmem://":
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        }
     }
-}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_CACHE_URL,
+        }
+    }
 
 # Email configuration (Brevo SMTP)
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

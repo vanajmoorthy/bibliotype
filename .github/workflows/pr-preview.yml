@@ -1,0 +1,266 @@
+name: PR Preview
+
+on:
+    # Comment /preview on a PR to deploy
+    issue_comment:
+        types: [created]
+    # Auto-cleanup when PR is closed or merged
+    pull_request:
+        types: [closed]
+
+concurrency:
+    group: preview-${{ github.event.issue.number || github.event.pull_request.number }}
+    cancel-in-progress: true
+
+jobs:
+    deploy-preview:
+        # Only runs when a collaborator comments /preview on a PR
+        if: >
+            github.event_name == 'issue_comment' &&
+            github.event.issue.pull_request &&
+            startsWith(github.event.comment.body, '/preview') &&
+            contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            pull-requests: write
+            issues: write
+        steps:
+            - name: Get PR details and react to comment
+              id: pr
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const prNumber = context.payload.issue.number;
+                      const { data: pr } = await github.rest.pulls.get({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        pull_number: prNumber,
+                      });
+
+                      if (pr.state !== 'open') {
+                        core.setFailed('PR is not open');
+                        return;
+                      }
+
+                      core.setOutput('number', prNumber);
+                      core.setOutput('sha', pr.head.sha);
+
+                      await github.rest.reactions.createForIssueComment({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        comment_id: context.payload.comment.id,
+                        content: 'rocket',
+                      });
+
+            - name: Check out PR code
+              uses: actions/checkout@v4
+              with:
+                  ref: ${{ steps.pr.outputs.sha }}
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Login to Docker Hub
+              uses: docker/login-action@v3
+              with:
+                  username: ${{ secrets.DOCKERHUB_USERNAME }}
+                  password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+            - name: Build and push preview image
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  push: true
+                  tags: ${{ secrets.DOCKERHUB_USERNAME }}/bibliotype:pr-${{ steps.pr.outputs.number }}
+                  cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/bibliotype:buildcache
+                  cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/bibliotype:buildcache,mode=max
+
+            - name: Deploy preview to VPS
+              uses: appleboy/ssh-action@v1.0.3
+              env:
+                  PR_NUMBER: ${{ steps.pr.outputs.number }}
+                  IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/bibliotype:pr-${{ steps.pr.outputs.number }}
+                  MAX_PREVIEWS: "3"
+              with:
+                  host: ${{ secrets.DO_SSH_HOST }}
+                  username: ${{ secrets.DO_SSH_USERNAME }}
+                  key: ${{ secrets.DO_SSH_KEY }}
+                  envs: PR_NUMBER,IMAGE,MAX_PREVIEWS
+                  script: |
+                      CONTAINER="preview-pr-${PR_NUMBER}"
+                      PORT=$((9000 + PR_NUMBER))
+
+                      # Enforce concurrent preview limit (excluding this PR if it already has one)
+                      RUNNING=$(docker ps --filter "name=preview-pr-" --format '{{.Names}}' | grep -v "^${CONTAINER}$" | wc -l)
+                      if [ "$RUNNING" -ge "$MAX_PREVIEWS" ]; then
+                        echo "ERROR: ${RUNNING} previews already running (max ${MAX_PREVIEWS})."
+                        echo "Active previews:"
+                        docker ps --filter "name=preview-pr-" --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+                        exit 1
+                      fi
+
+                      # Tear down existing preview for this PR if any
+                      docker stop $CONTAINER 2>/dev/null && docker rm $CONTAINER 2>/dev/null || true
+
+                      docker pull $IMAGE
+
+                      # Start container with migrate + runserver
+                      docker run -d \
+                        --name $CONTAINER \
+                        --restart unless-stopped \
+                        -p ${PORT}:8000 \
+                        -e SECRET_KEY=preview-insecure-not-for-production \
+                        -e DEBUG=True \
+                        -e "ALLOWED_HOSTS=*" \
+                        -e DJANGO_ENV=development \
+                        -e REDIS_CACHE_URL=locmem:// \
+                        --entrypoint "" \
+                        $IMAGE \
+                        bash -c "poetry run python manage.py migrate --run-syncdb && poetry run python manage.py runserver 0.0.0.0:8000"
+
+                      # Wait for migrations + server startup
+                      echo "Waiting for server to start..."
+                      sleep 15
+
+                      # Load fixture data with signal-safe command
+                      docker exec $CONTAINER poetry run python manage.py load_fixture_data core/fixtures/initial_data.json
+
+                      # Set all fixture user passwords to 'preview' so reviewers can log in
+                      docker exec $CONTAINER poetry run python manage.py shell -c "
+                      from django.contrib.auth.models import User
+                      for u in User.objects.all():
+                          u.set_password('preview')
+                          u.save()
+                      print(f'Set password for {User.objects.count()} users')
+                      "
+
+                      # Create a preview admin account
+                      docker exec \
+                        -e DJANGO_SUPERUSER_EMAIL=admin@preview.com \
+                        -e DJANGO_SUPERUSER_USERNAME=admin \
+                        -e DJANGO_SUPERUSER_PASSWORD=preview \
+                        $CONTAINER poetry run python manage.py createsuperuser --noinput 2>/dev/null || true
+
+                      # Verify server is responding
+                      for i in $(seq 1 10); do
+                        if curl -s -o /dev/null -w '%{http_code}' http://localhost:${PORT}/ | grep -qE '200|301|302'; then
+                          echo "Preview is ready on port ${PORT}"
+                          break
+                        fi
+                        echo "Waiting... ($i/10)"
+                        sleep 3
+                      done
+
+            - name: Comment preview URL on PR
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const prNumber = ${{ steps.pr.outputs.number }};
+                      const port = 9000 + prNumber;
+                      const host = '${{ secrets.DO_SSH_HOST }}';
+                      const url = `http://${host}:${port}`;
+                      const marker = '<!-- pr-preview-comment -->';
+                      const body = [
+                        marker,
+                        '## PR Preview',
+                        '',
+                        `**URL:** ${url}`,
+                        '',
+                        '### Login',
+                        '| Account | Email | Password |',
+                        '|---|---|---|',
+                        '| Admin | `admin@preview.com` | `preview` |',
+                        '| All fixture users | *(find emails via /admin/)* | `preview` |',
+                        '',
+                        'Log in at `/admin/` with the admin account to find fixture users that have DNA data,',
+                        'then log in at `/login/` with their email to see the full dashboard.',
+                        '',
+                        'Lightweight preview (SQLite, no Celery/Redis). Fixture data loaded.',
+                        '',
+                        `*Deployed from ${context.payload.issue?.pull_request ? 'PR head' : 'commit'} at ${new Date().toISOString()}*`,
+                      ].join('\n');
+
+                      const { data: comments } = await github.rest.issues.listComments({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: prNumber,
+                      });
+                      const existing = comments.find(c => c.body?.includes(marker));
+
+                      if (existing) {
+                        await github.rest.issues.updateComment({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          comment_id: existing.id,
+                          body,
+                        });
+                      } else {
+                        await github.rest.issues.createComment({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          issue_number: prNumber,
+                          body,
+                        });
+                      }
+
+            - name: Comment on failure
+              if: failure()
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const prNumber = ${{ steps.pr.outputs.number || 0 }};
+                      if (!prNumber) return;
+
+                      const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+                      await github.rest.issues.createComment({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: prNumber,
+                        body: `Preview deployment failed. Check the [workflow run](${runUrl}) for details.`,
+                      });
+
+    cleanup-preview:
+        if: github.event_name == 'pull_request' && github.event.action == 'closed'
+        runs-on: ubuntu-latest
+        permissions:
+            pull-requests: write
+            issues: write
+        steps:
+            - name: Tear down preview on VPS
+              uses: appleboy/ssh-action@v1.0.3
+              env:
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+                  IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/bibliotype:pr-${{ github.event.pull_request.number }}
+              with:
+                  host: ${{ secrets.DO_SSH_HOST }}
+                  username: ${{ secrets.DO_SSH_USERNAME }}
+                  key: ${{ secrets.DO_SSH_KEY }}
+                  envs: PR_NUMBER,IMAGE
+                  script: |
+                      CONTAINER="preview-pr-${PR_NUMBER}"
+                      docker stop $CONTAINER 2>/dev/null || true
+                      docker rm $CONTAINER 2>/dev/null || true
+                      docker rmi $IMAGE 2>/dev/null || true
+                      echo "Preview for PR #${PR_NUMBER} cleaned up"
+
+            - name: Update PR comment
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const prNumber = context.payload.pull_request.number;
+                      const marker = '<!-- pr-preview-comment -->';
+                      const { data: comments } = await github.rest.issues.listComments({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: prNumber,
+                      });
+                      const existing = comments.find(c => c.body?.includes(marker));
+                      if (existing) {
+                        await github.rest.issues.updateComment({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          comment_id: existing.id,
+                          body: `${marker}\n## PR Preview\n\n~~Preview has been torn down~~ (PR closed/merged)`,
+                        });
+                      }
