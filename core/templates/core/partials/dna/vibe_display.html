@@ -1,9 +1,33 @@
 {% if dna.reading_vibe %}
+    {# djlint:off #}
     <div id="vibe-container"
+         x-data="{
+             shown: false,
+             colors: ['#40e7aa', '#ffb4dd', '#ffa75e', '#8bbfff'],
+             init() {
+                 const observer = new IntersectionObserver((entries) => {
+                     if (entries[0].isIntersecting && !this.shown) {
+                         this.shown = true;
+                         observer.unobserve(this.$el);
+                     }
+                 }, { threshold: 0.3 });
+                 observer.observe(this.$el);
+             }
+         }"
+         x-init="init()"
          class="mb-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-4 text-center text-xl italic">
         {% for phrase in dna.reading_vibe %}
-            <span class="vibe-item whitespace-nowrap px-2 py-0 text-gray-700 mb-1 mt-1" style="background-color: {% cycle '#40e7aa' '#ffb4dd' '#ffa75e'   '#8bbfff' %};">{{ phrase }}</span>{% if not forloop.last %}<span class="vibe-separator font-bold text-blue-400 mx-1">·</span>{% endif %}
+            {% if not forloop.first %}
+                <span class="vibe-separator font-bold text-blue-400 mx-1 transition-all duration-300 ease-out"
+                      :style="shown
+                          ? 'opacity:1;transform:translateY(0);transition-delay:' + {{ forloop.counter0 }} * 150 + 'ms'
+                          : 'opacity:0;transform:translateY(12px)'">·</span>
+            {% endif %}
+            <span class="vibe-item whitespace-nowrap px-2 py-0 text-gray-700 mb-1 mt-1 transition-all duration-300 ease-out"
+                  :style="'background-color:' + colors[{{ forloop.counter0 }}] + ';' + (shown
+                      ? 'opacity:1;transform:translateY(0);transition-delay:' + {{ forloop.counter0 }} * 150 + 'ms'
+                      : 'opacity:0;transform:translateY(12px)')">{{ phrase }}</span>
         {% endfor %}
     </div>
+    {# djlint:on #}
 {% endif %}
-
