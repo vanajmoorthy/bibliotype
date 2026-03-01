@@ -606,24 +606,26 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         longest_book = None
         shortest_book = None
+        page_difference = None
         books_with_pages = [b for b in user_book_objects if b.page_count]
         if len(books_with_pages) >= 2:
             books_with_pages.sort(key=lambda b: (-b.page_count, b.normalized_title))
             longest = books_with_pages[0]
-            longest_book = {
-                "title": longest.title,
-                "author": longest.author.name,
-                "page_count": longest.page_count,
-                "cover_url": _build_cover_url(longest.isbn13),
-            }
-            books_with_pages.sort(key=lambda b: (b.page_count, b.normalized_title))
-            shortest = books_with_pages[0]
-            shortest_book = {
-                "title": shortest.title,
-                "author": shortest.author.name,
-                "page_count": shortest.page_count,
-                "cover_url": _build_cover_url(shortest.isbn13),
-            }
+            shortest = books_with_pages[-1]
+            if longest.page_count != shortest.page_count:
+                longest_book = {
+                    "title": longest.title,
+                    "author": longest.author.name,
+                    "page_count": longest.page_count,
+                    "cover_url": _build_cover_url(longest.isbn13),
+                }
+                shortest_book = {
+                    "title": shortest.title,
+                    "author": shortest.author.name,
+                    "page_count": shortest.page_count,
+                    "cover_url": _build_cover_url(shortest.isbn13),
+                }
+                page_difference = longest.page_count - shortest.page_count
 
         top_authors = list(read_df["Author"].value_counts().head(10).items())
         unique_authors_count = int(read_df["Author"].nunique())
@@ -804,6 +806,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             ),
             "longest_book": longest_book,
             "shortest_book": shortest_book,
+            "page_difference": page_difference,
         }
         logger.debug(f"DNA data generated")
 
