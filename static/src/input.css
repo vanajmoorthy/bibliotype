@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* 
+/*
   Then, define your custom neobrutalist theme.
   This is where all your custom styles come from.
 */
@@ -75,6 +75,11 @@ ol.list-decimal {
 .scroll-fade-up.is-visible {
     opacity: 1;
     transform: translate(0);
+}
+
+/* Hide Alpine.js elements until the framework initialises */
+[x-cloak] {
+    display: none !important;
 }
 
 /* Force a scrollbar to always be present to prevent layout shifts */
