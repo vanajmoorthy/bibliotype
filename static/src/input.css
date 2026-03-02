@@ -43,6 +43,11 @@ ol.list-decimal {
     list-style-type: decimal;
 }
 
+/* Hide Alpine.js elements until the framework initialises */
+[x-cloak] {
+    display: none !important;
+}
+
 /* Force a scrollbar to always be present to prevent layout shifts */
 html {
     overflow-y: scroll;
