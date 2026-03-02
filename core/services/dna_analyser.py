@@ -18,8 +18,10 @@ from core.services.llm_service import generate_vibe_with_llm
 
 from ..dna_constants import (
     CANONICAL_GENRE_MAP,
+    FICTION_GENRES,
     GLOBAL_AVERAGES,
     NICHE_THRESHOLD,
+    NONFICTION_GENRES,
     READER_TYPE_DESCRIPTIONS,
     compute_contrariness,
 )
@@ -410,10 +412,20 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     if progress_cb:
                         progress_cb(processed, total_books, "Syncing books")
 
+        fiction_count = 0
+        nonfiction_count = 0
+
         for book, genres, original_row in results:
             if book:
                 user_book_objects.append(book)
                 all_raw_genres.extend(genres)
+                # Fiction-first: books with any fiction genre are counted as fiction,
+                # even if they also carry nonfiction genres (e.g. historical fiction).
+                canonical = {CANONICAL_GENRE_MAP.get(g, g) for g in genres}
+                if canonical & FICTION_GENRES:
+                    fiction_count += 1
+                elif canonical & NONFICTION_GENRES:
+                    nonfiction_count += 1
 
         # Sync currently-reading books to DB (Book/Author only, no UserBook, no global_read_count)
         if currently_reading_books:
@@ -594,6 +606,29 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             }
             niche_books_count = sum(1 for b in user_book_objects if b.global_read_count <= NICHE_THRESHOLD)
 
+        longest_book = None
+        shortest_book = None
+        page_difference = None
+        books_with_pages = [b for b in user_book_objects if b.page_count]
+        if len(books_with_pages) >= 2:
+            books_with_pages.sort(key=lambda b: (-b.page_count, b.normalized_title))
+            longest = books_with_pages[0]
+            shortest = books_with_pages[-1]
+            if longest.page_count != shortest.page_count:
+                longest_book = {
+                    "title": longest.title,
+                    "author": longest.author.name,
+                    "page_count": longest.page_count,
+                    "cover_url": _build_cover_url(longest.isbn13),
+                }
+                shortest_book = {
+                    "title": shortest.title,
+                    "author": shortest.author.name,
+                    "page_count": shortest.page_count,
+                    "cover_url": _build_cover_url(shortest.isbn13),
+                }
+                page_difference = longest.page_count - shortest.page_count
+
         top_authors = list(read_df["Author"].value_counts().head(10).items())
         unique_authors_count = int(read_df["Author"].nunique())
         unique_genres_count = len(set(mapped_genres))
@@ -766,6 +801,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             "currently_reading_books": currently_reading_books,
             "currently_reading_count": currently_reading_count,
             "custom_shelf_count": custom_shelf_count,
+            "fiction_nonfiction_split": (
+                {"fiction_count": fiction_count, "nonfiction_count": nonfiction_count}
+                if (fiction_count + nonfiction_count) > 0
+                else None
+            ),
+            "longest_book": longest_book,
+            "shortest_book": shortest_book,
+            "page_difference": page_difference,
         }
         logger.debug(f"DNA data generated")
 

@@ -1,5 +1,5 @@
 {% if dna.currently_reading_count %}
-    <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+    <div class="border-brand-text shadow-neo overflow-y-clip border-2 bg-white p-6">
         <h2 class="mb-1 text-2xl font-bold uppercase">Currently Reading</h2>
         <p class="mb-4 text-base text-gray-500 italic">
             We found {{ dna.currently_reading_count }} book{{ dna.currently_reading_count|pluralize }} on {{ pronoun_pos|default:"your" }} currently-reading shelf — here are the most recent
@@ -9,17 +9,17 @@
                 class="flex gap-6 overflow-x-auto pb-2 md:grid {% if dna.currently_reading_books|length == 1 %}md:max-w-[10rem] md:mx-auto md:grid-cols-1{% elif dna.currently_reading_books|length == 2 %}md:max-w-sm md:mx-auto md:grid-cols-2{% else %}md:grid-cols-3{% endif %} md:overflow-x-visible md:pb-0"
             >
                 {% for book in dna.currently_reading_books %}
-                    <div class="flex w-32 shrink-0 flex-col items-center text-center md:w-auto md:shrink" x-data="{ imgFailed: false }">
+                    <div class="scroll-fade-up flex w-32 shrink-0 flex-col items-center text-center md:w-auto md:shrink" style="transition-delay: {{ forloop.counter0 }}50ms" x-data="{ imgFailed: false }">
                         {% if book.cover_url %}
                             <div
                                 x-show="!imgFailed"
-                                class="border-brand-text h-44 w-32 shrink-0 overflow-hidden border-2 md:mx-auto md:h-64 md:w-[10rem]"
+                                class="border-brand-text shadow-neo-sm h-44 w-32 shrink-0 overflow-hidden border-2 md:mx-auto md:h-64 md:w-[10rem]"
                             >
                                 <img
                                     src="{{ book.cover_url }}"
                                     alt="Cover of {{ book.title }}"
                                     class="h-full w-full object-cover"
-                                    loading="lazy"
+
                                     x-on:error="imgFailed = true"
                                     x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
                                 />
@@ -27,7 +27,7 @@
                         {% endif %}
                         <div
                             {% if book.cover_url %}x-show="imgFailed" x-cloak{% endif %}
-                            class="{% if forloop.counter0 == 0 %}bg-brand-pink{% elif forloop.counter0 == 1 %}bg-brand-cyan{% else %}bg-brand-green{% endif %} border-brand-text flex h-44 w-32 shrink-0 items-center justify-center border-2 text-4xl font-bold md:mx-auto md:h-64 md:w-[10rem]"
+                            class="{% if forloop.counter0 == 0 %}bg-brand-pink{% elif forloop.counter0 == 1 %}bg-brand-cyan{% else %}bg-brand-green{% endif %} border-brand-text shadow-neo-sm flex h-44 w-32 shrink-0 items-center justify-center border-2 text-4xl font-bold md:mx-auto md:h-64 md:w-[10rem]"
                         >
                             {{ book.title|first|upper }}
                         </div>

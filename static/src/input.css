@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* 
+/*
   Then, define your custom neobrutalist theme.
   This is where all your custom styles come from.
 */
@@ -41,6 +41,40 @@ ul.list-disc {
 
 ol.list-decimal {
     list-style-type: decimal;
+}
+
+/* Charts hidden until scroll-triggered */
+.chart-await {
+    opacity: 0;
+}
+
+.chart-visible {
+    opacity: 1;
+}
+
+/* Hard neobrutalist drop shadow on circular charts */
+.chart-visible canvas,
+.chart-drop-shadow canvas {
+    filter: drop-shadow(4px 4px 0px #1f2937);
+}
+
+/* Scroll-triggered intro animations */
+.scroll-fade-left {
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.scroll-fade-up {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.scroll-fade-left.is-visible,
+.scroll-fade-up.is-visible {
+    opacity: 1;
+    transform: translate(0);
 }
 
 /* Hide Alpine.js elements until the framework initialises */

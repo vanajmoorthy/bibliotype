@@ -23,7 +23,11 @@
 {% block content %}
     <div class="mx-auto h-full max-w-4xl space-y-6 p-2">
         {% if is_processing %}
-            <div id="processing-container" class="flex flex-col items-center p-4 py-12 md:py-24" x-data="{ status: 'PENDING' }">
+            <div
+                id="processing-container"
+                class="flex flex-col items-center p-4 py-12 md:py-24"
+                x-data="{ status: 'PENDING' }"
+            >
                 <div class="w-full max-w-2xl text-center" x-show="status !== 'FAILURE'">
                     {% include 'core/partials/cycling_messages.html' %}
                     <p class="mb-8 text-lg text-gray-600">
@@ -149,30 +153,28 @@
             </script>
         {% elif dna %}
             <div x-data="shareModalData()" class="space-y-6">
-            {{ dna|json_script:"dna-data" }}
-            <h1 class="mb-4 text-center text-5xl font-bold tracking-widest uppercase md:mb-8">
-                <span class="relative z-10">
-                    {% if user.is_authenticated %}
-                        {% include 'core/partials/username_editor.html' %}
-                    {% else %}
-                        Your Bibliotype
-                    {% endif %}
-                </span>
-            </h1>
+                {{ dna|json_script:"dna-data" }}
+                <h1 class="mb-4 text-center text-5xl font-bold tracking-widest uppercase md:mb-8">
+                    <span class="relative z-10">
+                        {% if user.is_authenticated %}
+                            {% include 'core/partials/username_editor.html' %}
+                        {% else %}
+                            Your Bibliotype
+                        {% endif %}
+                    </span>
+                </h1>
 
-            {% include 'core/partials/dna/vibe_display.html' %}
-            {% include 'core/partials/dna/reader_type_card.html' %}
-
-            {% include 'core/partials/share/share_button.html' %}
-            {% if user.is_authenticated %}
-                {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app/u/"|add:user.username %}
-            {% else %}
-                {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app" %}
-            {% endif %}
-
-            {% include 'core/partials/dna/top_traits_list.html' %}
-            {% include 'core/partials/dna/key_stats_row.html' %}
-            {% include 'core/partials/dna/comparative_analytics_card.html' %}
+                {% include 'core/partials/dna/vibe_display.html' %}
+                {% include 'core/partials/dna/reader_type_card.html' %}
+                {% include 'core/partials/share/share_button.html' %}
+                {% if user.is_authenticated %}
+                    {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app/u/"|add:user.username %}
+                {% else %}
+                    {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app" %}
+                {% endif %}
+                {% include 'core/partials/dna/top_traits_list.html' %}
+                {% include 'core/partials/dna/key_stats_row.html' %}
+                {% include 'core/partials/dna/comparative_analytics_card.html' %}
 
                 <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                     {% include 'core/partials/dna/niche_read_card.html' %}
@@ -181,6 +183,17 @@
 
                 {% include 'core/partials/dna/top_genres_authors_row.html' with use_rainbow=True %}
                 {% include 'core/partials/dna/review_analysis_card.html' %}
+
+                {% if dna.fiction_nonfiction_split or dna.longest_book %}
+                    <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+                        {% if dna.fiction_nonfiction_split %}
+                            {% include 'core/partials/dna/fiction_nonfiction_card.html' %}
+                        {% endif %}
+                        {% if dna.longest_book %}
+                            {% include 'core/partials/dna/book_extremes_card.html' %}
+                        {% endif %}
+                    </div>
+                {% endif %}
                 {% include 'core/partials/dna/controversial_ratings_card.html' %}
                 {% include 'core/partials/dna/currently_reading_card.html' %}
 
@@ -209,10 +222,14 @@
                         }"
                         x-init="init()"
                     >
-                    {# djlint:on #}
+                        {# djlint:on #}
                         <h2 class="mb-4 text-2xl font-bold uppercase">Recommended for You</h2>
                         <p class="text-lg opacity-70">
-                            Generating your recommendations<span x-data="{ dots: '' }" x-init="setInterval(() => dots = dots.length >= 3 ? '' : dots + '.', 500)" x-text="dots"></span>
+                            Generating your recommendations<span
+                                x-data="{ dots: '' }"
+                                x-init="setInterval(() => dots = dots.length >= 3 ? '' : dots + '.', 500)"
+                                x-text="dots"
+                            ></span>
                         </p>
                     </div>
                 {% else %}
@@ -287,51 +304,52 @@
                         </p>
                     </div>
                 {% endif %}
-            {% include 'core/partials/dna/charts_scripts.html' %}
-            <style>
-                .fade-in-section {
-                    opacity: 0;
-                    transform: translateY(6px);
-                    transition: opacity 0.45s ease-out, transform 0.45s ease-out;
-                }
-                .fade-in-section.is-visible {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            </style>
-            <script>
-                document.addEventListener("DOMContentLoaded", function () {
-                    const container = document.querySelector('[x-data="shareModalData()"]');
-                    if (!container) return;
-                    const sections = container.querySelectorAll(":scope > *");
-                    const observer = new IntersectionObserver(
-                        (entries) => {
-                            entries.forEach((entry) => {
-                                if (entry.isIntersecting) {
-                                    entry.target.classList.add("is-visible");
-                                    observer.unobserve(entry.target);
-                                }
-                            });
-                        },
-                        { threshold: 0.05 }
-                    );
-                    sections.forEach((s) => {
-                        if (s.tagName === "SCRIPT" || s.tagName === "STYLE") return;
-                        const rect = s.getBoundingClientRect();
-                        if (rect.top < window.innerHeight) return;
-                        s.classList.add("fade-in-section");
-                        observer.observe(s);
+                {% include 'core/partials/dna/charts_scripts.html' %}
+                <style>
+                    .fade-in-section {
+                        opacity: 0;
+                        transform: translateY(6px);
+                        transition:
+                            opacity 0.45s ease-out,
+                            transform 0.45s ease-out;
+                    }
+                    .fade-in-section.is-visible {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                </style>
+                <script>
+                    document.addEventListener("DOMContentLoaded", function () {
+                        const container = document.querySelector('[x-data="shareModalData()"]');
+                        if (!container) return;
+                        const sections = container.querySelectorAll(":scope > *");
+                        const observer = new IntersectionObserver(
+                            (entries) => {
+                                entries.forEach((entry) => {
+                                    if (entry.isIntersecting) {
+                                        entry.target.classList.add("is-visible");
+                                        entry.target.querySelectorAll(".scroll-fade-left, .scroll-fade-up").forEach((el) => el.classList.add("is-visible"));
+                                        observer.unobserve(entry.target);
+                                    }
+                                });
+                            },
+                            { threshold: 0.05 },
+                        );
+                        sections.forEach((s) => {
+                            if (s.tagName === "SCRIPT" || s.tagName === "STYLE") return;
+                            const rect = s.getBoundingClientRect();
+                            if (rect.top < window.innerHeight) return;
+                            s.classList.add("fade-in-section");
+                            observer.observe(s);
+                        });
                     });
-                });
-            </script>
+                </script>
             </div>
         {% else %}
             <div class="flex h-full flex-col p-4">
                 <div class="w-full">
                     <h1 class="mb-4 text-center text-5xl font-bold tracking-widest uppercase md:mb-8">
-                        <span class="relative z-10">
-                            {% include 'core/partials/username_editor.html' %}
-                        </span>
+                        <span class="relative z-10"> {% include 'core/partials/username_editor.html' %} </span>
                     </h1>
                 </div>
                 <div class="flex flex-grow items-center justify-center">

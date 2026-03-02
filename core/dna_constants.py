@@ -1539,3 +1539,42 @@ for canonical, aliases in GENRE_ALIASES.items():
     CANONICAL_GENRE_MAP[canonical] = canonical
     for alias in aliases:
         CANONICAL_GENRE_MAP[alias] = canonical
+
+FICTION_GENRES = {
+    "fantasy",
+    "science fiction",
+    "thriller",
+    "horror",
+    "historical fiction",
+    "romance",
+    "humorous fiction",
+    "young adult",
+    "children's literature",
+    "classics",
+    "mythology & folklore",
+    "short stories",
+    "comics & graphic novels",
+    "holiday fiction",
+    "fairy tales & fables",
+    "plays & drama",
+}
+
+NONFICTION_GENRES = {
+    "non-fiction",
+    "biography",
+    "history",
+    "psychology",
+    "philosophy",
+    "social science",
+    "nature",
+    "self-help",
+    "science",
+    "travel",
+    "art & music",
+    "food & cooking",
+    "religion & spirituality",
+}
+
+_all_canonical = set(GENRE_ALIASES.keys())
+_classified = FICTION_GENRES | NONFICTION_GENRES
+assert _classified == _all_canonical, f"Unclassified genres: {_all_canonical - _classified}"
