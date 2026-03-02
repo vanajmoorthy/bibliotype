@@ -13,7 +13,7 @@
                         {% if book.cover_url %}
                             <div
                                 x-show="!imgFailed"
-                                class="border-brand-text h-44 w-32 shrink-0 overflow-hidden border-2 md:mx-auto md:h-64 md:w-[10rem]"
+                                class="border-brand-text shadow-neo-sm h-44 w-32 shrink-0 overflow-hidden border-2 md:mx-auto md:h-64 md:w-[10rem]"
                             >
                                 <img
                                     src="{{ book.cover_url }}"
@@ -27,7 +27,7 @@
                         {% endif %}
                         <div
                             {% if book.cover_url %}x-show="imgFailed" x-cloak{% endif %}
-                            class="{% if forloop.counter0 == 0 %}bg-brand-pink{% elif forloop.counter0 == 1 %}bg-brand-cyan{% else %}bg-brand-green{% endif %} border-brand-text flex h-44 w-32 shrink-0 items-center justify-center border-2 text-4xl font-bold md:mx-auto md:h-64 md:w-[10rem]"
+                            class="{% if forloop.counter0 == 0 %}bg-brand-pink{% elif forloop.counter0 == 1 %}bg-brand-cyan{% else %}bg-brand-green{% endif %} border-brand-text shadow-neo-sm flex h-44 w-32 shrink-0 items-center justify-center border-2 text-4xl font-bold md:mx-auto md:h-64 md:w-[10rem]"
                         >
                             {{ book.title|first|upper }}
                         </div>

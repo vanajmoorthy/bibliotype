@@ -67,130 +67,194 @@
             return { labels: [], values: [] };
         }
 
-        // --- Top Genres Chart ---
-        const topGenresCtx = document.getElementById("topGenresChart")?.getContext("2d");
-        if (topGenresCtx && dnaData.top_genres) {
-            const { labels: genreLabels, values: genreValues } = parseChartData(dnaData.top_genres);
+        // --- Helper: create chart on scroll into view ---
+        function createChartOnScroll(canvasId, createFn) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const wrapper = canvas.closest(".chart-await");
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    observer.unobserve(canvas);
+                    if (wrapper) {
+                        wrapper.classList.remove("chart-await");
+                        wrapper.classList.add("chart-visible");
+                    }
+                    createFn(canvas.getContext("2d"));
+                }
+            }, { threshold: 0.3 });
+            observer.observe(canvas);
+        }
 
-            new Chart(topGenresCtx, {
-                type: "doughnut",
-                data: {
-                    labels: genreLabels,
-                    datasets: [
-                        {
-                            label: "Genres",
-                            data: genreValues,
-                            backgroundColor: chartColors,
-                            borderColor: "#1f2937",
-                            borderWidth: 2,
+        // --- Top Genres Chart ---
+        if (dnaData.top_genres) {
+            const { labels: genreLabels, values: genreValues } = parseChartData(dnaData.top_genres);
+            createChartOnScroll("topGenresChart", (ctx) => {
+                new Chart(ctx, {
+                    type: "doughnut",
+                    data: {
+                        labels: genreLabels,
+                        datasets: [
+                            {
+                                label: "Genres",
+                                data: genreValues,
+                                backgroundColor: chartColors,
+                                borderColor: "#1f2937",
+                                borderWidth: 4,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            animateRotate: true,
+                            animateScale: true,
+                            duration: 1400,
+                            easing: "easeOutQuart",
                         },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    let label = context.label || "";
-                                    if (label) {
-                                        label += ": ";
-                                    }
-                                    if (context.parsed !== null) {
-                                        label += context.parsed;
-                                    }
-                                    return label;
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        let label = context.label || "";
+                                        if (label) label += ": ";
+                                        if (context.parsed !== null) label += context.parsed;
+                                        return label;
+                                    },
                                 },
                             },
                         },
                     },
-                },
+                });
             });
         }
 
         // --- Top Authors Chart ---
-        const topAuthorsCtx = document.getElementById("topAuthorsChart")?.getContext("2d");
-        if (topAuthorsCtx && dnaData.top_authors) {
+        if (dnaData.top_authors) {
             const { labels: authorLabels, values: authorValues } = parseChartData(dnaData.top_authors);
-
-            new Chart(topAuthorsCtx, {
-                type: "doughnut",
-                data: {
-                    labels: authorLabels,
-                    datasets: [
-                        {
-                            label: "Authors",
-                            data: authorValues,
-                            backgroundColor: chartColors,
-                            borderColor: "#1f2937",
-                            borderWidth: 2,
+            createChartOnScroll("topAuthorsChart", (ctx) => {
+                new Chart(ctx, {
+                    type: "doughnut",
+                    data: {
+                        labels: authorLabels,
+                        datasets: [
+                            {
+                                label: "Authors",
+                                data: authorValues,
+                                backgroundColor: chartColors,
+                                borderColor: "#1f2937",
+                                borderWidth: 4,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            animateRotate: true,
+                            animateScale: true,
+                            duration: 1400,
+                            easing: "easeOutQuart",
                         },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    let label = context.label || "";
-                                    if (label) {
-                                        label += ": ";
-                                    }
-                                    if (context.parsed !== null) {
-                                        label += context.parsed;
-                                    }
-                                    return label;
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        let label = context.label || "";
+                                        if (label) label += ": ";
+                                        if (context.parsed !== null) label += context.parsed;
+                                        return label;
+                                    },
                                 },
                             },
                         },
                     },
-                },
+                });
             });
         }
 
         // --- Fiction vs Nonfiction Chart ---
-        const fictionCtx = document.getElementById("fictionNonfictionChart")?.getContext("2d");
-        if (fictionCtx && dnaData.fiction_nonfiction_split) {
-            const split = dnaData.fiction_nonfiction_split;
-            new Chart(fictionCtx, {
-                type: "pie",
-                data: {
-                    labels: ["Fiction", "Nonfiction"],
-                    datasets: [
-                        {
-                            data: [split.fiction_count, split.nonfiction_count],
-                            backgroundColor: ["#ffb4dd", "#8bbfff"],
-                            borderColor: "#1f2937",
-                            borderWidth: 3,
-                        },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: {
-                        animateRotate: true,
-                        duration: 1200,
-                        easing: "easeOutQuart",
+        if (dnaData.fiction_nonfiction_split) {
+            createChartOnScroll("fictionNonfictionChart", (ctx) => {
+                // Diagonal stripe pattern for fiction segment
+                const stripeSize = 24;
+                const stripeCanvas = document.createElement("canvas");
+                stripeCanvas.width = stripeSize;
+                stripeCanvas.height = stripeSize;
+                const sCtx = stripeCanvas.getContext("2d");
+                sCtx.fillStyle = "#ffb4dd";
+                sCtx.fillRect(0, 0, stripeSize, stripeSize);
+                sCtx.strokeStyle = "#ffcce8";
+                sCtx.lineWidth = 10;
+                sCtx.beginPath();
+                sCtx.moveTo(0, stripeSize);
+                sCtx.lineTo(stripeSize, 0);
+                sCtx.moveTo(-stripeSize / 2, stripeSize / 2);
+                sCtx.lineTo(stripeSize / 2, -stripeSize / 2);
+                sCtx.moveTo(stripeSize / 2, stripeSize * 1.5);
+                sCtx.lineTo(stripeSize * 1.5, stripeSize / 2);
+                sCtx.stroke();
+                const fictionPattern = ctx.createPattern(stripeCanvas, "repeat");
+
+                // Stripe pattern for nonfiction segment (same orientation as fiction)
+                const nfStripeCanvas = document.createElement("canvas");
+                nfStripeCanvas.width = stripeSize;
+                nfStripeCanvas.height = stripeSize;
+                const nfCtx = nfStripeCanvas.getContext("2d");
+                nfCtx.fillStyle = "#8bbfff";
+                nfCtx.fillRect(0, 0, stripeSize, stripeSize);
+                nfCtx.strokeStyle = "#b0d4ff";
+                nfCtx.lineWidth = 10;
+                nfCtx.beginPath();
+                nfCtx.moveTo(0, stripeSize);
+                nfCtx.lineTo(stripeSize, 0);
+                nfCtx.moveTo(-stripeSize / 2, stripeSize / 2);
+                nfCtx.lineTo(stripeSize / 2, -stripeSize / 2);
+                nfCtx.moveTo(stripeSize / 2, stripeSize * 1.5);
+                nfCtx.lineTo(stripeSize * 1.5, stripeSize / 2);
+                nfCtx.stroke();
+                const nonfictionPattern = ctx.createPattern(nfStripeCanvas, "repeat");
+
+                const split = dnaData.fiction_nonfiction_split;
+                new Chart(ctx, {
+                    type: "pie",
+                    data: {
+                        labels: ["Fiction", "Nonfiction"],
+                        datasets: [
+                            {
+                                data: [split.fiction_count, split.nonfiction_count],
+                                backgroundColor: [fictionPattern, nonfictionPattern],
+                                borderColor: "#1f2937",
+                                borderWidth: 5,
+                            },
+                        ],
                     },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    const total = split.fiction_count + split.nonfiction_count;
-                                    const pct = Math.round((context.parsed / total) * 100);
-                                    return context.label + ": " + pct + "%";
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            animateRotate: true,
+                            animateScale: true,
+                            duration: 1400,
+                            easing: "easeOutQuart",
+                        },
+                        animations: { colors: false },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        const total = split.fiction_count + split.nonfiction_count;
+                                        const pct = Math.round((context.parsed / total) * 100);
+                                        return context.label + ": " + pct + "%";
+                                    },
                                 },
                             },
                         },
                     },
-                },
+                });
             });
         }
     });

@@ -224,6 +224,13 @@ def _enrich_dna_for_display(dna_data):
     if niche_book and "cover_url" not in niche_book:
         niche_book["cover_url"] = None
 
+    # Backfill page_difference for old DNA data
+    if not dna_data.get("page_difference"):
+        longest = dna_data.get("longest_book")
+        shortest = dna_data.get("shortest_book")
+        if longest and shortest and longest.get("page_count") and shortest.get("page_count"):
+            dna_data["page_difference"] = longest["page_count"] - shortest["page_count"]
+
     # Recalculate percentiles from current aggregate data so they're never stale.
     # Cached for 10 minutes to avoid a DB hit on every page load while still staying fresh.
     bl = user_stats.get("avg_book_length", 0)
