@@ -260,4 +260,19 @@
     });
 
     window.addEventListener("resize", updateVibeSeparators);
+
+    // --- Scroll-triggered fade-in animations ---
+    document.addEventListener("DOMContentLoaded", function () {
+        const scrollEls = document.querySelectorAll(".scroll-fade-left, .scroll-fade-up");
+        if (!scrollEls.length) return;
+        const obs = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add("is-visible");
+                    obs.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.2 });
+        scrollEls.forEach((el) => obs.observe(el));
+    });
 </script>

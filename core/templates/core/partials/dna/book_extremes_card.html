@@ -6,7 +6,7 @@
     <div class="flex flex-col gap-6">
         {% if dna.longest_book %}
             <div class="flex items-start gap-4">
-                <div class="shrink-0" x-data="{ imgFailed: false }">
+                <div class="scroll-fade-left shrink-0" x-data="{ imgFailed: false }">
                     {% if dna.longest_book.cover_url %}
                         <div x-show="!imgFailed" class="border-brand-text shadow-neo-sm h-40 w-[6.75rem] overflow-hidden border-2">
                             <img
@@ -48,7 +48,7 @@
 
         {% if dna.shortest_book %}
             <div class="flex items-start gap-4">
-                <div class="shrink-0" x-data="{ imgFailed: false }">
+                <div class="scroll-fade-left shrink-0" x-data="{ imgFailed: false }">
                     {% if dna.shortest_book.cover_url %}
                         <div x-show="!imgFailed" class="border-brand-text shadow-neo-sm h-40 w-[6.75rem] overflow-hidden border-2">
                             <img

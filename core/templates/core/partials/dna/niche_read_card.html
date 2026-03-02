@@ -6,7 +6,7 @@
         <p class="mb-4 text-center text-base italic text-gray-500">{{ pronoun_pos|default:"Your"|capfirst }} rarest find on Bibliotype — read by only {{ dna.most_niche_book.read_count }} people</p>
     {% endif %}
     {% if dna.most_niche_book %}
-        <div class="flex flex-1 flex-col items-center justify-center" x-data="{ imgFailed: false }">
+        <div class="scroll-fade-up flex flex-1 flex-col items-center justify-center" x-data="{ imgFailed: false }">
             {% if dna.most_niche_book.cover_url %}
                 <div
                     x-show="!imgFailed"
@@ -16,7 +16,7 @@
                         src="{{ dna.most_niche_book.cover_url }}"
                         alt="Cover of {{ dna.most_niche_book.title }}"
                         class="h-full w-full object-cover"
-                        loading="lazy"
+                        fetchpriority="low"
                         x-on:error="imgFailed = true"
                         x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
                     />
