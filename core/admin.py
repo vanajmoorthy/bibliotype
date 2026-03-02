@@ -93,7 +93,7 @@ class BookAdmin(admin.ModelAdmin):
     search_fields = ("title", "author__name", "isbn13")
     readonly_fields = ("google_books_average_rating", "google_books_ratings_count", "google_books_last_checked")
     fieldsets = (
-        (None, {"fields": ("title", "author", "isbn13")}),
+        (None, {"fields": ("title", "author", "isbn13", "cover_url")}),
         ("Publication Info", {"fields": ("page_count", "publish_year", "publisher", "genres")}),
         ("App Metrics", {"fields": ("global_read_count",)}),
         (
@@ -221,6 +221,25 @@ ADMIN_COMMANDS = [
             {"name": "--limit", "type": "int", "label": "Limit", "help": "Max profiles to process"},
             {"name": "--username", "type": "str", "label": "Username", "help": "Process a single user"},
             {"name": "--force", "type": "flag", "label": "Force", "help": "Overwrite existing subtitle fields"},
+        ],
+    },
+    {
+        "name": "backfill_covers",
+        "description": "Populate cover URLs for books. Fast mode uses ISBN (no API calls). Use --with-api for books missing ISBN.",
+        "arguments": [
+            {
+                "name": "--dry-run",
+                "type": "flag",
+                "label": "Dry run",
+                "help": "Show what would be updated without saving",
+            },
+            {"name": "--limit", "type": "int", "label": "Limit", "help": "Max books to process"},
+            {
+                "name": "--with-api",
+                "type": "flag",
+                "label": "With API calls",
+                "help": "Also fetch covers for books without ISBN via API",
+            },
         ],
     },
     {

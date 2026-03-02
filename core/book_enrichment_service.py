@@ -184,7 +184,15 @@ def _fetch_from_open_library(book, session, slow_down=False):
         edition_key = search_result.get("cover_edition_key")
 
         # --- Step 2: Use the keys to get detailed data ---
-        book_details = {"genres": [], "publish_year": None, "publisher": None, "page_count": None, "isbn_13": None}
+        cover_id = search_result.get("cover_i")
+        book_details = {
+            "genres": [],
+            "publish_year": None,
+            "publisher": None,
+            "page_count": None,
+            "isbn_13": None,
+            "cover_id": cover_id,
+        }
         api_calls = 1  # We already made the search call
 
         # Fetch from the Work endpoint for subjects (genres)
@@ -277,6 +285,11 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
             "average_rating": volume_info.get("averageRating"),
         }
 
+        # Capture thumbnail URL for cover
+        image_links = volume_info.get("imageLinks", {})
+        if thumbnail := image_links.get("thumbnail"):
+            result["thumbnail_url"] = thumbnail.replace("http://", "https://")
+
         # Also fetch categories (Google Books' genre equivalent)
         if categories := volume_info.get("categories"):
             # Google Books categories are often prefixed with something like "Fiction / Literary"
@@ -307,6 +320,7 @@ def enrich_book_from_apis(book, session, slow_down=False):
     """
     ol_api_calls = 0
     gb_api_calls = 0
+    gb_data = {}  # May not be populated if GB enrichment already ran
     is_updated = False
 
     # --- Step 1: Always fetch genres from Open Library for re-enrichment ---
@@ -467,6 +481,21 @@ def enrich_book_from_apis(book, session, slow_down=False):
         # Mark as checked *after* the API call is attempted.
         book.google_books_last_checked = timezone.now()
         is_updated = True  # Always true if we ran the check
+
+    # --- Set cover_url from best available source (only if not already set) ---
+    if not book.cover_url:
+        new_cover_url = None
+        if ol_data.get("cover_id"):
+            new_cover_url = f"https://covers.openlibrary.org/b/id/{ol_data['cover_id']}-M.jpg"
+        elif book.isbn13:
+            new_cover_url = f"https://covers.openlibrary.org/b/isbn/{book.isbn13}-M.jpg"
+
+        if not new_cover_url and gb_data.get("thumbnail_url"):
+            new_cover_url = gb_data["thumbnail_url"]
+
+        if new_cover_url:
+            book.cover_url = new_cover_url
+            is_updated = True
 
     # --- Step 3: Finalize and save ---
     if is_updated:

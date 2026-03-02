@@ -456,14 +456,18 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     cr_book_defaults["isbn13"] = isbn13_value
 
                 try:
-                    Book.objects.update_or_create(
+                    db_book, _ = Book.objects.update_or_create(
                         normalized_title=normalized_title, author=author, defaults=cr_book_defaults
                     )
                 except IntegrityError:
                     cr_book_defaults.pop("isbn13", None)
-                    Book.objects.update_or_create(
+                    db_book, _ = Book.objects.update_or_create(
                         normalized_title=normalized_title, author=author, defaults=cr_book_defaults
                     )
+
+                # Upgrade cover from enrichment data (verified cover_i or GB thumbnail)
+                if db_book.cover_url:
+                    cr_book["cover_url"] = db_book.cover_url
 
         # Store UserBook entries for registered users
         if user and results:
@@ -602,7 +606,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 "title": user_book_objects[0].title,
                 "author": user_book_objects[0].author.name,
                 "read_count": user_book_objects[0].global_read_count,
-                "cover_url": _build_cover_url(user_book_objects[0].isbn13),
+                "cover_url": user_book_objects[0].cover_url or _build_cover_url(user_book_objects[0].isbn13),
             }
             niche_books_count = sum(1 for b in user_book_objects if b.global_read_count <= NICHE_THRESHOLD)
 
@@ -619,13 +623,13 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     "title": longest.title,
                     "author": longest.author.name,
                     "page_count": longest.page_count,
-                    "cover_url": _build_cover_url(longest.isbn13),
+                    "cover_url": longest.cover_url or _build_cover_url(longest.isbn13),
                 }
                 shortest_book = {
                     "title": shortest.title,
                     "author": shortest.author.name,
                     "page_count": shortest.page_count,
-                    "cover_url": _build_cover_url(shortest.isbn13),
+                    "cover_url": shortest.cover_url or _build_cover_url(shortest.isbn13),
                 }
                 page_difference = longest.page_count - shortest.page_count
 
