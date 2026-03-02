@@ -224,8 +224,8 @@ def _enrich_dna_for_display(dna_data):
     if niche_book and "cover_url" not in niche_book:
         niche_book["cover_url"] = None
 
-    # Backfill page_difference for old DNA data
-    if dna_data.get("page_difference") is None:
+    # Backfill page_difference for old DNA data (key absent = old DNA, not same-page-count None)
+    if "page_difference" not in dna_data:
         longest = dna_data.get("longest_book")
         shortest = dna_data.get("shortest_book")
         if longest and shortest and longest.get("page_count") and shortest.get("page_count"):

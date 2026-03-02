@@ -419,6 +419,8 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             if book:
                 user_book_objects.append(book)
                 all_raw_genres.extend(genres)
+                # Fiction-first: books with any fiction genre are counted as fiction,
+                # even if they also carry nonfiction genres (e.g. historical fiction).
                 canonical = {CANONICAL_GENRE_MAP.get(g, g) for g in genres}
                 if canonical & FICTION_GENRES:
                     fiction_count += 1

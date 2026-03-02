@@ -97,12 +97,12 @@
                 {% include 'core/partials/dna/review_analysis_card.html' %}
 
                 {% if dna.fiction_nonfiction_split or dna.longest_book %}
-                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                         {% if dna.fiction_nonfiction_split %}
-                            {% include 'core/partials/dna/fiction_nonfiction_card.html' %}
+                            {% include 'core/partials/dna/fiction_nonfiction_card.html' with pronoun_pos="their" %}
                         {% endif %}
                         {% if dna.longest_book %}
-                            {% include 'core/partials/dna/book_extremes_card.html' %}
+                            {% include 'core/partials/dna/book_extremes_card.html' with pronoun_pos="their" %}
                         {% endif %}
                     </div>
                 {% endif %}
