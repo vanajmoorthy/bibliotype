@@ -19,7 +19,7 @@
                                     src="{{ book.cover_url }}"
                                     alt="Cover of {{ book.title }}"
                                     class="h-full w-full object-cover"
-                                    loading="lazy"
+
                                     x-on:error="imgFailed = true"
                                     x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
                                 />

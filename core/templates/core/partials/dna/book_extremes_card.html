@@ -13,7 +13,7 @@
                                 src="{{ dna.longest_book.cover_url }}"
                                 alt="Cover of {{ dna.longest_book.title }}"
                                 class="h-full w-full object-cover"
-                                loading="lazy"
+
                                 x-on:error="imgFailed = true"
                                 x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
                             />
@@ -55,7 +55,7 @@
                                 src="{{ dna.shortest_book.cover_url }}"
                                 alt="Cover of {{ dna.shortest_book.title }}"
                                 class="h-full w-full object-cover"
-                                loading="lazy"
+
                                 x-on:error="imgFailed = true"
                                 x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
                             />
