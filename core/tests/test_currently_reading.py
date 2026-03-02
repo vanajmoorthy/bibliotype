@@ -276,3 +276,128 @@ class RecommendationCurrentlyReadingBoostTests(TestCase):
 
         boost = engine._calculate_currently_reading_boost(self.book, context)
         self.assertEqual(boost, 0.0)
+
+
+class CoverUrlPriorityTests(TestCase):
+    """Tests for the book.cover_url or _build_cover_url(isbn13) pattern in DNA generation."""
+
+    def setUp(self):
+        self.author = Author.objects.create(name="Cover Test Author")
+
+    def test_cover_url_prefers_book_cover_url_over_isbn(self):
+        """Book with cover_url and isbn13 → DNA dict gets the cover_url, not the ISBN URL."""
+        book = Book.objects.create(
+            title="Cover Priority Book",
+            author=self.author,
+            isbn13="9780593099322",
+            cover_url="https://covers.openlibrary.org/b/id/123-M.jpg",
+        )
+        result = book.cover_url or _build_cover_url(book.isbn13)
+        self.assertEqual(result, "https://covers.openlibrary.org/b/id/123-M.jpg")
+
+    def test_cover_url_falls_back_to_isbn_when_no_book_cover_url(self):
+        """Book with cover_url=None and isbn13 → DNA dict gets the ISBN URL."""
+        book = Book.objects.create(
+            title="ISBN Fallback Book",
+            author=self.author,
+            isbn13="9780593099322",
+            cover_url=None,
+        )
+        result = book.cover_url or _build_cover_url(book.isbn13)
+        self.assertEqual(result, "https://covers.openlibrary.org/b/isbn/9780593099322-M.jpg")
+
+    def test_cover_url_none_when_no_book_cover_url_and_no_isbn(self):
+        """Book with cover_url=None and isbn13=None → DNA dict gets None."""
+        book = Book.objects.create(
+            title="No Cover Book",
+            author=self.author,
+            isbn13=None,
+            cover_url=None,
+        )
+        result = book.cover_url or _build_cover_url(book.isbn13)
+        self.assertIsNone(result)
+
+
+@override_settings(
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_EAGER_PROPAGATES=True,
+    CELERY_RESULT_BACKEND="django-db",
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "cover-upgrade-tests",
+        }
+    },
+)
+class CurrentlyReadingCoverUpgradeTests(TransactionTestCase):
+    """Tests for currently-reading cover_url upgrade from DB."""
+
+    def setUp(self):
+        try:
+            cache.clear()
+        except Exception:
+            pass
+
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.delay")
+    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    def test_currently_reading_cover_upgraded_from_db(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
+        """Currently-reading book in DB with cover_url → gets the DB cover URL."""
+        mock_vibe.return_value = ["vibe1", "vibe2", "vibe3", "vibe4"]
+
+        # Pre-create the book in DB with a cover_url (as if previously enriched)
+        author = Author.objects.create(name="Pre Author")
+        Book.objects.create(
+            title="Pre Book",
+            author=author,
+            isbn13="9781234567890",
+            cover_url="https://covers.openlibrary.org/b/id/999-M.jpg",
+        )
+
+        user = User.objects.create_user(username="covertest", password="pw")
+
+        csv = _csv(
+            'Read Book,Other Author,read,="9780000000001",4,200,3.5,2024/01/15,2024/01/01,2020,',
+            'Pre Book,Pre Author,currently-reading,="9781234567890",0,300,4.0,,2024/06/15,2021,',
+        )
+
+        from core.tasks import generate_reading_dna_task
+
+        generate_reading_dna_task.delay(csv, user.id)
+
+        user.userprofile.refresh_from_db()
+        dna = user.userprofile.dna_data
+
+        cr_books = dna.get("currently_reading_books", [])
+        self.assertEqual(len(cr_books), 1)
+        self.assertEqual(cr_books[0]["title"], "Pre Book")
+        self.assertEqual(cr_books[0]["cover_url"], "https://covers.openlibrary.org/b/id/999-M.jpg")
+
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.delay")
+    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    def test_currently_reading_cover_keeps_csv_isbn_when_no_db_cover(
+        self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task
+    ):
+        """Currently-reading book in DB with cover_url=None → keeps the ISBN-constructed URL from CSV."""
+        mock_vibe.return_value = ["vibe1", "vibe2", "vibe3", "vibe4"]
+        user = User.objects.create_user(username="nodbcover", password="pw")
+
+        csv = _csv(
+            'Read Book,Other Author,read,="9780000000001",4,200,3.5,2024/01/15,2024/01/01,2020,',
+            'New Book,New Author,currently-reading,="9780000000099",0,300,4.0,,2024/06/15,2021,',
+        )
+
+        from core.tasks import generate_reading_dna_task
+
+        generate_reading_dna_task.delay(csv, user.id)
+
+        user.userprofile.refresh_from_db()
+        dna = user.userprofile.dna_data
+
+        cr_books = dna.get("currently_reading_books", [])
+        self.assertEqual(len(cr_books), 1)
+        # Should still have the ISBN-constructed URL since DB book has no cover_url
+        self.assertEqual(cr_books[0]["cover_url"], "https://covers.openlibrary.org/b/isbn/9780000000099-M.jpg")

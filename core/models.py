@@ -68,6 +68,7 @@ class Book(models.Model):
     global_read_count = models.PositiveIntegerField(default=0, db_index=True)
 
     isbn13 = models.CharField(max_length=13, null=True, blank=True, unique=True, db_index=True)
+    cover_url = models.URLField(max_length=500, null=True, blank=True)
 
     google_books_average_rating = models.FloatField(null=True, blank=True)
     google_books_ratings_count = models.PositiveIntegerField(default=0)

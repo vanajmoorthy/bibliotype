@@ -157,6 +157,118 @@ class BookEnrichmentIntegrationTests(TestCase):
         self.assertIn("science fiction", genre_names)
         self.assertNotIn("fantasy", genre_names)
 
+    @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
+    @patch("core.book_enrichment_service._fetch_from_open_library")
+    def test_enrich_book_sets_cover_url_from_cover_id(self, mock_ol, mock_gb):
+        """OL search with cover_i → cover_url uses cover ID URL."""
+        from core.book_enrichment_service import enrich_book_from_apis
+
+        mock_ol.return_value = (
+            {
+                "genres": [],
+                "publish_year": None,
+                "page_count": None,
+                "publisher": None,
+                "isbn_13": None,
+                "cover_id": 12345,
+            },
+            1,
+        )
+        mock_gb.return_value = ({}, 1)
+
+        session = MagicMock()
+        enrich_book_from_apis(self.book, session)
+
+        self.book.refresh_from_db()
+        self.assertEqual(self.book.cover_url, "https://covers.openlibrary.org/b/id/12345-M.jpg")
+
+    @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
+    @patch("core.book_enrichment_service._fetch_from_open_library")
+    def test_enrich_book_sets_cover_url_from_isbn_when_no_cover_id(self, mock_ol, mock_gb):
+        """OL search without cover_i, book has ISBN → cover_url uses ISBN URL."""
+        from core.book_enrichment_service import enrich_book_from_apis
+
+        self.book.isbn13 = "9780593099322"
+        self.book.save()
+
+        mock_ol.return_value = (
+            {
+                "genres": [],
+                "publish_year": None,
+                "page_count": None,
+                "publisher": None,
+                "isbn_13": None,
+                "cover_id": None,
+            },
+            1,
+        )
+        mock_gb.return_value = ({}, 1)
+
+        session = MagicMock()
+        enrich_book_from_apis(self.book, session)
+
+        self.book.refresh_from_db()
+        self.assertEqual(self.book.cover_url, "https://covers.openlibrary.org/b/isbn/9780593099322-M.jpg")
+
+    @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
+    @patch("core.book_enrichment_service._fetch_from_open_library")
+    def test_enrich_book_sets_cover_url_from_google_books_thumbnail(self, mock_ol, mock_gb):
+        """OL without cover_i, no ISBN, GB with thumbnail → cover_url is HTTPS thumbnail."""
+        from core.book_enrichment_service import enrich_book_from_apis
+
+        mock_ol.return_value = (
+            {
+                "genres": [],
+                "publish_year": None,
+                "page_count": None,
+                "publisher": None,
+                "isbn_13": None,
+                "cover_id": None,
+            },
+            1,
+        )
+        mock_gb.return_value = (
+            {"thumbnail_url": "https://books.google.com/books/content?id=abc&printsec=frontcover&img=1"},
+            1,
+        )
+
+        session = MagicMock()
+        enrich_book_from_apis(self.book, session)
+
+        self.book.refresh_from_db()
+        self.assertEqual(
+            self.book.cover_url,
+            "https://books.google.com/books/content?id=abc&printsec=frontcover&img=1",
+        )
+
+    @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
+    @patch("core.book_enrichment_service._fetch_from_open_library")
+    def test_enrich_book_preserves_existing_cover_url(self, mock_ol, mock_gb):
+        """Re-enrichment should not overwrite an existing cover_url."""
+        from core.book_enrichment_service import enrich_book_from_apis
+
+        self.book.cover_url = "https://covers.openlibrary.org/b/id/999-M.jpg"
+        self.book.save()
+
+        mock_ol.return_value = (
+            {
+                "genres": [],
+                "publish_year": None,
+                "page_count": None,
+                "publisher": None,
+                "isbn_13": None,
+                "cover_id": 55555,
+            },
+            1,
+        )
+        mock_gb.return_value = ({}, 1)
+
+        session = MagicMock()
+        enrich_book_from_apis(self.book, session)
+
+        self.book.refresh_from_db()
+        self.assertEqual(self.book.cover_url, "https://covers.openlibrary.org/b/id/999-M.jpg")
+
 
 # ──────────────────────────────────────────────
 # Class 2: Publisher Research Integration Tests
