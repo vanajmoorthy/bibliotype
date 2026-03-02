@@ -1,16 +1,20 @@
 import logging
 import os
-import re
 import time
 
 import requests
+from django.db.models import Q
 from django.core.management.base import BaseCommand
 
+from core.book_enrichment_service import _clean_title_for_api
 from core.models import Book
 
 logger = logging.getLogger(__name__)
 
 GOOGLE_BOOKS_API_KEY = os.getenv("GOOGLE_BOOKS_API_KEY")
+
+# Queryset filter for "no cover_url" — catches both NULL and empty string
+_NO_COVER = Q(cover_url__isnull=True) | Q(cover_url="")
 
 
 class Command(BaseCommand):
@@ -25,7 +29,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--limit",
             type=int,
-            help="Max books to process.",
+            help="Max books to process per stage.",
         )
         parser.add_argument(
             "--with-api",
@@ -41,18 +45,13 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING(msg))
         logger.warning(f"backfill_covers: {msg}")
 
-    def _clean_title_for_api(self, title):
-        clean = re.sub(r"[\(\[].*?[\)\]]", "", title)
-        clean = clean.split(":")[0]
-        return clean.strip()
-
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
         limit = options.get("limit")
         with_api = options["with_api"]
 
         # --- Fast mode: set cover_url from ISBN for books that have ISBN but no cover ---
-        isbn_qs = Book.objects.filter(cover_url__isnull=True, isbn13__isnull=False)
+        isbn_qs = Book.objects.filter(_NO_COVER, isbn13__isnull=False)
         fast_count = isbn_qs.count()
         self._log(f"Fast mode: {fast_count} books with ISBN but no cover_url.")
 
@@ -79,12 +78,12 @@ class Command(BaseCommand):
 
         # --- Full mode: API calls for remaining books without cover_url ---
         if not with_api:
-            remaining = Book.objects.filter(cover_url__isnull=True).count()
+            remaining = Book.objects.filter(_NO_COVER).count()
             if remaining > 0:
                 self._log(f"{remaining} books still without cover_url. Run with --with-api to fetch via API.")
             return
 
-        api_qs = Book.objects.filter(cover_url__isnull=True).select_related("author")
+        api_qs = Book.objects.filter(_NO_COVER).select_related("author")
         api_count = api_qs.count()
         self._log(f"API mode: {api_count} books without cover_url remaining.")
 
@@ -93,8 +92,6 @@ class Command(BaseCommand):
             return
 
         if dry_run:
-            for book in api_qs.iterator():
-                self._log(f"  Would fetch cover for: '{book.title}' by {book.author.name}")
             self._log(f"Dry run — would attempt API lookup for {api_count} books.")
             return
 
@@ -103,13 +100,12 @@ class Command(BaseCommand):
 
         found = 0
         not_found = 0
-        processed = 0
 
         with requests.Session() as session:
             session.headers.update({"User-Agent": "BibliotypeApp/1.0"})
 
             for book in api_qs.iterator():
-                if limit and processed >= limit:
+                if limit and (found + not_found) >= limit:
                     break
 
                 cover_url = self._fetch_cover_from_ol(session, book)
@@ -125,7 +121,6 @@ class Command(BaseCommand):
                     self._log(f"  No cover found: '{book.title}' by {book.author.name}")
                     not_found += 1
 
-                processed += 1
                 time.sleep(1.2)
 
         self._log(f"API mode complete. Found: {found}, Not found: {not_found}")
@@ -134,7 +129,7 @@ class Command(BaseCommand):
         """Search Open Library for cover_i. Returns cover URL or None."""
         search_url = "https://openlibrary.org/search.json"
         params = {
-            "title": self._clean_title_for_api(book.title),
+            "title": _clean_title_for_api(book.title),
             "author": book.author.name,
             "limit": 1,
             "fields": "cover_i",

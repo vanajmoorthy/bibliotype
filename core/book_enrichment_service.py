@@ -489,8 +489,6 @@ def enrich_book_from_apis(book, session, slow_down=False):
             new_cover_url = f"https://covers.openlibrary.org/b/id/{ol_data['cover_id']}-M.jpg"
         elif book.isbn13:
             new_cover_url = f"https://covers.openlibrary.org/b/isbn/{book.isbn13}-M.jpg"
-        elif ol_data.get("isbn_13"):
-            new_cover_url = f"https://covers.openlibrary.org/b/isbn/{ol_data['isbn_13']}-M.jpg"
 
         if not new_cover_url and gb_data.get("thumbnail_url"):
             new_cover_url = gb_data["thumbnail_url"]
