@@ -175,47 +175,33 @@
             });
         }
 
+        // --- Helper: create diagonal stripe pattern ---
+        function createStripePattern(ctx, fillColor, strokeColor) {
+            const size = 24;
+            const c = document.createElement("canvas");
+            c.width = size;
+            c.height = size;
+            const s = c.getContext("2d");
+            s.fillStyle = fillColor;
+            s.fillRect(0, 0, size, size);
+            s.strokeStyle = strokeColor;
+            s.lineWidth = 10;
+            s.beginPath();
+            s.moveTo(0, size);
+            s.lineTo(size, 0);
+            s.moveTo(-size / 2, size / 2);
+            s.lineTo(size / 2, -size / 2);
+            s.moveTo(size / 2, size * 1.5);
+            s.lineTo(size * 1.5, size / 2);
+            s.stroke();
+            return ctx.createPattern(c, "repeat");
+        }
+
         // --- Fiction vs Nonfiction Chart ---
         if (dnaData.fiction_nonfiction_split) {
             createChartOnScroll("fictionNonfictionChart", (ctx) => {
-                // Diagonal stripe pattern for fiction segment
-                const stripeSize = 24;
-                const stripeCanvas = document.createElement("canvas");
-                stripeCanvas.width = stripeSize;
-                stripeCanvas.height = stripeSize;
-                const sCtx = stripeCanvas.getContext("2d");
-                sCtx.fillStyle = "#ffb4dd";
-                sCtx.fillRect(0, 0, stripeSize, stripeSize);
-                sCtx.strokeStyle = "#ffcce8";
-                sCtx.lineWidth = 10;
-                sCtx.beginPath();
-                sCtx.moveTo(0, stripeSize);
-                sCtx.lineTo(stripeSize, 0);
-                sCtx.moveTo(-stripeSize / 2, stripeSize / 2);
-                sCtx.lineTo(stripeSize / 2, -stripeSize / 2);
-                sCtx.moveTo(stripeSize / 2, stripeSize * 1.5);
-                sCtx.lineTo(stripeSize * 1.5, stripeSize / 2);
-                sCtx.stroke();
-                const fictionPattern = ctx.createPattern(stripeCanvas, "repeat");
-
-                // Stripe pattern for nonfiction segment (same orientation as fiction)
-                const nfStripeCanvas = document.createElement("canvas");
-                nfStripeCanvas.width = stripeSize;
-                nfStripeCanvas.height = stripeSize;
-                const nfCtx = nfStripeCanvas.getContext("2d");
-                nfCtx.fillStyle = "#8bbfff";
-                nfCtx.fillRect(0, 0, stripeSize, stripeSize);
-                nfCtx.strokeStyle = "#b0d4ff";
-                nfCtx.lineWidth = 10;
-                nfCtx.beginPath();
-                nfCtx.moveTo(0, stripeSize);
-                nfCtx.lineTo(stripeSize, 0);
-                nfCtx.moveTo(-stripeSize / 2, stripeSize / 2);
-                nfCtx.lineTo(stripeSize / 2, -stripeSize / 2);
-                nfCtx.moveTo(stripeSize / 2, stripeSize * 1.5);
-                nfCtx.lineTo(stripeSize * 1.5, stripeSize / 2);
-                nfCtx.stroke();
-                const nonfictionPattern = ctx.createPattern(nfStripeCanvas, "repeat");
+                const fictionPattern = createStripePattern(ctx, "#ffb4dd", "#ffcce8");
+                const nonfictionPattern = createStripePattern(ctx, "#8bbfff", "#b0d4ff");
 
                 const split = dnaData.fiction_nonfiction_split;
                 new Chart(ctx, {

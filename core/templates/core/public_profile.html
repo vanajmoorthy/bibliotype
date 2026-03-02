@@ -3,37 +3,17 @@
 
 {% block seo_title %}Bibliotype – {{ heading_name }} Reading DNA{% endblock %}
 
-{% block seo_description %}{% if dna %}
-    View {{ title }} and literary personality. Discover their favourite genres, reading statistics, and book
-    preferences.
-{% else %}
-    {{ title }}
-    profile.
-{% endif %}{% endblock %}
+{% block seo_description %}{% if dna %}View {{ title }} and literary personality. Discover their favourite genres, reading statistics, and book preferences.{% else %}{{ title }} profile.{% endif %}{% endblock %}
 
-{% block seo_keywords %}
-    {{ heading_name }}
-    reading DNA, {{ heading_name }} literary personality, reading profile, book analysis, reader type, reading
-    statistics
-{% endblock %}
+{% block seo_keywords %}{{ heading_name }} reading DNA, {{ heading_name }} literary personality, reading profile, book analysis, reader type, reading statistics{% endblock %}
 
 {% block og_title %}{{ title }}{% endblock %}
 
-{% block og_description %}{% if dna %}
-    Discover {{ title }} and their unique reading DNA, literary personality, favourite genres, and reading insights.
-{% else %}
-    {{ title }}
-    profile.
-{% endif %}{% endblock %}
+{% block og_description %}{% if dna %}Discover {{ title }} and their unique reading DNA, literary personality, favourite genres, and reading insights.{% else %}{{ title }} profile.{% endif %}{% endblock %}
 
 {% block twitter_title %}{{ title }}{% endblock %}
 
-{% block twitter_description %}{% if dna %}
-    View {{ title }} and discover their literary personality.
-{% else %}
-    {{ title }}
-    profile.
-{% endif %}{% endblock %}
+{% block twitter_description %}{% if dna %}View {{ title }} and discover their literary personality.{% else %}{{ title }} profile.{% endif %}{% endblock %}
 
 {% block extra_head_js %}
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>

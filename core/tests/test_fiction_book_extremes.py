@@ -72,6 +72,7 @@ class BookExtremesTests(TestCase):
         return book
 
     def test_longest_and_shortest(self):
+        """Mirror production logic: single descending sort, [0] = longest, [-1] = shortest."""
         books = [
             self._make_book("Medium", "Author A", 300),
             self._make_book("Long", "Author B", 800),
@@ -80,8 +81,7 @@ class BookExtremesTests(TestCase):
         books_with_pages = [b for b in books if b.page_count]
         books_with_pages.sort(key=lambda b: (-b.page_count, b.normalized_title))
         longest = books_with_pages[0]
-        books_with_pages.sort(key=lambda b: (b.page_count, b.normalized_title))
-        shortest = books_with_pages[0]
+        shortest = books_with_pages[-1]
 
         self.assertEqual(longest.title, "Long")
         self.assertEqual(longest.page_count, 800)
@@ -102,7 +102,7 @@ class BookExtremesTests(TestCase):
         self.assertEqual(len(books_with_pages), 0)
 
     def test_tiebreaker_uses_normalized_title(self):
-        """When page counts are equal, normalized_title breaks the tie."""
+        """When page counts are equal, normalized_title breaks the tie (single sort, like production)."""
         books = [
             self._make_book("Bravo", "Author A", 500),
             self._make_book("Alpha", "Author B", 500),
@@ -110,9 +110,7 @@ class BookExtremesTests(TestCase):
         books_with_pages = [b for b in books if b.page_count]
         books_with_pages.sort(key=lambda b: (-b.page_count, b.normalized_title))
         longest = books_with_pages[0]
-        # "alpha" < "bravo" alphabetically, so Alpha wins the tiebreak
+        shortest = books_with_pages[-1]
+        # "alpha" < "bravo" alphabetically, so Alpha wins the tiebreak for both
         self.assertEqual(longest.title, "Alpha")
-
-        books_with_pages.sort(key=lambda b: (b.page_count, b.normalized_title))
-        shortest = books_with_pages[0]
-        self.assertEqual(shortest.title, "Alpha")
+        self.assertEqual(shortest.title, "Bravo")

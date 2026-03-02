@@ -1556,6 +1556,7 @@ FICTION_GENRES = {
     "comics & graphic novels",
     "holiday fiction",
     "fairy tales & fables",
+    "plays & drama",
 }
 
 NONFICTION_GENRES = {
@@ -1571,7 +1572,6 @@ NONFICTION_GENRES = {
     "travel",
     "art & music",
     "food & cooking",
-    "plays & drama",
     "religion & spirituality",
 }
 
