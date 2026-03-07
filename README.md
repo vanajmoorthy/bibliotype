@@ -18,13 +18,14 @@ Prioritised
     - so need to keep a mapping of dictionary hashes to llm vibes and reuse llm vibe when same dictionary is presented again
     - this would prevent several llm vibes being generated during testing
 - adjust reader type calculations, different colour for diff types? pixel square background for banner? animated?
+- check that when a user generates dna, the book covers get set and load. right now they only appear after refreshing.
 - allow user to delete profile - settings panel maybe? put make private there too, and opt out of recs, display name can also be there, email update as well? and change password functionality might as well
     - make sure public by default
     - allow users to opt out of recommendations
 - how similar are you/similarity percentage for 2 or more people
   - add page for this
   - allow similarity comparison with multiple users (only public)
-- sign up form validate password and all on blur
+- ~sign up form validate password and all on blur (done)~
 - long author names and genre names cutting of count when hovering on chart
 
 ##  Getting Started (Docker & Poetry)
