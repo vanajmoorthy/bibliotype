@@ -67,7 +67,6 @@ class Command(BaseCommand):
             user = profile.user
             dna = profile.dna_data
 
-            # Check if already backfilled (has any of the new fields)
             already_has = "contrariness_label" in dna and "unique_authors_count" in dna
             if already_has and not options["force"]:
                 skipped += 1

@@ -107,7 +107,6 @@ class RecommendationEngine:
         # Convert to list to avoid multiple queryset evaluations
         user_books = list(user_books_qs)
 
-        # Initialize all data structures
         read_book_ids = set()
         disliked_book_ids = set()
         top_books = set()
@@ -214,7 +213,6 @@ class RecommendationEngine:
         # Use getattr for backwards compatibility if migration hasn't run yet
         book_ratings = getattr(anon_session, "book_ratings", None) or {}
 
-        # Get disliked books (rated 1-2 stars) - NEW!
         disliked_book_ids = {book_id for book_id, rating in book_ratings.items() if rating <= 2}
 
         # Get genre preferences from stored distribution
@@ -479,11 +477,9 @@ class RecommendationEngine:
         candidates = {}
         read_book_ids = user_context["read_book_ids"]
 
-        # Source 1: Similar registered users (highest quality)
         similar_users = find_similar_users(user, min_similarity=self.min_similarity)
         self._collect_candidates_from_similar_users(similar_users, read_book_ids, candidates)
 
-        # Source 2: Anonymized profiles (medium quality)
         cache_key = "anon_profiles_sample"
         anonymized_profiles = safe_cache_get(cache_key)
         if anonymized_profiles is None:
@@ -499,7 +495,6 @@ class RecommendationEngine:
 
         self._collect_candidates_from_anonymized_profiles(matching_profiles, read_book_ids, candidates)
 
-        # Source 3: Fallback candidates for discovery
         fallback_candidates = self._get_fallback_candidates(user_context, limit=10)
         for book_id, candidate_data in fallback_candidates.items():
             if book_id not in candidates and book_id not in read_book_ids:
@@ -512,7 +507,6 @@ class RecommendationEngine:
         candidates = {}
         read_book_ids = anon_context["read_book_ids"]
 
-        # Source 1: Find similar users via bulk context comparison
         cache_key = "public_users_for_recs_sample"
         all_users = safe_cache_get(cache_key)
         if all_users is None:
@@ -542,7 +536,6 @@ class RecommendationEngine:
 
         self._collect_candidates_from_similar_users(similar_users, read_book_ids, candidates)
 
-        # Source 2: Anonymized profiles (use global cached sample)
         cache_key = "anon_profiles_sample"
         anonymized_profiles = safe_cache_get(cache_key)
         if anonymized_profiles is None:
@@ -606,8 +599,7 @@ class RecommendationEngine:
 
             base_confidence = candidate_data["max_similarity"]
 
-            # Add a small, diminishing boost for each additional recommender.
-            # math.log provides this diminishing return (2 recommenders is a good boost, 10 is not much more than 9).
+            # Diminishing boost per additional recommender
             recommender_boost = math.log(candidate_data["recommender_count"] + 1) * 0.1
 
             # Combine and cap at 100%
@@ -817,7 +809,6 @@ class RecommendationEngine:
             if any(s.get("type") == "global_popularity" for s in sources):
                 rec["explanation_components"]["discovery"] = "popular across the Bibliotype community"
 
-            # --- Ensure at least one explanation always exists ---
             if not rec["explanation_components"]:
                 if rec["book"].average_rating:
                     rec["explanation_components"]["rating"] = f"highly rated ({rec['book'].average_rating:.1f}★)"

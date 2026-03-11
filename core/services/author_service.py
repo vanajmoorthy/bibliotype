@@ -1,5 +1,3 @@
-# In core/services/author_service.py
-
 import logging
 import requests
 from datetime import datetime, timedelta
@@ -7,12 +5,9 @@ from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
-# --- Heuristic Thresholds (Now with a new "icon" level) ---
 WORK_COUNT_THRESHOLD = 10
-# Standard threshold for a popular, working author.
 MONTHLY_PAGEVIEW_THRESHOLD = 2000
-# Exceptionally high threshold for authors who are cultural mainstays, regardless of work count.
-# This is the "Harper Lee" exception.
+# For authors who are cultural mainstays regardless of work count (e.g. Harper Lee)
 CULTURAL_ICON_PAGEVIEW_THRESHOLD = 50000
 
 
@@ -26,12 +21,11 @@ def check_author_mainstream_status(author_name: str, session: requests.Session) 
         "work_count": 0,
         "average_monthly_views": 0,
         "is_mainstream": False,
-        "reason": None,  # We will now include a reason for the decision
+        "reason": None,
         "error": None,
     }
 
     try:
-        # --- Step 1: Query Open Library for work count ---
         ol_search_url = "https://openlibrary.org/search/authors.json"
         res_ol = session.get(ol_search_url, params={"q": author_name}, timeout=10)
         res_ol.raise_for_status()
@@ -41,7 +35,6 @@ def check_author_mainstream_status(author_name: str, session: requests.Session) 
             author_info = ol_data["docs"][0]
             findings["work_count"] = author_info.get("work_count", 0)
 
-        # --- Step 2: Query Wikipedia for average page views ---
         today = datetime.utcnow()
         ninety_days_ago = today - timedelta(days=90)
         start_date = ninety_days_ago.strftime("%Y%m%d")
@@ -62,18 +55,15 @@ def check_author_mainstream_status(author_name: str, session: requests.Session) 
                 total_views = sum(item["views"] for item in items)
                 findings["average_monthly_views"] = round(total_views / 3)
 
-        # --- NEW: Log the page views for visibility ---
         logger.debug(f"Work Count: {findings['work_count']}, Avg Monthly Views: {findings['average_monthly_views']}")
 
-        # --- NEW: Final Decision Logic with two paths ---
-
-        # Path 1: A prolific career author with sustained public interest.
+        # Path 1: Prolific career author with sustained public interest
         is_prolific_and_popular = (
             findings["work_count"] >= WORK_COUNT_THRESHOLD
             and findings["average_monthly_views"] >= MONTHLY_PAGEVIEW_THRESHOLD
         )
 
-        # Path 2: A cultural icon with massive public interest, regardless of work count.
+        # Path 2: Cultural icon with massive public interest regardless of work count
         is_cultural_icon = findings["average_monthly_views"] >= CULTURAL_ICON_PAGEVIEW_THRESHOLD
 
         if is_cultural_icon:

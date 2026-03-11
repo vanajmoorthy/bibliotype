@@ -133,7 +133,6 @@ def get_book_details_for_seeder(title: str, author: str, session: requests.Sessi
         if "number_of_pages_median" in search_result:
             details["page_count"] = int(search_result["number_of_pages_median"])
 
-        # --- Step 2: Use the edition key to get reliable publisher data ---
         if edition_key:
             edition_url = f"https://openlibrary.org/books/{edition_key}.json"
             res_edition = session.get(edition_url, timeout=5)
@@ -157,7 +156,6 @@ def _fetch_from_open_library(book, session, slow_down=False):
     """
     logger.debug(f"Querying Open Library for '{book.title}'")
 
-    # --- Step 1: Search for the book to get its keys ---
     search_url = "https://openlibrary.org/search.json"
     search_params = {}
     if book.isbn13:
@@ -183,7 +181,6 @@ def _fetch_from_open_library(book, session, slow_down=False):
         work_key = search_result.get("key")
         edition_key = search_result.get("cover_edition_key")
 
-        # --- Step 2: Use the keys to get detailed data ---
         cover_id = search_result.get("cover_i")
         book_details = {
             "genres": [],
@@ -323,8 +320,7 @@ def enrich_book_from_apis(book, session, slow_down=False):
     gb_data = {}  # May not be populated if GB enrichment already ran
     is_updated = False
 
-    # --- Step 1: Always fetch genres from Open Library for re-enrichment ---
-    # We want to refresh genres even if other data exists
+    # Always refresh genres from Open Library even if other data exists
     ol_data, calls_made = _fetch_from_open_library(book, session, slow_down)
     ol_api_calls += calls_made
 
@@ -416,7 +412,6 @@ def enrich_book_from_apis(book, session, slow_down=False):
             else:
                 logger.debug(f"No genres to add after limiting")
 
-    # --- Step 2: Get ratings AND categories (genres) from Google Books if needed ---
     # Google Books often has more accurate genres than Open Library
     if book.google_books_last_checked is None:
         gb_data, calls_made = _fetch_ratings_and_categories_from_google_books(book, session, slow_down)
@@ -497,7 +492,6 @@ def enrich_book_from_apis(book, session, slow_down=False):
             book.cover_url = new_cover_url
             is_updated = True
 
-    # --- Step 3: Finalize and save ---
     if is_updated:
         try:
             book.save()

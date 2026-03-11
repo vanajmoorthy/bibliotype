@@ -9,7 +9,6 @@ class ForceDisconnectTestRunner(DiscoverRunner):
     def teardown_databases(self, old_config, **kwargs):
         """Force disconnect all PostgreSQL connections before dropping the test database."""
 
-        # Step 1: Close all Django connections aggressively
         print("🔧 Closing all Django connections...")
         for _ in range(5):
             for conn in connections.all():
@@ -22,7 +21,6 @@ class ForceDisconnectTestRunner(DiscoverRunner):
             connections.close_all()
             time.sleep(0.2)
 
-        # Step 2: Get the actual test database names from old_config
         print("🔧 Terminating PostgreSQL connections...")
 
         # old_config is a list of tuples: (connection, old_db_name, serialize)
@@ -87,12 +85,10 @@ class ForceDisconnectTestRunner(DiscoverRunner):
             finally:
                 temp_conn.close()
 
-        # Step 3: Final cleanup
         print("🔧 Final cleanup...")
         connections.close_all()
         time.sleep(0.5)
 
-        # Step 4: Proceed with normal teardown
         print("🔧 Proceeding with database destruction...")
         try:
             super().teardown_databases(old_config, **kwargs)

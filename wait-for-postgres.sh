@@ -1,4 +1,5 @@
 #!/bin/sh
+# Wait for PostgreSQL to become available before running a command.
 set -e
 
 host="$1"

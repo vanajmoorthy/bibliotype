@@ -378,15 +378,11 @@ def display_dna_view(request):
         if dna_data is None and user_profile.dna_data:
             dna_data = user_profile.dna_data
 
-        # Get recommendations for registered user - use STORED recommendations
         if user_profile.dna_data:
             try:
-                # Use stored recommendations if available (generated when DNA was created/updated)
                 if user_profile.recommendations_data:
                     stored_recs = user_profile.recommendations_data
 
-                    # Transform stored format to template-expected format
-                    # Template expects rec.book.title, rec.book.author.name, etc.
                     for rec in stored_recs:
                         # Create nested book structure for template compatibility
                         rec["book"] = {
@@ -434,7 +430,6 @@ def display_dna_view(request):
                 from .models import AnonymousUserSession, Author
                 from .services.recommendation_service import get_recommendations_for_anonymous
 
-                # Check if AnonymousUserSession exists, if not try to recreate it
                 try:
                     anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
                     # Session exists, get recommendations normally
@@ -460,7 +455,7 @@ def display_dna_view(request):
                         # Try to get book IDs from session if stored, otherwise use empty list
                         books_data = request.session.get("book_ids", [])
                         top_books_data = request.session.get("top_book_ids", [])
-                        book_ratings = request.session.get("book_ratings", {})  # Get ratings if stored
+                        book_ratings = request.session.get("book_ratings", {})
 
                         # Create a minimal AnonymousUserSession from dna_data
                         anon_session = AnonymousUserSession.objects.create(
@@ -483,7 +478,6 @@ def display_dna_view(request):
                         logger.error(f"Error recreating anonymous session: {recreate_error}", exc_info=True)
                         recommendations = []
 
-                # Process recommendations if we got any
                 if recommendations:
                     for rec in recommendations:
                         rec["confidence_pct"] = int(rec.get("confidence", 0) * 100)
@@ -903,15 +897,12 @@ def public_profile_view(request, username):
             title = f"{display_name_lower}'s bibliotype"
             heading_name = f"{display_name}'s"
 
-        # Get recommendations for the profile owner - use STORED recommendations
         recommendations = []
         if profile.dna_data:
             try:
-                # Use stored recommendations if available
                 if profile.recommendations_data:
                     stored_recs = profile.recommendations_data
 
-                    # Transform stored format to template-expected format
                     for rec in stored_recs:
                         rec["book"] = {
                             "id": rec.get("book_id"),
@@ -1045,7 +1036,6 @@ def get_task_result_view(request, task_id):
 
 def handler404(request, exception=None):
     """Custom 404 handler that renders our fun 404 page."""
-    # Check if this is a user profile path to show user-not-found message
     path = request.path.strip("/")
     username = None
     if path.startswith("u/") and len(path.split("/")) >= 2:
@@ -1059,7 +1049,6 @@ def handler404(request, exception=None):
 
 def catch_all_404_view(request, unused_path):
     """Catch-all view for unmatched URLs that shows our custom 404 page."""
-    # Check if this is a user profile path to show user-not-found message
     path = request.path.strip("/")
     username = None
     if path.startswith("u/") and len(path.split("/")) >= 2:

@@ -58,7 +58,6 @@ READER_TYPE_DESCRIPTIONS = {
 }
 
 
-# This new hierarchical dictionary replaces the old MAJOR_PUBLISHERS set.
 MAINSTREAM_PUBLISHERS_HIERARCHY = {
     "Penguin Random House": [
         "Penguin Books",

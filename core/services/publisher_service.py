@@ -8,7 +8,6 @@ from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
-# This should already be configured in your project from the vibe generation
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
@@ -23,10 +22,7 @@ BIG_5_PUBLISHERS = [
 
 
 def research_publisher_identity(publisher_name: str, session: requests.Session) -> dict:
-    """
-    Uses Wikipedia and an LLM to determine a publisher's parent company and mainstream status.
-    Now tries multiple search queries to find the most relevant Wikipedia page.
-    """
+    """Uses Wikipedia and an LLM to determine a publisher's parent company and mainstream status."""
     findings = {"is_mainstream": False, "parent_company_name": None, "reasoning": None, "error": None}
 
     if not GEMINI_API_KEY:
@@ -34,7 +30,6 @@ def research_publisher_identity(publisher_name: str, session: requests.Session) 
         return findings
 
     try:
-        # --- NEW: Create a list of potential search terms ---
         search_terms = [
             f"{publisher_name} (publisher)",
             f"{publisher_name} (imprint)",
@@ -44,7 +39,6 @@ def research_publisher_identity(publisher_name: str, session: requests.Session) 
         context_text = ""
         found_page_title = None
 
-        # --- NEW: Loop through search terms to find the best page ---
         for term in search_terms:
             encoded_name = quote(term)
             wiki_api_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{encoded_name}"
@@ -52,7 +46,6 @@ def research_publisher_identity(publisher_name: str, session: requests.Session) 
 
             if res_wiki.status_code == 200:
                 wiki_json = res_wiki.json()
-                # Check if the summary is not about a disambiguation page
                 if "extract" in wiki_json and "may refer to" not in wiki_json["extract"].lower():
                     context_text = wiki_json["extract"]
                     found_page_title = wiki_json.get("title", term)
@@ -63,7 +56,6 @@ def research_publisher_identity(publisher_name: str, session: requests.Session) 
             findings["error"] = f"Could not find a relevant Wikipedia page for '{publisher_name}'."
             return findings
 
-        # --- Step 2: Construct a precise prompt for Gemini ---
         prompt = f"""
         You are a publishing industry analyst. Your task is to analyze the provided text about a publisher and determine if it is a major publisher or an imprint of one of the "Big 5". The "Big 5" are: {', '.join(BIG_5_PUBLISHERS)}.
 
@@ -89,8 +81,7 @@ def research_publisher_identity(publisher_name: str, session: requests.Session) 
         JSON Response:
         """
 
-        # --- Step 3: Call the Gemini API ---
-        model = genai.GenerativeModel("models/gemini-2.5-flash")  # Or your preferred model
+        model = genai.GenerativeModel("models/gemini-2.5-flash")
         response = model.generate_content(prompt)
 
         # Clean up the response to extract only the JSON part
