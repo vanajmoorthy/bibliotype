@@ -12,7 +12,6 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-# Initialize PostHog
 _posthog_initialized = False
 
 

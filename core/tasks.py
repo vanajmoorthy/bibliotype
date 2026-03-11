@@ -167,7 +167,6 @@ def _create_userbooks_from_anonymous_session(user, session_key):
             logger.warning(f"No book IDs found in AnonymousUserSession {session_key}")
             return
 
-        # Create UserBook records for all books
         books_created = 0
         for book_id in book_ids:
             try:
@@ -180,7 +179,6 @@ def _create_userbooks_from_anonymous_session(user, session_key):
 
         logger.info(f"Created {books_created} UserBook records for user {user.username} from anonymous session")
 
-        # Calculate and store top books
         if books_created > 0:
             calculate_and_store_top_books(user, limit=5)
             # Also mark the top books from the anonymous session if they exist
@@ -234,7 +232,6 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
         raise
 
     try:
-        # Define a progress callback that reports progress to Celery result backend
         def progress_cb(current: int, total: int, stage: str):
             try:
                 self.update_state(state="PROGRESS", meta={"current": current, "total": total, "stage": stage})
@@ -443,7 +440,6 @@ def generate_recommendations_task(self, user_id: int):
         # Generate recommendations (this uses all the optimizations we added)
         recommendations = get_recommendations_for_user(user, limit=6)
 
-        # Process recommendations to add display data (same as view does)
         processed_recs = []
         for rec in recommendations:
             processed_rec = {
@@ -460,7 +456,6 @@ def generate_recommendations_task(self, user_id: int):
                 "explanation_components": rec.get("explanation_components", {}),
             }
 
-            # Find best source user
             primary_source_user = None
             best_similarity = 0
             for source in rec.get("sources", []):
@@ -474,7 +469,6 @@ def generate_recommendations_task(self, user_id: int):
 
             processed_recs.append(processed_rec)
 
-        # Extract similar user metadata for subtitle display
         similar_user_set = set()
         min_overlap_pct = None
         for rec in processed_recs:
@@ -491,7 +485,6 @@ def generate_recommendations_task(self, user_id: int):
             "min_overlap_pct": min_overlap_pct or 0,
         }
 
-        # Store in profile
         profile.recommendations_data = processed_recs
         profile.recommendations_meta = recommendations_meta
         profile.recommendations_generated_at = timezone.now()

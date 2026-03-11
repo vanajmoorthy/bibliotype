@@ -1,5 +1,3 @@
-# In core/management/commands/seed_books.py
-
 import random
 from concurrent.futures import ThreadPoolExecutor
 
@@ -228,10 +226,6 @@ class Command(BaseCommand):
             f"Starting to seed {len(COMPREHENSIVE_BOOK_LIST)} popular books. This will take several minutes..."
         )
 
-        # --- STEP 1: FETCH ALL BOOK DATA IN PARALLEL ---
-        # The worker function now ONLY fetches data and returns it.
-        # It does NOT interact with the database.
-
         fetched_results = []
         with ThreadPoolExecutor(max_workers=10) as executor, requests.Session() as session:
 
@@ -256,10 +250,6 @@ class Command(BaseCommand):
                 f"\nAPI fetching complete. Successfully fetched data for {len(successful_fetches)}/{len(COMPREHENSIVE_BOOK_LIST)} books."
             )
         )
-
-        # --- STEP 2: WRITE RESULTS TO THE DATABASE SERIALLY ---
-        # Now that all API calls are done, we loop through the results one by one.
-        # This prevents the "database is locked" error entirely.
 
         self.stdout.write("Writing fetched data to the database...")
         created_count = 0

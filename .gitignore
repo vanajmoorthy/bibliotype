@@ -62,3 +62,11 @@ var/
 
 db_dump.json
 !core/fixtures/
+
+# Scraped data and caches
+scraped_html/
+api_cache.json
+
+# Plans and brainstorms (local only)
+docs/plans/
+docs/brainstorms/
