@@ -437,7 +437,6 @@ def generate_recommendations_task(self, user_id: int):
 
         logger.info(f"Generating recommendations for user {user_id}")
 
-        # Generate recommendations (this uses all the optimizations we added)
         recommendations = get_recommendations_for_user(user, limit=6)
 
         processed_recs = []

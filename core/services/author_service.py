@@ -21,7 +21,7 @@ def check_author_mainstream_status(author_name: str, session: requests.Session) 
         "work_count": 0,
         "average_monthly_views": 0,
         "is_mainstream": False,
-        "reason": None,  # We will now include a reason for the decision
+        "reason": None,
         "error": None,
     }
 
