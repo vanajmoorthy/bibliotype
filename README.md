@@ -10,11 +10,13 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 ## TODO
 
 Prioritised 
+
 ongoing
 - settings modal
 - lock down canonical genres and improve mapping (improve fiction/non fiction split)
 - storygraph support
-  
+
+todo  
 - adjust reader type calculations, different colour for diff types? pixel square background for banner? animated?
 - (double check but probably fine) check that when a user generates dna, the book covers get set and load. right now they only appear after refreshing.
 - (need to link methodology pages or something) update the sources for comparative analytics
