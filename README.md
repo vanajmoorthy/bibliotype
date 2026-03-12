@@ -10,15 +10,21 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 ## TODO
 
 Prioritised 
-- lock down canonical genres and improve mapping
-- update the sources for comparative analytics
+ongoing
+- settings modal
+- lock down canonical genres and improve mapping (improve fiction/non fiction split)
+- storygraph support
+  
+- adjust reader type calculations, different colour for diff types? pixel square background for banner? animated?
+- (double check but probably fine) check that when a user generates dna, the book covers get set and load. right now they only appear after refreshing.
+- (need to link methodology pages or something) update the sources for comparative analytics
 - save llm vibe against the dna dictionary, cache this for a month and only refetch if dictionary has changed
     - user a uploads a csv, vibe generated
     - user b uploads the same csv, we want to reuse this same vibe instead of hitting gemini again
     - so need to keep a mapping of dictionary hashes to llm vibes and reuse llm vibe when same dictionary is presented again
     - this would prevent several llm vibes being generated during testing
-- adjust reader type calculations, different colour for diff types? pixel square background for banner? animated?
-- check that when a user generates dna, the book covers get set and load. right now they only appear after refreshing.
+
+
 - allow user to delete profile - settings panel maybe? put make private there too, and opt out of recs, display name can also be there, email update as well? and change password functionality might as well
     - make sure public by default
     - allow users to opt out of recommendations
