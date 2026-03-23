@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-When committing, do not include the Co-Authored-By trailer.
+When committing, do not include the Co-Authored-By trailer. Do not mention Claude or AI assistance in PR descriptions.
 
 ## Project Overview
 
