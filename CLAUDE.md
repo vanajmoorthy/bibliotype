@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+When committing, do not include the Co-Authored-By trailer.
+
 ## Project Overview
 
 Bibliotype is a Django web application that analyzes reading data from Goodreads/StoryGraph CSV exports to generate personalized "Reading DNA" dashboards with AI-powered insights. It features a neobrutalist design aesthetic with bold borders, offset shadows, bright colors, and a retro monospace font (VT323).
