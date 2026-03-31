@@ -515,7 +515,7 @@ def display_dna_view(request):
 
             total_books = UserBook.objects.filter(user=request.user).count()
             books_with_genres = (
-                Book.objects.filter(userbook__user=request.user, genres__isnull=False).distinct().count()
+                Book.objects.filter(readers__user=request.user, genres__isnull=False).distinct().count()
             )
             enrichment_pending = total_books > 0 and (books_with_genres / total_books) < 0.5
         else:
