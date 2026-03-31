@@ -598,33 +598,33 @@ The vibe cache hash uses raw `Title` + `Author` from the CSV. Different author f
 
 ### Functional Requirements
 
-- [ ] StoryGraph CSV uploads produce valid DNA dashboards
-- [ ] Goodreads CSV uploads continue to work identically (no regressions)
-- [ ] Unknown CSV formats produce a clear error message
-- [ ] StoryGraph multi-author books use the first listed author
-- [ ] StoryGraph float ratings are rounded half-up to integers (4.5→5, 3.5→4, 0.5→1)
-- [ ] StoryGraph `did-not-finish` books are excluded from analysis
-- [ ] StoryGraph non-ISBN UIDs are discarded (not stored in `isbn13`)
-- [ ] Books with matching ISBNs across platforms are deduplicated (not duplicated)
-- [ ] Uploading a StoryGraph CSV does NOT overwrite existing enriched book data with None
-- [ ] Title is not overwritten on existing books during re-upload (only set on creation)
-- [ ] StoryGraph uploads enrich books inline (DB backfill + Google Books) before stats calculation
-- [ ] Dashboard sections depending on missing data (pages, controversial ratings) degrade gracefully when enrichment data unavailable
-- [ ] Enrichment tasks rate-limited to prevent API abuse
-- [ ] Home page hero text mentions StoryGraph
+- [x] StoryGraph CSV uploads produce valid DNA dashboards
+- [x] Goodreads CSV uploads continue to work identically (no regressions)
+- [x] Unknown CSV formats produce a clear error message
+- [x] StoryGraph multi-author books use the first listed author
+- [x] StoryGraph float ratings are rounded half-up to integers (4.5→5, 3.5→4, 0.5→1)
+- [x] StoryGraph `did-not-finish` books are excluded from analysis
+- [x] StoryGraph non-ISBN UIDs are discarded (not stored in `isbn13`)
+- [x] Books with matching ISBNs across platforms are deduplicated (not duplicated)
+- [x] Uploading a StoryGraph CSV does NOT overwrite existing enriched book data with None
+- [x] Title is not overwritten on existing books during re-upload (only set on creation)
+- [x] StoryGraph uploads enrich books inline (DB backfill + Google Books) before stats calculation
+- [x] Dashboard sections depending on missing data (pages, controversial ratings) degrade gracefully when enrichment data unavailable
+- [x] Enrichment tasks rate-limited to prevent API abuse
+- [x] Home page hero text mentions StoryGraph
 
 ### Non-Functional Requirements
 
-- [ ] No performance regression for Goodreads uploads
-- [ ] UTF-8-BOM encoded CSVs handled transparently
-- [ ] Enrichment rate limited to 5/min per worker
+- [x] No performance regression for Goodreads uploads
+- [x] UTF-8-BOM encoded CSVs handled transparently
+- [x] Enrichment rate limited to 5/min per worker
 
 ### Quality Gates
 
-- [ ] All existing tests pass (no regressions)
-- [ ] 3 unit tests for normalization function (format detection, column rename, rating rounding, ISBN validation)
-- [ ] 2 integration tests for full StoryGraph pipeline (with controversial guard verification) and book_defaults no-overwrite
-- [ ] `poetry run python manage.py test` passes clean
+- [x] All existing tests pass (no regressions)
+- [x] 3 unit tests for normalization function (format detection, column rename, rating rounding, ISBN validation)
+- [x] 2 integration tests for full StoryGraph pipeline (with controversial guard verification) and book_defaults no-overwrite
+- [x] `poetry run python manage.py test` passes clean
 
 ---
 
