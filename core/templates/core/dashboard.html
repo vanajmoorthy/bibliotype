@@ -167,6 +167,12 @@ recommendations, reading insights{% endblock %}
                 {% include 'core/partials/share/share_modal.html' with share_url="bibliotype.app" %}
             {% endif %}
 
+            {% if enrichment_pending %}
+                <div class="border-brand-text border-2 bg-brand-yellow/30 px-3 py-2 text-sm">
+                    Still fetching genre and mainstream data — refresh the page in a few minutes to see updates.
+                </div>
+            {% endif %}
+
             {% include 'core/partials/dna/top_traits_list.html' %}
             {% include 'core/partials/dna/key_stats_row.html' %}
             {% include 'core/partials/dna/comparative_analytics_card.html' %}

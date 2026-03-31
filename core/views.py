@@ -506,6 +506,21 @@ def display_dna_view(request):
 
     dna_data = _enrich_dna_for_display(dna_data)
 
+    # Determine if async enrichment is still pending (genres, mainstream status)
+    csv_source = dna_data.get("csv_source", "goodreads") if dna_data else "goodreads"
+    enrichment_pending = False
+    if csv_source == "storygraph":
+        if request.user.is_authenticated:
+            from .models import UserBook, Book
+
+            total_books = UserBook.objects.filter(user=request.user).count()
+            books_with_genres = (
+                Book.objects.filter(userbook__user=request.user, genres__isnull=False).distinct().count()
+            )
+            enrichment_pending = total_books > 0 and (books_with_genres / total_books) < 0.5
+        else:
+            enrichment_pending = True  # Anonymous: always show for StoryGraph
+
     recommendations_meta = {}
     if request.user.is_authenticated and user_profile:
         recommendations_meta = user_profile.recommendations_meta or {}
@@ -517,6 +532,7 @@ def display_dna_view(request):
         "recommendations": recommendations,
         "recommendations_meta": recommendations_meta,
         "title": title,
+        "enrichment_pending": enrichment_pending,
     }
 
     return render(request, "core/dashboard.html", context)
@@ -538,7 +554,8 @@ def upload_view(request):
         # Track file upload started
         track_file_upload_started(request, csv_file.size)
 
-        csv_content = csv_file.read().decode("utf-8")
+        # utf-8-sig transparently strips BOM if present (some exports include it)
+        csv_content = csv_file.read().decode("utf-8-sig")
 
         if request.user.is_authenticated:
             # Clear old session data so the view will use the updated profile data
