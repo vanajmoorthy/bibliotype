@@ -455,7 +455,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     has_genres = Genre.objects.filter(books__id=book.pk).exists()
 
                 # Dispatch enrichment as a background task to avoid blocking upload
-                if created or not has_genres:
+                # Skip if the full enrichment pipeline already ran (google_books_last_checked is set)
+                already_attempted = not created and book.google_books_last_checked is not None
+                if not already_attempted and (created or not has_genres):
                     from ..tasks import enrich_book_task
 
                     logger.debug(

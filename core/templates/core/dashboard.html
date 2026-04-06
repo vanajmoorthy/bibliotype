@@ -328,19 +328,18 @@
                                         this.pending = false;
                                         Alpine.store('enrichment', { pending: false });
                                         clearInterval(this.interval);
-                                        // Reload to show finalized stats
                                         setTimeout(() => window.location.reload(), 500);
                                         return;
                                     }
                                     this.bannerText = `Enriching your library — ${data.percent}% complete. ~${data.remaining_minutes} min remaining.`;
-                                    // Update live stats in the page
                                     const s = data.updated_stats;
                                     if (s) {
-                                        const pagesEl = document.querySelector('[x-text="fmtPages(pages)"]');
-                                        if (pagesEl && pagesEl.__x) {
-                                            pagesEl.__x.$data.targetPages = s.total_pages_read;
-                                            pagesEl.__x.$data.pages = s.total_pages_read;
-                                        }
+                                        // Update total pages read
+                                        const pagesNum = document.getElementById('stat-pages');
+                                        if (pagesNum) pagesNum.textContent = s.total_pages_read.toLocaleString();
+                                        // Update mainstream score
+                                        const msEl = document.getElementById('mainstream-score');
+                                        if (msEl) msEl.textContent = s.mainstream_score_percent;
                                     }
                                 } catch (e) {
                                     // Silent fail — will retry on next interval

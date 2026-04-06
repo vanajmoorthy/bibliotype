@@ -66,7 +66,7 @@ def check_author_mainstream_status_task(author_id: int):
         raise
 
 
-@shared_task(bind=True, max_retries=3, rate_limit="30/m")
+@shared_task(bind=True, max_retries=3)
 def enrich_book_task(self, book_id: int):
     """Enrich a single book with data from Open Library and Google Books APIs."""
     try:
