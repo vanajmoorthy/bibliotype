@@ -9,19 +9,23 @@
                 class="flex gap-6 overflow-x-auto pb-2 md:grid {% if dna.currently_reading_books|length == 1 %}md:max-w-[10rem] md:mx-auto md:grid-cols-1{% elif dna.currently_reading_books|length == 2 %}md:max-w-sm md:mx-auto md:grid-cols-2{% else %}md:grid-cols-3{% endif %} md:overflow-x-visible md:pb-0"
             >
                 {% for book in dna.currently_reading_books %}
-                    <div class="scroll-fade-up flex w-32 shrink-0 flex-col items-center text-center md:w-auto md:shrink" style="transition-delay: {{ forloop.counter0 }}50ms" x-data="{ imgFailed: false }">
+                    <div class="scroll-fade-up flex w-32 shrink-0 flex-col items-center text-center md:w-auto md:shrink" style="transition-delay: {{ forloop.counter0 }}50ms" x-data="{ imgFailed: false, imgLoaded: false }">
                         {% if book.cover_url %}
                             <div
-                                x-show="!imgFailed"
+                                x-show="!imgLoaded && !imgFailed"
+                                class="cover-crosshatch border-brand-text shadow-neo-sm h-44 w-32 shrink-0 border-2 md:mx-auto md:h-64 md:w-[10rem]"
+                            ></div>
+                            <div
+                                x-show="imgLoaded && !imgFailed"
+                                x-cloak
                                 class="border-brand-text shadow-neo-sm h-44 w-32 shrink-0 overflow-hidden border-2 md:mx-auto md:h-64 md:w-[10rem]"
                             >
                                 <img
                                     src="{{ book.cover_url }}"
                                     alt="Cover of {{ book.title }}"
                                     class="h-full w-full object-cover"
-
                                     x-on:error="imgFailed = true"
-                                    x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
+                                    x-on:load="imgLoaded = true; if ($el.naturalWidth < 10) imgFailed = true"
                                 />
                             </div>
                         {% endif %}

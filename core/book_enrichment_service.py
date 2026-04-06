@@ -7,6 +7,7 @@ import requests
 from django.db import IntegrityError
 from django.utils import timezone
 
+from .analytics.events import track_external_api_call
 from .dna_constants import CANONICAL_GENRE_MAP, EXCLUDED_GENRES
 from .models import Author, Book, Genre, Publisher
 
@@ -175,6 +176,7 @@ def _fetch_from_open_library(book, session, slow_down=False):
 
         if not search_data.get("docs"):
             logger.debug(f"Open Library: Not found in search for '{book.title}'")
+            track_external_api_call("open_library", book.pk, book.title, "not_found")
             return {}, 1
 
         search_result = search_data["docs"][0]
@@ -235,11 +237,13 @@ def _fetch_from_open_library(book, session, slow_down=False):
                 elif isbns_10 := edition_data.get("isbn_10"):
                     book_details["isbn_13"] = isbns_10[0]  # Save isbn_10 in the isbn_13 field for simplicity
 
+        track_external_api_call("open_library", book.pk, book.title, "success")
         return book_details, api_calls
 
     except requests.RequestException as e:
         logger.error(f"Open Library API Error for '{book.title}': {e}")
-        # Even if it fails, we count the initial attempt as one call
+        status_code = getattr(e.response, "status_code", None) if hasattr(e, "response") else None
+        track_external_api_call("open_library", book.pk, book.title, "error", status_code=status_code, error_message=str(e))
         return {}, 1
 
 
@@ -273,6 +277,7 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
 
         if data.get("totalItems", 0) == 0:
             logger.debug(f"Google Books: Not found for '{book.title}'")
+            track_external_api_call("google_books", book.pk, book.title, "not_found")
             return {}, 1
 
         volume_info = data["items"][0].get("volumeInfo", {})
@@ -302,10 +307,13 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
             else:
                 logger.debug(f"All Google Books categories filtered out (too generic)")
 
+        track_external_api_call("google_books", book.pk, book.title, "success")
         return result, 1
 
     except requests.RequestException as e:
         logger.error(f"Google Books API Error for '{book.title}': {e}")
+        status_code = getattr(e.response, "status_code", None) if hasattr(e, "response") else None
+        track_external_api_call("google_books", book.pk, book.title, "error", status_code=status_code, error_message=str(e))
         return {}, 1
 
 

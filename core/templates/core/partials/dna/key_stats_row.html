@@ -53,9 +53,11 @@
         <div class="text-5xl font-bold" x-text="books">{{ dna.user_stats.total_books_read }}</div>
         <div class="mt-2 text-lg uppercase">Total Books Read</div>
     </div>
-    <div class="bg-brand-pink border-brand-text shadow-neo border-2 p-6 text-center">
+    <div class="bg-brand-pink border-brand-text shadow-neo relative border-2 p-6 text-center">
         {% if enrichment.pages_pending %}
-            {% include 'core/partials/dna/enrichment_banner.html' %}
+            <p class="absolute inset-x-0 top-0 bg-brand-yellow/30 py-1 text-center text-xs animate-[enrichPulse_2s_ease-in-out_infinite]">
+                Still enriching — refresh for updates.
+            </p>
         {% endif %}
         <div class="text-5xl font-bold" x-text="fmtPages(pages)">{{ dna.user_stats.total_pages_read|intcomma }}</div>
         <div class="mt-2 text-lg uppercase">Total Pages Read</div>

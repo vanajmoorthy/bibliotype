@@ -6,10 +6,15 @@
         <p class="mb-4 text-center text-base italic text-gray-500">{{ pronoun_pos|default:"Your"|capfirst }} rarest find on Bibliotype — read by only {{ dna.most_niche_book.read_count }} people</p>
     {% endif %}
     {% if dna.most_niche_book %}
-        <div class="scroll-fade-up flex flex-1 flex-col items-center justify-center" x-data="{ imgFailed: false }">
+        <div class="scroll-fade-up flex flex-1 flex-col items-center justify-center" x-data="{ imgFailed: false, imgLoaded: false }">
             {% if dna.most_niche_book.cover_url %}
                 <div
-                    x-show="!imgFailed"
+                    x-show="!imgLoaded && !imgFailed"
+                    class="cover-crosshatch border-brand-text shadow-neo-sm h-40 w-[6.75rem] border-2"
+                ></div>
+                <div
+                    x-show="imgLoaded && !imgFailed"
+                    x-cloak
                     class="border-brand-text shadow-neo-sm h-40 w-[6.75rem] overflow-hidden border-2"
                 >
                     <img
@@ -18,7 +23,7 @@
                         class="h-full w-full object-cover"
                         fetchpriority="low"
                         x-on:error="imgFailed = true"
-                        x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
+                        x-on:load="imgLoaded = true; if ($el.naturalWidth < 10) imgFailed = true"
                     />
                 </div>
                 <div

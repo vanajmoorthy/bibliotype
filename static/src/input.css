@@ -50,6 +50,26 @@ ol.list-decimal {
     list-style-type: decimal;
 }
 
+/* Crosshatch placeholder for loading book covers */
+.cover-crosshatch {
+    background-color: #e5e7eb;
+    background-image:
+        repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 4px,
+            #1f2937 4px,
+            #1f2937 6px
+        ),
+        repeating-linear-gradient(
+            -45deg,
+            transparent,
+            transparent 4px,
+            #1f2937 4px,
+            #1f2937 6px
+        );
+}
+
 /* Charts hidden until scroll-triggered */
 .chart-await {
     opacity: 0;
