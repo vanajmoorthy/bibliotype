@@ -48,6 +48,20 @@ def _sanitize_review_text(text):
     return text.strip()
 
 
+_ARTICLE_PREFIXES = ("the ", "a ", "an ")
+
+
+def _cover_initial(title):
+    """Return the first letter for a book cover fallback, skipping leading articles."""
+    lower = title.lower()
+    for prefix in _ARTICLE_PREFIXES:
+        if lower.startswith(prefix):
+            rest = title[len(prefix):].strip()
+            if rest:
+                return rest[0].upper()
+    return title[0].upper() if title else "?"
+
+
 OPEN_LIBRARY_COVER_URL = "https://covers.openlibrary.org/b/isbn/{isbn}-M.jpg"
 
 
@@ -315,12 +329,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
             for _, row in currently_reading_df.head(3).iterrows():
                 isbn13_raw = row.get("ISBN13")
+                title = str(row.get("Title", "")).strip()
                 currently_reading_books.append(
                     {
-                        "title": str(row.get("Title", "")).strip(),
+                        "title": title,
                         "author": str(row.get("Author", "")).strip(),
                         "cover_url": _build_cover_url(isbn13_raw if pd.notna(isbn13_raw) else None),
                         "page_count": int(row["Number of Pages"]) if pd.notna(row.get("Number of Pages")) else None,
+                        "initial": _cover_initial(title),
                     }
                 )
 
@@ -718,6 +734,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 "author": user_book_objects[0].author.name,
                 "read_count": user_book_objects[0].global_read_count,
                 "cover_url": user_book_objects[0].cover_url or _build_cover_url(user_book_objects[0].isbn13),
+                "initial": _cover_initial(user_book_objects[0].title),
             }
             niche_books_count = sum(1 for b in user_book_objects if b.global_read_count <= NICHE_THRESHOLD)
 
@@ -735,12 +752,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     "author": longest.author.name,
                     "page_count": longest.page_count,
                     "cover_url": longest.cover_url or _build_cover_url(longest.isbn13),
+                    "initial": _cover_initial(longest.title),
                 }
                 shortest_book = {
                     "title": shortest.title,
                     "author": shortest.author.name,
                     "page_count": shortest.page_count,
                     "cover_url": shortest.cover_url or _build_cover_url(shortest.isbn13),
+                    "initial": _cover_initial(shortest.title),
                 }
                 page_difference = longest.page_count - shortest.page_count
 
