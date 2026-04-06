@@ -23,6 +23,13 @@
     --shadow-neo-sm: 2px 2px 0px 0px var(--color-brand-text);
 
     --font-sans: "VT323", ui-sans-serif, system-ui, sans-serif;
+
+    --animate-enrichPulse: enrichPulse 2s ease-in-out infinite;
+}
+
+@keyframes enrichPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
 
 /* Custom utility class for the grid background pattern */

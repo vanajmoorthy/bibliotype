@@ -1,11 +1,10 @@
 import hashlib
 import logging
-import os
 import random
 import re
 import time
 from collections import Counter
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 
 import numpy as np
@@ -61,9 +60,6 @@ def _build_cover_url(isbn13: str | None) -> str | None:
         return None
     return OPEN_LIBRARY_COVER_URL.format(isbn=cleaned[:13])
 
-
-def _get_google_books_api_key():
-    return os.getenv("GOOGLE_BOOKS_API_KEY")
 
 # Goodreads column names serve as the internal canonical schema.
 # All CSV sources are normalized to these names so downstream code
@@ -612,73 +608,6 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     if pd.isna(read_df.at[idx, "Average Rating"]) and book_data["average_rating"]:
                         read_df.at[idx, "Average Rating"] = book_data["average_rating"]
             logger.info(f"DB backfill: enriched {backfilled}/{len(all_book_pks)} books from existing data")
-
-            # Phase B: Quick Google Books lookup for remaining gaps
-            needs_enrichment_idxs = read_df[
-                read_df["Number of Pages"].isna() | read_df["Original Publication Year"].isna()
-            ].index.tolist()
-            # Only include indices we have book PKs for
-            needs_enrichment_idxs = [idx for idx in needs_enrichment_idxs if idx in book_pks_by_idx]
-
-            gb_api_key = _get_google_books_api_key()
-            if needs_enrichment_idxs and gb_api_key:
-                if progress_cb:
-                    progress_cb(0, len(needs_enrichment_idxs), "Enriching your library")
-
-                def _quick_enrich(idx):
-                    """Single Google Books API call to get pageCount + publishedDate + averageRating."""
-                    row = read_df.loc[idx]
-                    book_pk = book_pks_by_idx[idx]
-                    book = Book.objects.get(pk=book_pk)
-                    if book.isbn13:
-                        query = f"isbn:{book.isbn13}"
-                    else:
-                        query = f"intitle:{requests.utils.quote(book.title)}+inauthor:{requests.utils.quote(str(row['Author']))}"
-                    url = f"https://www.googleapis.com/books/v1/volumes?q={query}&key={gb_api_key}"
-                    try:
-                        res = requests.get(url, timeout=10)
-                        res.raise_for_status()
-                        data = res.json()
-                        if data.get("totalItems", 0) == 0:
-                            return idx, {}
-                        volume_info = data["items"][0].get("volumeInfo", {})
-                        result = {}
-                        if pc := volume_info.get("pageCount"):
-                            result["page_count"] = int(pc)
-                        if pd_str := volume_info.get("publishedDate"):
-                            if match := re.search(r"\d{4}", str(pd_str)):
-                                result["publish_year"] = int(match.group())
-                        if ar := volume_info.get("averageRating"):
-                            result["average_rating"] = float(ar)
-                        return idx, result
-                    except Exception as e:
-                        logger.warning(f"Google Books enrichment failed for book pk={book_pk}: {e}")
-                        return idx, {}
-
-                enriched_count = 0
-                with ThreadPoolExecutor(max_workers=4) as executor:
-                    futures = {executor.submit(_quick_enrich, idx): idx for idx in needs_enrichment_idxs}
-                    for future in as_completed(futures):
-                        idx, result = future.result()
-                        if result:
-                            book_pk = book_pks_by_idx[idx]
-                            update_fields = {}
-                            if "page_count" in result:
-                                read_df.at[idx, "Number of Pages"] = result["page_count"]
-                                update_fields["page_count"] = result["page_count"]
-                            if "publish_year" in result:
-                                read_df.at[idx, "Original Publication Year"] = result["publish_year"]
-                                update_fields["publish_year"] = result["publish_year"]
-                            if "average_rating" in result:
-                                read_df.at[idx, "Average Rating"] = result["average_rating"]
-                                update_fields["average_rating"] = result["average_rating"]
-                            if update_fields:
-                                Book.objects.filter(pk=book_pk).update(**update_fields)
-                            enriched_count += 1
-                        if progress_cb:
-                            progress_cb(enriched_count, len(needs_enrichment_idxs), "Enriching your library")
-
-                logger.info(f"Quick enrichment: enriched {enriched_count}/{len(needs_enrichment_idxs)} books via Google Books")
 
             # Re-coerce numeric columns after backfill
             read_df["Number of Pages"] = pd.to_numeric(read_df["Number of Pages"], errors="coerce")
