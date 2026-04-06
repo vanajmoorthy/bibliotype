@@ -181,11 +181,13 @@ def _recalculate_enrichment_stats(user, dna_data):
     if not books.exists():
         return
 
+    user_stats = dna_data.setdefault("user_stats", {})
+
     # Page stats
     page_counts = [b.page_count for b in books if b.page_count]
     if page_counts:
-        dna_data["user_stats"]["total_pages_read"] = sum(page_counts)
-        dna_data["user_stats"]["avg_book_length"] = round(sum(page_counts) / len(page_counts))
+        user_stats["total_pages_read"] = sum(page_counts)
+        user_stats["avg_book_length"] = round(sum(page_counts) / len(page_counts))
 
     # Genre stats
     all_genres = []
@@ -612,16 +614,21 @@ def display_dna_view(request):
 
             if pending:
                 _recalculate_enrichment_stats(request.user, dna_data)
-                remaining = total - min(genres_done, pages_done)
+                slowest = min(genres_done, pages_done)
+                percent = round(slowest / total * 100)
+                remaining = total - slowest
                 remaining_minutes = max(1, math.ceil(remaining / 20))
+                csv_source = dna_data.get("csv_source", "goodreads")
                 enrichment = {
                     "total": total,
+                    "percent": percent,
                     "genres_done": genres_done,
                     "genres_pending": genres_pending,
                     "pages_done": pages_done,
                     "pages_pending": pages_pending,
                     "pending": True,
                     "remaining_minutes": remaining_minutes,
+                    "csv_source": csv_source,
                 }
             elif not dna_data.get("enrichment_finalized"):
                 # Enrichment just finished — do one final recalculation and save
@@ -979,6 +986,64 @@ def check_recommendations_status_view(request):
     if profile.recommendations_data:
         return JsonResponse({"status": "ready"})
     return JsonResponse({"status": "pending"})
+
+
+@login_required
+def enrichment_status_view(request):
+    """AJAX endpoint for polling enrichment progress. Returns updated stats for live dashboard updates."""
+    from .models import Book
+
+    profile = request.user.userprofile
+    dna_data = profile.dna_data
+    if not dna_data:
+        return JsonResponse({"pending": False})
+
+    user_books_qs = Book.objects.filter(readers__user=request.user)
+    total = user_books_qs.count()
+    if total == 0:
+        return JsonResponse({"pending": False})
+
+    genres_done = user_books_qs.filter(genres__isnull=False).distinct().count()
+    pages_done = user_books_qs.filter(page_count__isnull=False).count()
+    genres_pending = (genres_done / total) < 0.5
+    pages_pending = (pages_done / total) < 0.5
+    pending = genres_pending or pages_pending
+
+    if not pending:
+        # Enrichment complete — finalize if needed
+        if not dna_data.get("enrichment_finalized"):
+            _recalculate_enrichment_stats(request.user, dna_data)
+            dna_data["enrichment_finalized"] = True
+            profile.dna_data = dna_data
+            profile.save(update_fields=["dna_data"])
+        return JsonResponse({"pending": False})
+
+    # Recalculate fresh stats
+    _recalculate_enrichment_stats(request.user, dna_data)
+
+    slowest = min(genres_done, pages_done)
+    percent = round(slowest / total * 100)
+    remaining = total - slowest
+    remaining_minutes = max(1, math.ceil(remaining / 20))
+
+    return JsonResponse({
+        "pending": True,
+        "percent": percent,
+        "genres_done": genres_done,
+        "pages_done": pages_done,
+        "total": total,
+        "genres_pending": genres_pending,
+        "pages_pending": pages_pending,
+        "remaining_minutes": remaining_minutes,
+        "csv_source": dna_data.get("csv_source", "goodreads"),
+        "updated_stats": {
+            "total_pages_read": dna_data["user_stats"].get("total_pages_read", 0),
+            "avg_book_length": dna_data["user_stats"].get("avg_book_length", 0),
+            "top_genres": dna_data.get("top_genres", []),
+            "mainstream_score_percent": dna_data.get("mainstream_score_percent", 0),
+            "fiction_nonfiction_split": dna_data.get("fiction_nonfiction_split"),
+        },
+    })
 
 
 def public_profile_view(request, username):

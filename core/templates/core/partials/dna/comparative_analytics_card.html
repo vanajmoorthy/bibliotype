@@ -4,12 +4,8 @@
     {% if dna.bibliotype_percentiles %}
         <div class="space-y-4 text-lg">
             <!-- Average Book Length -->
-            <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
-                {% if enrichment.pages_pending %}
-                    <p class="-mx-3 -mt-3 mb-3 bg-brand-yellow/30 py-1.5 text-center text-sm animate-[enrichPulse_2s_ease-in-out_infinite]">
-                        Still enriching — refresh for updates.
-                    </p>
-                {% endif %}
+            <div class="border-brand-text shadow-neo-sm relative border-2 bg-gray-50 p-3">
+                {% include 'core/partials/dna/enrichment_banner.html' %}
                 <p>
                     The average length of books {{ pronoun_sub|default:"you" }} read is
                     <strong>{{ dna.user_stats.avg_book_length }} pages</strong>.
@@ -27,12 +23,8 @@
             </div>
 
             <!-- Average Book Age -->
-            <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
-                {% if enrichment.pages_pending %}
-                    <p class="-mx-3 -mt-3 mb-3 bg-brand-yellow/30 py-1.5 text-center text-sm animate-[enrichPulse_2s_ease-in-out_infinite]">
-                        Still enriching — refresh for updates.
-                    </p>
-                {% endif %}
+            <div class="border-brand-text shadow-neo-sm relative border-2 bg-gray-50 p-3">
+                {% include 'core/partials/dna/enrichment_banner.html' %}
                 <p>
                     The average age of books {{ pronoun_sub|default:"you" }} read is from
                     <strong>{{ dna.user_stats.avg_publish_year|floatformat:0 }}</strong>.
