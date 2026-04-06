@@ -162,6 +162,61 @@ def terms_view(request):
     return render(request, "core/terms.html")
 
 
+def _recalculate_enrichment_stats(user, dna_data):
+    """Recalculate stats that depend on book enrichment data (genres, page counts, mainstream status).
+
+    Called on each page load while enrichment is pending, so the dashboard reflects
+    the latest enriched data without requiring a re-upload.
+    """
+    from collections import Counter
+
+    from .dna_constants import CANONICAL_GENRE_MAP, FICTION_GENRES, NONFICTION_GENRES
+    from .models import Book
+
+    books = (
+        Book.objects.filter(readers__user=user)
+        .select_related("author", "publisher")
+        .prefetch_related("genres")
+    )
+    if not books.exists():
+        return
+
+    # Page stats
+    page_counts = [b.page_count for b in books if b.page_count]
+    if page_counts:
+        dna_data["user_stats"]["total_pages_read"] = sum(page_counts)
+        dna_data["user_stats"]["avg_book_length"] = round(sum(page_counts) / len(page_counts))
+
+    # Genre stats
+    all_genres = []
+    fiction_count = 0
+    nonfiction_count = 0
+    for book in books:
+        book_genres = [g.name for g in book.genres.all()]
+        all_genres.extend(book_genres)
+        canonical = {CANONICAL_GENRE_MAP.get(g, g) for g in book_genres}
+        if canonical & FICTION_GENRES:
+            fiction_count += 1
+        elif canonical & NONFICTION_GENRES:
+            nonfiction_count += 1
+
+    mapped = [CANONICAL_GENRE_MAP.get(g, g) for g in all_genres]
+    dna_data["top_genres"] = Counter(mapped).most_common(10)
+    dna_data["unique_genres_count"] = len(set(mapped))
+    dna_data["fiction_nonfiction_split"] = (
+        {"fiction_count": fiction_count, "nonfiction_count": nonfiction_count}
+        if (fiction_count + nonfiction_count) > 0
+        else None
+    )
+
+    # Mainstream score
+    total = books.count()
+    mainstream_count = sum(
+        1 for b in books if b.author.is_mainstream or (b.publisher and b.publisher.is_mainstream)
+    )
+    dna_data["mainstream_score_percent"] = round((mainstream_count / total) * 100)
+
+
 def _enrich_dna_for_display(dna_data):
     """Patch dna_data with fresh community averages, global averages, and comparative text.
 
@@ -555,9 +610,11 @@ def display_dna_view(request):
                 genres_pending = (genres_done / total) < 0.5
                 pages_pending = (pages_done / total) < 0.5
                 pending = genres_pending or pages_pending
+
+                # Recalculate stats from current DB data while enrichment is active
                 if pending:
+                    _recalculate_enrichment_stats(request.user, dna_data)
                     remaining = total - min(genres_done, pages_done)
-                    # Conservative estimate: assume ~20 books/min (accounting for API latency)
                     remaining_minutes = max(1, math.ceil(remaining / 20))
                     enrichment = {
                         "total": total,
@@ -568,6 +625,12 @@ def display_dna_view(request):
                         "pending": True,
                         "remaining_minutes": remaining_minutes,
                     }
+                elif dna_data.get("csv_source") == "storygraph":
+                    # Enrichment just finished — do one final recalculation and save
+                    _recalculate_enrichment_stats(request.user, dna_data)
+                    dna_data["csv_source"] = "storygraph_enriched"
+                    user_profile.dna_data = dna_data
+                    user_profile.save(update_fields=["dna_data"])
         else:
             # Anonymous users: no UserBook records, show generic banner
             total = dna_data.get("user_stats", {}).get("total_books_read", 0)
