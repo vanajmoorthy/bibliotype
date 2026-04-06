@@ -99,21 +99,16 @@ CSV Upload → Celery Task (async) → DNA Analysis → Book/Author DB Sync
 - f-strings exclusively — no `.format()` or `%` formatting
 - All Redis operations go through `safe_cache_get/set/delete()` in `core/cache_utils.py` for graceful degradation
 
-## PostHog Analytics
+## Deep-Dive Rules (`.claude/rules/`)
 
-Events tracked in `core/analytics/events.py`. To add a new event:
+These load automatically when you work on matching files:
 
-1. Add a `track_*` function in `events.py` using `capture_event(distinct_id, event_name, properties)`
-2. Export it in `core/analytics/__init__.py`
-3. Call it from your view/task
-
-Conventions:
-- Event names: snake_case (`file_upload_started`, `dna_generation_completed`)
-- Distinct IDs: `str(user.id)` for authenticated, `session.session_key` for anonymous
-- All events get `environment` property automatically
-- Error messages sanitized (truncated 500 chars, API keys stripped)
-- `PostHogExceptionMiddleware` tracks unhandled exceptions in production only
-- Cookieless mode enabled (no consent needed)
+- `ui-and-styling.md` — Neobrutalist design system, Tailwind @theme, component patterns, Alpine.js, Chart.js
+- `caching.md` — safe_cache wrappers, Redis key registry, invalidation strategy, graceful degradation
+- `celery-tasks.md` — Task registry, retry/backoff, progress tracking, task chains, testing
+- `user-flows.md` — Auth vs anonymous uploads, DNA claim on signup, session data, CAPTCHA, polling
+- `posthog-analytics.md` — How to add events, naming conventions, middleware, event registry
+- `models.md` — Normalization, signals, JSONField schemas, constraints, singleton pattern
 
 ## Tech Stack
 
