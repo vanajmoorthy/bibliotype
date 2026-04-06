@@ -18,6 +18,7 @@ ongoing
 
 todo  
 - add see password button, forgot password link too close to input
+- fix button hover animation 
 - adjust reader type calculations, different colour for diff types? pixel square background for banner? animated?
 - (double check but probably fine) check that when a user generates dna, the book covers get set and load. right now they only appear after refreshing.
 - (need to link methodology pages or something) update the sources for comparative analytics
