@@ -89,6 +89,42 @@ STORYGRAPH_TO_GOODREADS = {
     "Format": "Binding",
 }
 
+# Maps common StoryGraph user tags to canonical genres.
+# Applied before enrichment dispatch so tagged books can skip API genre lookups.
+STORYGRAPH_TAG_TO_GENRE = {
+    "sci-fi": "science fiction",
+    "scifi": "science fiction",
+    "science fiction": "science fiction",
+    "fantasy": "fantasy",
+    "dystopian": "dystopian",
+    "dystopia": "dystopian",
+    "classic": "classics",
+    "classics": "classics",
+    "non-fiction": "non-fiction",
+    "nonfiction": "non-fiction",
+    "horror": "horror",
+    "romance": "romance",
+    "thriller": "thriller",
+    "mystery": "thriller",
+    "biography": "biography",
+    "memoir": "biography",
+    "history": "history",
+    "philosophy": "philosophy",
+    "psychology": "psychology",
+    "historical fiction": "historical fiction",
+    "young adult": "young adult",
+    "ya": "young adult",
+    "short stories": "short stories",
+    "poetry": "plays & drama",
+    "travel": "travel",
+    "science": "science",
+    "nature": "nature",
+    "art": "art & music",
+    "music": "art & music",
+    "self-help": "self-help",
+    "self help": "self-help",
+}
+
 
 def _detect_and_normalize_csv(df):
     """Detect CSV source (Goodreads vs StoryGraph) and normalize columns to Goodreads schema."""
@@ -144,7 +180,7 @@ def assign_reader_type(read_df, enriched_data, all_genres):
     logger.debug(f"Genre counts: {genre_counts}")
 
     # These scores are now based on CLEAN, CANONICAL genre counts
-    scores["Fantasy Fanatic"] += genre_counts.get("fantasy", 0) + genre_counts.get("science fiction", 0)
+    scores["Fantasy Fanatic"] += genre_counts.get("fantasy", 0) + genre_counts.get("science fiction", 0) + genre_counts.get("dystopian", 0)
     scores["Non-Fiction Ninja"] += genre_counts.get("non-fiction", 0)
     scores["Philosophical Philomath"] += genre_counts.get("philosophy", 0)
     scores["Nature Nut Case"] += genre_counts.get("nature", 0)
@@ -168,6 +204,15 @@ def assign_reader_type(read_df, enriched_data, all_genres):
             if not publisher.is_mainstream:
                 logger.debug(f"Found non-major publisher: {publisher}")
                 scores["Small Press Supporter"] += 1
+
+    # Re-read detection: StoryGraph provides Read Count, Goodreads uses duplicate titles
+    if "Read Count" in read_df.columns:
+        reread_count = int((pd.to_numeric(read_df["Read Count"], errors="coerce").fillna(1) > 1).sum())
+    else:
+        reread_count = read_df.duplicated(subset=["Title"], keep=False).sum() // 2
+    # Award 3 points per reread — a reader with 5+ rereads out of 30 books gets a meaningful score
+    if reread_count > 0:
+        scores["Comfort Rereader"] += reread_count * 3
 
     DIVERSITY_THRESHOLD = 10
     DIVERSITY_BONUS = 15
@@ -380,6 +425,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         all_raw_genres, user_book_objects = [], []
         book_pks_by_idx = {}  # Track book PKs for inline enrichment
+        # Upload nonce: enrichment tasks check this to exit early if a newer upload started
+        upload_nonce = None
+        upload_user_id = None
+        if user:
+            upload_user_id = user.id
+            from ..cache_utils import safe_cache_get
+
+            upload_nonce = safe_cache_get(f"upload_nonce_{user.id}")
         with requests.Session() as session:
 
             def process_book_row(original_row):
@@ -470,16 +523,29 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     # Query from the Genre side of the relationship to ensure fresh data
                     has_genres = Genre.objects.filter(books__id=book.pk).exists()
 
+                # StoryGraph tags → canonical genres (applied before enrichment dispatch)
+                if csv_source == "storygraph" and not has_genres:
+                    raw_tags_str = original_row.get("Tags")
+                    if raw_tags_str and pd.notna(raw_tags_str):
+                        raw_tags = [t.strip().lower() for t in str(raw_tags_str).split(",") if t.strip()]
+                        tag_genres = list({STORYGRAPH_TAG_TO_GENRE[t] for t in raw_tags if t in STORYGRAPH_TAG_TO_GENRE})
+                        if tag_genres:
+                            genre_objs = [Genre.objects.get_or_create(name=g)[0] for g in tag_genres]
+                            book.genres.add(*genre_objs)
+                            has_genres = True
+                            logger.debug(f"Applied {len(tag_genres)} tag-derived genres for '{book.title}': {tag_genres}")
+
                 # Dispatch enrichment as a background task to avoid blocking upload
                 # Skip if the full enrichment pipeline already ran (google_books_last_checked is set)
                 already_attempted = not created and book.google_books_last_checked is not None
-                if not already_attempted and (created or not has_genres):
+                needs_page_data = not book.page_count or not book.publish_year
+                if not already_attempted and (created or not has_genres or needs_page_data):
                     from ..tasks import enrich_book_task
 
                     logger.debug(
-                        f"Dispatching enrichment for '{book.title}' (created={created}, has_genres={has_genres})"
+                        f"Dispatching enrichment for '{book.title}' (created={created}, has_genres={has_genres}, needs_page_data={needs_page_data})"
                     )
-                    enrich_book_task.delay(book.pk)
+                    enrich_book_task.delay(book.pk, user_id=upload_user_id, upload_nonce=upload_nonce)
                 else:
                     logger.debug(f"Book '{book.title}' already enriched. Skipping.")
 
@@ -901,6 +967,20 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 comparative_text["bpy_direction"] = "fewer"
                 comparative_text["bpy_pct"] = round(100 - bpy_pct, 1)
 
+        # StoryGraph mood and pace distributions (empty for Goodreads)
+        mood_distribution = []
+        pace_distribution = []
+        if "Moods" in read_df.columns:
+            all_moods = []
+            for moods_str in read_df["Moods"].dropna():
+                all_moods.extend([m.strip().lower() for m in str(moods_str).split(",") if m.strip()])
+            if all_moods:
+                mood_distribution = Counter(all_moods).most_common(10)
+        if "Pace" in read_df.columns:
+            pace_values = read_df["Pace"].dropna().str.strip().str.lower()
+            if not pace_values.empty:
+                pace_distribution = Counter(pace_values).most_common()
+
         dna = {
             "user_stats": user_base_stats,
             "bibliotype_percentiles": percentiles,
@@ -944,6 +1024,8 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             "shortest_book": shortest_book,
             "page_difference": page_difference,
             "csv_source": csv_source,
+            "mood_distribution": mood_distribution,
+            "pace_distribution": pace_distribution,
         }
         logger.debug(f"DNA data generated")
 

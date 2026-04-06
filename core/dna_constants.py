@@ -52,6 +52,23 @@ READER_TYPE_DESCRIPTIONS = {
         "You enjoy pondering the big questions. Your reading history shows a recurring interest in philosophical works.",
         "Your library is a space for deep thought, filled with books that explore ethics, existence, and the nature of reality.",
     ],
+    "Rapacious Reader": [
+        "You devour books at an extraordinary pace. With over 40 books a year under your belt, reading isn't just a hobby — it's a way of life.",
+        "Your reading velocity is remarkable. You tear through books at a rate most readers can only dream of.",
+    ],
+    "Nature Nut Case": [
+        "The natural world is your reading sanctuary. Your shelves are filled with books about ecology, wildlife, and the great outdoors.",
+        "From field guides to nature writing, your reading habits reveal a deep connection with the environment and the living world around us.",
+    ],
+    "Self Help Scholar": [
+        "You read with purpose and self-improvement in mind. Your library is rich with books on personal development, productivity, and growth.",
+        "You believe in the power of books to change lives — starting with your own. Self-help and personal development titles dominate your reading list.",
+    ],
+    "Comfort Rereader": [
+        "You find joy in returning to books you love. Your reading history shows a pattern of revisiting favourites rather than always chasing the new.",
+        "Some readers race through new titles — you prefer to deepen your relationship with books that matter to you. Your rereads speak volumes.",
+        "Your library isn't just a collection of books read once. You return to stories like old friends, finding new meaning with each visit.",
+    ],
     "Eclectic Reader": [
         "Your reading habits are balanced and wide-ranging, with no single trait dominating the others. You are a true eclectic reader!",
     ],
@@ -139,7 +156,6 @@ GENRE_ALIASES = {
     "science fiction": {
         "sci-fi",
         "speculative fiction",
-        "dystopian fiction",
         "cyberpunk",
         "space opera",
         "time travel",
@@ -147,14 +163,17 @@ GENRE_ALIASES = {
         "utopias",
         "the future",
         "artificial intelligence",
-        "totalitarianism",
         "hainish cycle",
         "dune (imaginary place)",
         "science-fiction",
-        "fiction, dystopian",
-        "dystopias",
-        "totalitarianism -- fiction",
         "robots",
+    },
+    "dystopian": {
+        "dystopian fiction",
+        "dystopias",
+        "fiction, dystopian",
+        "totalitarianism",
+        "totalitarianism -- fiction",
     },
     "thriller": {
         "thriller",
@@ -1260,7 +1279,6 @@ EXCLUDED_GENRES = {
     "brothers",
     "frères",
     "guerres et batailles imaginaires",
-    "dystopian",
     "series: a song of ice and fire",
     "narnia (imaginary place)",
     "narnia (imaginary place), fiction",
@@ -1542,6 +1560,7 @@ for canonical, aliases in GENRE_ALIASES.items():
 FICTION_GENRES = {
     "fantasy",
     "science fiction",
+    "dystopian",
     "thriller",
     "horror",
     "historical fiction",

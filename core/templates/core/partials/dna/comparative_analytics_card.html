@@ -4,11 +4,14 @@
     {% if dna.bibliotype_percentiles %}
         <div class="space-y-4 text-lg">
             <!-- Average Book Length -->
-            <div class="border-brand-text shadow-neo-sm relative border-2 bg-gray-50 p-3">
-                {% include 'core/partials/dna/enrichment_banner.html' %}
+            <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
+                <p class="-mx-3 -mt-3 mb-2 bg-brand-yellow/30 py-0.5 text-center text-xs animate-[enrichPulse_2s_ease-in-out_infinite]"
+                   x-data x-show="$store.enrichment?.pending" x-cloak>
+                    Still enriching
+                </p>
                 <p>
                     The average length of books {{ pronoun_sub|default:"you" }} read is
-                    <strong>{{ dna.user_stats.avg_book_length }} pages</strong>.
+                    <strong><span id="stat-avg-length">{{ dna.user_stats.avg_book_length }}</span> pages</strong>.
                 </p>
                 <p class="mt-1 text-base">
                     This is <strong>{{ dna.comparative_text.length_direction }}</strong> than
@@ -23,8 +26,11 @@
             </div>
 
             <!-- Average Book Age -->
-            <div class="border-brand-text shadow-neo-sm relative border-2 bg-gray-50 p-3">
-                {% include 'core/partials/dna/enrichment_banner.html' %}
+            <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
+                <p class="-mx-3 -mt-3 mb-2 bg-brand-yellow/30 py-0.5 text-center text-xs animate-[enrichPulse_2s_ease-in-out_infinite]"
+                   x-data x-show="$store.enrichment?.pending" x-cloak>
+                    Still enriching
+                </p>
                 <p>
                     The average age of books {{ pronoun_sub|default:"you" }} read is from
                     <strong>{{ dna.user_stats.avg_publish_year|floatformat:0 }}</strong>.

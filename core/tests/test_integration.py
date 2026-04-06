@@ -44,7 +44,9 @@ class BookEnrichmentIntegrationTests(TestCase):
     @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
     @patch("core.book_enrichment_service._fetch_from_open_library")
     def test_enrich_book_task_updates_book_with_api_data(self, mock_ol, mock_gb):
-        """Full enrichment pipeline: task → service → DB updates."""
+        """Full enrichment pipeline: task → service → DB updates.
+        When OL returns genres, GB is skipped (optimization) so google_books_last_checked
+        is set but ratings come from the GB-skip path (no actual GB call)."""
         from core.tasks import enrich_book_task
 
         mock_ol.return_value = (
@@ -65,8 +67,8 @@ class BookEnrichmentIntegrationTests(TestCase):
         self.assertEqual(self.book.publish_year, 2020)
         self.assertEqual(self.book.page_count, 350)
         self.assertIsNotNone(self.book.google_books_last_checked)
-        self.assertEqual(self.book.google_books_ratings_count, 500)
-        self.assertAlmostEqual(self.book.google_books_average_rating, 4.1)
+        # GB is skipped when OL found genres, so no ratings from GB
+        mock_gb.assert_not_called()
 
         # Check publisher was created and linked
         self.assertIsNotNone(self.book.publisher)
@@ -83,6 +85,34 @@ class BookEnrichmentIntegrationTests(TestCase):
         # Should not raise
         result = enrich_book_task.delay(99999)
         self.assertIsNone(result.result)
+
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    def test_enrich_book_task_skipped_when_superseded_by_newer_upload(self, mock_enrich):
+        """Enrichment task exits early if a newer upload nonce is in the cache."""
+        from core.cache_utils import safe_cache_set
+        from core.tasks import enrich_book_task
+
+        # Set a newer nonce than what the task carries
+        safe_cache_set("upload_nonce_42", "new-upload-id", timeout=3600)
+
+        enrich_book_task.delay(self.book.id, user_id=42, upload_nonce="old-upload-id")
+
+        # enrich_book_from_apis should NOT have been called
+        mock_enrich.assert_not_called()
+
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    def test_enrich_book_task_runs_when_nonce_matches(self, mock_enrich):
+        """Enrichment task runs normally when upload nonce is current."""
+        from core.cache_utils import safe_cache_set
+        from core.tasks import enrich_book_task
+
+        safe_cache_set("upload_nonce_42", "current-upload-id", timeout=3600)
+
+        enrich_book_task.delay(self.book.id, user_id=42, upload_nonce="current-upload-id")
+
+        mock_enrich.assert_called_once()
 
     @patch("core.book_enrichment_service.enrich_book_from_apis")
     def test_enrich_book_task_retries_on_api_failure(self, mock_enrich):
@@ -129,8 +159,37 @@ class BookEnrichmentIntegrationTests(TestCase):
 
     @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
     @patch("core.book_enrichment_service._fetch_from_open_library")
-    def test_google_books_genres_replace_open_library_genres(self, mock_ol, mock_gb):
-        """When Google Books returns categories, they replace OL genres."""
+    def test_google_books_genres_used_when_ol_has_no_genres(self, mock_ol, mock_gb):
+        """When OL returns no genres, GB is called and its categories are used."""
+        from core.book_enrichment_service import enrich_book_from_apis
+
+        mock_ol.return_value = (
+            {
+                "genres": [],
+                "publish_year": None,
+                "page_count": None,
+                "publisher": None,
+                "isbn_13": None,
+            },
+            2,
+        )
+        # Google Books returns Science Fiction category as fallback
+        mock_gb.return_value = (
+            {"categories": ["Science Fiction"], "ratings_count": 100, "average_rating": 4.0},
+            1,
+        )
+
+        session = MagicMock()
+        enrich_book_from_apis(self.book, session)
+
+        self.book.refresh_from_db()
+        genre_names = set(self.book.genres.values_list("name", flat=True))
+        self.assertIn("science fiction", genre_names)
+
+    @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
+    @patch("core.book_enrichment_service._fetch_from_open_library")
+    def test_gb_skipped_when_ol_found_genres(self, mock_ol, mock_gb):
+        """When OL returns genres, GB is skipped entirely (optimization)."""
         from core.book_enrichment_service import enrich_book_from_apis
 
         mock_ol.return_value = (
@@ -143,19 +202,15 @@ class BookEnrichmentIntegrationTests(TestCase):
             },
             2,
         )
-        # Google Books returns Science Fiction category
-        mock_gb.return_value = (
-            {"categories": ["Science Fiction"], "ratings_count": 100, "average_rating": 4.0},
-            1,
-        )
 
         session = MagicMock()
         enrich_book_from_apis(self.book, session)
 
+        mock_gb.assert_not_called()
         self.book.refresh_from_db()
+        self.assertIsNotNone(self.book.google_books_last_checked)
         genre_names = set(self.book.genres.values_list("name", flat=True))
-        self.assertIn("science fiction", genre_names)
-        self.assertNotIn("fantasy", genre_names)
+        self.assertIn("fantasy", genre_names)
 
     @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
     @patch("core.book_enrichment_service._fetch_from_open_library")

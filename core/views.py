@@ -606,17 +606,18 @@ def display_dna_view(request):
         if total > 0:
             genres_done = user_books_qs.filter(genres__isnull=False).distinct().count()
             pages_done = user_books_qs.filter(page_count__isnull=False).count()
-            # Consider enrichment complete if >=50% of books have genres
-            # (some books genuinely have no genre data on Open Library/Google Books)
-            genres_pending = (genres_done / total) < 0.5
-            pages_pending = (pages_done / total) < 0.5
-            pending = genres_pending or pages_pending
+            # Enrichment is complete when all books have been through the pipeline
+            # (google_books_last_checked is set as the final step of enrichment)
+            all_attempted = not user_books_qs.filter(google_books_last_checked__isnull=True).exists()
+            genres_pending = not all_attempted and (genres_done / total) < 0.5
+            pages_pending = not all_attempted and (pages_done / total) < 0.5
+            pending = not all_attempted
 
             if pending:
                 _recalculate_enrichment_stats(request.user, dna_data)
-                slowest = min(genres_done, pages_done)
-                percent = round(slowest / total * 100)
-                remaining = total - slowest
+                attempted = user_books_qs.filter(google_books_last_checked__isnull=False).count()
+                percent = round(attempted / total * 100)
+                remaining = total - attempted
                 remaining_minutes = max(1, math.ceil(remaining / 20))
                 csv_source = dna_data.get("csv_source", "goodreads")
                 enrichment = {
@@ -636,18 +637,8 @@ def display_dna_view(request):
                 dna_data["enrichment_finalized"] = True
                 user_profile.dna_data = dna_data
                 user_profile.save(update_fields=["dna_data"])
-    elif dna_data and not request.user.is_authenticated:
-        # Anonymous users: no UserBook records, show generic banner
-        total = dna_data.get("user_stats", {}).get("total_books_read", 0)
-        enrichment = {
-            "total": total,
-            "genres_done": 0,
-            "genres_pending": True,
-            "pages_done": 0,
-            "pages_pending": True,
-            "pending": True,
-            "remaining_minutes": max(1, math.ceil(total / 20)),
-        }
+    # Anonymous users have no async enrichment — their DNA is computed synchronously.
+    # No enrichment banner or polling needed.
 
     recommendations_meta = {}
     if request.user.is_authenticated and user_profile:
@@ -702,6 +693,11 @@ def upload_view(request):
             # Save the pending task ID to track regeneration progress
             request.user.userprofile.pending_dna_task_id = result.id
             request.user.userprofile.save()
+
+            # Store upload nonce so stale enrichment tasks from previous uploads exit early
+            from .cache_utils import safe_cache_set
+
+            safe_cache_set(f"upload_nonce_{request.user.id}", result.id, timeout=3600)
 
             messages.success(
                 request,
@@ -1005,9 +1001,10 @@ def enrichment_status_view(request):
 
     genres_done = user_books_qs.filter(genres__isnull=False).distinct().count()
     pages_done = user_books_qs.filter(page_count__isnull=False).count()
-    genres_pending = (genres_done / total) < 0.5
-    pages_pending = (pages_done / total) < 0.5
-    pending = genres_pending or pages_pending
+    all_attempted = not user_books_qs.filter(google_books_last_checked__isnull=True).exists()
+    genres_pending = not all_attempted and (genres_done / total) < 0.5
+    pages_pending = not all_attempted and (pages_done / total) < 0.5
+    pending = not all_attempted
 
     if not pending:
         # Enrichment complete — finalize if needed
@@ -1021,9 +1018,9 @@ def enrichment_status_view(request):
     # Recalculate fresh stats
     _recalculate_enrichment_stats(request.user, dna_data)
 
-    slowest = min(genres_done, pages_done)
-    percent = round(slowest / total * 100)
-    remaining = total - slowest
+    attempted = user_books_qs.filter(google_books_last_checked__isnull=False).count()
+    percent = round(attempted / total * 100)
+    remaining = total - attempted
     remaining_minutes = max(1, math.ceil(remaining / 20))
 
     return JsonResponse({

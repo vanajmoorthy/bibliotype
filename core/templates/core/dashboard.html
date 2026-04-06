@@ -184,13 +184,15 @@
                 {% include 'core/partials/dna/top_genres_authors_row.html' with use_rainbow=True %}
                 {% include 'core/partials/dna/review_analysis_card.html' %}
 
-                {% if dna.fiction_nonfiction_split or dna.longest_book %}
+                {% if dna.fiction_nonfiction_split or dna.longest_book or enrichment.pending %}
                     <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                         {% if dna.fiction_nonfiction_split %}
                             {% include 'core/partials/dna/fiction_nonfiction_card.html' %}
                         {% endif %}
                         {% if dna.longest_book %}
                             {% include 'core/partials/dna/book_extremes_card.html' %}
+                        {% elif enrichment.pending %}
+                            {% include 'core/partials/dna/book_extremes_skeleton.html' %}
                         {% endif %}
                     </div>
                 {% endif %}
@@ -339,7 +341,10 @@
                                         if (pagesNum) pagesNum.textContent = s.total_pages_read.toLocaleString();
                                         // Update mainstream score
                                         const msEl = document.getElementById('mainstream-score');
-                                        if (msEl) msEl.textContent = s.mainstream_score_percent;
+                                        if (msEl) msEl.textContent = s.mainstream_score_percent + '%';
+                                        // Update avg book length in comparative analytics
+                                        const avgEl = document.getElementById('stat-avg-length');
+                                        if (avgEl) avgEl.textContent = s.avg_book_length;
                                     }
                                 } catch (e) {
                                     // Silent fail — will retry on next interval

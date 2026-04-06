@@ -29,6 +29,13 @@ def create_vibe_prompt(dna: dict) -> str:
     # Simple logic to determine the era
     era = "classic" if avg_pub_year < 1980 else "modern"
 
+    # StoryGraph mood data (empty for Goodreads uploads)
+    mood_line = ""
+    mood_distribution = dna.get("mood_distribution", [])
+    if mood_distribution:
+        top_moods = [f"{m[0]} ({m[1]})" for m in mood_distribution[:5]]
+        mood_line = f"\n- Self-Reported Moods: {', '.join(top_moods)}"
+
     prompt = f"""
 You are a witty, self-aware observer who writes funny, specific one-liner descriptions of a person based on their reading habits. Think: a friend affectionately roasting your taste in books — wry, literary, a little self-deprecating, with unexpected juxtapositions.
 
@@ -47,7 +54,7 @@ Your task is to generate 2 vivid, character-sketch-style sentences that capture 
 - Primary Reader Type: "{reader_type}"
 - Top Genres: {', '.join(top_genres)}
 - Favorite Authors: {', '.join(top_authors)}
-- General Era: {era}
+- General Era: {era}{mood_line}
 
 **Example of GOOD output for a Fantasy/Sci-Fi reader:**
 {{
@@ -97,7 +104,7 @@ def generate_vibe_with_llm(dna: dict) -> list:
     prompt = create_vibe_prompt(dna)
 
     try:
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        model = genai.GenerativeModel("gemini-2.0-flash-lite")
         generation_config = genai.GenerationConfig(response_mime_type="application/json")
         response = model.generate_content(prompt, generation_config=generation_config)
 
