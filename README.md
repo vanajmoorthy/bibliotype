@@ -21,6 +21,7 @@ todo
 - adjust reader type calculations, different colour for diff types? pixel square background for banner? animated?
 - (double check but probably fine) check that when a user generates dna, the book covers get set and load. right now they only appear after refreshing.
 - (need to link methodology pages or something) update the sources for comparative analytics
+- improve ai generated vibe. add llm metrics with posthog
 - save llm vibe against the dna dictionary, cache this for a month and only refetch if dictionary has changed
     - user a uploads a csv, vibe generated
     - user b uploads the same csv, we want to reuse this same vibe instead of hitting gemini again
