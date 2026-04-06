@@ -164,6 +164,16 @@
                     </span>
                 </h1>
 
+                {% if enrichment.pending %}
+                    <div class="border-brand-text shadow-neo animate-pulse border-2 bg-brand-yellow/50 p-4 text-center">
+                        <p class="text-lg font-bold">
+                            Still enriching your library — {{ enrichment.genres_done }}/{{ enrichment.total }} books processed.
+                            Roughly {{ enrichment.remaining_minutes }} minute{{ enrichment.remaining_minutes|pluralize }} remaining.
+                        </p>
+                        <p class="mt-1 text-sm">Refresh the page to see updated stats.</p>
+                    </div>
+                {% endif %}
+
                 {% include 'core/partials/dna/vibe_display.html' %}
                 {% include 'core/partials/dna/reader_type_card.html' %}
                 {% include 'core/partials/share/share_button.html' %}

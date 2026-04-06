@@ -1,4 +1,7 @@
 <div class="border-brand-text shadow-neo flex flex-col border-2 bg-white p-6">
+    {% if enrichment.genres_pending %}
+        {% include 'core/partials/dna/enrichment_banner.html' %}
+    {% endif %}
     <h2 class="mb-1 text-center text-2xl font-bold uppercase">Fiction vs Nonfiction</h2>
     <p class="text-center text-base text-gray-500 italic">
         How {{ pronoun_pos|default:"your" }} library splits between fiction and nonfiction

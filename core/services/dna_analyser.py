@@ -1,12 +1,14 @@
 import hashlib
 import logging
+import os
 import random
 import re
 import time
 from collections import Counter
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import StringIO
 
+import numpy as np
 import pandas as pd
 import requests
 from django.core.exceptions import ObjectDoesNotExist
@@ -58,6 +60,51 @@ def _build_cover_url(isbn13: str | None) -> str | None:
     if not cleaned or len(cleaned) < 10:
         return None
     return OPEN_LIBRARY_COVER_URL.format(isbn=cleaned[:13])
+
+
+def _get_google_books_api_key():
+    return os.getenv("GOOGLE_BOOKS_API_KEY")
+
+# Goodreads column names serve as the internal canonical schema.
+# All CSV sources are normalized to these names so downstream code
+# (calculate_full_dna, assign_reader_type, save_anonymous_session_data)
+# works identically regardless of source.
+STORYGRAPH_TO_GOODREADS = {
+    "Authors": "Author",
+    "Read Status": "Exclusive Shelf",
+    "Star Rating": "My Rating",
+    "Last Date Read": "Date Read",
+    "Review": "My Review",
+    "ISBN/UID": "ISBN13",
+    "Format": "Binding",
+}
+
+
+def _detect_and_normalize_csv(df):
+    """Detect CSV source (Goodreads vs StoryGraph) and normalize columns to Goodreads schema."""
+    if "Exclusive Shelf" in df.columns:
+        return df, "goodreads"
+    elif "Read Status" in df.columns:
+        df = df.rename(columns=STORYGRAPH_TO_GOODREADS)
+        # Multi-author: take first author from comma-separated list
+        # StoryGraph uses "First Last" format (not "Last, First"), so comma = author separator
+        df["Author"] = df["Author"].str.split(",").str[0].str.strip()
+        # Float ratings -> int using round-half-up (not banker's rounding)
+        # 4.5 -> 5, 3.5 -> 4, 0.5 -> 1 (preserves user intent for half-star ratings)
+        ratings = pd.to_numeric(df["My Rating"], errors="coerce")
+        df["My Rating"] = ratings.apply(lambda x: int(np.floor(x + 0.5)) if pd.notna(x) else pd.NA).astype("Int64")
+        # Validate ISBN: only keep values that are all-digits and length 10 or 13
+        # StoryGraph ISBN/UID may contain non-ISBN internal identifiers
+        if "ISBN13" in df.columns:
+            isbn_col = df["ISBN13"].astype(str).str.strip().str.replace(r"[^0-9Xx]", "", regex=True)
+            df["ISBN13"] = isbn_col.where(isbn_col.str.len().isin([10, 13]), other=pd.NA)
+        # Add missing columns as NaN
+        for col in ["Number of Pages", "Original Publication Year", "Average Rating"]:
+            if col not in df.columns:
+                df[col] = pd.NA
+        return df, "storygraph"
+    else:
+        raise ValueError("Unrecognized CSV format. Please upload a Goodreads or StoryGraph export.")
 
 
 def assign_reader_type(read_df, enriched_data, all_genres):
@@ -251,6 +298,8 @@ def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_d
 def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progress_cb=None):
     try:
         df = pd.read_csv(StringIO(csv_file_content))
+        df, csv_source = _detect_and_normalize_csv(df)
+        logger.info(f"CSV source detected: {csv_source}")
         read_df = df[df["Exclusive Shelf"] == "read"].copy()
 
         # --- Extract currently-reading and custom shelf data ---
@@ -311,7 +360,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         logger.info("Syncing book data with the database...")
 
+        # Prefetch all ISBN-matched books in a single query to avoid N+1
+        csv_isbns = read_df["ISBN13"].dropna().unique().tolist() if "ISBN13" in read_df.columns else []
+        isbn_book_map = {}
+        if csv_isbns:
+            isbn_book_map = {b.isbn13: b for b in Book.objects.filter(isbn13__in=csv_isbns)}
+
         all_raw_genres, user_book_objects = [], []
+        book_pks_by_idx = {}  # Track book PKs for inline enrichment
         with requests.Session() as session:
 
             def process_book_row(original_row):
@@ -350,30 +406,47 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     if cleaned and len(cleaned) >= 10:
                         isbn13_value = cleaned[:13]
 
-                book_defaults = {
-                    "title": title_from_csv,
-                    "page_count": int(p) if pd.notna(p := original_row.get("Number of Pages")) else None,
-                    "average_rating": float(r) if pd.notna(r := original_row.get("Average Rating")) else None,
-                }
+                # Only include fields with actual values to avoid overwriting enriched data with None
+                book_defaults = {}
+                if pd.notna(p := original_row.get("Number of Pages")) and int(p) > 0:
+                    book_defaults["page_count"] = int(p)
+                if pd.notna(r := original_row.get("Average Rating")) and float(r) > 0:
+                    book_defaults["average_rating"] = float(r)
                 if publish_year_value:
                     book_defaults["publish_year"] = publish_year_value
                 if isbn13_value:
                     book_defaults["isbn13"] = isbn13_value
 
-                try:
-                    book, created = Book.objects.update_or_create(
-                        normalized_title=normalized_book_title,
-                        author=author,
-                        defaults=book_defaults,
-                    )
-                except IntegrityError:
-                    # Duplicate ISBN13 — retry without it
-                    book_defaults.pop("isbn13", None)
-                    book, created = Book.objects.update_or_create(
-                        normalized_title=normalized_book_title,
-                        author=author,
-                        defaults=book_defaults,
-                    )
+                # ISBN-based deduplication: reuse existing book if ISBN matches
+                existing_book_by_isbn = isbn_book_map.get(isbn13_value) if isbn13_value else None
+
+                if existing_book_by_isbn:
+                    book = existing_book_by_isbn
+                    created = False
+                    for key, value in book_defaults.items():
+                        if value is not None and getattr(book, key, None) is None:
+                            setattr(book, key, value)
+                    try:
+                        book.save()
+                    except IntegrityError:
+                        logger.warning(f"IntegrityError saving ISBN-matched book {isbn13_value}, skipping update")
+                else:
+                    try:
+                        book, created = Book.objects.update_or_create(
+                            normalized_title=normalized_book_title,
+                            author=author,
+                            defaults=book_defaults,
+                            create_defaults={"title": title_from_csv, **book_defaults},
+                        )
+                    except IntegrityError:
+                        # Duplicate ISBN13 — retry without it
+                        book_defaults.pop("isbn13", None)
+                        book, created = Book.objects.update_or_create(
+                            normalized_title=normalized_book_title,
+                            author=author,
+                            defaults=book_defaults,
+                            create_defaults={"title": title_from_csv, **book_defaults},
+                        )
 
                 # Check if the book already has genres by querying the database directly
                 # This ensures we get the actual current state, not cached relationship data
@@ -406,8 +479,12 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             with ThreadPoolExecutor(max_workers=1) as executor:
                 results = []
                 processed = 0
-                for res in executor.map(process_book_row, read_df.to_dict("records")):
+                row_dicts = read_df.to_dict("records")
+                for row_idx, res in enumerate(executor.map(process_book_row, row_dicts)):
                     results.append(res)
+                    # Track book PK by DataFrame index for inline enrichment
+                    if res[0] is not None:
+                        book_pks_by_idx[read_df.index[row_idx]] = res[0].pk
                     processed += 1
                     if progress_cb:
                         progress_cb(processed, total_books, "Syncing books")
@@ -512,6 +589,109 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                             "date_read": date_read_value,
                         },
                     )
+
+        # Inline enrichment for StoryGraph uploads (DB backfill + Google Books quick lookup)
+        if csv_source == "storygraph" and book_pks_by_idx:
+            # Phase A: Backfill from DB -- single batch query
+            all_book_pks = list(book_pks_by_idx.values())
+            enriched_books = {
+                b["pk"]: b
+                for b in Book.objects.filter(pk__in=all_book_pks).values(
+                    "pk", "page_count", "publish_year", "average_rating"
+                )
+            }
+            backfilled = 0
+            for idx, book_pk in book_pks_by_idx.items():
+                book_data = enriched_books.get(book_pk)
+                if book_data:
+                    if pd.isna(read_df.at[idx, "Number of Pages"]) and book_data["page_count"]:
+                        read_df.at[idx, "Number of Pages"] = book_data["page_count"]
+                        backfilled += 1
+                    if pd.isna(read_df.at[idx, "Original Publication Year"]) and book_data["publish_year"]:
+                        read_df.at[idx, "Original Publication Year"] = book_data["publish_year"]
+                    if pd.isna(read_df.at[idx, "Average Rating"]) and book_data["average_rating"]:
+                        read_df.at[idx, "Average Rating"] = book_data["average_rating"]
+            logger.info(f"DB backfill: enriched {backfilled}/{len(all_book_pks)} books from existing data")
+
+            # Phase B: Quick Google Books lookup for remaining gaps
+            needs_enrichment_idxs = read_df[
+                read_df["Number of Pages"].isna() | read_df["Original Publication Year"].isna()
+            ].index.tolist()
+            # Only include indices we have book PKs for
+            needs_enrichment_idxs = [idx for idx in needs_enrichment_idxs if idx in book_pks_by_idx]
+
+            gb_api_key = _get_google_books_api_key()
+            if needs_enrichment_idxs and gb_api_key:
+                if progress_cb:
+                    progress_cb(0, len(needs_enrichment_idxs), "Enriching your library")
+
+                def _quick_enrich(idx):
+                    """Single Google Books API call to get pageCount + publishedDate + averageRating."""
+                    row = read_df.loc[idx]
+                    book_pk = book_pks_by_idx[idx]
+                    book = Book.objects.get(pk=book_pk)
+                    if book.isbn13:
+                        query = f"isbn:{book.isbn13}"
+                    else:
+                        query = f"intitle:{requests.utils.quote(book.title)}+inauthor:{requests.utils.quote(str(row['Author']))}"
+                    url = f"https://www.googleapis.com/books/v1/volumes?q={query}&key={gb_api_key}"
+                    try:
+                        res = requests.get(url, timeout=10)
+                        res.raise_for_status()
+                        data = res.json()
+                        if data.get("totalItems", 0) == 0:
+                            return idx, {}
+                        volume_info = data["items"][0].get("volumeInfo", {})
+                        result = {}
+                        if pc := volume_info.get("pageCount"):
+                            result["page_count"] = int(pc)
+                        if pd_str := volume_info.get("publishedDate"):
+                            if match := re.search(r"\d{4}", str(pd_str)):
+                                result["publish_year"] = int(match.group())
+                        if ar := volume_info.get("averageRating"):
+                            result["average_rating"] = float(ar)
+                        return idx, result
+                    except Exception as e:
+                        logger.warning(f"Google Books enrichment failed for book pk={book_pk}: {e}")
+                        return idx, {}
+
+                enriched_count = 0
+                with ThreadPoolExecutor(max_workers=4) as executor:
+                    futures = {executor.submit(_quick_enrich, idx): idx for idx in needs_enrichment_idxs}
+                    for future in as_completed(futures):
+                        idx, result = future.result()
+                        if result:
+                            book_pk = book_pks_by_idx[idx]
+                            update_fields = {}
+                            if "page_count" in result:
+                                read_df.at[idx, "Number of Pages"] = result["page_count"]
+                                update_fields["page_count"] = result["page_count"]
+                            if "publish_year" in result:
+                                read_df.at[idx, "Original Publication Year"] = result["publish_year"]
+                                update_fields["publish_year"] = result["publish_year"]
+                            if "average_rating" in result:
+                                read_df.at[idx, "Average Rating"] = result["average_rating"]
+                                update_fields["average_rating"] = result["average_rating"]
+                            if update_fields:
+                                Book.objects.filter(pk=book_pk).update(**update_fields)
+                            enriched_count += 1
+                        if progress_cb:
+                            progress_cb(enriched_count, len(needs_enrichment_idxs), "Enriching your library")
+
+                logger.info(f"Quick enrichment: enriched {enriched_count}/{len(needs_enrichment_idxs)} books via Google Books")
+
+            # Re-coerce numeric columns after backfill
+            read_df["Number of Pages"] = pd.to_numeric(read_df["Number of Pages"], errors="coerce")
+            read_df["Average Rating"] = pd.to_numeric(read_df["Average Rating"], errors="coerce")
+            if "Original Publication Year" in read_df.columns:
+                read_df["Original Publication Year"] = pd.to_numeric(
+                    read_df["Original Publication Year"], errors="coerce"
+                )
+
+            # Refresh book objects so enriched data is available for scoring
+            refreshed_pks = [b.pk for b in user_book_objects]
+            refreshed_map = {b.pk: b for b in Book.objects.filter(pk__in=refreshed_pks)}
+            user_book_objects = [refreshed_map.get(b.pk, b) for b in user_book_objects]
 
         enriched_data_for_scoring = {
             book.title: {
@@ -813,6 +993,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             "longest_book": longest_book,
             "shortest_book": shortest_book,
             "page_difference": page_difference,
+            "csv_source": csv_source,
         }
         logger.debug(f"DNA data generated")
 

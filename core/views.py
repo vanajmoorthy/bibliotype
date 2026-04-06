@@ -17,10 +17,6 @@ from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
 
-from .forms import CustomUserCreationForm, UpdateDisplayNameForm
-from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
-
-logger = logging.getLogger(__name__)
 from .analytics.events import (
     track_anonymous_dna_claimed,
     track_anonymous_dna_displayed,
@@ -34,6 +30,10 @@ from .analytics.events import (
     track_user_logged_in,
     track_user_signed_up,
 )
+from .forms import CustomUserCreationForm, UpdateDisplayNameForm
+from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
+
+logger = logging.getLogger(__name__)
 
 
 def robots_txt_view(request):
@@ -538,6 +538,42 @@ def display_dna_view(request):
 
     dna_data = _enrich_dna_for_display(dna_data)
 
+    # Compute per-tile enrichment progress for StoryGraph uploads
+    enrichment = None
+    csv_source = dna_data.get("csv_source", "goodreads") if dna_data else "goodreads"
+    if csv_source == "storygraph" and dna_data:
+        if request.user.is_authenticated:
+            from .models import Book, UserBook
+
+            user_books_qs = Book.objects.filter(readers__user=request.user)
+            total = user_books_qs.count()
+            if total > 0:
+                genres_done = user_books_qs.filter(genres__isnull=False).distinct().count()
+                pages_done = user_books_qs.filter(page_count__isnull=False).count()
+                remaining = total - min(genres_done, pages_done)
+                remaining_minutes = max(1, math.ceil(remaining / 30))
+                enrichment = {
+                    "total": total,
+                    "genres_done": genres_done,
+                    "genres_pending": genres_done < total,
+                    "pages_done": pages_done,
+                    "pages_pending": pages_done < total,
+                    "pending": genres_done < total or pages_done < total,
+                    "remaining_minutes": remaining_minutes,
+                }
+        else:
+            # Anonymous users: no UserBook records, show generic banner
+            total = dna_data.get("user_stats", {}).get("total_books_read", 0)
+            enrichment = {
+                "total": total,
+                "genres_done": 0,
+                "genres_pending": True,
+                "pages_done": 0,
+                "pages_pending": True,
+                "pending": True,
+                "remaining_minutes": max(1, math.ceil(total / 30)),
+            }
+
     recommendations_meta = {}
     if request.user.is_authenticated and user_profile:
         recommendations_meta = user_profile.recommendations_meta or {}
@@ -558,6 +594,7 @@ def display_dna_view(request):
         "recommendations_meta": recommendations_meta,
         "recommendations_pending": recommendations_pending,
         "title": title,
+        "enrichment": enrichment,
     }
 
     return render(request, "core/dashboard.html", context)
@@ -579,7 +616,8 @@ def upload_view(request):
         # Track file upload started
         track_file_upload_started(request, csv_file.size)
 
-        csv_content = csv_file.read().decode("utf-8")
+        # utf-8-sig transparently strips BOM if present (some exports include it)
+        csv_content = csv_file.read().decode("utf-8-sig")
 
         if request.user.is_authenticated:
             # Clear old session data so the view will use the updated profile data

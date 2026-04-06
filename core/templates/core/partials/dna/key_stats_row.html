@@ -54,6 +54,9 @@
         <div class="mt-2 text-lg uppercase">Total Books Read</div>
     </div>
     <div class="bg-brand-pink border-brand-text shadow-neo border-2 p-6 text-center">
+        {% if enrichment.pages_pending %}
+            {% include 'core/partials/dna/enrichment_banner.html' %}
+        {% endif %}
         <div class="text-5xl font-bold" x-text="fmtPages(pages)">{{ dna.user_stats.total_pages_read|intcomma }}</div>
         <div class="mt-2 text-lg uppercase">Total Pages Read</div>
     </div>
