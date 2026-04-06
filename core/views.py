@@ -550,17 +550,24 @@ def display_dna_view(request):
             if total > 0:
                 genres_done = user_books_qs.filter(genres__isnull=False).distinct().count()
                 pages_done = user_books_qs.filter(page_count__isnull=False).count()
-                remaining = total - min(genres_done, pages_done)
-                remaining_minutes = max(1, math.ceil(remaining / 30))
-                enrichment = {
-                    "total": total,
-                    "genres_done": genres_done,
-                    "genres_pending": genres_done < total,
-                    "pages_done": pages_done,
-                    "pages_pending": pages_done < total,
-                    "pending": genres_done < total or pages_done < total,
-                    "remaining_minutes": remaining_minutes,
-                }
+                # Consider enrichment complete if >=50% of books have genres
+                # (some books genuinely have no genre data on Open Library/Google Books)
+                genres_pending = (genres_done / total) < 0.5
+                pages_pending = (pages_done / total) < 0.5
+                pending = genres_pending or pages_pending
+                if pending:
+                    remaining = total - min(genres_done, pages_done)
+                    # Conservative estimate: assume ~20 books/min (accounting for API latency)
+                    remaining_minutes = max(1, math.ceil(remaining / 20))
+                    enrichment = {
+                        "total": total,
+                        "genres_done": genres_done,
+                        "genres_pending": genres_pending,
+                        "pages_done": pages_done,
+                        "pages_pending": pages_pending,
+                        "pending": True,
+                        "remaining_minutes": remaining_minutes,
+                    }
         else:
             # Anonymous users: no UserBook records, show generic banner
             total = dna_data.get("user_stats", {}).get("total_books_read", 0)
@@ -571,7 +578,7 @@ def display_dna_view(request):
                 "pages_done": 0,
                 "pages_pending": True,
                 "pending": True,
-                "remaining_minutes": max(1, math.ceil(total / 30)),
+                "remaining_minutes": max(1, math.ceil(total / 20)),
             }
 
     recommendations_meta = {}
