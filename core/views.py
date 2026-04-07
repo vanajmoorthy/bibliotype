@@ -688,16 +688,22 @@ def upload_view(request):
         if request.user.is_authenticated:
             # Clear old session data so the view will use the updated profile data
             request.session.pop("dna_data", None)
+
+            # Store upload nonce BEFORE dispatching the task so enrichment tasks
+            # from previous uploads can detect they've been superseded. Using uuid
+            # rather than task ID since the task hasn't been created yet.
+            import uuid
+
+            from .cache_utils import safe_cache_set
+
+            upload_nonce = str(uuid.uuid4())
+            safe_cache_set(f"upload_nonce_{request.user.id}", upload_nonce, timeout=3600)
+
             result = generate_reading_dna_task.delay(csv_content, request.user.id)
 
             # Save the pending task ID to track regeneration progress
             request.user.userprofile.pending_dna_task_id = result.id
             request.user.userprofile.save()
-
-            # Store upload nonce so stale enrichment tasks from previous uploads exit early
-            from .cache_utils import safe_cache_set
-
-            safe_cache_set(f"upload_nonce_{request.user.id}", result.id, timeout=3600)
 
             messages.success(
                 request,

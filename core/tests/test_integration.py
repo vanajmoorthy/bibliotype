@@ -185,6 +185,7 @@ class BookEnrichmentIntegrationTests(TestCase):
         self.book.refresh_from_db()
         genre_names = set(self.book.genres.values_list("name", flat=True))
         self.assertIn("science fiction", genre_names)
+        mock_gb.assert_called_once()
 
     @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
     @patch("core.book_enrichment_service._fetch_from_open_library")
@@ -211,6 +212,83 @@ class BookEnrichmentIntegrationTests(TestCase):
         self.assertIsNotNone(self.book.google_books_last_checked)
         genre_names = set(self.book.genres.values_list("name", flat=True))
         self.assertIn("fantasy", genre_names)
+
+    def test_ol_isbn_direct_lookup_skips_search(self):
+        """When book has isbn13, _fetch_from_open_library uses /isbn/ endpoint, not search."""
+        from core.book_enrichment_service import _fetch_from_open_library
+
+        self.book.isbn13 = "9780451524935"
+        self.book.save()
+
+        session = MagicMock()
+        # ISBN endpoint returns edition data with a works key
+        isbn_response = MagicMock()
+        isbn_response.status_code = 200
+        isbn_response.json.return_value = {
+            "number_of_pages": 328,
+            "publishers": ["Signet"],
+            "publish_date": "1961",
+            "covers": [12345],
+            "works": [{"key": "/works/OL1168083W"}],
+        }
+        # Work endpoint returns genres
+        work_response = MagicMock()
+        work_response.status_code = 200
+        work_response.json.return_value = {"subjects": ["Dystopian fiction", "Totalitarianism"]}
+
+        session.get.side_effect = [isbn_response, work_response]
+
+        with patch("core.book_enrichment_service.track_external_api_call"):
+            details, api_calls = _fetch_from_open_library(self.book, session)
+
+        self.assertEqual(api_calls, 2)  # ISBN + work, no search
+        self.assertEqual(details["page_count"], 328)
+        self.assertEqual(details["publisher"], "Signet")
+        self.assertEqual(details["publish_year"], 1961)
+        self.assertEqual(details["cover_id"], 12345)
+        self.assertIn("dystopian", details["genres"])
+
+        # Verify the ISBN endpoint was called, not the search endpoint
+        first_call_url = session.get.call_args_list[0][0][0]
+        self.assertIn("/isbn/9780451524935.json", first_call_url)
+
+    def test_ol_isbn_lookup_falls_through_to_search_on_404(self):
+        """When ISBN endpoint returns 404, falls through to title+author search."""
+        from core.book_enrichment_service import _fetch_from_open_library
+
+        self.book.isbn13 = "9780000000000"
+        self.book.save()
+
+        session = MagicMock()
+        # ISBN endpoint returns 404
+        isbn_response = MagicMock()
+        isbn_response.status_code = 404
+
+        # Search endpoint returns results
+        search_response = MagicMock()
+        search_response.status_code = 200
+        search_response.raise_for_status = MagicMock()
+        search_response.json.return_value = {
+            "docs": [{"key": "/works/OL123W", "cover_edition_key": "OL456M", "cover_i": 999}]
+        }
+        # Work endpoint
+        work_response = MagicMock()
+        work_response.status_code = 200
+        work_response.json.return_value = {"subjects": ["Fantasy"]}
+        # Edition endpoint
+        edition_response = MagicMock()
+        edition_response.status_code = 200
+        edition_response.json.return_value = {"number_of_pages": 200, "publishers": ["Tor"]}
+
+        session.get.side_effect = [isbn_response, search_response, work_response, edition_response]
+
+        with patch("core.book_enrichment_service.track_external_api_call"):
+            details, api_calls = _fetch_from_open_library(self.book, session)
+
+        # 4 calls: ISBN (failed) + search + work + edition
+        self.assertEqual(api_calls, 4)
+        self.assertIn("fantasy", details["genres"])
+        self.assertEqual(details["page_count"], 200)
 
     @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
     @patch("core.book_enrichment_service._fetch_from_open_library")

@@ -5,7 +5,12 @@ import pandas as pd
 from django.test import TestCase
 
 from core.models import Book, UserProfile
-from core.services.dna_analyser import _detect_and_normalize_csv, _save_dna_to_profile, assign_reader_type
+from core.services.dna_analyser import (
+    STORYGRAPH_TAG_TO_GENRE,
+    _detect_and_normalize_csv,
+    _save_dna_to_profile,
+    assign_reader_type,
+)
 
 
 SG_CSV_HEADER = (
@@ -172,3 +177,142 @@ class NormalizationUnitTests(TestCase):
 
         self.assertEqual(source, "goodreads")
         self.assertEqual(result_df.iloc[0]["Title"], "Some Book")
+
+    def test_storygraph_columns_preserved_through_normalization(self):
+        """Moods, Pace, Read Count, and Tags columns survive normalization."""
+        csv_text = _sg_csv(
+            '"Test Book","Test Author",,9780000000001,Paperback,read,2024/01/01,2024/02/01,,3,dark,fast,,,,,,4.0,,,,"dystopian, sci-fi",Yes',
+        )
+        df = pd.read_csv(StringIO(csv_text))
+        result_df, source = _detect_and_normalize_csv(df)
+
+        self.assertEqual(source, "storygraph")
+        self.assertIn("Moods", result_df.columns)
+        self.assertIn("Pace", result_df.columns)
+        self.assertIn("Read Count", result_df.columns)
+        self.assertIn("Tags", result_df.columns)
+        self.assertEqual(result_df.iloc[0]["Moods"], "dark")
+        self.assertEqual(result_df.iloc[0]["Pace"], "fast")
+        self.assertEqual(result_df.iloc[0]["Read Count"], 3)
+
+
+class ReReadDetectionTests(TestCase):
+
+    def test_comfort_rereader_scoring_with_read_count(self):
+        """StoryGraph Read Count > 1 awards 3 points per reread to Comfort Rereader."""
+        csv_data = """Title,Author,Exclusive Shelf,Number of Pages,Read Count
+        Book A,Author X,read,200,3
+        Book B,Author Y,read,200,1
+        Book C,Author Z,read,200,2
+        Book D,Author W,read,200,1
+        """
+        read_df = pd.read_csv(StringIO(csv_data))
+        read_df.columns = read_df.columns.str.strip()
+
+        reader_type, scores = assign_reader_type(read_df, {}, [])
+
+        # Books A (Read Count=3) and C (Read Count=2) are re-reads → 2 rereads × 3 pts = 6
+        self.assertEqual(scores["Comfort Rereader"], 6)
+
+    def test_comfort_rereader_scoring_goodreads_fallback(self):
+        """Goodreads uses duplicate title detection when Read Count column is absent."""
+        csv_data = """Title,Author,Exclusive Shelf,Number of Pages
+        Book A,Author X,read,200
+        Book A,Author X,read,200
+        Book B,Author Y,read,200
+        """
+        read_df = pd.read_csv(StringIO(csv_data))
+        read_df.columns = read_df.columns.str.strip()
+
+        reader_type, scores = assign_reader_type(read_df, {}, [])
+
+        # Book A appears twice → 2 duplicated rows // 2 = 1 reread × 3 pts = 3
+        self.assertEqual(scores["Comfort Rereader"], 3)
+
+    def test_no_comfort_rereader_when_no_rereads(self):
+        """No re-reads means no Comfort Rereader score."""
+        csv_data = """Title,Author,Exclusive Shelf,Number of Pages,Read Count
+        Book A,Author X,read,200,1
+        Book B,Author Y,read,200,1
+        """
+        read_df = pd.read_csv(StringIO(csv_data))
+        read_df.columns = read_df.columns.str.strip()
+
+        reader_type, scores = assign_reader_type(read_df, {}, [])
+
+        self.assertEqual(scores.get("Comfort Rereader", 0), 0)
+
+
+class StoryGraphTagMappingTests(TestCase):
+
+    def test_tag_to_genre_mapping_covers_common_tags(self):
+        """STORYGRAPH_TAG_TO_GENRE maps common user tags to canonical genres."""
+        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["sci-fi"], "science fiction")
+        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["fantasy"], "fantasy")
+        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["dystopian"], "dystopian")
+        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["classic"], "classics")
+        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["non-fiction"], "non-fiction")
+        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["ya"], "young adult")
+        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["memoir"], "biography")
+
+    def test_unknown_tags_are_not_in_mapping(self):
+        """Tags not in the mapping are silently ignored during processing."""
+        self.assertNotIn("page-turner", STORYGRAPH_TAG_TO_GENRE)
+        self.assertNotIn("beach-read", STORYGRAPH_TAG_TO_GENRE)
+        self.assertNotIn("", STORYGRAPH_TAG_TO_GENRE)
+
+
+class MoodPaceDistributionTests(TestCase):
+
+    def test_mood_distribution_from_storygraph_csv(self):
+        """Mood distribution is computed from StoryGraph Moods column."""
+        from collections import Counter
+
+        csv_text = _sg_csv(
+            '"Book A","Author A",,9780000000001,Paperback,read,2024/01/01,2024/02/01,,1,"dark, reflective",slow,,,,,,4.0,,,,,Yes',
+            '"Book B","Author B",,9780000000002,Paperback,read,2024/01/01,2024/02/01,,1,"dark, adventurous",fast,,,,,,3.0,,,,,Yes',
+            '"Book C","Author C",,9780000000003,Paperback,read,2024/01/01,2024/02/01,,1,lighthearted,medium,,,,,,5.0,,,,,Yes',
+        )
+        df = pd.read_csv(StringIO(csv_text))
+        result_df, _ = _detect_and_normalize_csv(df)
+
+        # Simulate the mood distribution logic from dna_analyser.py
+        all_moods = []
+        for moods_str in result_df["Moods"].dropna():
+            all_moods.extend([m.strip().lower() for m in str(moods_str).split(",") if m.strip()])
+        mood_distribution = Counter(all_moods).most_common(10)
+
+        mood_dict = dict(mood_distribution)
+        self.assertEqual(mood_dict["dark"], 2)
+        self.assertEqual(mood_dict["reflective"], 1)
+        self.assertEqual(mood_dict["adventurous"], 1)
+        self.assertEqual(mood_dict["lighthearted"], 1)
+
+    def test_pace_distribution_from_storygraph_csv(self):
+        """Pace distribution is computed from StoryGraph Pace column."""
+        from collections import Counter
+
+        csv_text = _sg_csv(
+            '"Book A","Author A",,9780000000001,Paperback,read,2024/01/01,2024/02/01,,1,,slow,,,,,,4.0,,,,,Yes',
+            '"Book B","Author B",,9780000000002,Paperback,read,2024/01/01,2024/02/01,,1,,fast,,,,,,3.0,,,,,Yes',
+            '"Book C","Author C",,9780000000003,Paperback,read,2024/01/01,2024/02/01,,1,,slow,,,,,,5.0,,,,,Yes',
+        )
+        df = pd.read_csv(StringIO(csv_text))
+        result_df, _ = _detect_and_normalize_csv(df)
+
+        pace_values = result_df["Pace"].dropna().str.strip().str.lower()
+        pace_distribution = Counter(pace_values).most_common()
+
+        pace_dict = dict(pace_distribution)
+        self.assertEqual(pace_dict["slow"], 2)
+        self.assertEqual(pace_dict["fast"], 1)
+
+    def test_goodreads_csv_has_empty_mood_pace(self):
+        """Goodreads CSVs lack Moods/Pace columns — distribution should be empty."""
+        csv_text = "Title,Author,Exclusive Shelf,My Rating\nBook,Author,read,4"
+        df = pd.read_csv(StringIO(csv_text))
+        result_df, source = _detect_and_normalize_csv(df)
+
+        self.assertEqual(source, "goodreads")
+        self.assertNotIn("Moods", result_df.columns)
+        self.assertNotIn("Pace", result_df.columns)
