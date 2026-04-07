@@ -6,10 +6,26 @@
         <p class="mb-4 text-center text-base italic text-gray-500">{{ pronoun_pos|default:"Your"|capfirst }} rarest find on Bibliotype — read by only {{ dna.most_niche_book.read_count }} people</p>
     {% endif %}
     {% if dna.most_niche_book %}
-        <div class="scroll-fade-up flex flex-1 flex-col items-center justify-center" x-data="{ imgFailed: false }">
+        <div class="scroll-fade-up flex flex-1 flex-col items-center justify-center" x-data="{ imgFailed: false, imgLoaded: false }">
             {% if dna.most_niche_book.cover_url %}
+                <!-- Hidden img that always loads; drives Alpine state -->
+                <img
+                    src="{{ dna.most_niche_book.cover_url }}"
+                    alt="Cover of {{ dna.most_niche_book.title }}"
+                    class="absolute h-0 w-0 opacity-0"
+                    fetchpriority="low"
+                    x-on:error="imgFailed = true"
+                    x-on:load="imgLoaded = true; if ($el.naturalWidth < 10) imgFailed = true"
+                />
+                <!-- Crosshatch loading placeholder -->
                 <div
-                    x-show="!imgFailed"
+                    x-show="!imgLoaded && !imgFailed"
+                    class="cover-crosshatch border-brand-text shadow-neo-sm h-40 w-[6.75rem] border-2"
+                ></div>
+                <!-- Loaded cover -->
+                <div
+                    x-show="imgLoaded && !imgFailed"
+                    x-cloak
                     class="border-brand-text shadow-neo-sm h-40 w-[6.75rem] overflow-hidden border-2"
                 >
                     <img
@@ -17,22 +33,21 @@
                         alt="Cover of {{ dna.most_niche_book.title }}"
                         class="h-full w-full object-cover"
                         fetchpriority="low"
-                        x-on:error="imgFailed = true"
-                        x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
                     />
                 </div>
+                <!-- Letter fallback -->
                 <div
                     x-show="imgFailed"
                     x-cloak
                     class="bg-brand-purple border-brand-text shadow-neo-sm flex h-40 w-[6.75rem] items-center justify-center border-2 text-5xl font-bold"
                 >
-                    {{ dna.most_niche_book.title|first|upper }}
+                    {{ dna.most_niche_book.initial|default:dna.most_niche_book.title|first|upper }}
                 </div>
             {% else %}
                 <div
                     class="bg-brand-purple border-brand-text shadow-neo-sm flex h-40 w-[6.75rem] items-center justify-center border-2 text-5xl font-bold"
                 >
-                    {{ dna.most_niche_book.title|first|upper }}
+                    {{ dna.most_niche_book.initial|default:dna.most_niche_book.title|first|upper }}
                 </div>
             {% endif %}
             <p class="mt-3 text-center text-xl font-bold">{{ dna.most_niche_book.title }}</p>

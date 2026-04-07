@@ -53,8 +53,9 @@
         <div class="text-5xl font-bold" x-text="books">{{ dna.user_stats.total_books_read }}</div>
         <div class="mt-2 text-lg uppercase">Total Books Read</div>
     </div>
-    <div class="bg-brand-pink border-brand-text shadow-neo border-2 p-6 text-center">
-        <div class="text-5xl font-bold" x-text="fmtPages(pages)">{{ dna.user_stats.total_pages_read|intcomma }}</div>
+    <div class="bg-brand-pink border-brand-text shadow-neo relative border-2 p-6 text-center">
+        {% include 'core/partials/dna/enrichment_banner.html' %}
+        <div id="stat-pages" class="text-5xl font-bold" x-text="fmtPages(pages)">{{ dna.user_stats.total_pages_read|intcomma }}</div>
         <div class="mt-2 text-lg uppercase">Total Pages Read</div>
     </div>
     <div class="bg-brand-cyan border-brand-text shadow-neo border-2 p-6 text-center">

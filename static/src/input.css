@@ -23,6 +23,13 @@
     --shadow-neo-sm: 2px 2px 0px 0px var(--color-brand-text);
 
     --font-sans: "VT323", ui-sans-serif, system-ui, sans-serif;
+
+    --animate-enrichPulse: enrichPulse 2s ease-in-out infinite;
+}
+
+@keyframes enrichPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
 
 /* Custom utility class for the grid background pattern */
@@ -41,6 +48,26 @@ ul.list-disc {
 
 ol.list-decimal {
     list-style-type: decimal;
+}
+
+/* Crosshatch placeholder for loading book covers */
+.cover-crosshatch {
+    background-color: #e5e7eb;
+    background-image:
+        repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 4px,
+            #1f2937 4px,
+            #1f2937 6px
+        ),
+        repeating-linear-gradient(
+            -45deg,
+            transparent,
+            transparent 4px,
+            #1f2937 4px,
+            #1f2937 6px
+        );
 }
 
 /* Charts hidden until scroll-triggered */

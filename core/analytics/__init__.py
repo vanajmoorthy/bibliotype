@@ -22,6 +22,7 @@ from .events import (
     track_settings_updated,
     track_recommendation_error,
     track_redis_cache_error,
+    track_external_api_call,
 )
 
 __all__ = [
@@ -45,4 +46,5 @@ __all__ = [
     "track_settings_updated",
     "track_recommendation_error",
     "track_redis_cache_error",
+    "track_external_api_call",
 ]

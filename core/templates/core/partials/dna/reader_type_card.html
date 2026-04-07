@@ -1,7 +1,25 @@
 {% if dna.reader_type %}
     <div class="bg-brand-purple border-brand-text shadow-neo border-2 p-4 text-center sm:p-6">
+        {% if enrichment.pending %}
+            <div x-data="enrichmentPoller()" class="-mx-4 -mt-4 mb-3 bg-brand-yellow/30 py-1.5 text-center text-sm sm:-mx-6 sm:-mt-6 sm:mb-4 animate-[enrichPulse_2s_ease-in-out_infinite]"
+                 x-show="pending" x-cloak
+                 :class="{ 'animate-[enrichPulse_2s_ease-in-out_infinite]': pending }">
+                <span x-text="bannerText">
+                    Enriching your library — {{ enrichment.percent }}% complete. ~{{ enrichment.remaining_minutes }} min remaining.
+                </span>
+                <button @click="showInfo = !showInfo" class="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full border border-brand-text/40 text-xs leading-none hover:bg-brand-yellow/50" title="Why?">i</button>
+                <div x-show="showInfo" x-cloak @click.away="showInfo = false"
+                     class="mx-auto mt-2 max-w-lg rounded border border-brand-text/20 bg-white/90 p-2 text-left text-xs leading-relaxed">
+                    {% if enrichment.csv_source == "storygraph" %}
+                        StoryGraph exports don't include genre or page count data, so we fetch this from Open Library and Google Books in the background.
+                    {% else %}
+                        We're fetching genre data for your books from Open Library and Google Books in the background.
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
         <div class="text-lg uppercase">{{ owner_pos|default:"Your" }} Reader Type is...</div>
-        <div class="mt-1 text-5xl font-bold tracking-widest uppercase">{{ dna.reader_type }}</div>
+        <div class="mt-1 text-5xl font-bold tracking-widest uppercase" x-data x-text="$store.enrichment?.readerType || '{{ dna.reader_type }}'">{{ dna.reader_type }}</div>
         {% if dna.reader_type_explanation %}
             <p class="mx-auto mt-4 max-w-2xl text-lg">{{ dna.reader_type_explanation }}</p>
         {% endif %}

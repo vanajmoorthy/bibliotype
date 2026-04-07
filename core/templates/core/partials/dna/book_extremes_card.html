@@ -6,16 +6,24 @@
     <div class="flex flex-col gap-6">
         {% if dna.longest_book %}
             <div class="flex items-start gap-4">
-                <div class="scroll-fade-left shrink-0" x-data="{ imgFailed: false }">
+                <div class="scroll-fade-left shrink-0" x-data="{ imgFailed: false, imgLoaded: false }">
                     {% if dna.longest_book.cover_url %}
-                        <div x-show="!imgFailed" class="border-brand-text shadow-neo-sm h-40 w-[6.75rem] overflow-hidden border-2">
+                        <img
+                            src="{{ dna.longest_book.cover_url }}"
+                            alt="Cover of {{ dna.longest_book.title }}"
+                            class="absolute h-0 w-0 opacity-0"
+                            x-on:error="imgFailed = true"
+                            x-on:load="imgLoaded = true; if ($el.naturalWidth < 10) imgFailed = true"
+                        />
+                        <div
+                            x-show="!imgLoaded && !imgFailed"
+                            class="cover-crosshatch border-brand-text shadow-neo-sm h-40 w-[6.75rem] border-2"
+                        ></div>
+                        <div x-show="imgLoaded && !imgFailed" x-cloak class="border-brand-text shadow-neo-sm h-40 w-[6.75rem] overflow-hidden border-2">
                             <img
                                 src="{{ dna.longest_book.cover_url }}"
                                 alt="Cover of {{ dna.longest_book.title }}"
                                 class="h-full w-full object-cover"
-
-                                x-on:error="imgFailed = true"
-                                x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
                             />
                         </div>
                         <div
@@ -23,13 +31,13 @@
                             x-cloak
                             class="bg-brand-orange border-brand-text shadow-neo-sm flex h-40 w-[6.75rem] items-center justify-center border-2 text-5xl font-bold"
                         >
-                            {{ dna.longest_book.title|first|upper }}
+                            {{ dna.longest_book.initial|default:dna.longest_book.title|first|upper }}
                         </div>
                     {% else %}
                         <div
                             class="bg-brand-orange border-brand-text shadow-neo-sm flex h-40 w-[6.75rem] items-center justify-center border-2 text-5xl font-bold"
                         >
-                            {{ dna.longest_book.title|first|upper }}
+                            {{ dna.longest_book.initial|default:dna.longest_book.title|first|upper }}
                         </div>
                     {% endif %}
                 </div>
@@ -48,16 +56,24 @@
 
         {% if dna.shortest_book %}
             <div class="flex items-start gap-4">
-                <div class="scroll-fade-left shrink-0" x-data="{ imgFailed: false }">
+                <div class="scroll-fade-left shrink-0" x-data="{ imgFailed: false, imgLoaded: false }">
                     {% if dna.shortest_book.cover_url %}
-                        <div x-show="!imgFailed" class="border-brand-text shadow-neo-sm h-40 w-[6.75rem] overflow-hidden border-2">
+                        <img
+                            src="{{ dna.shortest_book.cover_url }}"
+                            alt="Cover of {{ dna.shortest_book.title }}"
+                            class="absolute h-0 w-0 opacity-0"
+                            x-on:error="imgFailed = true"
+                            x-on:load="imgLoaded = true; if ($el.naturalWidth < 10) imgFailed = true"
+                        />
+                        <div
+                            x-show="!imgLoaded && !imgFailed"
+                            class="cover-crosshatch border-brand-text shadow-neo-sm h-40 w-[6.75rem] border-2"
+                        ></div>
+                        <div x-show="imgLoaded && !imgFailed" x-cloak class="border-brand-text shadow-neo-sm h-40 w-[6.75rem] overflow-hidden border-2">
                             <img
                                 src="{{ dna.shortest_book.cover_url }}"
                                 alt="Cover of {{ dna.shortest_book.title }}"
                                 class="h-full w-full object-cover"
-
-                                x-on:error="imgFailed = true"
-                                x-on:load="if ($el.naturalWidth < 10) imgFailed = true"
                             />
                         </div>
                         <div
@@ -65,13 +81,13 @@
                             x-cloak
                             class="bg-brand-green border-brand-text shadow-neo-sm flex h-40 w-[6.75rem] items-center justify-center border-2 text-5xl font-bold"
                         >
-                            {{ dna.shortest_book.title|first|upper }}
+                            {{ dna.shortest_book.initial|default:dna.shortest_book.title|first|upper }}
                         </div>
                     {% else %}
                         <div
                             class="bg-brand-green border-brand-text shadow-neo-sm flex h-40 w-[6.75rem] items-center justify-center border-2 text-5xl font-bold"
                         >
-                            {{ dna.shortest_book.title|first|upper }}
+                            {{ dna.shortest_book.initial|default:dna.shortest_book.title|first|upper }}
                         </div>
                     {% endif %}
                 </div>

@@ -17,10 +17,6 @@ from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
 
-from .forms import CustomUserCreationForm, UpdateDisplayNameForm
-from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
-
-logger = logging.getLogger(__name__)
 from .analytics.events import (
     track_anonymous_dna_claimed,
     track_anonymous_dna_displayed,
@@ -34,6 +30,10 @@ from .analytics.events import (
     track_user_logged_in,
     track_user_signed_up,
 )
+from .forms import CustomUserCreationForm, UpdateDisplayNameForm
+from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
+
+logger = logging.getLogger(__name__)
 
 
 def robots_txt_view(request):
@@ -160,6 +160,63 @@ def privacy_view(request):
 def terms_view(request):
     """Displays the terms of service page."""
     return render(request, "core/terms.html")
+
+
+def _recalculate_enrichment_stats(user, dna_data):
+    """Recalculate stats that depend on book enrichment data (genres, page counts, mainstream status).
+
+    Called on each page load while enrichment is pending, so the dashboard reflects
+    the latest enriched data without requiring a re-upload.
+    """
+    from collections import Counter
+
+    from .dna_constants import CANONICAL_GENRE_MAP, FICTION_GENRES, NONFICTION_GENRES
+    from .models import Book
+
+    books = (
+        Book.objects.filter(readers__user=user)
+        .select_related("author", "publisher")
+        .prefetch_related("genres")
+    )
+    if not books.exists():
+        return
+
+    user_stats = dna_data.setdefault("user_stats", {})
+
+    # Page stats
+    page_counts = [b.page_count for b in books if b.page_count]
+    if page_counts:
+        user_stats["total_pages_read"] = sum(page_counts)
+        user_stats["avg_book_length"] = round(sum(page_counts) / len(page_counts))
+
+    # Genre stats
+    all_genres = []
+    fiction_count = 0
+    nonfiction_count = 0
+    for book in books:
+        book_genres = [g.name for g in book.genres.all()]
+        all_genres.extend(book_genres)
+        canonical = {CANONICAL_GENRE_MAP.get(g, g) for g in book_genres}
+        if canonical & FICTION_GENRES:
+            fiction_count += 1
+        elif canonical & NONFICTION_GENRES:
+            nonfiction_count += 1
+
+    mapped = [CANONICAL_GENRE_MAP.get(g, g) for g in all_genres]
+    dna_data["top_genres"] = Counter(mapped).most_common(10)
+    dna_data["unique_genres_count"] = len(set(mapped))
+    dna_data["fiction_nonfiction_split"] = (
+        {"fiction_count": fiction_count, "nonfiction_count": nonfiction_count}
+        if (fiction_count + nonfiction_count) > 0
+        else None
+    )
+
+    # Mainstream score
+    total = books.count()
+    mainstream_count = sum(
+        1 for b in books if b.author.is_mainstream or (b.publisher and b.publisher.is_mainstream)
+    )
+    dna_data["mainstream_score_percent"] = round((mainstream_count / total) * 100)
 
 
 def _enrich_dna_for_display(dna_data):
@@ -538,6 +595,51 @@ def display_dna_view(request):
 
     dna_data = _enrich_dna_for_display(dna_data)
 
+    # Compute per-tile enrichment progress (applies to all CSV sources —
+    # genres are always async-enriched via Open Library / Google Books)
+    enrichment = None
+    if dna_data and request.user.is_authenticated:
+        from .models import Book, UserBook
+
+        user_books_qs = Book.objects.filter(readers__user=request.user)
+        total = user_books_qs.count()
+        if total > 0:
+            genres_done = user_books_qs.filter(genres__isnull=False).distinct().count()
+            pages_done = user_books_qs.filter(page_count__isnull=False).count()
+            # Enrichment is complete when all books have been through the pipeline
+            # (google_books_last_checked is set as the final step of enrichment)
+            all_attempted = not user_books_qs.filter(google_books_last_checked__isnull=True).exists()
+            genres_pending = not all_attempted and (genres_done / total) < 0.5
+            pages_pending = not all_attempted and (pages_done / total) < 0.5
+            pending = not all_attempted
+
+            if pending:
+                _recalculate_enrichment_stats(request.user, dna_data)
+                attempted = user_books_qs.filter(google_books_last_checked__isnull=False).count()
+                percent = round(attempted / total * 100)
+                remaining = total - attempted
+                remaining_minutes = max(1, math.ceil(remaining / 20))
+                csv_source = dna_data.get("csv_source", "goodreads")
+                enrichment = {
+                    "total": total,
+                    "percent": percent,
+                    "genres_done": genres_done,
+                    "genres_pending": genres_pending,
+                    "pages_done": pages_done,
+                    "pages_pending": pages_pending,
+                    "pending": True,
+                    "remaining_minutes": remaining_minutes,
+                    "csv_source": csv_source,
+                }
+            elif not dna_data.get("enrichment_finalized"):
+                # Enrichment just finished — do one final recalculation and save
+                _recalculate_enrichment_stats(request.user, dna_data)
+                dna_data["enrichment_finalized"] = True
+                user_profile.dna_data = dna_data
+                user_profile.save(update_fields=["dna_data"])
+    # Anonymous users have no async enrichment — their DNA is computed synchronously.
+    # No enrichment banner or polling needed.
+
     recommendations_meta = {}
     if request.user.is_authenticated and user_profile:
         recommendations_meta = user_profile.recommendations_meta or {}
@@ -558,6 +660,7 @@ def display_dna_view(request):
         "recommendations_meta": recommendations_meta,
         "recommendations_pending": recommendations_pending,
         "title": title,
+        "enrichment": enrichment,
     }
 
     return render(request, "core/dashboard.html", context)
@@ -579,11 +682,23 @@ def upload_view(request):
         # Track file upload started
         track_file_upload_started(request, csv_file.size)
 
-        csv_content = csv_file.read().decode("utf-8")
+        # utf-8-sig transparently strips BOM if present (some exports include it)
+        csv_content = csv_file.read().decode("utf-8-sig")
 
         if request.user.is_authenticated:
             # Clear old session data so the view will use the updated profile data
             request.session.pop("dna_data", None)
+
+            # Store upload nonce BEFORE dispatching the task so enrichment tasks
+            # from previous uploads can detect they've been superseded. Using uuid
+            # rather than task ID since the task hasn't been created yet.
+            import uuid
+
+            from .cache_utils import safe_cache_set
+
+            upload_nonce = str(uuid.uuid4())
+            safe_cache_set(f"upload_nonce_{request.user.id}", upload_nonce, timeout=3600)
+
             result = generate_reading_dna_task.delay(csv_content, request.user.id)
 
             # Save the pending task ID to track regeneration progress
@@ -873,6 +988,65 @@ def check_recommendations_status_view(request):
     if profile.recommendations_data:
         return JsonResponse({"status": "ready"})
     return JsonResponse({"status": "pending"})
+
+
+@login_required
+def enrichment_status_view(request):
+    """AJAX endpoint for polling enrichment progress. Returns updated stats for live dashboard updates."""
+    from .models import Book
+
+    profile = request.user.userprofile
+    dna_data = profile.dna_data
+    if not dna_data:
+        return JsonResponse({"pending": False})
+
+    user_books_qs = Book.objects.filter(readers__user=request.user)
+    total = user_books_qs.count()
+    if total == 0:
+        return JsonResponse({"pending": False})
+
+    genres_done = user_books_qs.filter(genres__isnull=False).distinct().count()
+    pages_done = user_books_qs.filter(page_count__isnull=False).count()
+    all_attempted = not user_books_qs.filter(google_books_last_checked__isnull=True).exists()
+    genres_pending = not all_attempted and (genres_done / total) < 0.5
+    pages_pending = not all_attempted and (pages_done / total) < 0.5
+    pending = not all_attempted
+
+    if not pending:
+        # Enrichment complete — finalize if needed
+        if not dna_data.get("enrichment_finalized"):
+            _recalculate_enrichment_stats(request.user, dna_data)
+            dna_data["enrichment_finalized"] = True
+            profile.dna_data = dna_data
+            profile.save(update_fields=["dna_data"])
+        return JsonResponse({"pending": False})
+
+    # Recalculate fresh stats
+    _recalculate_enrichment_stats(request.user, dna_data)
+
+    attempted = user_books_qs.filter(google_books_last_checked__isnull=False).count()
+    percent = round(attempted / total * 100)
+    remaining = total - attempted
+    remaining_minutes = max(1, math.ceil(remaining / 20))
+
+    return JsonResponse({
+        "pending": True,
+        "percent": percent,
+        "genres_done": genres_done,
+        "pages_done": pages_done,
+        "total": total,
+        "genres_pending": genres_pending,
+        "pages_pending": pages_pending,
+        "remaining_minutes": remaining_minutes,
+        "csv_source": dna_data.get("csv_source", "goodreads"),
+        "updated_stats": {
+            "total_pages_read": dna_data["user_stats"].get("total_pages_read", 0),
+            "avg_book_length": dna_data["user_stats"].get("avg_book_length", 0),
+            "top_genres": dna_data.get("top_genres", []),
+            "mainstream_score_percent": dna_data.get("mainstream_score_percent", 0),
+            "fiction_nonfiction_split": dna_data.get("fiction_nonfiction_split"),
+        },
+    })
 
 
 def public_profile_view(request, username):

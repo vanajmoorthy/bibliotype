@@ -184,13 +184,15 @@
                 {% include 'core/partials/dna/top_genres_authors_row.html' with use_rainbow=True %}
                 {% include 'core/partials/dna/review_analysis_card.html' %}
 
-                {% if dna.fiction_nonfiction_split or dna.longest_book %}
+                {% if dna.fiction_nonfiction_split or dna.longest_book or enrichment.pending %}
                     <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                         {% if dna.fiction_nonfiction_split %}
                             {% include 'core/partials/dna/fiction_nonfiction_card.html' %}
                         {% endif %}
                         {% if dna.longest_book %}
                             {% include 'core/partials/dna/book_extremes_card.html' %}
+                        {% elif enrichment.pending %}
+                            {% include 'core/partials/dna/book_extremes_skeleton.html' %}
                         {% endif %}
                     </div>
                 {% endif %}
@@ -305,6 +307,56 @@
                     </div>
                 {% endif %}
                 {% include 'core/partials/dna/charts_scripts.html' %}
+                {% if enrichment.pending %}
+                <script>
+                    document.addEventListener('alpine:init', () => {
+                        Alpine.store('enrichment', { pending: true });
+                    });
+
+                    function enrichmentPoller() {
+                        return {
+                            pending: true,
+                            showInfo: false,
+                            bannerText: 'Enriching your library — {{ enrichment.percent }}% complete. ~{{ enrichment.remaining_minutes }} min remaining.',
+                            interval: null,
+                            init() {
+                                this.interval = setInterval(() => this.poll(), 5000);
+                            },
+                            async poll() {
+                                try {
+                                    const res = await fetch('{% url "core:api_enrichment_status" %}');
+                                    const data = await res.json();
+                                    if (!data.pending) {
+                                        this.pending = false;
+                                        Alpine.store('enrichment', { pending: false });
+                                        clearInterval(this.interval);
+                                        setTimeout(() => window.location.reload(), 500);
+                                        return;
+                                    }
+                                    this.bannerText = `Enriching your library — ${data.percent}% complete. ~${data.remaining_minutes} min remaining.`;
+                                    const s = data.updated_stats;
+                                    if (s) {
+                                        // Update total pages read
+                                        const pagesNum = document.getElementById('stat-pages');
+                                        if (pagesNum) pagesNum.textContent = s.total_pages_read.toLocaleString();
+                                        // Update mainstream score
+                                        const msEl = document.getElementById('mainstream-score');
+                                        if (msEl) msEl.textContent = s.mainstream_score_percent + '%';
+                                        // Update avg book length in comparative analytics
+                                        const avgEl = document.getElementById('stat-avg-length');
+                                        if (avgEl) avgEl.textContent = s.avg_book_length;
+                                    }
+                                } catch (e) {
+                                    // Silent fail — will retry on next interval
+                                }
+                            },
+                            destroy() {
+                                if (this.interval) clearInterval(this.interval);
+                            }
+                        };
+                    }
+                </script>
+                {% endif %}
                 <style>
                     .fade-in-section {
                         opacity: 0;
