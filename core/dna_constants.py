@@ -326,7 +326,6 @@ GENRE_ALIASES = {
         "greek epic poetry",
         "classical epic poetry",
         "legends",
-        "fairy tales",
         "legends, fiction",
         "prophecies",
         "prophecy",

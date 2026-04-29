@@ -128,6 +128,30 @@ class BookEnrichmentIntegrationTests(TestCase):
         # The enrichment function was called at least once
         self.assertGreaterEqual(mock_enrich.call_count, 1)
 
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    def test_enrich_book_task_marks_attempted_after_max_retries(self, mock_enrich):
+        """When task exhausts max retries, book is marked as attempted so polling doesn't get stuck."""
+        from celery.exceptions import MaxRetriesExceededError
+
+        from core.tasks import enrich_book_task
+
+        # Simulate persistent API failures
+        mock_enrich.side_effect = requests.RequestException("Persistent API timeout")
+
+        self.assertIsNone(self.book.google_books_last_checked)
+
+        # Simulate a task instance where retries are already exhausted by patching
+        # the retry method to raise MaxRetriesExceededError directly
+        with patch.object(enrich_book_task, "retry", side_effect=MaxRetriesExceededError("max retries")):
+            try:
+                enrich_book_task.delay(self.book.id)
+            except Exception:
+                pass
+
+        self.book.refresh_from_db()
+        # Book must be marked as attempted to prevent stuck-at-X% polling
+        self.assertIsNotNone(self.book.google_books_last_checked)
+
     @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
     @patch("core.book_enrichment_service._fetch_from_open_library")
     def test_enrich_book_genre_canonicalization(self, mock_ol, mock_gb):

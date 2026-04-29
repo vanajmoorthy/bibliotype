@@ -100,8 +100,19 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
 
         logger.info(f"Successfully enriched '{book.title}'")
     except Exception as e:
+        from celery.exceptions import MaxRetriesExceededError
+
         logger.error(f"Error enriching book '{book.title}' (id={book_id}): {e}", exc_info=True)
-        raise self.retry(countdown=60 * (2**self.request.retries), exc=e)
+        try:
+            raise self.retry(countdown=60 * (2**self.request.retries), exc=e)
+        except MaxRetriesExceededError:
+            # Mark book as attempted so polling completion detection can finish.
+            # Without this, books that consistently fail enrichment leave the
+            # dashboard banner stuck at the same percent forever.
+            from django.utils import timezone
+
+            Book.objects.filter(pk=book_id).update(google_books_last_checked=timezone.now())
+            logger.warning(f"Max retries exhausted for book '{book.title}' (id={book_id}); marking as attempted")
 
 
 @shared_task(bind=True, max_retries=5)

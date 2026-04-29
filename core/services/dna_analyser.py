@@ -402,10 +402,18 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         logger.info(f"Found {len(read_df)} books marked as 'read' for statistical analysis")
         for temp_df in [df, read_df]:
-            temp_df["My Rating"] = pd.to_numeric(temp_df["My Rating"], errors="coerce")
-            temp_df["Number of Pages"] = pd.to_numeric(temp_df["Number of Pages"], errors="coerce")
-            temp_df["Average Rating"] = pd.to_numeric(temp_df["Average Rating"], errors="coerce")
-            temp_df["Date Read"] = pd.to_datetime(temp_df["Date Read"], errors="coerce")
+            # Numeric columns: coerce if present, otherwise add as NaN.
+            # Goodreads exports may omit columns when the user has no data in them.
+            for col in ["My Rating", "Number of Pages", "Average Rating"]:
+                if col in temp_df.columns:
+                    temp_df[col] = pd.to_numeric(temp_df[col], errors="coerce")
+                else:
+                    temp_df[col] = pd.NA
+
+            if "Date Read" in temp_df.columns:
+                temp_df["Date Read"] = pd.to_datetime(temp_df["Date Read"], errors="coerce")
+            else:
+                temp_df["Date Read"] = pd.NaT
 
             if "Original Publication Year" in temp_df.columns:
                 temp_df["Original Publication Year"] = pd.to_numeric(
@@ -413,7 +421,11 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 )
             else:
                 temp_df["Original Publication Year"] = None
-            temp_df.loc[:, "My Review"] = temp_df["My Review"].fillna("")
+
+            if "My Review" in temp_df.columns:
+                temp_df.loc[:, "My Review"] = temp_df["My Review"].fillna("")
+            else:
+                temp_df["My Review"] = ""
 
         logger.info("Syncing book data with the database...")
 
