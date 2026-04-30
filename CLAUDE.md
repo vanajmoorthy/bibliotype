@@ -58,13 +58,16 @@ Key patterns:
 
 ## Tailwind CSS Build
 
-`static/dist/output.css` is a compiled artifact checked into git. After any Tailwind/CSS changes (including changes to HTML templates that add new utility classes), you must rebuild and commit the output:
+`static/dist/output.css` is a build artifact and is gitignored. The Dockerfile runs `pnpm run build` during image build, so CI and production rebuild it automatically — no need to commit it.
+
+For local development, rebuild it yourself when Tailwind/CSS or template classes change:
 
 ```bash
 pnpm run build          # Compiles static/src/input.css → static/dist/output.css (minified)
+pnpm run dev            # Watch mode
 ```
 
-If Tailwind changes aren't showing up locally, make sure either `pnpm run dev` (watch mode) is running or run `pnpm run build` manually.
+If Tailwind changes aren't showing up locally, make sure either `pnpm run dev` is running or run `pnpm run build` manually.
 
 ## Code Formatting
 
