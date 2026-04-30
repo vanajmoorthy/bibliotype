@@ -115,7 +115,6 @@ STORYGRAPH_TAG_TO_GENRE = {
     "young adult": "young adult",
     "ya": "young adult",
     "short stories": "short stories",
-    "poetry": "plays & drama",
     "travel": "travel",
     "science": "science",
     "nature": "nature",
