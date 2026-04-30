@@ -2,11 +2,14 @@
 
 FROM python:3.13-slim-bookworm
 
-RUN apt-get update && apt-get install -y postgresql-client dos2unix curl
+RUN apt-get update && apt-get install -y postgresql-client dos2unix curl gnupg ca-certificates
 
-# Install Node.js
+# Install Node.js + npm via NodeSource (Node 20).
+# NodeSource setup needs gnupg/ca-certificates (installed above) to verify and add its apt key.
+# Verify both binaries are present so build fails loudly if NodeSource didn't take.
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs
+    apt-get install -y nodejs && \
+    node --version && npm --version
 
 # Install pnpm
 RUN npm install -g pnpm
