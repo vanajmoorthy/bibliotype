@@ -2,16 +2,16 @@
     {% include 'core/partials/dna/enrichment_banner.html' %}
     <h2 class="mb-1 text-center text-2xl font-bold uppercase">Fiction vs Nonfiction</h2>
     <p class="text-center text-base text-gray-500 italic">
-        How {{ pronoun_pos|default:"your" }} library splits between fiction and nonfiction
+        How {{ pronoun_pos|default:"your" }} library splits between fiction and nonfiction{% if enrichment.pending %} (so far){% endif %}
     </p>
-    <div class="flex flex-1 flex-col items-center justify-center py-4">
+    <div class="flex flex-1 flex-col items-center justify-center py-4 {% if enrichment.pending %}opacity-60 transition-opacity duration-500{% endif %}">
         <div class="chart-await mx-auto" style="height: 220px; width: 220px">
             <canvas id="fictionNonfictionChart"></canvas>
         </div>
     </div>
     {% with split=dna.fiction_nonfiction_split %}
         {% widthratio split.fiction_count split.fiction_count|add:split.nonfiction_count 100 as fiction_pct %}
-        <div class="flex items-center justify-center gap-6 text-lg">
+        <div class="flex items-center justify-center gap-6 text-lg {% if enrichment.pending %}opacity-60 transition-opacity duration-500{% endif %}">
             <div class="flex items-center gap-2">
                 <span
                     class="inline-block h-4 w-4 border-2 border-gray-800"

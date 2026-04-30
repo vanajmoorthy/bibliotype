@@ -188,6 +188,8 @@
                     <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                         {% if dna.fiction_nonfiction_split %}
                             {% include 'core/partials/dna/fiction_nonfiction_card.html' %}
+                        {% elif enrichment.pending %}
+                            {% include 'core/partials/dna/fiction_nonfiction_skeleton.html' %}
                         {% endif %}
                         {% if dna.longest_book %}
                             {% include 'core/partials/dna/book_extremes_card.html' %}

@@ -9,6 +9,7 @@
                    x-data x-show="$store.enrichment?.pending" x-cloak>
                     Still enriching
                 </p>
+                <div class="{% if enrichment.pending %}opacity-60 transition-opacity duration-500{% endif %}">
                 <p>
                     The average length of books {{ pronoun_sub|default:"you" }} read is
                     <strong><span id="stat-avg-length">{{ dna.user_stats.avg_book_length }}</span> pages</strong>.
@@ -23,6 +24,7 @@
                     <a href="https://wordsrated.com/book-length-statistics/" target="_blank" rel="noopener" class="underline hover:text-brand-text">[source]</a>
                 </p>
                 {% include 'core/partials/dna/number_line.html' with nl_min=dna.number_line_ranges.pages.min nl_max=dna.number_line_ranges.pages.max nl_min_label=dna.number_line_ranges.pages.min_label nl_max_label=dna.number_line_ranges.pages.max_label nl_user_value=dna.user_stats.avg_book_length nl_user_tag="You" nl_compare_value=dna.community_averages.avg_book_length nl_compare_tag="Community" nl_unit="pages" nl_third_value=dna.global_averages.avg_book_length_pages nl_third_tag="World Avg" %}
+                </div>
             </div>
 
             <!-- Average Book Age -->
@@ -31,6 +33,7 @@
                    x-data x-show="$store.enrichment?.pending" x-cloak>
                     Still enriching
                 </p>
+                <div class="{% if enrichment.pending %}opacity-60 transition-opacity duration-500{% endif %}">
                 <p>
                     The average age of books {{ pronoun_sub|default:"you" }} read is from
                     <strong>{{ dna.user_stats.avg_publish_year|floatformat:0 }}</strong>.
@@ -45,6 +48,7 @@
                     <a href="https://ammar-alyousfi.com/2020/goodreads-books-statistics" target="_blank" rel="noopener" class="underline hover:text-brand-text">[source]</a>
                 </p>
                 {% include 'core/partials/dna/number_line.html' with nl_min=dna.number_line_ranges.year.min nl_max=dna.number_line_ranges.year.max nl_min_label=dna.number_line_ranges.year.min_label nl_max_label=dna.number_line_ranges.year.max_label nl_user_value=dna.user_stats.avg_publish_year nl_user_tag="You" nl_compare_value=dna.community_averages.avg_publish_year nl_compare_tag="Community" nl_unit="CE" nl_third_value=dna.global_averages.avg_publish_year nl_third_tag="World Avg" %}
+                </div>
             </div>
 
             <!-- Books Per Year -->

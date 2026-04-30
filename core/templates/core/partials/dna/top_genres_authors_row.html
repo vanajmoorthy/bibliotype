@@ -29,15 +29,15 @@
         {% include 'core/partials/dna/enrichment_banner.html' %}
         <h2 class="mb-1 text-2xl font-bold uppercase md:pr-36">Top Genres</h2>
         {% if dna.top_genres %}
-            <div class="flex items-start justify-between md:!block md:!max-h-none" style="max-height: 5rem;">
+            <div class="flex items-start justify-between md:!block md:!max-h-none {% if enrichment.pending %}opacity-60 transition-opacity duration-500{% endif %}" style="max-height: 5rem;">
                 {% if dna.unique_genres_count %}
-                    <p class="mb-2 text-base italic text-gray-500 md:mb-6 md:pr-36">We found {{ dna.unique_genres_count }} unique genre{{ dna.unique_genres_count|pluralize }} in {{ pronoun_pos|default:"your" }} library</p>
+                    <p class="mb-2 text-base italic text-gray-500 md:mb-6 md:pr-36">We found {{ dna.unique_genres_count }} unique genre{{ dna.unique_genres_count|pluralize }} in {{ pronoun_pos|default:"your" }} library{% if enrichment.pending %} so far{% endif %}</p>
                 {% endif %}
                 <div class="chart-drop-shadow chart-await h-28 w-28 flex-shrink-0 md:!absolute md:!top-2 md:!right-2 md:!h-32 md:!w-32" style="position: relative; top: -2.5rem; right: -0.6rem;">
                     <canvas id="topGenresChart"></canvas>
                 </div>
             </div>
-            <ol class="space-y-2 text-lg" x-ref="genreList">
+            <ol class="space-y-2 text-lg {% if enrichment.pending %}opacity-60 transition-opacity duration-500{% endif %}" x-ref="genreList">
                 {% for genre, count in dna.top_genres %}
                     <li class="capitalize">
                         <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-yellow"
@@ -48,6 +48,8 @@
                     </li>
                 {% endfor %}
             </ol>
+        {% elif enrichment.pending %}
+            {% include 'core/partials/dna/top_genres_skeleton.html' %}
         {% else %}
             <p class="text-lg">Not enough genre data to display.</p>
         {% endif %}
