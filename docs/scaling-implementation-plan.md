@@ -273,17 +273,14 @@ docker stats   # Watch memory usage stabilize
 
 ### 3.1 Disk cleanup
 
-The repo root has 200+ `.prof` files (Django Silk profiling output) that shouldn't be there:
+The repo root has accumulated Django Silk profiling output locally (already in `.gitignore`, but eats disk). Clean periodically:
 
 ```bash
-ls *.prof | wc -l    # Confirm count
-rm *.prof
+ls *.prof 2>/dev/null | wc -l    # See how many
+rm -f *.prof
 ```
 
-Add to `.gitignore` if not already:
-```
-*.prof
-```
+Worth adding to a `make clean` target or a periodic local cron if Silk runs often.
 
 ### 3.2 Log rotation
 
