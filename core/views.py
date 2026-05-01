@@ -2,6 +2,7 @@ import json
 import logging
 import math
 import os
+from collections import Counter
 from datetime import date
 
 from celery.result import AsyncResult
@@ -12,15 +13,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.contrib.auth.views import PasswordResetView
+from django.db import transaction
+from django.db.models import Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
 
-from .forms import CustomUserCreationForm, UpdateDisplayNameForm
-from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
-
-logger = logging.getLogger(__name__)
 from .analytics.events import (
     track_anonymous_dna_claimed,
     track_anonymous_dna_displayed,
@@ -34,6 +33,12 @@ from .analytics.events import (
     track_user_logged_in,
     track_user_signed_up,
 )
+from .cache_utils import safe_cache_get, safe_cache_set
+from .dna_constants import CANONICAL_GENRE_MAP, FICTION_GENRES, GLOBAL_AVERAGES, NONFICTION_GENRES
+from .forms import CustomUserCreationForm, UpdateDisplayNameForm
+from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
+
+logger = logging.getLogger(__name__)
 
 
 def robots_txt_view(request):
@@ -162,6 +167,152 @@ def terms_view(request):
     return render(request, "core/terms.html")
 
 
+ENRICHMENT_STATS_CACHE_TTL = 2  # seconds — short, since dashboard polls every 5s
+
+
+def _compute_enrichment_stats(user):
+    """Compute enrichment-derived stats from DB in a single QuerySet pass.
+
+    Cached briefly so a 5s polling cadence (plus a possible page load in the
+    same window) doesn't re-hit Postgres on every tick for users with
+    thousands of books.
+    """
+    from .models import Book
+
+    cache_key = f"enrichment_stats_{user.id}"
+    cached = safe_cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    books = list(
+        Book.objects.filter(readers__user=user)
+        .select_related("author", "publisher")
+        .prefetch_related("genres")
+    )
+    if not books:
+        return None
+
+    total = len(books)
+    page_counts = [b.page_count for b in books if b.page_count]
+
+    all_genres = []
+    fiction_count = 0
+    nonfiction_count = 0
+    mainstream_count = 0
+    for book in books:
+        book_genres = [g.name for g in book.genres.all()]
+        all_genres.extend(book_genres)
+        canonical = {CANONICAL_GENRE_MAP.get(g, g) for g in book_genres}
+        if canonical & FICTION_GENRES:
+            fiction_count += 1
+        elif canonical & NONFICTION_GENRES:
+            nonfiction_count += 1
+        if book.author.is_mainstream or (book.publisher and book.publisher.is_mainstream):
+            mainstream_count += 1
+
+    mapped = [CANONICAL_GENRE_MAP.get(g, g) for g in all_genres]
+
+    stats = {
+        "total_pages_read": sum(page_counts) if page_counts else None,
+        "avg_book_length": round(sum(page_counts) / len(page_counts)) if page_counts else None,
+        "top_genres": Counter(mapped).most_common(10),
+        "unique_genres_count": len(set(mapped)),
+        "fiction_nonfiction_split": (
+            {"fiction_count": fiction_count, "nonfiction_count": nonfiction_count}
+            if (fiction_count + nonfiction_count) > 0
+            else None
+        ),
+        "mainstream_score_percent": round((mainstream_count / total) * 100),
+    }
+
+    safe_cache_set(cache_key, stats, timeout=ENRICHMENT_STATS_CACHE_TTL)
+    return stats
+
+
+def _recalculate_enrichment_stats(user, dna_data):
+    """Apply enrichment-derived stats to dna_data in place.
+
+    Called on each page load and poll while enrichment is pending, so the
+    dashboard reflects the latest enriched data without requiring a re-upload.
+    """
+    stats = _compute_enrichment_stats(user)
+    if not stats:
+        return
+    user_stats = dna_data.setdefault("user_stats", {})
+    if stats["total_pages_read"] is not None:
+        user_stats["total_pages_read"] = stats["total_pages_read"]
+        user_stats["avg_book_length"] = stats["avg_book_length"]
+    dna_data["top_genres"] = stats["top_genres"]
+    dna_data["unique_genres_count"] = stats["unique_genres_count"]
+    dna_data["fiction_nonfiction_split"] = stats["fiction_nonfiction_split"]
+    dna_data["mainstream_score_percent"] = stats["mainstream_score_percent"]
+
+
+def _compute_enrichment_progress(user, profile, dna_data):
+    """Compute enrichment progress + apply DB-derived stats to dna_data.
+
+    Single chokepoint shared by display_dna_view and enrichment_status_view.
+    Returns:
+        - None if user has no books
+        - {"pending": False, "total": N} when enrichment has finished
+          (also persists the finalized dna_data to the profile on first
+          completion).
+        - {"pending": True, "percent": ..., ...} otherwise (mutates dna_data
+          with fresh stats).
+    """
+    from .models import Book
+
+    counts = Book.objects.filter(readers__user=user).aggregate(
+        total=Count("id", distinct=True),
+        genres_done=Count("id", filter=Q(genres__isnull=False), distinct=True),
+        pages_done=Count("id", filter=Q(page_count__isnull=False), distinct=True),
+        attempted=Count("id", filter=Q(google_books_last_checked__isnull=False), distinct=True),
+    )
+    total = counts["total"]
+    if total == 0:
+        return None
+
+    attempted = counts["attempted"]
+    pending = attempted < total
+
+    if not pending:
+        # Two concurrent requests (page render + AJAX poll, or two open tabs)
+        # could both race past the unfinalized check and both write. Lock the
+        # profile row, re-check inside the transaction, then save once.
+        if not dna_data.get("enrichment_finalized"):
+            from .models import UserProfile
+
+            with transaction.atomic():
+                locked = UserProfile.objects.select_for_update().get(pk=profile.pk)
+                if not (locked.dna_data or {}).get("enrichment_finalized"):
+                    _recalculate_enrichment_stats(user, dna_data)
+                    dna_data["enrichment_finalized"] = True
+                    locked.dna_data = dna_data
+                    locked.save(update_fields=["dna_data"])
+                else:
+                    # Another request already finalized — pick up its data so
+                    # the in-memory dna_data the caller holds is consistent.
+                    dna_data.clear()
+                    dna_data.update(locked.dna_data or {})
+                profile.dna_data = dna_data
+        return {"pending": False, "total": total}
+
+    _recalculate_enrichment_stats(user, dna_data)
+    genres_done = counts["genres_done"]
+    pages_done = counts["pages_done"]
+    return {
+        "pending": True,
+        "total": total,
+        "percent": round(attempted / total * 100),
+        "genres_done": genres_done,
+        "genres_pending": (genres_done / total) < 0.5,
+        "pages_done": pages_done,
+        "pages_pending": (pages_done / total) < 0.5,
+        "remaining_minutes": max(1, math.ceil((total - attempted) / 20)),
+        "csv_source": dna_data.get("csv_source", "goodreads"),
+    }
+
+
 def _enrich_dna_for_display(dna_data):
     """Patch dna_data with fresh community averages, global averages, and comparative text.
 
@@ -171,8 +322,6 @@ def _enrich_dna_for_display(dna_data):
     if not dna_data:
         return dna_data
 
-    from .cache_utils import safe_cache_get, safe_cache_set
-    from .dna_constants import GLOBAL_AVERAGES
     from .percentile_engine import calculate_community_means, calculate_percentiles_from_aggregates
 
     # Always use current global averages constant
@@ -538,6 +687,15 @@ def display_dna_view(request):
 
     dna_data = _enrich_dna_for_display(dna_data)
 
+    # Compute per-tile enrichment progress (applies to all CSV sources —
+    # genres are always async-enriched via Open Library / Google Books).
+    # Anonymous users have no async enrichment, so we skip this entirely for them.
+    enrichment = None
+    if dna_data and request.user.is_authenticated:
+        progress = _compute_enrichment_progress(request.user, user_profile, dna_data)
+        if progress and progress["pending"]:
+            enrichment = progress
+
     recommendations_meta = {}
     if request.user.is_authenticated and user_profile:
         recommendations_meta = user_profile.recommendations_meta or {}
@@ -558,6 +716,7 @@ def display_dna_view(request):
         "recommendations_meta": recommendations_meta,
         "recommendations_pending": recommendations_pending,
         "title": title,
+        "enrichment": enrichment,
     }
 
     return render(request, "core/dashboard.html", context)
@@ -579,11 +738,21 @@ def upload_view(request):
         # Track file upload started
         track_file_upload_started(request, csv_file.size)
 
-        csv_content = csv_file.read().decode("utf-8")
+        # utf-8-sig transparently strips BOM if present (some exports include it)
+        csv_content = csv_file.read().decode("utf-8-sig")
 
         if request.user.is_authenticated:
             # Clear old session data so the view will use the updated profile data
             request.session.pop("dna_data", None)
+
+            # Store upload nonce BEFORE dispatching the task so enrichment tasks
+            # from previous uploads can detect they've been superseded. Using uuid
+            # rather than task ID since the task hasn't been created yet.
+            import uuid
+
+            upload_nonce = str(uuid.uuid4())
+            safe_cache_set(f"upload_nonce_{request.user.id}", upload_nonce, timeout=3600)
+
             result = generate_reading_dna_task.delay(csv_content, request.user.id)
 
             # Save the pending task ID to track regeneration progress
@@ -875,6 +1044,31 @@ def check_recommendations_status_view(request):
     return JsonResponse({"status": "pending"})
 
 
+@login_required
+def enrichment_status_view(request):
+    """AJAX endpoint for polling enrichment progress. Returns updated stats for live dashboard updates."""
+    profile = request.user.userprofile
+    dna_data = profile.dna_data
+    if not dna_data:
+        return JsonResponse({"pending": False})
+
+    progress = _compute_enrichment_progress(request.user, profile, dna_data)
+    if progress is None or not progress["pending"]:
+        return JsonResponse({"pending": False})
+
+    user_stats = dna_data.get("user_stats", {})
+    return JsonResponse({
+        **progress,
+        "updated_stats": {
+            "total_pages_read": user_stats.get("total_pages_read", 0),
+            "avg_book_length": user_stats.get("avg_book_length", 0),
+            "top_genres": dna_data.get("top_genres", []),
+            "mainstream_score_percent": dna_data.get("mainstream_score_percent", 0),
+            "fiction_nonfiction_split": dna_data.get("fiction_nonfiction_split"),
+        },
+    })
+
+
 def public_profile_view(request, username):
     """Displays a user's public DNA."""
     try:
@@ -969,7 +1163,6 @@ def task_status_view(request, task_id):
 
 
 def get_task_result_view(request, task_id):
-    from .cache_utils import safe_cache_get
     from .models import AnonymousUserSession
 
     cached_result = safe_cache_get(f"dna_result_{task_id}")

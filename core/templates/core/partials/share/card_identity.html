@@ -9,7 +9,7 @@
             <div class="mt-4">
                 <p class="mb-2 text-center text-xs font-bold uppercase opacity-70">Reading Vibes</p>
                 <div class="flex flex-wrap justify-center gap-1.5">
-                    {% for phrase in dna.reading_vibe %}
+                    {% for phrase in dna.reading_vibe|slice:":2" %}
                         <span class="border-2 border-brand-text px-2 py-0.5 text-sm font-bold" style="background-color: {% cycle '#40e7aa' '#ffb4dd' '#ffa75e' '#8bbfff' %};">{{ phrase }}</span>
                     {% endfor %}
                 </div>

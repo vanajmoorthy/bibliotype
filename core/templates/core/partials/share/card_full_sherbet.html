@@ -10,7 +10,7 @@
             <div class="mt-2">
                 <p class="mb-1 text-center text-[10px] font-bold uppercase opacity-70">Reading Vibes</p>
                 <div class="flex flex-wrap justify-center gap-1">
-                    {% for phrase in dna.reading_vibe %}
+                    {% for phrase in dna.reading_vibe|slice:":2" %}
                         <span
                             class="border-brand-text {% cycle 'bg-brand-cyan' 'bg-brand-green' 'bg-brand-yellow' 'bg-brand-purple' %} shadow-neo-sm border px-1.5 py-0.5 text-xs font-bold"
                             >{{ phrase }}</span

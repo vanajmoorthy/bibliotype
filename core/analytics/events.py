@@ -334,6 +334,29 @@ def track_recommendation_error(profile_user_id, error_type, error_message, conte
     )
 
 
+def track_external_api_call(api_name, book_id, book_title, status, status_code=None, error_message=None):
+    """Track an external API call (Open Library, Google Books) for usage monitoring."""
+    environment = get_environment()
+
+    properties = {
+        "api_name": api_name,
+        "book_id": book_id,
+        "book_title": book_title,
+        "status": status,
+    }
+    if status_code is not None:
+        properties["status_code"] = status_code
+    if error_message:
+        properties["error_message"] = str(error_message)[:500]
+
+    capture_event(
+        distinct_id="system",
+        event_name="external_api_call",
+        properties=properties,
+        environment=environment,
+    )
+
+
 def track_redis_cache_error(operation, key, error_type, error_message):
     """
     Track Redis cache errors (only in production).

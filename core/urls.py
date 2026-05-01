@@ -30,4 +30,5 @@ urlpatterns = [
     path("api/task-result/<str:task_id>/", views.get_task_result_view, name="get_task_result"),
     path("api/dna-status/", views.check_dna_status_view, name="api_check_dna_status"),
     path("api/recommendations-status/", views.check_recommendations_status_view, name="api_check_recommendations_status"),
+    path("api/enrichment-status/", views.enrichment_status_view, name="api_enrichment_status"),
 ]

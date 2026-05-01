@@ -7,6 +7,7 @@ import requests
 from django.db import IntegrityError
 from django.utils import timezone
 
+from .analytics.events import track_external_api_call
 from .dna_constants import CANONICAL_GENRE_MAP, EXCLUDED_GENRES
 from .models import Author, Book, Genre, Publisher
 
@@ -149,24 +150,87 @@ def get_book_details_for_seeder(title: str, author: str, session: requests.Sessi
     return details
 
 
+def _extract_edition_data(edition_data, book_details):
+    """Extract page count, publisher, publish year, and ISBN from an OL edition response."""
+    if pub_date := edition_data.get("publish_date"):
+        if match := re.search(r"\d{4}", str(pub_date)):
+            book_details["publish_year"] = int(match.group())
+    if pages := edition_data.get("number_of_pages"):
+        book_details["page_count"] = int(pages)
+    if pubs := edition_data.get("publishers"):
+        book_details["publisher"] = pubs[0]
+    if isbns_13 := edition_data.get("isbn_13"):
+        book_details["isbn_13"] = isbns_13[0]
+    elif isbns_10 := edition_data.get("isbn_10"):
+        book_details["isbn_13"] = isbns_10[0]
+
+
+def _fetch_work_genres(work_key, book_title, session, book_details, slow_down=False):
+    """Fetch genres from an OL work endpoint. Returns number of API calls made."""
+    work_url = f"https://openlibrary.org{work_key}.json"
+    work_response = session.get(work_url, timeout=5)
+    if slow_down:
+        time.sleep(1.2)
+    if work_response.status_code == 200:
+        work_data = work_response.json()
+        raw_subjects = work_data.get("subjects", [])
+        logger.debug(f"Raw Subjects from API for '{book_title}': {raw_subjects}")
+        final_genres = list(_clean_and_canonicalize_genres(raw_subjects))
+        logger.debug(f"Canonicalized Genres for '{book_title}': {final_genres}")
+        book_details["genres"] = final_genres
+    return 1
+
+
 def _fetch_from_open_library(book, session, slow_down=False):
     """
-    Fetches metadata by first searching, then querying the specific Work and Edition
-    endpoints, mirroring the original reliable logic.
+    Fetches metadata from Open Library. Uses direct ISBN endpoint when available
+    (skips search), then work endpoint for genres, and edition endpoint only if
+    the book is missing page count/publisher/year data.
     """
     logger.debug(f"Querying Open Library for '{book.title}'")
 
-    search_url = "https://openlibrary.org/search.json"
-    search_params = {}
-    if book.isbn13:
-        search_params["q"] = f"isbn:{book.isbn13}"
-    else:
-        search_params["title"] = _clean_title_for_api(book.title)
-        search_params["author"] = book.author.name
+    book_details = {
+        "genres": [],
+        "publish_year": None,
+        "publisher": None,
+        "page_count": None,
+        "isbn_13": None,
+        "cover_id": None,
+    }
+    api_calls = 0
 
     try:
-        res = session.get(search_url, params=search_params, timeout=10)
+        # Fast path: direct ISBN lookup (skips search entirely)
+        if book.isbn13:
+            isbn_url = f"https://openlibrary.org/isbn/{book.isbn13}.json"
+            res = session.get(isbn_url, timeout=5)
+            api_calls += 1
+            if slow_down:
+                time.sleep(1.2)
 
+            if res.status_code == 200:
+                edition_data = res.json()
+                _extract_edition_data(edition_data, book_details)
+
+                # Get cover ID from the edition
+                if covers := edition_data.get("covers"):
+                    book_details["cover_id"] = covers[0]
+
+                # Follow work key for genres
+                if works := edition_data.get("works"):
+                    work_key = works[0].get("key")
+                    if work_key:
+                        api_calls += _fetch_work_genres(work_key, book.title, session, book_details, slow_down)
+
+                track_external_api_call("open_library", book.pk, book.title, "success")
+                return book_details, api_calls
+            # ISBN lookup failed (404 etc) — fall through to search
+
+        # Fallback: search by title+author
+        search_url = "https://openlibrary.org/search.json"
+        search_params = {"title": _clean_title_for_api(book.title), "author": book.author.name}
+        res = session.get(search_url, params=search_params, timeout=10)
+        api_calls += 1
         if slow_down:
             time.sleep(1.2)
 
@@ -175,72 +239,38 @@ def _fetch_from_open_library(book, session, slow_down=False):
 
         if not search_data.get("docs"):
             logger.debug(f"Open Library: Not found in search for '{book.title}'")
-            return {}, 1
+            track_external_api_call("open_library", book.pk, book.title, "not_found")
+            return {}, api_calls
 
         search_result = search_data["docs"][0]
         work_key = search_result.get("key")
         edition_key = search_result.get("cover_edition_key")
+        book_details["cover_id"] = search_result.get("cover_i")
 
-        cover_id = search_result.get("cover_i")
-        book_details = {
-            "genres": [],
-            "publish_year": None,
-            "publisher": None,
-            "page_count": None,
-            "isbn_13": None,
-            "cover_id": cover_id,
-        }
-        api_calls = 1  # We already made the search call
-
-        # Fetch from the Work endpoint for subjects (genres)
+        # Fetch genres from work endpoint
         if work_key:
-            work_url = f"https://openlibrary.org{work_key}.json"
-            work_response = session.get(work_url, timeout=5)
-            api_calls += 1
-            if slow_down:
-                time.sleep(1.2)
+            api_calls += _fetch_work_genres(work_key, book.title, session, book_details, slow_down)
 
-            if work_response.status_code == 200:
-                work_data = work_response.json()
-                raw_subjects = work_data.get("subjects", [])
-                logger.debug(f"Raw Subjects from API for '{book.title}': {raw_subjects}")
-                final_genres = list(_clean_and_canonicalize_genres(raw_subjects))
-                logger.debug(f"Canonicalized Genres for '{book.title}': {final_genres}")
-
-                book_details["genres"] = final_genres
-
-        # Fetch from the Edition endpoint for page count, publisher, etc.
-        if edition_key:
+        # Skip edition endpoint if book already has all edition data
+        if book.page_count and book.publisher and book.publish_year and book.isbn13:
+            logger.debug(f"Skipping OL edition for '{book.title}' — already has page/publisher/year/isbn data")
+        elif edition_key:
             edition_url = f"https://openlibrary.org/books/{edition_key}.json"
             edition_response = session.get(edition_url, timeout=5)
             api_calls += 1
             if slow_down:
                 time.sleep(1.2)
-
             if edition_response.status_code == 200:
-                edition_data = edition_response.json()
+                _extract_edition_data(edition_response.json(), book_details)
 
-                if pub_date := edition_data.get("publish_date"):
-                    if match := re.search(r"\d{4}", str(pub_date)):
-                        book_details["publish_year"] = int(match.group())
-
-                if pages := edition_data.get("number_of_pages"):
-                    book_details["page_count"] = int(pages)
-
-                if pubs := edition_data.get("publishers"):
-                    book_details["publisher"] = pubs[0]
-
-                if isbns_13 := edition_data.get("isbn_13"):
-                    book_details["isbn_13"] = isbns_13[0]
-                elif isbns_10 := edition_data.get("isbn_10"):
-                    book_details["isbn_13"] = isbns_10[0]  # Save isbn_10 in the isbn_13 field for simplicity
-
+        track_external_api_call("open_library", book.pk, book.title, "success")
         return book_details, api_calls
 
     except requests.RequestException as e:
         logger.error(f"Open Library API Error for '{book.title}': {e}")
-        # Even if it fails, we count the initial attempt as one call
-        return {}, 1
+        status_code = getattr(e.response, "status_code", None) if hasattr(e, "response") else None
+        track_external_api_call("open_library", book.pk, book.title, "error", status_code=status_code, error_message=str(e))
+        return {}, api_calls or 1
 
 
 def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=False):
@@ -273,6 +303,7 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
 
         if data.get("totalItems", 0) == 0:
             logger.debug(f"Google Books: Not found for '{book.title}'")
+            track_external_api_call("google_books", book.pk, book.title, "not_found")
             return {}, 1
 
         volume_info = data["items"][0].get("volumeInfo", {})
@@ -302,10 +333,13 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
             else:
                 logger.debug(f"All Google Books categories filtered out (too generic)")
 
+        track_external_api_call("google_books", book.pk, book.title, "success")
         return result, 1
 
     except requests.RequestException as e:
         logger.error(f"Google Books API Error for '{book.title}': {e}")
+        status_code = getattr(e.response, "status_code", None) if hasattr(e, "response") else None
+        track_external_api_call("google_books", book.pk, book.title, "error", status_code=status_code, error_message=str(e))
         return {}, 1
 
 
@@ -355,6 +389,7 @@ def enrich_book_from_apis(book, session, slow_down=False):
                 # Fiction genres (most specific to generic)
                 "fantasy",
                 "science fiction",
+                "dystopian",
                 "thriller",
                 "horror",
                 "historical fiction",
@@ -412,7 +447,13 @@ def enrich_book_from_apis(book, session, slow_down=False):
             else:
                 logger.debug(f"No genres to add after limiting")
 
-    # Google Books often has more accurate genres than Open Library
+    # Skip Google Books when OL already found good genres — GB is mainly a genre fallback
+    if ol_data.get("genres") and book.google_books_last_checked is None:
+        book.google_books_last_checked = timezone.now()
+        is_updated = True
+        logger.debug(f"OL found genres for '{book.title}', skipping Google Books")
+
+    # Google Books: only called if OL didn't find genres (fallback for ratings + categories)
     if book.google_books_last_checked is None:
         gb_data, calls_made = _fetch_ratings_and_categories_from_google_books(book, session, slow_down)
         gb_api_calls += calls_made
@@ -439,6 +480,7 @@ def enrich_book_from_apis(book, session, slow_down=False):
                     genre_priority = [
                         "fantasy",
                         "science fiction",
+                        "dystopian",
                         "thriller",
                         "horror",
                         "historical fiction",

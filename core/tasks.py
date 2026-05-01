@@ -67,8 +67,22 @@ def check_author_mainstream_status_task(author_id: int):
 
 
 @shared_task(bind=True, max_retries=3)
-def enrich_book_task(self, book_id: int):
-    """Enrich a single book with data from Open Library and Google Books APIs."""
+def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str = None):
+    """Enrich a single book with data from Open Library and Google Books APIs.
+
+    If upload_nonce is provided, checks that it still matches the current upload
+    for this user. If a newer upload has started, this task exits early to avoid
+    wasting API calls on stale enrichment work.
+    """
+    # Check if this enrichment task is still relevant (not superseded by a re-upload)
+    if user_id and upload_nonce:
+        from .cache_utils import safe_cache_get
+
+        current_nonce = safe_cache_get(f"upload_nonce_{user_id}")
+        if current_nonce and current_nonce != upload_nonce:
+            logger.info(f"Enrich task for book {book_id} skipped — superseded by newer upload")
+            return
+
     try:
         book = Book.objects.get(pk=book_id)
     except Book.DoesNotExist:
@@ -86,8 +100,19 @@ def enrich_book_task(self, book_id: int):
 
         logger.info(f"Successfully enriched '{book.title}'")
     except Exception as e:
+        from celery.exceptions import MaxRetriesExceededError
+
         logger.error(f"Error enriching book '{book.title}' (id={book_id}): {e}", exc_info=True)
-        raise self.retry(countdown=60 * (2**self.request.retries), exc=e)
+        try:
+            raise self.retry(countdown=60 * (2**self.request.retries), exc=e)
+        except MaxRetriesExceededError:
+            # Mark book as attempted so polling completion detection can finish.
+            # Without this, books that consistently fail enrichment leave the
+            # dashboard banner stuck at the same percent forever.
+            from django.utils import timezone
+
+            Book.objects.filter(pk=book_id).update(google_books_last_checked=timezone.now())
+            logger.warning(f"Max retries exhausted for book '{book.title}' (id={book_id}); marking as attempted")
 
 
 @shared_task(bind=True, max_retries=5)

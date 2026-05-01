@@ -29,41 +29,62 @@ def create_vibe_prompt(dna: dict) -> str:
     # Simple logic to determine the era
     era = "classic" if avg_pub_year < 1980 else "modern"
 
-    prompt = f"""
-You are a witty, poetic observer who can distill the "vibe" of a person's reading list into short, aesthetic phrases. You are not a robot; you are creative and a little quirky.
+    # StoryGraph mood data (empty for Goodreads uploads)
+    mood_line = ""
+    mood_distribution = dna.get("mood_distribution", [])
+    if mood_distribution:
+        top_moods = [f"{m[0]} ({m[1]})" for m in mood_distribution[:5]]
+        mood_line = f"\n- Self-Reported Moods: {', '.join(top_moods)}"
 
-Your task is to generate 4 short, evocative, lowercase phrases that capture the feeling of this person's reading DNA.
+    prompt = f"""
+You are a witty, self-aware observer who writes funny, specific one-liner descriptions of a person based on their reading habits. Think: a friend affectionately roasting your taste in books — wry, literary, a little self-deprecating, with unexpected juxtapositions.
+
+Your task is to generate 2 vivid, character-sketch-style sentences that capture this person's reading personality.
 
 **RULES:**
-- Phrases must be short (2-6 words).
+- Each sentence should be 8-18 words. Not short phrases — full, punchy sentences or descriptions.
 - All lowercase.
-- No punctuation at the end of phrases.
-- Do NOT describe the user's reading habits directly (e.g., "you read fantasy"). Instead, evoke the *feeling* of those habits.
-- Output ONLY a valid JSON object with a single key "vibe_phrases" which is a list of 4 strings.
+- No punctuation at the end.
+- Be specific and visual — paint a scene or describe a character, don't just list genres.
+- Be funny but not cringey. Wry and self-aware, not try-hard quirky.
+- Do NOT mention specific book titles, author names, or genre names directly.
+- Output ONLY a valid JSON object with a single key "vibe_phrases" which is a list of 2 strings.
 
 **User's Reading DNA:**
 - Primary Reader Type: "{reader_type}"
 - Top Genres: {', '.join(top_genres)}
 - Favorite Authors: {', '.join(top_authors)}
-- General Era: {era}
+- General Era: {era}{mood_line}
 
-**Example of GOOD output for a Fantasy/Classic reader:**
+**Example of GOOD output for a Fantasy/Sci-Fi reader:**
 {{
   "vibe_phrases": [
-    "dusty maps and forgotten prophecies",
-    "the scent of old paper",
-    "a quiet corner in a grand library",
-    "a story that echoes through ages"
+    "accidentally falling asleep in someone else's imaginary world again",
+    "the one who brings a 600-page paperback to the beach"
+  ]
+}}
+
+**Example of GOOD output for a Literary Fiction reader:**
+{{
+  "vibe_phrases": [
+    "staring out of train windows like a protagonist between chapters",
+    "collecting existential crises from other people's novels"
+  ]
+}}
+
+**Example of GOOD output for a Nonfiction/History reader:**
+{{
+  "vibe_phrases": [
+    "explaining the roman empire at dinner and losing the table",
+    "quietly judging everyone who hasn't read the footnotes"
   ]
 }}
 
 **Example of BAD output (Do NOT do this):**
 {{
   "vibe_phrases": [
-    "You enjoy reading fantasy books.",
-    "Your favorite author is Brandon Sanderson.",
-    "You read a lot of classics.",
-    "Your vibe is nerdy."
+    "dusty maps and forgotten prophecies",
+    "you enjoy reading fantasy books"
   ]
 }}
 
@@ -83,7 +104,7 @@ def generate_vibe_with_llm(dna: dict) -> list:
     prompt = create_vibe_prompt(dna)
 
     try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-2.0-flash-lite")
         generation_config = genai.GenerationConfig(response_mime_type="application/json")
         response = model.generate_content(prompt, generation_config=generation_config)
 
