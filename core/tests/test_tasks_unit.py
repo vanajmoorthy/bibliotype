@@ -120,10 +120,11 @@ class NormalizationUnitTests(TestCase):
         self.assertEqual(result_df.iloc[1]["My Rating"], 3)  # 3.0 -> 3
         self.assertEqual(result_df.iloc[2]["My Rating"], 1)  # 0.5 -> 1
 
-        # ISBN validation: valid ISBN kept, non-ISBN UID discarded
+        # ISBN validation: valid ISBN kept (ISBN-10 → ISBN-13), non-ISBN UID discarded
         self.assertEqual(result_df.iloc[0]["ISBN13"], "9780060853983")
         self.assertTrue(pd.isna(result_df.iloc[1]["ISBN13"]))  # sg_internal_id filtered out
-        self.assertEqual(result_df.iloc[2]["ISBN13"], "1234567890")  # 10-digit ISBN kept
+        # 10-digit ISBNs are upgraded to ISBN-13 for cross-platform dedup
+        self.assertEqual(result_df.iloc[2]["ISBN13"], "9781234567897")
 
         # Read Status mapped to Exclusive Shelf
         self.assertEqual(result_df.iloc[0]["Exclusive Shelf"], "read")
