@@ -528,13 +528,23 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 if existing_book_by_isbn:
                     book = existing_book_by_isbn
                     created = False
-                    for key, value in book_defaults.items():
-                        if value is not None and getattr(book, key, None) is None:
-                            setattr(book, key, value)
-                    try:
-                        book.save()
-                    except IntegrityError:
-                        logger.warning(f"IntegrityError saving ISBN-matched book {isbn13_value}, skipping update")
+                    # Targeted UPDATE skips Book.save()'s _normalize_title work
+                    # for fields that haven't changed. Only fill columns that
+                    # are currently NULL on the existing row.
+                    fields_to_fill = {
+                        k: v
+                        for k, v in book_defaults.items()
+                        if v is not None and getattr(book, k, None) is None
+                    }
+                    if fields_to_fill:
+                        try:
+                            Book.objects.filter(pk=book.pk).update(**fields_to_fill)
+                            for k, v in fields_to_fill.items():
+                                setattr(book, k, v)
+                        except IntegrityError:
+                            logger.warning(
+                                f"IntegrityError updating ISBN-matched book {isbn13_value}, skipping update"
+                            )
                 else:
                     try:
                         book, created = Book.objects.update_or_create(
