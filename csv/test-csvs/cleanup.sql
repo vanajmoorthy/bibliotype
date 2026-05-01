@@ -1,6 +1,6 @@
 -- Auto-generated cleanup script for test CSV books
--- Covers all CSVs in docs/test-csvs/ (319 unique titles)
--- Usage: cat docs/test-csvs/cleanup.sql | docker-compose -f docker-compose.local.yml exec -T db psql -U bibliotype_user -d bibliotype_db
+-- Covers all CSVs in csv/test-csvs/ (319 unique titles)
+-- Usage: cat csv/test-csvs/cleanup.sql | docker-compose -f docker-compose.local.yml exec -T db psql -U bibliotype_user -d bibliotype_db
 
 BEGIN;
 
