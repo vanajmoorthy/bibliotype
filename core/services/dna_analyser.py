@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import math
 import random
 import re
 import time
@@ -7,7 +8,6 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 
-import numpy as np
 import pandas as pd
 import requests
 from django.core.exceptions import ObjectDoesNotExist
@@ -167,7 +167,7 @@ def _detect_and_normalize_csv(df):
         # Float ratings -> int using round-half-up (not banker's rounding)
         # 4.5 -> 5, 3.5 -> 4, 0.5 -> 1 (preserves user intent for half-star ratings)
         ratings = pd.to_numeric(df["My Rating"], errors="coerce")
-        df["My Rating"] = ratings.apply(lambda x: int(np.floor(x + 0.5)) if pd.notna(x) else pd.NA).astype("Int64")
+        df["My Rating"] = ratings.apply(lambda x: int(math.floor(x + 0.5)) if pd.notna(x) else pd.NA).astype("Int64")
         # Validate ISBN: keep digits (and X for ISBN-10 check digit), length must be 10 or 13.
         # StoryGraph ISBN/UID may contain non-ISBN internal identifiers (rejected by helper).
         # ISBN-10 inputs are upgraded to ISBN-13 for cross-platform dedup with Goodreads.
