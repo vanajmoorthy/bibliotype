@@ -13,6 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.contrib.auth.views import PasswordResetView
+from django.db import transaction
 from django.db.models import Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
@@ -275,11 +276,25 @@ def _compute_enrichment_progress(user, profile, dna_data):
     pending = attempted < total
 
     if not pending:
+        # Two concurrent requests (page render + AJAX poll, or two open tabs)
+        # could both race past the unfinalized check and both write. Lock the
+        # profile row, re-check inside the transaction, then save once.
         if not dna_data.get("enrichment_finalized"):
-            _recalculate_enrichment_stats(user, dna_data)
-            dna_data["enrichment_finalized"] = True
-            profile.dna_data = dna_data
-            profile.save(update_fields=["dna_data"])
+            from .models import UserProfile
+
+            with transaction.atomic():
+                locked = UserProfile.objects.select_for_update().get(pk=profile.pk)
+                if not (locked.dna_data or {}).get("enrichment_finalized"):
+                    _recalculate_enrichment_stats(user, dna_data)
+                    dna_data["enrichment_finalized"] = True
+                    locked.dna_data = dna_data
+                    locked.save(update_fields=["dna_data"])
+                else:
+                    # Another request already finalized — pick up its data so
+                    # the in-memory dna_data the caller holds is consistent.
+                    dna_data.clear()
+                    dna_data.update(locked.dna_data or {})
+                profile.dna_data = dna_data
         return {"pending": False, "total": total}
 
     _recalculate_enrichment_stats(user, dna_data)
