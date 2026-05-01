@@ -208,3 +208,37 @@ Then upload `csv/test-csvs/storygraph_all_alien.csv` or `goodreads_mixed.csv` an
 ## CI status
 
 Last green build: https://github.com/vanajmoorthy/bibliotype/actions/runs/25184829685 (after the Dockerfile gnupg fix). PR is mergeable.
+
+## Follow-up review fixes (2026-05-01)
+
+Second review pass after the initial handoff. Each numbered item below is its own commit.
+
+### Applied
+
+1. **Cross-platform ISBN dedup** — Goodreads ISBN-10s and StoryGraph ISBN-13s for the same physical book no longer create duplicate `Book` rows. Added `_isbn_to_isbn13()` helper (handles `="..."` wrapping, X check digit, NaN). Applied at every CSV-side ingest point. Tests cover known conversions, X handling, round-trip dedup, and pandas-NaN tolerance.
+
+2. **Goodreads reread under-count** — Replaced `read_df.duplicated().sum() // 2` with `read_df["Title"].value_counts().sub(1).clip(lower=0).sum()`. The old formula under-counted: a title read 3 times → 1 reread; now correctly 2. Added a regression test.
+
+3. **Tests for view helpers** — New `core/tests/test_enrichment_stats.py` covers `_compute_enrichment_stats`, `_recalculate_enrichment_stats`, and `_compute_enrichment_progress`: empty book set, fiction split canonicalization, mainstream count via author + publisher, page stats, cache hit within TTL, finalize-flips-once.
+
+4. **`enrichment_finalized` write race** — Wrapped the finalize block in `transaction.atomic()` with `UserProfile.objects.select_for_update().get(pk=...)` and re-checked `enrichment_finalized` inside the lock so two concurrent requests can't both write.
+
+5. **Drop explicit numpy dependency** — Removed `numpy` from `pyproject.toml`. Replaced `int(np.floor(x + 0.5))` in StoryGraph rating coercion with `int(math.floor(x + 0.5))`. `user_similarity_service.py` still uses numpy via pandas's transitive dep.
+
+6. **Stale ISBN regex comment** — Already fixed during item 1's rewrite of `_detect_and_normalize_csv` (no separate commit needed).
+
+7. **Targeted update for ISBN-matched books** — Replaced `setattr` + `book.save()` with `Book.objects.filter(pk=...).update(**fill_diff)` so existing rows skip the unnecessary `_normalize_title()` work on save.
+
+8. **`cleanup.sql` header path** — `docs/test-csvs/` → `csv/test-csvs/` in lines 2-3.
+
+9. **PR description model name** — Already updated in commit `4d6a788` to say `Gemini 2.0 Flash Lite`.
+
+### Still deferred (out of scope this pass)
+
+- **Polling backoff after 90% complete** — Currently fixed 5s. Stretching to 10–15s once `percent > 90%` would reduce DB churn during the final stretch.
+- **`enrichmentPoller` lifecycle (`x-show` → `x-if`)** — Banner DOM elements stay rendered when complete; switching to `x-if` would unmount cleanly.
+- **Probe `<img>` absolute positioning** — Cover-art probe element flagged in earlier UI review; needs a designer pass to coordinate with the comparative-analytics tile.
+- **Existing-book title-update policy** — Current behavior on `update_or_create` ISBN match keeps the oldest row's title. Worth deciding whether to update titles or document the keep-oldest invariant explicitly. (Likely intentional — investigate before changing.)
+- **Concurrent uploads → "stuck at 50%"** (handoff §2) — Reject-while-pending guard in `upload_view` is the recommended Option A.
+- **Reader type live update** during enrichment (handoff §1) — Requires either re-running `assign_reader_type` from DB state in the polling endpoint or persisting the read DataFrame.
+- **UI banner overlap on top-genres tile** (handoff §3).
