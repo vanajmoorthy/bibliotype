@@ -20,6 +20,7 @@ from core.dna_constants import (
 from core.services.dna_analyser import (
     STORYGRAPH_TAG_TO_GENRE,
     _detect_and_normalize_csv,
+    _isbn_to_isbn13,
     assign_reader_type,
 )
 
@@ -401,11 +402,11 @@ class CSVDetectionEdgeCasesTests(TestCase):
         self.assertEqual(result_df.iloc[6]["My Rating"], 1)
 
     def test_isbn_validation_rejects_non_numeric(self):
-        """ISBN validation: only 10/13-digit numeric values kept; others become NaN."""
+        """ISBN validation: 10/13-digit values kept (ISBN-10 → ISBN-13); others become NaN."""
         csv_text = (
             "Title,Authors,Read Status,Star Rating,ISBN/UID\n"
-            "A,X,read,4,9780743273565\n"  # 13-digit valid
-            "B,X,read,4,0743273567\n"     # 10-digit valid
+            "A,X,read,4,9780743273565\n"  # 13-digit valid (passthrough)
+            "B,X,read,4,0743273567\n"     # ISBN-10 valid → upgraded to ISBN-13
             "C,X,read,4,sg_internal_id\n"  # invalid
             "D,X,read,4,12345\n"            # too short
             "E,X,read,4,123456789012345\n"  # too long
@@ -413,7 +414,8 @@ class CSVDetectionEdgeCasesTests(TestCase):
         df = pd.read_csv(StringIO(csv_text))
         result_df, _ = _detect_and_normalize_csv(df)
         self.assertEqual(result_df.iloc[0]["ISBN13"], "9780743273565")
-        self.assertEqual(result_df.iloc[1]["ISBN13"], "0743273567")
+        # 0743273567 (ISBN-10) → 9780743273565 (same physical book)
+        self.assertEqual(result_df.iloc[1]["ISBN13"], "9780743273565")
         self.assertTrue(pd.isna(result_df.iloc[2]["ISBN13"]))
         self.assertTrue(pd.isna(result_df.iloc[3]["ISBN13"]))
         self.assertTrue(pd.isna(result_df.iloc[4]["ISBN13"]))
@@ -437,3 +439,73 @@ class CSVDetectionEdgeCasesTests(TestCase):
         with self.assertRaises(ValueError) as ctx:
             _detect_and_normalize_csv(df)
         self.assertIn("Unrecognized CSV format", str(ctx.exception))
+
+
+class IsbnNormalizationTests(TestCase):
+    """ISBN-10 → ISBN-13 conversion for cross-platform dedup."""
+
+    def test_isbn_10_converts_to_isbn_13(self):
+        """Known conversion: 0306406152 → 9780306406157."""
+        self.assertEqual(_isbn_to_isbn13("0306406152"), "9780306406157")
+
+    def test_isbn_10_with_x_check_digit(self):
+        """X check digit (= value 10) is accepted on ISBN-10 input."""
+        # 080442957X is a valid ISBN-10. Conversion drops the X (it's just a
+        # check digit) and computes a fresh EAN-13 check.
+        self.assertEqual(_isbn_to_isbn13("080442957X"), "9780804429573")
+        # Lowercase x is accepted too.
+        self.assertEqual(_isbn_to_isbn13("080442957x"), "9780804429573")
+
+    def test_isbn_13_passthrough(self):
+        """13-digit input is returned unchanged (function is idempotent)."""
+        self.assertEqual(_isbn_to_isbn13("9780743273565"), "9780743273565")
+
+    def test_goodreads_wrapper_stripped(self):
+        """Goodreads-style ="..." wrapping is stripped before conversion."""
+        self.assertEqual(_isbn_to_isbn13('="0306406152"'), "9780306406157")
+
+    def test_invalid_isbn_returns_none(self):
+        """Garbage input returns None instead of raising."""
+        for bad in [None, "", "  ", "abc", "12345", "sg_internal_id", "123456789012345"]:
+            self.assertIsNone(_isbn_to_isbn13(bad), f"Expected None for {bad!r}")
+
+    def test_pandas_nan_returns_none(self):
+        """pandas NaN floats don't blow up the helper."""
+        import math as _math
+        self.assertIsNone(_isbn_to_isbn13(_math.nan))
+        self.assertIsNone(_isbn_to_isbn13(pd.NA))
+
+    def test_round_trip_dedup_goodreads_then_storygraph(self):
+        """Same physical book uploaded as Goodreads ISBN-10 + StoryGraph ISBN-13 dedupes to one DB row."""
+        from django.contrib.auth.models import User
+
+        from core.models import Book
+        from core.services.dna_analyser import calculate_full_dna
+
+        user = User.objects.create_user(username="isbn_dedup_user", password="x")
+
+        goodreads_csv = (
+            'Title,Author,Exclusive Shelf,Number of Pages,Date Read,My Rating,My Review,'
+            'Original Publication Year,Average Rating,ISBN13,Binding\n'
+            '"The Great Gatsby","F. Scott Fitzgerald",read,180,2024/01/01,5,Loved it,'
+            '1925,4.0,="0743273567",Paperback\n'
+        )
+        storygraph_csv = (
+            "Title,Authors,Read Status,Star Rating,ISBN/UID,Format,Last Date Read,Read Count,"
+            "Number of Pages,Original Publication Year,Average Rating\n"
+            '"The Great Gatsby","F. Scott Fitzgerald",read,5,9780743273565,Paperback,'
+            "2024/02/01,1,180,1925,4.0\n"
+        )
+
+        from unittest.mock import patch
+
+        with patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a", "b"]), \
+             patch("core.tasks.enrich_book_task.delay"):
+            calculate_full_dna(goodreads_csv, user=user)
+            calculate_full_dna(storygraph_csv, user=user)
+
+        # Same physical book → exactly one Book row, with ISBN-13 stored
+        gatsby_books = Book.objects.filter(isbn13="9780743273565")
+        self.assertEqual(gatsby_books.count(), 1, f"Expected 1 Book row, found {gatsby_books.count()}")
+        # And no leftover row keyed only on the ISBN-10 form
+        self.assertFalse(Book.objects.filter(isbn13="0743273567").exists())

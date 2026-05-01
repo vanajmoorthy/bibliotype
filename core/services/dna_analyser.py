@@ -65,6 +65,30 @@ def _cover_initial(title):
 OPEN_LIBRARY_COVER_URL = "https://covers.openlibrary.org/b/isbn/{isbn}-M.jpg"
 
 
+def _isbn_to_isbn13(raw):
+    """Normalize an ISBN-10 or ISBN-13 to its 13-digit form.
+
+    Without this, Goodreads ISBN-10 and StoryGraph ISBN-13 for the same physical
+    book don't match in our DB, so cross-platform dedup fails.
+
+    Returns None for invalid input. Accepts the ISBN-10 X check digit (X = 10),
+    Goodreads-style ="..." wrapping, and inputs containing whitespace or other
+    junk characters. Idempotent for valid ISBN-13 inputs.
+    """
+    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
+        return None
+    s = str(raw).strip().strip('="').upper()
+    cleaned = re.sub(r"[^0-9X]", "", s)
+    if len(cleaned) == 13 and cleaned.isdigit():
+        return cleaned
+    if len(cleaned) == 10 and cleaned[:9].isdigit() and (cleaned[9].isdigit() or cleaned[9] == "X"):
+        prefix = "978" + cleaned[:9]
+        total = sum(int(c) * (1 if i % 2 == 0 else 3) for i, c in enumerate(prefix))
+        check = (10 - (total % 10)) % 10
+        return prefix + str(check)
+    return None
+
+
 def _build_cover_url(isbn13: str | None) -> str | None:
     """Construct an Open Library Covers API URL from an ISBN13. No HTTP request needed."""
     if not isbn13:
@@ -126,8 +150,14 @@ STORYGRAPH_TAG_TO_GENRE = {
 
 
 def _detect_and_normalize_csv(df):
-    """Detect CSV source (Goodreads vs StoryGraph) and normalize columns to Goodreads schema."""
+    """Detect CSV source (Goodreads vs StoryGraph) and normalize columns to Goodreads schema.
+
+    Always normalizes ISBN13 column to 13-digit ISBNs so cross-platform dedup
+    works (Goodreads exports use ISBN-10s, StoryGraph uses ISBN-13s).
+    """
     if "Exclusive Shelf" in df.columns:
+        if "ISBN13" in df.columns:
+            df["ISBN13"] = df["ISBN13"].apply(lambda x: _isbn_to_isbn13(x) if pd.notna(x) else pd.NA)
         return df, "goodreads"
     elif "Read Status" in df.columns:
         df = df.rename(columns=STORYGRAPH_TO_GOODREADS)
@@ -138,11 +168,11 @@ def _detect_and_normalize_csv(df):
         # 4.5 -> 5, 3.5 -> 4, 0.5 -> 1 (preserves user intent for half-star ratings)
         ratings = pd.to_numeric(df["My Rating"], errors="coerce")
         df["My Rating"] = ratings.apply(lambda x: int(np.floor(x + 0.5)) if pd.notna(x) else pd.NA).astype("Int64")
-        # Validate ISBN: only keep values that are all-digits and length 10 or 13
-        # StoryGraph ISBN/UID may contain non-ISBN internal identifiers
+        # Validate ISBN: keep digits (and X for ISBN-10 check digit), length must be 10 or 13.
+        # StoryGraph ISBN/UID may contain non-ISBN internal identifiers (rejected by helper).
+        # ISBN-10 inputs are upgraded to ISBN-13 for cross-platform dedup with Goodreads.
         if "ISBN13" in df.columns:
-            isbn_col = df["ISBN13"].astype(str).str.strip().str.replace(r"[^0-9Xx]", "", regex=True)
-            df["ISBN13"] = isbn_col.where(isbn_col.str.len().isin([10, 13]), other=pd.NA)
+            df["ISBN13"] = df["ISBN13"].apply(lambda x: _isbn_to_isbn13(x) if pd.notna(x) else pd.NA)
         # Add missing columns as NaN
         for col in ["Number of Pages", "Original Publication Year", "Average Rating"]:
             if col not in df.columns:
@@ -474,13 +504,10 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     except (ValueError, TypeError):
                         publish_year_value = None
 
-                isbn13_value = None
-                raw_isbn = original_row.get("ISBN13")
-                if raw_isbn and pd.notna(raw_isbn):
-                    # Goodreads wraps ISBNs in ="..." — strip that
-                    cleaned = str(raw_isbn).strip().strip('="')
-                    if cleaned and len(cleaned) >= 10:
-                        isbn13_value = cleaned[:13]
+                # Normalize to ISBN-13: Goodreads wraps in ="...", and exports may
+                # contain ISBN-10s. _isbn_to_isbn13 handles both, plus the X check
+                # digit. Idempotent for already-13-digit input from earlier passes.
+                isbn13_value = _isbn_to_isbn13(original_row.get("ISBN13"))
 
                 # Only include fields with actual values to avoid overwriting enriched data with None
                 book_defaults = {}
