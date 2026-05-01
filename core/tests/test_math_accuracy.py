@@ -115,7 +115,19 @@ class ReaderTypeScoringMathTests(TestCase):
             "Book C,Auth,read,200",
         ])
         _, scores = assign_reader_type(df, {}, [])
-        # 4 duplicate-marked rows // 2 = 2 rereads * 3 pts = 6
+        # 2 titles each read twice → 2 rereads * 3 pts = 6
+        self.assertEqual(scores["Comfort Rereader"], 6)
+
+    def test_comfort_rereader_goodreads_three_reads(self):
+        """Goodreads: a title read 3 times = 2 rereads = 6 pts (not 1 reread)."""
+        df = self._df([
+            "Book A,Auth,read,200",
+            "Book A,Auth,read,200",
+            "Book A,Auth,read,200",
+            "Book B,Auth,read,200",  # solo, no rereads
+        ])
+        _, scores = assign_reader_type(df, {}, [])
+        # Book A: 3 reads → 2 rereads. Book B: 0. Total: 2 * 3 = 6.
         self.assertEqual(scores["Comfort Rereader"], 6)
 
     def test_no_comfort_rereader_when_zero_rereads(self):

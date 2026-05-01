@@ -234,11 +234,13 @@ def assign_reader_type(read_df, enriched_data, all_genres):
                 logger.debug(f"Found non-major publisher: {publisher}")
                 scores["Small Press Supporter"] += 1
 
-    # Re-read detection: StoryGraph provides Read Count, Goodreads uses duplicate titles
+    # Re-read detection: StoryGraph provides Read Count, Goodreads uses duplicate titles.
+    # Goodreads: a title appearing N times = N-1 rereads. value_counts().sub(1).clip(lower=0)
+    # avoids the //2 trick (which under-counts: 3 reads → 1 reread instead of 2).
     if "Read Count" in read_df.columns:
         reread_count = int((pd.to_numeric(read_df["Read Count"], errors="coerce").fillna(1) > 1).sum())
     else:
-        reread_count = read_df.duplicated(subset=["Title"], keep=False).sum() // 2
+        reread_count = int(read_df["Title"].value_counts().sub(1).clip(lower=0).sum())
     # Award 3 points per reread — a reader with 5+ rereads out of 30 books gets a meaningful score
     if reread_count > 0:
         scores["Comfort Rereader"] += reread_count * 3
