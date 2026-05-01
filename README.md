@@ -14,8 +14,17 @@ Prioritised
 ongoing
 - settings modal
 - lock down canonical genres and improve mapping (improve fiction/non fiction split)
-- storygraph support
-
+- storygraph support ✅ follow ups:
+    - concurrent uploads stuck at 50%, revoke previous upload
+    - Reader type doesn't update live during enrichment
+    - Polling backoff after 90% complete: Currently fixed 5s. Stretch to 10–15s once percent > 90% to reduce DB churn during the long tail.
+    - enrichmentPoller lifecycle (x-show → x-if): Banner DOM elements stay rendered when complete; switching to x-if would unmount cleanly and remove the dead $store.enrichment references.
+    - Existing-book title-update policy" update_or_create ISBN match keeps the oldest row's title. Decide: update titles on match, or document keep-oldest as the invariant. Likely intentional — investigate before changing.
+    - Probe <img> absolute positioning
+    - Cover-art probe element from earlier UI review needs designer pass to coordinate with the comparative-analytics tile.
+    - Skeleton/placeholder cohesion pass (handoff §3)
+    - The three skeleton templates work but have inconsistent copy ("Still figuring out…" / "Still discovering…" / "Still fetching…") and incoherent design
+      
 todo  
 - add see password button, forgot password link too close to input
 - fix button hover animation 
