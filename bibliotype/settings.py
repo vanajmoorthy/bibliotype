@@ -265,7 +265,7 @@ handler404 = 'core.views.handler404'
 # Django Silk configuration - only used when DEBUG=True (local development)
 if DEBUG:
     SILKY_PYTHON_PROFILER = True
-    SILKY_PYTHON_PROFILER_BINARY = True
+    SILKY_PYTHON_PROFILER_BINARY = False
     SILKY_META = True
     # Limit the number of requests to store (prevents database bloat)
     SILKY_MAX_RECORDED_REQUESTS = 1000
