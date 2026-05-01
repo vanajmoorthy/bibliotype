@@ -326,3 +326,129 @@ class UploadNonceTests(TransactionTestCase):
         self.assertIsNotNone(first_nonce)
         self.assertIsNotNone(second_nonce)
         self.assertNotEqual(first_nonce, second_nonce)
+
+
+@override_settings(
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_STORE_EAGER_RESULT=True,
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "concurrent-upload-tests",
+        }
+    },
+)
+class ConcurrentUploadRevokeTests(TransactionTestCase):
+    """Re-uploading while a prior DNA task is still pending revokes the prior task.
+
+    Without this, the prior task keeps running and contends on Postgres row locks
+    with the new task, stalling the new task's progress bar at ~50%.
+    """
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username="revoke_user", email="revoke@test.com", password="testpass123"
+        )
+        self.client.force_login(self.user)
+
+    def tearDown(self):
+        from django.db import connections
+
+        for conn in connections.all():
+            if conn.connection is not None:
+                conn.close()
+        connections.close_all()
+        super().tearDown()
+
+    def _upload(self):
+        csv_content = (
+            "Title,Author,Exclusive Shelf,My Rating\n"
+            "Test Book,Test Author,read,4\n"
+        ).encode("utf-8")
+        csv_file = SimpleUploadedFile("g.csv", csv_content, content_type="text/csv")
+        return self.client.post(reverse("core:upload"), {"csv_file": csv_file})
+
+    @patch("core.views.AsyncResult")
+    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    def test_upload_revokes_prior_pending_task(self, mock_enrich, mock_vibe, mock_async_result):
+        """If a prior DNA task is still pending, the new upload revokes it."""
+        prior_id = "prior-task-id-123"
+        self.user.userprofile.pending_dna_task_id = prior_id
+        self.user.userprofile.save()
+
+        prior_result = mock_async_result.return_value
+        prior_result.ready.return_value = False
+
+        self._upload()
+
+        mock_async_result.assert_any_call(prior_id)
+        prior_result.revoke.assert_called_once_with(terminate=True, signal="SIGTERM")
+
+    @patch("core.views.AsyncResult")
+    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    def test_upload_does_not_revoke_completed_task(self, mock_enrich, mock_vibe, mock_async_result):
+        """If the prior task has already finished, no revoke is attempted."""
+        prior_id = "prior-task-id-456"
+        self.user.userprofile.pending_dna_task_id = prior_id
+        self.user.userprofile.save()
+
+        prior_result = mock_async_result.return_value
+        prior_result.ready.return_value = True
+
+        self._upload()
+
+        prior_result.revoke.assert_not_called()
+
+    @patch("core.views.AsyncResult")
+    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    def test_upload_succeeds_when_revoke_raises(self, mock_enrich, mock_vibe, mock_async_result):
+        """A failure to revoke the prior task must not block the new upload."""
+        prior_id = "prior-task-id-789"
+        self.user.userprofile.pending_dna_task_id = prior_id
+        self.user.userprofile.save()
+
+        prior_result = mock_async_result.return_value
+        prior_result.ready.return_value = False
+        prior_result.revoke.side_effect = RuntimeError("broker unavailable")
+
+        response = self._upload()
+
+        # Upload still redirects to the dashboard processing view
+        self.assertEqual(response.status_code, 302)
+        self.user.userprofile.refresh_from_db()
+        self.assertIsNotNone(self.user.userprofile.pending_dna_task_id)
+        self.assertNotEqual(self.user.userprofile.pending_dna_task_id, prior_id)
+
+    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    def test_reupload_clears_stale_userbooks(self, mock_enrich, mock_vibe):
+        """Books from a prior upload that aren't in the new CSV are removed (handhles
+        orphans from a revoked task — calculate_full_dna deletes UserBooks not in the
+        current upload)."""
+        # First upload: one book
+        first_csv = (
+            "Title,Author,Exclusive Shelf,My Rating\n"
+            "Old Book,Old Author,read,5\n"
+        ).encode("utf-8")
+        self.client.post(
+            reverse("core:upload"),
+            {"csv_file": SimpleUploadedFile("a.csv", first_csv, content_type="text/csv")},
+        )
+        self.assertTrue(UserBook.objects.filter(user=self.user, book__title="Old Book").exists())
+
+        # Second upload: different book
+        second_csv = (
+            "Title,Author,Exclusive Shelf,My Rating\n"
+            "New Book,New Author,read,4\n"
+        ).encode("utf-8")
+        self.client.post(
+            reverse("core:upload"),
+            {"csv_file": SimpleUploadedFile("b.csv", second_csv, content_type="text/csv")},
+        )
+
+        self.assertFalse(UserBook.objects.filter(user=self.user, book__title="Old Book").exists())
+        self.assertTrue(UserBook.objects.filter(user=self.user, book__title="New Book").exists())
