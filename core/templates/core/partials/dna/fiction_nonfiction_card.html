@@ -1,5 +1,5 @@
 <div class="border-brand-text shadow-neo relative flex flex-col border-2 bg-white p-6">
-    {% include 'core/partials/dna/enrichment_banner.html' %}
+    {% include 'core/partials/dna/enrichment_banner.html' with condition=enrichment.pending %}
     <h2 class="mb-1 text-center text-2xl font-bold uppercase">Fiction vs Nonfiction</h2>
     <p class="text-center text-base text-gray-500 italic">
         How {{ pronoun_pos|default:"your" }} library splits between fiction and nonfiction{% if enrichment.pending %} (so far){% endif %}

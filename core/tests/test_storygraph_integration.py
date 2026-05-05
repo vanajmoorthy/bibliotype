@@ -196,7 +196,7 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
         connections.close_all()
         super().tearDown()
 
-    def _create_book(self, title, isbn, attempted=False):
+    def _create_book(self, title, isbn, attempted=False, page_count=None, publish_year=None):
         """Create a book and link to test user via UserBook."""
         from core.models import Author
 
@@ -207,6 +207,8 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
             author=author,
             isbn13=isbn,
             google_books_last_checked=timezone.now() if attempted else None,
+            page_count=page_count,
+            publish_year=publish_year,
         )
         UserBook.objects.create(user=self.user, book=book)
         return book
@@ -254,6 +256,44 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
         data = response.json()
         self.assertEqual(data["percent"], 75)
         self.assertEqual(data["total"], 4)
+
+    def test_pages_any_missing_false_when_all_books_have_page_count(self):
+        """Goodreads case: every book has page_count from the CSV — no length banner needed."""
+        self._create_book("A", "9789000000020", attempted=False, page_count=300, publish_year=2020)
+        self._create_book("B", "9789000000021", attempted=False, page_count=200, publish_year=2021)
+
+        response = self.client.get(reverse("core:api_enrichment_status"))
+        data = response.json()
+        self.assertTrue(data["pending"])  # global enrichment still running
+        self.assertFalse(data["pages_any_missing"])  # but page data is complete
+
+    def test_pages_any_missing_true_when_any_book_missing_page_count(self):
+        """One book missing page_count → length banner should show."""
+        self._create_book("A", "9789000000022", attempted=False, page_count=300)
+        self._create_book("B", "9789000000023", attempted=False, page_count=None)
+
+        response = self.client.get(reverse("core:api_enrichment_status"))
+        data = response.json()
+        self.assertTrue(data["pages_any_missing"])
+
+    def test_year_any_missing_false_when_all_books_have_publish_year(self):
+        """Goodreads case: every book has publish_year from the CSV — no year banner needed."""
+        self._create_book("A", "9789000000024", attempted=False, page_count=300, publish_year=1999)
+        self._create_book("B", "9789000000025", attempted=False, page_count=200, publish_year=2010)
+
+        response = self.client.get(reverse("core:api_enrichment_status"))
+        data = response.json()
+        self.assertTrue(data["pending"])
+        self.assertFalse(data["year_any_missing"])
+
+    def test_year_any_missing_true_when_any_book_missing_publish_year(self):
+        """One book missing publish_year → year banner should show."""
+        self._create_book("A", "9789000000026", attempted=False, publish_year=2020)
+        self._create_book("B", "9789000000027", attempted=False, publish_year=None)
+
+        response = self.client.get(reverse("core:api_enrichment_status"))
+        data = response.json()
+        self.assertTrue(data["year_any_missing"])
 
 
 @override_settings(

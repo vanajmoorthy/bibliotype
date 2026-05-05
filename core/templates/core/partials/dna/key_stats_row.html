@@ -54,8 +54,10 @@
         <div class="mt-2 text-lg uppercase">Total Books Read</div>
     </div>
     <div class="bg-brand-pink border-brand-text shadow-neo relative border-2 p-6 text-center">
-        {% include 'core/partials/dna/enrichment_banner.html' %}
-        <div class="{% if enrichment.pending %}opacity-60 transition-opacity duration-500{% endif %}">
+        {% include 'core/partials/dna/enrichment_banner.html' with condition=enrichment.pages_any_missing store_key="pages_any_missing" %}
+        <div x-data
+             class="transition-opacity duration-500 {% if enrichment.pages_any_missing %}opacity-60{% endif %}"
+             :class="{ 'opacity-60': $store.enrichment?.pages_any_missing }">
             <div id="stat-pages" class="text-5xl font-bold" x-text="fmtPages(pages)">{{ dna.user_stats.total_pages_read|intcomma }}</div>
             <div class="mt-2 text-lg uppercase">Total Pages Read</div>
         </div>

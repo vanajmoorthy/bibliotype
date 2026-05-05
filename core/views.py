@@ -266,6 +266,7 @@ def _compute_enrichment_progress(user, profile, dna_data):
         total=Count("id", distinct=True),
         genres_done=Count("id", filter=Q(genres__isnull=False), distinct=True),
         pages_done=Count("id", filter=Q(page_count__isnull=False), distinct=True),
+        year_done=Count("id", filter=Q(publish_year__isnull=False), distinct=True),
         attempted=Count("id", filter=Q(google_books_last_checked__isnull=False), distinct=True),
     )
     total = counts["total"]
@@ -308,6 +309,12 @@ def _compute_enrichment_progress(user, profile, dna_data):
         "genres_pending": (genres_done / total) < 0.5,
         "pages_done": pages_done,
         "pages_pending": (pages_done / total) < 0.5,
+        # Per-stat banner gates: True iff any book is still missing this field.
+        # Distinct from pages_pending above (a 50%-done sparseness threshold
+        # for skeletons). Goodreads CSVs supply both fields per row, so these
+        # stay False throughout enrichment for Goodreads uploads.
+        "pages_any_missing": pages_done < total,
+        "year_any_missing": counts["year_done"] < total,
         "remaining_minutes": max(1, math.ceil((total - attempted) / 20)),
         "csv_source": dna_data.get("csv_source", "goodreads"),
     }
