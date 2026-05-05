@@ -5,13 +5,15 @@
         <div class="space-y-4 text-lg">
             <!-- Average Book Length -->
             <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
-                {% if enrichment.length_pending %}
+                {% if enrichment.pages_any_missing %}
                 <p class="-mx-3 -mt-3 mb-2 bg-brand-yellow/30 py-0.5 text-center text-xs animate-[enrichPulse_2s_ease-in-out_infinite]"
-                   x-data x-show="$store.enrichment?.pending" x-cloak>
+                   x-data x-show="$store.enrichment?.pages_any_missing" x-cloak>
                     Still enriching
                 </p>
                 {% endif %}
-                <div class="{% if enrichment.length_pending %}opacity-60 transition-opacity duration-500{% endif %}">
+                <div x-data
+                     class="transition-opacity duration-500 {% if enrichment.pages_any_missing %}opacity-60{% endif %}"
+                     :class="{ 'opacity-60': $store.enrichment?.pages_any_missing }">
                 <p>
                     The average length of books {{ pronoun_sub|default:"you" }} read is
                     <strong><span id="stat-avg-length">{{ dna.user_stats.avg_book_length }}</span> pages</strong>.
@@ -31,13 +33,15 @@
 
             <!-- Average Book Age -->
             <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
-                {% if enrichment.year_pending %}
+                {% if enrichment.year_any_missing %}
                 <p class="-mx-3 -mt-3 mb-2 bg-brand-yellow/30 py-0.5 text-center text-xs animate-[enrichPulse_2s_ease-in-out_infinite]"
-                   x-data x-show="$store.enrichment?.pending" x-cloak>
+                   x-data x-show="$store.enrichment?.year_any_missing" x-cloak>
                     Still enriching
                 </p>
                 {% endif %}
-                <div class="{% if enrichment.year_pending %}opacity-60 transition-opacity duration-500{% endif %}">
+                <div x-data
+                     class="transition-opacity duration-500 {% if enrichment.year_any_missing %}opacity-60{% endif %}"
+                     :class="{ 'opacity-60': $store.enrichment?.year_any_missing }">
                 <p>
                     The average age of books {{ pronoun_sub|default:"you" }} read is from
                     <strong>{{ dna.user_stats.avg_publish_year|floatformat:0 }}</strong>.

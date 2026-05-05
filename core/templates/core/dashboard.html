@@ -312,7 +312,11 @@
                 {% if enrichment.pending %}
                 <script>
                     document.addEventListener('alpine:init', () => {
-                        Alpine.store('enrichment', { pending: true });
+                        Alpine.store('enrichment', {
+                            pending: true,
+                            pages_any_missing: {{ enrichment.pages_any_missing|yesno:"true,false" }},
+                            year_any_missing: {{ enrichment.year_any_missing|yesno:"true,false" }},
+                        });
                     });
 
                     function enrichmentPoller() {
@@ -346,13 +350,22 @@
                                     const data = await res.json();
                                     if (!data.pending) {
                                         this.pending = false;
-                                        Alpine.store('enrichment', { pending: false });
+                                        Alpine.store('enrichment', {
+                                            pending: false,
+                                            pages_any_missing: false,
+                                            year_any_missing: false,
+                                        });
                                         clearInterval(this.interval);
                                         setTimeout(() => window.location.reload(), 500);
                                         return;
                                     }
                                     this.adjustInterval(data.percent);
                                     this.bannerText = `Enriching your library — ${data.percent}% complete. ~${data.remaining_minutes} min remaining.`;
+                                    Alpine.store('enrichment', {
+                                        pending: true,
+                                        pages_any_missing: !!data.pages_any_missing,
+                                        year_any_missing: !!data.year_any_missing,
+                                    });
                                     const s = data.updated_stats;
                                     if (s) {
                                         // Update total pages read

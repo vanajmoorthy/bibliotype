@@ -1,6 +1,10 @@
-{% if enrichment.pending %}
+{% comment %}
+condition (required) — server-render gate (e.g. enrichment.pending or enrichment.pages_any_missing)
+store_key (optional, default "pending") — Alpine store key driving live x-show
+{% endcomment %}
+{% if condition %}
 <p class="enrichment-banner absolute inset-x-0 top-0 z-10 bg-brand-yellow/30 py-0.5 text-center text-xs animate-[enrichPulse_2s_ease-in-out_infinite]"
-   x-data x-show="$store.enrichment?.pending" x-cloak>
+   x-data x-show="$store.enrichment?.{{ store_key|default:'pending' }}" x-cloak>
     Still enriching
 </p>
 {% endif %}
