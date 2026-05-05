@@ -176,7 +176,7 @@
                 {% include 'core/partials/dna/key_stats_row.html' %}
                 {% include 'core/partials/dna/comparative_analytics_card.html' %}
 
-                <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+                <div class="enrichment-row grid grid-cols-1 gap-8 md:grid-cols-2">
                     {% include 'core/partials/dna/niche_read_card.html' %}
                     {% include 'core/partials/dna/mainstream_gauge_card.html' %}
                 </div>
@@ -185,7 +185,7 @@
                 {% include 'core/partials/dna/review_analysis_card.html' %}
 
                 {% if dna.fiction_nonfiction_split or dna.longest_book or enrichment.pending %}
-                    <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+                    <div class="enrichment-row grid grid-cols-1 gap-8 md:grid-cols-2">
                         {% if dna.fiction_nonfiction_split %}
                             {% include 'core/partials/dna/fiction_nonfiction_card.html' %}
                         {% elif enrichment.pending %}
@@ -322,21 +322,25 @@
                             bannerText: 'Enriching your library — {{ enrichment.percent }}% complete. ~{{ enrichment.remaining_minutes }} min remaining.',
                             interval: null,
                             intervalMs: 5000,
+                            inFlight: false,
                             init() {
                                 this.interval = setInterval(() => this.poll(), this.intervalMs);
                             },
                             // Slow polling once enrichment is nearly done — most of the
-                            // remaining work is the long tail of stragglers, no need to
-                            // hammer the server every 5s.
+                            // remaining work is the long tail of stragglers. Monotonic:
+                            // once we've slowed, we never speed back up, so a non-monotonic
+                            // percent (rounding, denominator shifts) can't thrash the timer.
                             adjustInterval(percent) {
-                                const targetMs = percent > 90 ? 12000 : 5000;
-                                if (targetMs !== this.intervalMs) {
-                                    this.intervalMs = targetMs;
+                                if (this.intervalMs >= 12000) return;
+                                if (percent > 90) {
+                                    this.intervalMs = 12000;
                                     clearInterval(this.interval);
                                     this.interval = setInterval(() => this.poll(), this.intervalMs);
                                 }
                             },
                             async poll() {
+                                if (this.inFlight) return;
+                                this.inFlight = true;
                                 try {
                                     const res = await fetch('{% url "core:api_enrichment_status" %}');
                                     const data = await res.json();
@@ -363,6 +367,8 @@
                                     }
                                 } catch (e) {
                                     // Silent fail — will retry on next interval
+                                } finally {
+                                    this.inFlight = false;
                                 }
                             },
                             destroy() {

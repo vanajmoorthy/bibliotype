@@ -32,6 +32,21 @@
     50% { opacity: 0.5; }
 }
 
+/* Reserve uniform top space on every tile in a row when one of them shows
+   the "Still enriching" banner — otherwise the absolute-positioned banner
+   covers the tile's content while sibling tiles sit flush with the top. */
+.enrichment-row:has(.enrichment-banner) > * {
+    padding-top: 1.75rem;
+}
+
+/* Push the absolute-positioned corner charts (top-genres / top-authors) down
+   to clear the banner zone, in lockstep with the > * padding above. */
+@media (min-width: 768px) {
+    .enrichment-row:has(.enrichment-banner) .enrichment-corner-chart {
+        top: 1.75rem !important;
+    }
+}
+
 /* Custom utility class for the grid background pattern */
 .grid-background {
     background-color: var(--color-brand-background);
