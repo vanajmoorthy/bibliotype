@@ -56,6 +56,7 @@ services:
             - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
             - TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY}
             - TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY}
+            - ENABLE_SILK=${ENABLE_SILK:-False}
         depends_on:
             db:
                 condition: service_healthy
@@ -82,6 +83,7 @@ services:
             - POSTGRES_DB=${POSTGRES_DB}
             - POSTGRES_USER=${POSTGRES_USER}
             - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            - ENABLE_SILK=${ENABLE_SILK:-False}
         depends_on:
             db:
                 condition: service_healthy
