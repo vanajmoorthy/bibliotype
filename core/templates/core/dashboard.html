@@ -321,8 +321,20 @@
                             showInfo: false,
                             bannerText: 'Enriching your library — {{ enrichment.percent }}% complete. ~{{ enrichment.remaining_minutes }} min remaining.',
                             interval: null,
+                            intervalMs: 5000,
                             init() {
-                                this.interval = setInterval(() => this.poll(), 5000);
+                                this.interval = setInterval(() => this.poll(), this.intervalMs);
+                            },
+                            // Slow polling once enrichment is nearly done — most of the
+                            // remaining work is the long tail of stragglers, no need to
+                            // hammer the server every 5s.
+                            adjustInterval(percent) {
+                                const targetMs = percent > 90 ? 12000 : 5000;
+                                if (targetMs !== this.intervalMs) {
+                                    this.intervalMs = targetMs;
+                                    clearInterval(this.interval);
+                                    this.interval = setInterval(() => this.poll(), this.intervalMs);
+                                }
                             },
                             async poll() {
                                 try {
@@ -335,6 +347,7 @@
                                         setTimeout(() => window.location.reload(), 500);
                                         return;
                                     }
+                                    this.adjustInterval(data.percent);
                                     this.bannerText = `Enriching your library — ${data.percent}% complete. ~${data.remaining_minutes} min remaining.`;
                                     const s = data.updated_stats;
                                     if (s) {

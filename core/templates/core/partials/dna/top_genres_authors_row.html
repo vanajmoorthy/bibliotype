@@ -33,7 +33,7 @@
                 {% if dna.unique_genres_count %}
                     <p class="mb-2 text-base italic text-gray-500 md:mb-6 md:pr-36">We found {{ dna.unique_genres_count }} unique genre{{ dna.unique_genres_count|pluralize }} in {{ pronoun_pos|default:"your" }} library{% if enrichment.pending %} so far{% endif %}</p>
                 {% endif %}
-                <div class="chart-drop-shadow chart-await h-28 w-28 flex-shrink-0 md:!absolute md:!top-2 md:!right-2 md:!h-32 md:!w-32" style="position: relative; top: -2.5rem; right: -0.6rem;">
+                <div class="chart-drop-shadow chart-await h-28 w-28 flex-shrink-0 md:!absolute {% if enrichment.pending %}md:!top-8{% else %}md:!top-2{% endif %} md:!right-2 md:!h-32 md:!w-32" style="position: relative; top: -2.5rem; right: -0.6rem;">
                     <canvas id="topGenresChart"></canvas>
                 </div>
             </div>
