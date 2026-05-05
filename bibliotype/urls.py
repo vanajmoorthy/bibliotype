@@ -48,8 +48,8 @@ urlpatterns = [
     path("", include("core.urls")),
 ]
 
-# Django Silk URLs for profiling - only available in local development (DEBUG=True)
-if settings.DEBUG:
+# Django Silk URLs for profiling - opt-in via ENABLE_SILK=True (local development only)
+if settings.ENABLE_SILK:
     urlpatterns.insert(0, path("silk/", include("silk.urls")))
 
 # Custom 404 handler - must be a callable in root URLconf (string format only works in settings.py)

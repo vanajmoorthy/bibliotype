@@ -9,6 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
 DEBUG = os.environ.get("DEBUG", "True") == "True"
+ENABLE_SILK = os.environ.get("ENABLE_SILK", "False") == "True"
 
 allowed_hosts_str = os.environ.get("ALLOWED_HOSTS", "")
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(",") if host.strip()]
@@ -28,8 +29,8 @@ INSTALLED_APPS = [
     "django_celery_results",
 ]
 
-# Django Silk for profiling - only enabled in local development (DEBUG=True)
-if DEBUG:
+# Django Silk for profiling - opt-in via ENABLE_SILK=True (local development only)
+if ENABLE_SILK:
     INSTALLED_APPS.insert(0, "silk")  # Insert at beginning to ensure it's loaded first
 
 
@@ -44,8 +45,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# Django Silk middleware for profiling - only enabled in local development (DEBUG=True)
-if DEBUG:
+# Django Silk middleware for profiling - opt-in via ENABLE_SILK=True (local development only)
+if ENABLE_SILK:
     MIDDLEWARE.insert(0, "silk.middleware.SilkyMiddleware")
 
 
@@ -262,8 +263,8 @@ CELERY_BEAT_SCHEDULE = {
 # Custom 404 handler
 handler404 = 'core.views.handler404'
 
-# Django Silk configuration - only used when DEBUG=True (local development)
-if DEBUG:
+# Django Silk configuration - opt-in via ENABLE_SILK=True (local development only)
+if ENABLE_SILK:
     SILKY_PYTHON_PROFILER = True
     SILKY_PYTHON_PROFILER_BINARY = False
     SILKY_META = True
