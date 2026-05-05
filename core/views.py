@@ -745,6 +745,28 @@ def upload_view(request):
             # Clear old session data so the view will use the updated profile data
             request.session.pop("dna_data", None)
 
+            # If a previous upload is still running, revoke it before dispatching
+            # the new one. Without this, both tasks contend on the same Book/Author
+            # row locks in Postgres and the new task's progress bar stalls until
+            # the old task releases its locks ("stuck at 50%").
+            prior_task_id = request.user.userprofile.pending_dna_task_id
+            if prior_task_id:
+                try:
+                    prior_result = AsyncResult(prior_task_id)
+                    if not prior_result.ready():
+                        prior_result.revoke(terminate=True, signal="SIGTERM")
+                        logger.info(
+                            f"Revoked pending DNA task {prior_task_id} for user {request.user.id} "
+                            f"because a new upload superseded it"
+                        )
+                except Exception as e:
+                    # Best-effort: a failed revoke shouldn't block the new upload.
+                    # The nonce mechanism still protects enrichment tasks; the worst
+                    # case is brief lock contention until the prior task finishes.
+                    logger.warning(
+                        f"Failed to revoke prior DNA task {prior_task_id} for user {request.user.id}: {e}"
+                    )
+
             # Store upload nonce BEFORE dispatching the task so enrichment tasks
             # from previous uploads can detect they've been superseded. Using uuid
             # rather than task ID since the task hasn't been created yet.
@@ -755,9 +777,13 @@ def upload_view(request):
 
             result = generate_reading_dna_task.delay(csv_content, request.user.id)
 
-            # Save the pending task ID to track regeneration progress
-            request.user.userprofile.pending_dna_task_id = result.id
-            request.user.userprofile.save()
+            # Save the pending task ID to track regeneration progress.
+            # Use .update() instead of fetching + saving the related object — the
+            # eager task path runs the DNA save inline, and a cached stale
+            # UserProfile instance here would clobber the DNA the task just wrote.
+            from .models import UserProfile
+
+            UserProfile.objects.filter(user=request.user).update(pending_dna_task_id=result.id)
 
             messages.success(
                 request,
