@@ -1,0 +1,9 @@
+# Bibliotype triage progress log
+
+## Codebase Patterns
+- (populated as Ralph iterations discover them)
+
+---
+
+2026-05-10: PRD generated from multi-agent triage report (see tasks/prd-codebase-triage-fixes.md).
+2026-05-10: Ralph harness scaffolded in scripts/ralph/. prd.json has 70 stories across 8 phases.
