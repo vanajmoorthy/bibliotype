@@ -114,6 +114,36 @@ class BookEnrichmentIntegrationTests(TestCase):
 
         mock_enrich.assert_called_once()
 
+    @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    def test_enrich_book_task_skipped_at_second_check_if_nonce_changed_during_db_fetch(self, mock_enrich):
+        """Re-check defends against the window between task start and API call.
+
+        Without this, a task that started under a valid nonce, then sat waiting
+        on its DB fetch while a new upload superseded it, would still spend
+        ~5s of API calls and write stale data.
+        """
+        from core.cache_utils import safe_cache_set
+        from core.tasks import enrich_book_task
+
+        # Start with matching nonce. After the first check passes, the cached
+        # value is overwritten — the second check (after Book.objects.get)
+        # should catch this and bail before enrich_book_from_apis runs.
+        safe_cache_set("upload_nonce_42", "old-upload-id", timeout=3600)
+        book_id = self.book.id
+
+        original_get = Book.objects.get
+
+        def get_with_nonce_change(*args, **kwargs):
+            result = original_get(*args, **kwargs)
+            safe_cache_set("upload_nonce_42", "new-upload-id", timeout=3600)
+            return result
+
+        with patch("core.tasks.Book.objects.get", side_effect=get_with_nonce_change):
+            enrich_book_task.delay(book_id, user_id=42, upload_nonce="old-upload-id")
+
+        mock_enrich.assert_not_called()
+
     @patch("core.book_enrichment_service.enrich_book_from_apis")
     def test_enrich_book_task_retries_on_api_failure(self, mock_enrich):
         """Task should retry on API failures."""
@@ -425,6 +455,62 @@ class BookEnrichmentIntegrationTests(TestCase):
 
         self.book.refresh_from_db()
         self.assertEqual(self.book.cover_url, "https://covers.openlibrary.org/b/id/999-M.jpg")
+
+
+# ──────────────────────────────────────────────
+# Class 1b: Author Mainstream Status Task Tests
+# ──────────────────────────────────────────────
+
+
+@override_settings(
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_EAGER_PROPAGATES=True,
+    CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
+)
+class CheckAuthorMainstreamStatusTaskTests(TestCase):
+
+    def setUp(self):
+        self.author = Author.objects.create(name="Test Author")
+
+    @patch("core.tasks.check_author_mainstream_status")
+    def test_skipped_when_superseded_by_newer_upload(self, mock_check):
+        """Author check exits early if a newer upload nonce is in the cache."""
+        from core.cache_utils import safe_cache_set
+        from core.tasks import check_author_mainstream_status_task
+
+        safe_cache_set("upload_nonce_42", "new-upload-id", timeout=3600)
+
+        check_author_mainstream_status_task.delay(
+            self.author.id, user_id=42, upload_nonce="old-upload-id"
+        )
+
+        mock_check.assert_not_called()
+
+    @patch("core.tasks.check_author_mainstream_status")
+    def test_runs_when_nonce_matches(self, mock_check):
+        """Author check runs normally when upload nonce is current."""
+        from core.cache_utils import safe_cache_set
+        from core.tasks import check_author_mainstream_status_task
+
+        safe_cache_set("upload_nonce_42", "current-upload-id", timeout=3600)
+        mock_check.return_value = {"error": None, "is_mainstream": True, "reason": "test"}
+
+        check_author_mainstream_status_task.delay(
+            self.author.id, user_id=42, upload_nonce="current-upload-id"
+        )
+
+        mock_check.assert_called_once()
+
+    @patch("core.tasks.check_author_mainstream_status")
+    def test_runs_when_no_nonce_provided(self, mock_check):
+        """Backwards-compat: tasks dispatched without nonce kwargs still run."""
+        from core.tasks import check_author_mainstream_status_task
+
+        mock_check.return_value = {"error": None, "is_mainstream": False, "reason": "test"}
+
+        check_author_mainstream_status_task.delay(self.author.id)
+
+        mock_check.assert_called_once()
 
 
 # ──────────────────────────────────────────────

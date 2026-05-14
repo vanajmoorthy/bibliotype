@@ -35,7 +35,19 @@ else:
 
 
 @shared_task
-def check_author_mainstream_status_task(author_id: int):
+def check_author_mainstream_status_task(author_id: int, user_id: int = None, upload_nonce: str = None):
+    # If the upload that spawned this task has been superseded by a newer one,
+    # exit immediately. Without this, hundreds of leftover author-check tasks
+    # from a prior CSV upload drain the worker and starve the new DNA task
+    # (the "stuck at 50%" symptom on re-upload).
+    if user_id and upload_nonce:
+        from .cache_utils import safe_cache_get
+
+        current_nonce = safe_cache_get(f"upload_nonce_{user_id}")
+        if current_nonce and current_nonce != upload_nonce:
+            logger.info(f"Author status task for author {author_id} skipped — superseded by newer upload")
+            return
+
     try:
         author = Author.objects.get(pk=author_id)
         logger.info(f"Running mainstream status check for new author: {author.name}")
@@ -74,19 +86,30 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
     for this user. If a newer upload has started, this task exits early to avoid
     wasting API calls on stale enrichment work.
     """
-    # Check if this enrichment task is still relevant (not superseded by a re-upload)
-    if user_id and upload_nonce:
-        from .cache_utils import safe_cache_get
+    from .cache_utils import safe_cache_get
 
+    def _is_superseded():
+        if not (user_id and upload_nonce):
+            return False
         current_nonce = safe_cache_get(f"upload_nonce_{user_id}")
-        if current_nonce and current_nonce != upload_nonce:
-            logger.info(f"Enrich task for book {book_id} skipped — superseded by newer upload")
-            return
+        return bool(current_nonce) and current_nonce != upload_nonce
+
+    # Check if this enrichment task is still relevant (not superseded by a re-upload)
+    if _is_superseded():
+        logger.info(f"Enrich task for book {book_id} skipped at start — superseded by newer upload")
+        return
 
     try:
         book = Book.objects.get(pk=book_id)
     except Book.DoesNotExist:
         logger.error(f"Enrich task: Book with ID {book_id} not found")
+        return
+
+    # Re-check after the DB fetch. Tasks can sit in the queue for a while; the
+    # nonce may have changed between dispatch and execution, and we don't want
+    # to spend ~5s of API calls (plus the subsequent book.save) on stale work.
+    if _is_superseded():
+        logger.info(f"Enrich task for book {book_id} skipped before API call — superseded by newer upload")
         return
 
     logger.info(f"Enriching book '{book.title}' (id={book_id}) via background task")

@@ -494,7 +494,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     from ..tasks import check_author_mainstream_status_task
 
                     logger.info(f"New author found: '{author.name}'. Dispatching background check.")
-                    check_author_mainstream_status_task.delay(author.id)
+                    check_author_mainstream_status_task.delay(
+                        author.id, user_id=upload_user_id, upload_nonce=upload_nonce
+                    )
 
                 normalized_book_title = Book._normalize_title(title_from_csv)
 
@@ -649,7 +651,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 if created:
                     from ..tasks import check_author_mainstream_status_task
 
-                    check_author_mainstream_status_task.delay(author.id)
+                    check_author_mainstream_status_task.delay(
+                        author.id, user_id=upload_user_id, upload_nonce=upload_nonce
+                    )
 
                 normalized_title = Book._normalize_title(cr_title)
                 isbn13_value = None
