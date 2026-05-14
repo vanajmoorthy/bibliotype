@@ -109,6 +109,28 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertIsNotNone(new_user.userprofile.dna_data)
         self.assertIn("an e2e vibe", new_user.userprofile.reading_vibe)
 
+    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    def test_anonymous_upload_binds_task_owner_to_session(self, mock_enrich_book, mock_generate_vibe):
+        """
+        US-001: After an anonymous upload, the task_id must be bound to the
+        caller's session via both `session["anonymous_task_id"]` and the
+        `task_owner_<task_id>` cache entry, so downstream views can refuse
+        cross-session lookups.
+        """
+        mock_enrich_book.return_value = (None, 0, 0)
+        mock_generate_vibe.return_value = ["bind-test vibe"]
+
+        response = self.client.post(reverse("core:upload"), {"csv_file": self.csv_file})
+
+        self.assertEqual(response.status_code, 302)
+        task_id = response.url.rstrip("/").split("/")[-1]
+
+        session = self.client.session
+        self.assertEqual(session["anonymous_task_id"], task_id)
+        self.assertIsNotNone(session.session_key)
+        self.assertEqual(cache.get(f"task_owner_{task_id}"), session.session_key)
+
     @patch("core.tasks.generate_recommendations_task")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
     @patch("core.book_enrichment_service.enrich_book_from_apis")

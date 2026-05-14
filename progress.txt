@@ -1,9 +1,36 @@
 # Bibliotype triage progress log
 
 ## Codebase Patterns
-- (populated as Ralph iterations discover them)
+- Anonymous DNA tasks: bind `task_owner_<task_id>` in cache to
+  `request.session.session_key` at upload time (US-001). Session must be
+  saved first if `session_key is None` (Django doesn't allocate one until
+  first save). Reads of `task_owner_*` happen in `get_task_result_view`
+  (US-002) and `claim_anonymous_dna_task` (US-003).
+- Test environment: `black` / `isort` are NOT installed in the Docker image
+  or the local Poetry venv (not in `pyproject.toml [tool.poetry.group.dev]`,
+  which only has `djlint`). Match existing style by hand and skip the
+  formatter step until they're added as a dev dep.
 
 ---
 
 2026-05-10: PRD generated from multi-agent triage report (see tasks/prd-codebase-triage-fixes.md).
 2026-05-10: Ralph harness scaffolded in scripts/ralph/. prd.json has 70 stories across 8 phases.
+
+## 2026-05-14 14:55 — US-001
+- Anonymous branch of `upload_view` now ensures `session_key` exists before
+  dispatching the DNA task and writes `task_owner_<task_id>` to Redis with
+  TTL 3600s. Added e2e test `test_anonymous_upload_binds_task_owner_to_session`.
+- Files changed:
+  - core/views.py (anonymous branch of upload_view)
+  - core/tests/test_views_e2e.py (new positive test)
+  - scripts/ralph/prd.json (US-001 passes=true)
+- Learnings for future iterations:
+  - AGENTS.md "Redis key registry" section was already pre-populated with
+    `task_owner_<task_id>` and the snake_case convention by the PRD third
+    pass, so no AGENTS.md edit was needed for this story. Future stories
+    should still check AGENTS.md before assuming new sections need writing.
+  - `safe_cache_set` is already imported at module top of `core/views.py`
+    — no new import required.
+  - The test passed in the Docker stack with `manage.py test
+    core.tests.test_views_e2e` (8 tests, all green).
+---

@@ -801,10 +801,19 @@ def upload_view(request):
 
             return redirect(processing_url)
         else:
-            result = generate_reading_dna_task.delay(csv_content, None, request.session.session_key)
+            # Ensure the session has a session_key so we can bind ownership of
+            # the task to this caller. Without this, an attacker who guesses or
+            # leaks the task_id could pull another visitor's DNA into their
+            # own session.
+            if request.session.session_key is None:
+                request.session.save()
+            session_key = request.session.session_key
+
+            result = generate_reading_dna_task.delay(csv_content, None, session_key)
             task_id = result.id
 
             request.session["anonymous_task_id"] = task_id
+            safe_cache_set(f"task_owner_{task_id}", session_key, 3600)
             request.session.save()
 
             return redirect("core:task_status", task_id=task_id)
