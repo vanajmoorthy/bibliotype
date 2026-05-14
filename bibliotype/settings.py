@@ -11,6 +11,13 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 ENABLE_SILK = os.environ.get("ENABLE_SILK", "False") == "True"
 
+# Strict ownership check on anonymous DNA task lookups (US-002). Kill-switch for
+# the Phase-1 hijack fix introduced in US-001. Default OFF so legacy task IDs
+# predating US-001 can still be polled; production flips this to True no later
+# than 1 hour after the US-001 deploy, once metrics confirm zero "skipped"
+# warnings (see core.views.get_task_result_view).
+ENFORCE_TASK_OWNERSHIP = os.environ.get("ENFORCE_TASK_OWNERSHIP", "False") == "True"
+
 allowed_hosts_str = os.environ.get("ALLOWED_HOSTS", "")
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(",") if host.strip()]
 

@@ -34,3 +34,32 @@
   - The test passed in the Docker stack with `manage.py test
     core.tests.test_views_e2e` (8 tests, all green).
 ---
+
+## 2026-05-14 15:00 — US-002
+- `get_task_result_view` now reads `task_owner_<task_id>` and compares against
+  `request.session.session_key`. New `ENFORCE_TASK_OWNERSHIP` setting (env
+  `ENFORCE_TASK_OWNERSHIP`, default `False`) gates the strict 403 response;
+  while it's off, a `task_owner check skipped` warning is logged for each
+  unowned lookup so operators can drain pre-US-001 legacy task IDs before
+  flipping the switch.
+- Files changed:
+  - bibliotype/settings.py (new `ENFORCE_TASK_OWNERSHIP` flag)
+  - core/views.py (`get_task_result_view` strict/legacy ownership check)
+  - core/tests/test_views_e2e.py (3 new tests: owner positive, foreign-session
+    strict 403, foreign-session legacy warn-and-allow)
+  - scripts/ralph/prd.json (US-002 passes=true)
+- Learnings for future iterations:
+  - `django.conf.settings` is already imported at the top of `core/views.py`,
+    so reading the flag is `settings.ENFORCE_TASK_OWNERSHIP` — no new import.
+  - `@override_settings` works on this setting because we centralized it in
+    `settings.py` rather than reading `os.environ` at call time inside the
+    view. Future story flags should follow the same pattern so tests stay
+    deterministic.
+  - The legacy-mode test reads `self.csv_file` once for upload and once for a
+    fresh `SimpleUploadedFile` to avoid an empty-payload re-read; needed
+    because `SimpleUploadedFile` doesn't auto-seek between requests.
+  - **Production cutover prerequisite for US-002 (the strict flip)**: deploy
+    US-001 first, wait ≥1 hour, confirm no `task_owner check skipped` warnings
+    in metrics, then set `ENFORCE_TASK_OWNERSHIP=True`.
+- All 11 tests in `core.tests.test_views_e2e` pass.
+---

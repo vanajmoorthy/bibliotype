@@ -131,6 +131,77 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertIsNotNone(session.session_key)
         self.assertEqual(cache.get(f"task_owner_{task_id}"), session.session_key)
 
+    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    def test_task_result_owner_can_fetch_own_task(self, mock_enrich_book, mock_generate_vibe):
+        """
+        US-002 positive: the session that uploaded a CSV is able to poll its
+        own task_id and gets a SUCCESS response, regardless of whether the
+        strict ownership flag is on.
+        """
+        mock_enrich_book.return_value = (None, 0, 0)
+        mock_generate_vibe.return_value = ["owner vibe"]
+
+        response = self.client.post(reverse("core:upload"), {"csv_file": self.csv_file})
+        task_id = response.url.rstrip("/").split("/")[-1]
+
+        with override_settings(ENFORCE_TASK_OWNERSHIP=True):
+            response = self.client.get(reverse("core:get_task_result", kwargs={"task_id": task_id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "SUCCESS")
+
+    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    def test_task_result_rejects_foreign_session_when_enforced(self, mock_enrich_book, mock_generate_vibe):
+        """
+        US-002 negative (strict): with ENFORCE_TASK_OWNERSHIP=True, a second
+        client that did not upload the file must receive a 403 when polling
+        someone else's task_id.
+        """
+        mock_enrich_book.return_value = (None, 0, 0)
+        mock_generate_vibe.return_value = ["enforced vibe"]
+
+        uploader = self.client
+        upload_response = uploader.post(reverse("core:upload"), {"csv_file": self.csv_file})
+        task_id = upload_response.url.rstrip("/").split("/")[-1]
+
+        attacker = Client()
+        with override_settings(ENFORCE_TASK_OWNERSHIP=True):
+            response = attacker.get(reverse("core:get_task_result", kwargs={"task_id": task_id}))
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["status"], "FORBIDDEN")
+
+    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    def test_task_result_warns_but_allows_when_not_enforced(self, mock_enrich_book, mock_generate_vibe):
+        """
+        US-002 negative (legacy mode): with ENFORCE_TASK_OWNERSHIP=False
+        (the default), a foreign session still gets the cached result but a
+        warning is logged so operators can quantify legacy traffic.
+        """
+        mock_enrich_book.return_value = (None, 0, 0)
+        mock_generate_vibe.return_value = ["legacy vibe"]
+
+        uploader = self.client
+        csv_file_2 = SimpleUploadedFile(
+            "goodreads.csv",
+            self.csv_file.read(),
+            content_type="text/csv",
+        )
+        upload_response = uploader.post(reverse("core:upload"), {"csv_file": csv_file_2})
+        task_id = upload_response.url.rstrip("/").split("/")[-1]
+
+        attacker = Client()
+        with override_settings(ENFORCE_TASK_OWNERSHIP=False):
+            with self.assertLogs("core.views", level="WARNING") as log_capture:
+                response = attacker.get(reverse("core:get_task_result", kwargs={"task_id": task_id}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "SUCCESS")
+        self.assertTrue(any("task_owner check skipped" in msg for msg in log_capture.output))
+
     @patch("core.tasks.generate_recommendations_task")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
     @patch("core.book_enrichment_service.enrich_book_from_apis")

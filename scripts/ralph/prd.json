@@ -48,7 +48,7 @@
         "**AGENTS.md:** add to \"Settings invariants\": \"`ENFORCE_TASK_OWNERSHIP` is the kill-switch on the Phase-1 hijack fix. Production must set it to `True` no later than 1 hour after US-001's deploy.\"",
         "`manage.py test core.tests.test_views_e2e` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 3
     },

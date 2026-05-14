@@ -1207,6 +1207,18 @@ def task_status_view(request, task_id):
 def get_task_result_view(request, task_id):
     from .models import AnonymousUserSession
 
+    # US-002: refuse task_ids that aren't bound to the caller's session so
+    # nobody else can pull this DNA into their own session. The strict check is
+    # gated by ENFORCE_TASK_OWNERSHIP — until it flips on in production we
+    # only log a warning for each unowned lookup so operators can drain legacy
+    # in-flight task IDs from before US-001 shipped.
+    owner = safe_cache_get(f"task_owner_{task_id}")
+    caller_key = request.session.session_key
+    if owner is None or owner != caller_key:
+        if settings.ENFORCE_TASK_OWNERSHIP:
+            return JsonResponse({"status": "FORBIDDEN"}, status=403)
+        logger.warning("task_owner check skipped, key=%s", task_id)
+
     cached_result = safe_cache_get(f"dna_result_{task_id}")
     if cached_result is not None:
         request.session["dna_data"] = cached_result
