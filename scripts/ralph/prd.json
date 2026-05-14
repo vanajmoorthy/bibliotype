@@ -66,7 +66,7 @@
         "**Regression test 3 (security):** task fed a mismatched session_key via direct invocation logs the warning and creates no UserBooks. Use `assertLogs`.",
         "`manage.py test core.tests.test_views_e2e core.tests.test_tasks_integration` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 4
     },

@@ -202,6 +202,77 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertEqual(response.json()["status"], "SUCCESS")
         self.assertTrue(any("task_owner check skipped" in msg for msg in log_capture.output))
 
+    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    def test_signup_rejects_cross_session_task_id_claim(self, mock_enrich_book, mock_generate_vibe):
+        """
+        US-003 negative: session A uploads and gets a task_id. Session B (a
+        different Client) attempts to sign up using A's task_id. The signup
+        form must render with a validation error and no user must be created.
+        """
+        mock_enrich_book.return_value = (None, 0, 0)
+        mock_generate_vibe.return_value = ["cross-session vibe"]
+
+        uploader = self.client
+        upload_response = uploader.post(reverse("core:upload"), {"csv_file": self.csv_file})
+        task_id = upload_response.url.rstrip("/").split("/")[-1]
+
+        attacker = Client()
+        response = attacker.post(
+            reverse("core:signup") + f"?task_id={task_id}",
+            {
+                "username": "attacker",
+                "email": "attacker@test.com",
+                "password1": "a-Strong-p4ssword!",
+                "password2": "a-Strong-p4ssword!",
+                "task_id_to_claim": task_id,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "We couldn't verify that this Bibliotype belongs to your current session.")
+        self.assertFalse(User.objects.filter(username="attacker").exists())
+
+    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    def test_signup_positive_claim_after_session_rotation(self, mock_enrich_book, mock_generate_vibe):
+        """
+        US-003 positive: same Client uploads then signs up. login() rotates
+        the session_key, but the view captured the pre-login key and passes
+        it to the claim task, so the claim should still succeed. Explicitly
+        verifies that the session_key did rotate between upload and post-login.
+        """
+        mock_enrich_book.return_value = (None, 0, 0)
+        mock_generate_vibe.return_value = ["rotation vibe"]
+
+        upload_response = self.client.post(reverse("core:upload"), {"csv_file": self.csv_file})
+        task_id = upload_response.url.rstrip("/").split("/")[-1]
+
+        pre_login_session_key = self.client.session.session_key
+        self.assertIsNotNone(pre_login_session_key)
+
+        response = self.client.post(
+            reverse("core:signup") + f"?task_id={task_id}",
+            {
+                "username": "claimer",
+                "email": "claimer@test.com",
+                "password1": "a-Strong-p4ssword!",
+                "password2": "a-Strong-p4ssword!",
+                "task_id_to_claim": task_id,
+            },
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse("core:display_dna") + "?processing=true")
+
+        post_login_session_key = self.client.session.session_key
+        self.assertIsNotNone(post_login_session_key)
+        self.assertNotEqual(pre_login_session_key, post_login_session_key)
+
+        user = User.objects.get(username="claimer")
+        user.userprofile.refresh_from_db()
+        self.assertIsNotNone(user.userprofile.dna_data)
+
     @patch("core.tasks.generate_recommendations_task")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
     @patch("core.book_enrichment_service.enrich_book_from_apis")

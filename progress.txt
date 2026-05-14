@@ -63,3 +63,37 @@
     in metrics, then set `ENFORCE_TASK_OWNERSHIP=True`.
 - All 11 tests in `core.tests.test_views_e2e` pass.
 ---
+
+## 2026-05-14 15:10 — US-003
+- `signup_view` now (a) verifies POSTed `task_id_to_claim` equals
+  `session["anonymous_task_id"]` BEFORE creating the user/calling `login()`,
+  and (b) captures `pre_login_session_key = request.session.session_key`
+  before login() rotates it. The captured key is passed as the new third
+  argument to `claim_anonymous_dna_task.delay(user_id, task_id, session_key)`.
+- `claim_anonymous_dna_task` gained an optional `session_key` argument and
+  refuses to do any DNA write / UserBook creation when
+  `task_owner_<task_id>` is set in cache and the supplied key doesn't match.
+  Logs `claim rejected: session_key mismatch` via `logger.warning(extra={...})`.
+- Files changed:
+  - core/views.py (signup_view: pre-flight task_id check + pre-login key capture)
+  - core/tasks.py (claim_anonymous_dna_task: session_key arg + cache verification)
+  - core/tests/test_views_e2e.py (2 new: cross-session reject, post-rotation positive)
+  - core/tests/test_tasks_integration.py (1 new: direct mismatch invocation)
+  - scripts/ralph/prd.json (US-003 passes=true)
+- Learnings for future iterations:
+  - `core/templates/core/signup.html` does NOT render `form.non_field_errors`,
+    only per-field errors. Validation feedback on signup must go through
+    `messages.error(request, ...)` (rendered by `base.html`'s messages loop) —
+    exactly the existing pattern used for CAPTCHA failures.
+  - `assertContains` against a `messages.error` payload should use the raw
+    apostrophe ("couldn't"), NOT the HTML-encoded entity. Messages are
+    emitted via `{{ message|safe }}` which bypasses auto-escaping.
+  - Django `login()` rotates `request.session.session_key`. To verify task
+    ownership across login, the pre-login key MUST be captured into a local
+    variable BEFORE `login(request, user)` and passed downstream — the
+    post-login key will not match the cache.
+  - Test pattern for verifying rotation: `pre = client.session.session_key;
+    post-login post = client.session.session_key; assertNotEqual(pre, post)`.
+    Django's test Client makes both keys observable.
+- All 17 tests in `core.tests.test_views_e2e` + `core.tests.test_tasks_integration` pass.
+---

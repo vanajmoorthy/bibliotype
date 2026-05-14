@@ -116,7 +116,7 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
 
 
 @shared_task(bind=True, max_retries=5)
-def claim_anonymous_dna_task(self, user_id: int, task_id: str):
+def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str = None):
     try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
@@ -124,6 +124,23 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str):
         return
 
     from .cache_utils import safe_cache_get
+
+    # US-003: verify the task_id was originally bound to the same session_key
+    # that initiated the signup. The view captures session_key BEFORE login()
+    # rotates it, so this check compares the pre-login key against the value
+    # stored under `task_owner_<task_id>` at upload time (US-001).
+    owner_session_key = safe_cache_get(f"task_owner_{task_id}")
+    if owner_session_key is not None and session_key is not None and owner_session_key != session_key:
+        logger.warning(
+            "claim rejected: session_key mismatch",
+            extra={
+                "user_id": user_id,
+                "task_id": task_id,
+                "expected_session_key": owner_session_key,
+                "received_session_key": session_key,
+            },
+        )
+        return
 
     cached_dna = safe_cache_get(f"dna_result_{task_id}")
     cached_session_key = safe_cache_get(f"session_key_{task_id}")

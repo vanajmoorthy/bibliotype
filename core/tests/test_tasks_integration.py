@@ -95,3 +95,33 @@ class TaskIntegrationTests(TransactionTestCase):
         self.assertEqual(user.userprofile.reader_type, "Claimed Reader")
 
         mock_async_result.assert_called_with(task_id)
+
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.AsyncResult")
+    def test_claim_anonymous_dna_task_rejects_session_key_mismatch(self, mock_async_result, mock_rec_task):
+        """
+        US-003 security: when the caller-supplied session_key does NOT match
+        the `task_owner_<task_id>` value cached at upload time, the task must
+        log a warning and return early — no DNA writes, no UserBooks.
+        """
+        user = User.objects.create_user(username="mismatchuser", password="password")
+        user.userprofile.pending_dna_task_id = "owner-task-789"
+        user.userprofile.save()
+
+        task_id = "owner-task-789"
+        cache.set(f"task_owner_{task_id}", "real-owner-session-key", 3600)
+
+        with self.assertLogs("core.tasks", level="WARNING") as log_capture:
+            claim_anonymous_dna_task.delay(user.id, task_id, "attacker-session-key")
+
+        self.assertTrue(
+            any("claim rejected: session_key mismatch" in msg for msg in log_capture.output),
+            f"expected warning not found in log output: {log_capture.output}",
+        )
+
+        user.userprofile.refresh_from_db()
+        self.assertIsNone(user.userprofile.dna_data)
+        from core.models import UserBook
+
+        self.assertEqual(UserBook.objects.filter(user=user).count(), 0)
+        mock_async_result.assert_not_called()

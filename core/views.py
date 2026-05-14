@@ -840,6 +840,28 @@ def signup_view(request):
             return render(request, "core/signup.html", {"form": form, "task_id_to_claim": task_id})
 
         if form.is_valid():
+            # US-003: validate the task_id being claimed actually belongs to this
+            # session BEFORE creating the account or calling login(). Django
+            # rotates session_key on login, so capture the pre-login key now
+            # and pass it to the claim task for cache verification.
+            if task_id_to_claim:
+                expected_task_id = request.session.get("anonymous_task_id")
+                if expected_task_id != task_id_to_claim:
+                    logger.warning(
+                        "signup claim rejected: task_id_to_claim does not match session "
+                        "anonymous_task_id (claim=%s, session=%s)",
+                        task_id_to_claim,
+                        expected_task_id,
+                    )
+                    messages.error(
+                        request,
+                        "We couldn't verify that this Bibliotype belongs to your current session. "
+                        "Please upload your library again from this browser.",
+                    )
+                    return render(request, "core/signup.html", {"form": form, "task_id_to_claim": task_id})
+
+            pre_login_session_key = request.session.session_key
+
             user = form.save()
             login(request, user)
 
@@ -848,7 +870,7 @@ def signup_view(request):
             if task_id_to_claim:
                 user.userprofile.pending_dna_task_id = task_id_to_claim
                 user.userprofile.save()
-                claim_anonymous_dna_task.delay(user.id, task_id_to_claim)
+                claim_anonymous_dna_task.delay(user.id, task_id_to_claim, pre_login_session_key)
 
                 # Track signup and DNA claim
                 track_user_signed_up(
