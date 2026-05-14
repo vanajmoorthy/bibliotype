@@ -85,6 +85,8 @@ A story is "done" when:
 5. `progress.txt` has a learning line for any non-obvious discovery.
 6. `AGENTS.md` updated if a project-wide convention was established.
 
+**Line numbers in this PRD are advisory only.** The codebase was on commit `04a6f72` when the triage ran; subsequent merges (notably PR #104) have shifted lines by 5–25 in several files. When a story's `Files:` section cites a line number, **re-anchor on the function/symbol name first** (`grep -n "def <name>" <file>`) before editing. If the line range disagrees, trust the symbol; the line numbers were a snapshot at PRD-authoring time.
+
 ---
 
 ## 5. User Stories
@@ -127,7 +129,8 @@ A story is "done" when:
 - `AGENTS.md` (Redis key registry)
 
 **Acceptance Criteria:**
-- [ ] In `upload_view`, after dispatching the DNA Celery task, ensure `request.session.session_key` exists (call `request.session.save()` if `session_key is None`). Store `request.session["anonymous_task_id"] = task_id` and `safe_cache_set(f"task_owner_{task_id}", request.session.session_key, 3600)`.
+- [ ] **Scope:** apply ONLY in the anonymous branch of `upload_view` (the `else` of `if request.user.is_authenticated`). The authenticated branch already binds the task to `request.user.id` and doesn't need a session-keyed owner entry.
+- [ ] In `upload_view`'s anonymous branch, after dispatching the DNA Celery task, ensure `request.session.session_key` exists (call `request.session.save()` if `session_key is None`). Store `request.session["anonymous_task_id"] = task_id` and `safe_cache_set(f"task_owner_{task_id}", request.session.session_key, 3600)`.
 - [ ] **Redis key registry:** add a "Redis key registry" section to `AGENTS.md` documenting:
   - `task_owner_<task_id>` — owner session_key for an anon DNA task; written at upload, read by `get_task_result_view` and `claim_anonymous_dna_task`; TTL 3600s.
   - `dna_result_<task_id>` — pre-existing; cached DNA payload.
@@ -195,16 +198,15 @@ A story is "done" when:
 ---
 
 #### US-005: Move management-command whitelist into `run_management_command_task`
-**Description:** As an operator, I want the management-command Celery task to refuse non-whitelisted commands even if a malicious caller publishes a message directly to the broker.
+**Description:** As an operator, I want the management-command Celery task to refuse non-whitelisted commands even if a malicious caller publishes a message directly to the broker. **`core/admin.py` already derives `ALLOWED_COMMANDS = {cmd["name"] for cmd in ADMIN_COMMANDS}` at module scope (near L276).** Use that as the single source of truth — don't redefine.
 
 **Files:**
-- `core/tasks.py` (`run_management_command_task` L391–433)
-- `core/admin.py` (the existing whitelist near L304)
+- `core/tasks.py` (`run_management_command_task` — locate by `grep -n "def run_management_command_task"`)
+- `core/admin.py` (existing `ALLOWED_COMMANDS` near L276)
 
 **Acceptance Criteria:**
-- [ ] Define `ALLOWED_MANAGEMENT_COMMANDS = frozenset({...})` in `core/tasks.py`, populated from the existing admin whitelist.
-- [ ] First line of `run_management_command_task`: `if command_name not in ALLOWED_MANAGEMENT_COMMANDS: raise ValueError(f"command not allowed: {command_name}")`.
-- [ ] `core/admin.py` imports and uses the same constant.
+- [ ] In `core/tasks.py`, import the whitelist from admin: `from .admin import ALLOWED_COMMANDS` (or move `ADMIN_COMMANDS` and `ALLOWED_COMMANDS` to a new `core/management_command_registry.py` if you'd rather avoid the tasks → admin import direction — pick whichever is cleaner). Do NOT redefine the whitelist as a second `frozenset` literal in tasks.py.
+- [ ] First line of `run_management_command_task` body: `if command_name not in ALLOWED_COMMANDS: raise ValueError(f"command not allowed: {command_name}")`.
 - [ ] **Negative test:** unit test verifies the task raises `ValueError` on a non-whitelisted name; verify `call_command` was not invoked using `mock.patch`.
 - [ ] **Positive test:** unit test verifies a whitelisted command (use a no-op like `check`) executes successfully.
 - [ ] `manage.py test core.tests.test_tasks_unit core.tests.test_tasks_integration` passes.
@@ -225,44 +227,31 @@ A story is "done" when:
 
 ---
 
-#### US-007: Remove tracked `.prof` files from repo
-**Description:** As a maintainer, I want the 110 silk profile dumps removed from version control.
+#### US-007: Verify `.prof` files are not tracked
+**Description:** As a maintainer, I want to confirm that no Silk profile dumps are tracked in git. (Earlier triage noted ~110 of them; PR #103 already gitignored `*.prof` and untracked them. This story is now mostly a verification step.)
 
-**Files:** Repo root `*.prof`, `.gitignore` (verify pattern).
+**Files:** `.gitignore`, repo root (verify state only).
 
 **Acceptance Criteria:**
-- [ ] Confirm `.gitignore` already covers `*.prof`. Add it if missing.
-- [ ] Run `git ls-files '*.prof' | xargs git rm` (explicit list of tracked files — avoids glob-expansion surprises).
-- [ ] `git status` shows working tree clean of `.prof` entries.
-- [ ] `manage.py test` passes.
+- [ ] Run `git ls-files '*.prof'` — output must be empty. If non-empty, `xargs git rm` the listed files and explain in `progress.txt` why they were still tracked.
+- [ ] Confirm `.gitignore` already covers `*.prof`. Add it if missing (unlikely).
+- [ ] If everything is already clean, this story commits no changes — mark `passes: true` in `prd.json` and append a one-line `progress.txt` entry confirming the verification.
+- [ ] `manage.py test` passes (sanity).
 
 ---
 
-#### US-008a-i: Introduce `TEST_FIXTURES_DIR` constant and move synthetic CSV files
-**Description:** As a maintainer, I want a stable fixtures path constant in place before any test imports change.
+#### US-008a: Move synthetic CSV fixtures into `core/tests/fixtures/csv/` (atomic)
+**Description:** As a maintainer, I want synthetic test CSVs in a proper Django-conventional fixtures location. **The previous review revealed test files don't actually reference `csv/...` paths at runtime (they use `SimpleUploadedFile` inline), so the only path updates needed are in management commands — meaning this is a single-commit operation.** Do the file moves and update any management-command path references in the same commit.
 
-**Files:** `core/tests/__init__.py` (or `core/tests/conftest.py`-equivalent), `csv/` source files, new `core/tests/fixtures/csv/` destination.
+**Files:** `core/tests/__init__.py` (new — defines `TEST_FIXTURES_DIR`), `csv/` source files (synthetic + test_reader CSVs + subdirs), new `core/tests/fixtures/csv/` destination, plus any management command that hardcodes `csv/...` (find with `grep -rn '"csv/' core/management/`).
 
 **Acceptance Criteria:**
-- [ ] Create `core/tests/__init__.py` (if not present; preserve any existing content) that defines `from pathlib import Path; TEST_FIXTURES_DIR = Path(__file__).parent / "fixtures" / "csv"`.
+- [ ] Create or augment `core/tests/__init__.py` with: `from pathlib import Path; TEST_FIXTURES_DIR = Path(__file__).parent / "fixtures" / "csv"`.
 - [ ] `mkdir -p core/tests/fixtures/csv/` and move the 16 synthetic + 5 test_reader CSV files there.
 - [ ] Move the three subdirectories (`test/`, `test_storygraph/`, `test-csvs/`) into `core/tests/fixtures/csv/` preserving structure.
-- [ ] **Do NOT update test imports yet** — this is US-008a-ii. The current tests will fail; that's expected and proves the move worked.
-- [ ] **Verification:** `manage.py test` should now FAIL because tests still reference the old `csv/...` paths. The failure is the signal; do not "fix" it in this story.
-- [ ] **Commit guard:** commit message must include `WIP: tests broken until US-008a-ii (fixture-path imports)`.
-
----
-
-#### US-008a-ii: Update test and management-command imports to use `TEST_FIXTURES_DIR` / new paths
-**Description:** As a maintainer, I want the broken-by-US-008a-i imports updated to point at the new fixtures location.
-
-**Files:** All `core/tests/*.py` that reference `csv/...` (find with `grep -rn "csv/" core/tests/`), all `core/management/commands/*.py` that hardcode `csv/...` (find with `grep -rn "csv/" core/management/`).
-
-**Acceptance Criteria:**
-- [ ] In each test file: replace `csv/...` literal paths with `TEST_FIXTURES_DIR / "..."`.
-- [ ] In each management command: replace hardcoded `csv/...` paths with paths to `core/tests/fixtures/csv/...` (these commands are mostly dead — verify they aren't covered by US-012/US-013 first; if they are, no change needed).
-- [ ] `manage.py test` passes — this story's success condition is the test suite going green again.
-- [ ] `progress.txt`: note where test fixtures now live and the constant name.
+- [ ] Update any management command that hardcodes `csv/...` paths to point at `core/tests/fixtures/csv/...` instead. **First verify the affected command isn't slated for deletion** by US-012/US-013 — if it is, do nothing (deletion handles it).
+- [ ] `progress.txt`: note where test fixtures now live and the `TEST_FIXTURES_DIR` constant name.
+- [ ] `manage.py test` passes — must remain green for the whole story (no intermediate broken state).
 
 ---
 
@@ -349,17 +338,20 @@ A story is "done" when:
 
 ---
 
-#### US-014: Remove unused imports flagged by AST scan
-**Description:** As a maintainer, I want the dead-import lines removed.
+#### US-014: Remove genuinely-unused imports (only the two that are safe)
+**Description:** As a maintainer, I want dead-import lines removed. **Critical scope clarification:** the AST scan also flagged `safe_cache_delete` in `recommendation_service.py:8` — but that import is **deliberately re-exported** (`# noqa: F401 - re-exported`) and `core/tests/test_cache_refactor.py:99, 104, 109` imports it. **Do NOT touch the noqa-marked import line.** That re-export is removed only by US-060 (Phase 8), which also updates the consuming tests in the same commit.
 
 **Files:**
-- `core/services/recommendation_service.py` L8 (`safe_cache_delete`)
-- `core/services/user_similarity_service.py` L3 (`Avg`)
-- `core/services/anonymization_service.py` L3 (`Author`)
+- `core/services/user_similarity_service.py` L3 — `Avg` (from `django.db.models import Avg`)
+- `core/services/anonymization_service.py` L3 — `Author` (from `..models import ..., Author`)
 
 **Acceptance Criteria:**
-- [ ] Imports removed; `isort` produces no diff.
-- [ ] `manage.py test` passes.
+- [ ] Remove `Avg` from the `from django.db.models import Avg` line in `user_similarity_service.py`. If it's the only symbol on that line, delete the whole import line.
+- [ ] Remove `Author` from the `from ..models import AnonymizedReadingProfile, AnonymousUserSession, Author` line in `anonymization_service.py`. Keep the other two symbols.
+- [ ] **Explicitly do NOT modify** `core/services/recommendation_service.py:8` — verify before commit that line is unchanged.
+- [ ] `isort --profile black --line-length 120 core/services/user_similarity_service.py core/services/anonymization_service.py` produces no diff after your edit.
+- [ ] `manage.py test core.tests.test_cache_refactor` passes (sanity — the re-export still works).
+- [ ] `manage.py test` passes (full).
 
 ---
 
@@ -473,19 +465,18 @@ A story is "done" when:
 ---
 
 #### US-022: Remove redundant per-row Book/Genre queries in `process_book_row`
-**Description:** As an operator, I want the 3 redundant queries inside the per-book loop eliminated.
+**Description:** As an operator, I want the redundant queries inside the per-book loop eliminated — but **carefully**, because the existing refetch of `Book.objects.get(pk=book.pk)` after `Book.objects.filter(pk=book.pk).update(global_read_count=F('global_read_count') + 1)` exists specifically to pull the post-increment value into the Python object. Downstream code reads `global_read_count` from the returned book (e.g., niche-book stats around `dna_analyser.py:851, 855, 859`).
 
-**Files:** `core/services/dna_analyser.py` (`process_book_row` around L574, L604, L606).
+**Files:** `core/services/dna_analyser.py` — locate `process_book_row` by `grep -n "def process_book_row"` (currently around L481); the three redundant queries are: (a) the `Genre.objects.filter(books__id=book.pk).exists()` check just after `update_or_create`, (b) `Book.objects.get(pk=book.pk)` after the `global_read_count` F-update, (c) the subsequent re-traversal of `fresh_book_instance.genres.all()`.
 
 **Acceptance Criteria:**
-- [ ] Use the `created` flag from `update_or_create` instead of re-`exists()`-checking genres.
-- [ ] Drop the `Book.objects.get(pk=book.pk)` re-fetch — operate on the `book` object already in scope.
-- [ ] Reuse `book.genres.all()` directly without a re-query.
-- [ ] Existing integration tests pass (`test_tasks_integration`, `test_storygraph_integration`, `test_subtitle_data`, `test_views_e2e` upload-flow tests).
-- [ ] **Query-count regression test:** add or augment a test in `core/tests/test_tasks_integration.py` that wraps the upload flow in `from django.test.utils import CaptureQueriesContext; with CaptureQueriesContext(connection) as ctx: ...` and asserts `len(ctx) < BASELINE_QUERIES`. Establish `BASELINE_QUERIES` by capturing the count before this story's edit and storing the pre-change number in the test file's docstring; the post-change assertion is `<= BASELINE - 3 * NUM_BOOKS_IN_FIXTURE`.
-- [ ] **Manual canary:** upload one of the synthetic CSVs in `core/tests/fixtures/csv/` end-to-end via the running dev server (`/upload/` page). Confirm DNA generates correctly and books appear in the dashboard. Capture in `progress.txt`.
-- [ ] **Risk note:** this is the upload pipeline's hot path. Genre membership and `update_or_create` semantics differ subtly when a Book row already exists with different `defaults={...}`. If tests fail, do NOT loosen them — investigate the semantic change.
-- [ ] `manage.py test` passes.
+- [ ] **Genre check (a):** the existing `else` branch (when `created=False`) calls `Genre.objects.filter(books__id=book.pk).exists()` to decide whether enrichment is needed. The original triage note conflated this with the `created` flag, but the code already uses `created`. The redundant query is the `.exists()` itself. **Decision needed (encode in commit message):** either (i) trust `book.genres.exists()` instead (one query, hits the in-memory FK cache if Django populated it; otherwise one fresh query — still no worse), or (ii) accept that existing-with-no-genres books will all dispatch enrichment unconditionally and drop the check entirely. Pick (i) — safer.
+- [ ] **Book refetch (b):** replace `fresh_book_instance = Book.objects.get(pk=book.pk)` with `book.refresh_from_db(fields=["global_read_count"])` and return `book` directly. This is one query instead of one query, BUT avoids reloading all fields (`cover_url`, JSONField, etc.) — material on a 500-char URLField. **Crucial:** do NOT just drop the refetch — `global_read_count` would be stale and break niche-book stats downstream.
+- [ ] **Genres re-traversal (c):** after change (b), `book.genres.all()` is still required, but using `book.genres.all()` once and converting to a list (`genre_names = [g.name for g in book.genres.all()]`) avoids accidental re-iteration. Verify only one iteration remains.
+- [ ] Existing integration tests pass (`test_tasks_integration`, `test_storygraph_integration`, `test_subtitle_data`, `test_views_e2e` upload-flow tests). Niche-book stats tests in particular (`test_math_accuracy`, `test_fiction_book_extremes`) must stay green.
+- [ ] **Query-count regression test:** add a test in `core/tests/test_tasks_integration.py` using `CaptureQueriesContext` around an upload of a small fixture; assert query count dropped by at least `2 * NUM_BOOKS` (one per book for dropped `.exists()`, one per book for trimming the refetch). Store the pre-change baseline in the test docstring.
+- [ ] **Manual canary:** upload one of the synthetic CSVs in `core/tests/fixtures/csv/` end-to-end via the running dev server (`/upload/` page). Confirm DNA generates correctly, books appear in the dashboard, AND niche-book stats look reasonable (not all books reported as `read_count=0`). Capture in `progress.txt`.
+- [ ] `manage.py test` passes (full).
 
 ---
 
@@ -549,8 +540,8 @@ A story is "done" when:
 
 **Acceptance Criteria:**
 - [ ] Add `ENABLE_PARALLEL_ENRICHMENT = os.environ.get("ENABLE_PARALLEL_ENRICHMENT", "False") == "True"` to `bibliotype/settings.py`. Document in `AGENTS.md` under "Settings invariants": "default `False`; flip to `True` only after confirming Open Library + Google Books rate-limit headroom."
-- [ ] Wrap each `time.sleep(...)` in `if not settings.ENABLE_PARALLEL_ENRICHMENT: time.sleep(1.2)`. (Cleaner: extract a `_throttle()` helper that does the conditional check, call it at the 5 sites.)
-- [ ] Confirm `enrich_book_task` declares `rate_limit="30/m"` (add if missing) — this is the safety net regardless of the flag.
+- [ ] Wrap each `time.sleep(...)` in `if not settings.ENABLE_PARALLEL_ENRICHMENT: time.sleep(1.2)`. (Cleaner: extract a `_throttle()` helper that does the conditional check, call it at the 5 sites.) Locate the 5 sites by `grep -n "time.sleep" core/book_enrichment_service.py`.
+- [ ] **Add `rate_limit="30/m"` to `enrich_book_task`'s `@shared_task` decorator** in `core/tasks.py`. The current decorator is `@shared_task(bind=True, max_retries=3)` (verified — no rate_limit present). This is the safety net regardless of the flag, so it ships unconditionally. Locate by `grep -n "def enrich_book_task" core/tasks.py`.
 - [ ] `progress.txt`: "Parallel enrichment lands disabled. Operator must set `ENABLE_PARALLEL_ENRICHMENT=True` and validate API headroom before enabling."
 - [ ] Existing enrichment tests pass with `CELERY_TASK_ALWAYS_EAGER=True`.
 - [ ] `manage.py test core.tests.test_integration core.tests.test_enrichment_stats` passes.
@@ -588,12 +579,15 @@ A story is "done" when:
 #### US-024c: Invalidate recommendations cache on `update_recommendation_visibility`
 **Description:** As a privacy-conscious user, I want my cached recommendations and similarity-candidate entries cleared when I toggle visibility off.
 
-**Files:** `core/views.py` `update_recommendation_visibility` L1011–1027.
+**Files:** `core/views.py` `update_recommendation_visibility` (locate by `grep -n "def update_recommendation_visibility"`).
 
 **Acceptance Criteria:**
-- [ ] After saving the new visibility flag, call `safe_cache_delete(f"recs_{user.id}")` AND any similar-users cache key (`safe_cache_delete(f"similar_users_{user.id}")` if it exists; if the key naming differs, document the actual key in `AGENTS.md` Redis registry).
-- [ ] If the user toggled FROM visible TO invisible, also clear the candidate-set cache (`safe_cache_delete("public_users_for_recs_sample")` — this is the 30-min cached candidate sample referenced in `recommendation_service.py`). When toggling visible→invisible, log `logger.info("user opted out of recs; cleared candidate sample cache")`.
-- [ ] **Test:** toggle visibility off, then assert the relevant cache keys are absent.
+- [ ] After saving the new visibility flag, call `safe_cache_delete(f"user_recommendations_{user.id}")`. (Note: the actual cache key is `user_recommendations_<id>`, NOT `recs_<id>`. Verified at `core/tasks.py:543` and `core/services/recommendation_service.py:39` — also referenced from `core/services/dna_analyser.py:300`.)
+- [ ] Also call `safe_cache_delete(f"similar_users_{user.id}")` (verified key at `core/services/user_similarity_service.py:331`).
+- [ ] If the user toggled FROM visible TO invisible, also clear the candidate-set cache `safe_cache_delete("public_users_for_recs_sample")` (verified at `core/services/recommendation_service.py:510`) and log `logger.info("user opted out of recs; cleared candidate sample cache", extra={"user_id": user.id})`.
+- [ ] **Update `AGENTS.md` Redis key registry** to confirm `user_recommendations_<user_id>`, `similar_users_<user_id>`, and `public_users_for_recs_sample` are the canonical names.
+- [ ] **Test (visible → invisible):** toggle visibility off, then assert `safe_cache_get("user_recommendations_<id>")` and `safe_cache_get("similar_users_<id>")` return `None`, and `safe_cache_get("public_users_for_recs_sample")` returns `None`.
+- [ ] **Test (invisible → visible):** toggling back on does NOT clear `public_users_for_recs_sample` (only one direction warrants the candidate-pool flush).
 - [ ] `manage.py test core.tests.test_profile_and_recommendations` passes.
 
 ---
@@ -650,8 +644,9 @@ A story is "done" when:
 - [ ] Remove `class RecommendationEngine:` line; dedent body. Each `def method(self, ...)` becomes `def method(...)`.
 - [ ] Replace `self.method(...)` internal calls with bare `method(...)` calls. Replace `self.min_similarity` and `self.quality_threshold` with module-level constants `MIN_SIMILARITY = 0.15`, `QUALITY_THRESHOLD = 3.5`. Drop `self.diversity_factor` entirely (it is set but never read — US-031b deletes the parameter from the signature too).
 - [ ] Update `get_recommendations_for_user` / `get_recommendations_for_anonymous` to call functions directly (no `RecommendationEngine()` instantiation).
+- [ ] **`@patch` decorator targets must be rewritten.** `test_cache_refactor.py:273` uses `@patch("core.services.recommendation_service.RecommendationEngine.get_recommendations_for_user")` — that path no longer exists after the class is gone. Replace with `@patch("core.services.recommendation_service.get_recommendations_for_user")` (drop the `.RecommendationEngine` segment). Apply the same transform to every `@patch` / `patch()` call referencing a method on the class. `grep -rn '"core.services.recommendation_service.RecommendationEngine' core/tests/` lists them all.
 - [ ] **Test command:** `manage.py test` (full suite, not scoped) — class deletion ripples wider than any single test module.
-- [ ] **Final verification:** `git grep RecommendationEngine` returns ZERO matches.
+- [ ] **Final verification:** `git grep RecommendationEngine` returns ZERO matches (this includes strings inside `@patch` decorators).
 - [ ] **Risk note:** highest-risk story in the PRD. If full test suite goes red, do NOT loosen tests — investigate semantic divergence in the converted functions.
 
 ---
@@ -685,29 +680,38 @@ A story is "done" when:
 
 ---
 
-#### US-033: Pick one — delete legacy backfills OR re-upload nudge
-**Description:** As a maintainer, I want one source of truth for handling old DNA-data shapes.
+#### US-033: Delete legacy DNA-data backfill block in `_enrich_dna_for_display`
+**Description:** As a maintainer, I want one source of truth for handling old DNA-data shapes. Keep the unconditional community-averages refresh logic (hot-path freshness, NOT a backfill); only delete the legacy backfills.
 
-**Files:** `core/views.py` `_enrich_dna_for_display` L316–389 (backfills) and L681–686 (`messages.info` re-upload nudge).
+**Files:** `core/views.py` `_enrich_dna_for_display` — locate by `grep -n "def _enrich_dna_for_display"`.
 
 **Acceptance Criteria:**
 - [ ] **BLOCKING PRE-FLIGHT:** before changing any code, `progress.txt` must already contain a line matching the regex `^\d{4}-\d{2}-\d{2}: regenerate_dna run in production` followed by an operator name. If absent, exit the story without modifying code and emit a comment in the commit message: `BLOCKED: regenerate_dna prerequisite (Q4) unresolved.` Do NOT mark this story complete until the prerequisite line exists.
-- [ ] Delete the L316–389 backfill block.
-- [ ] Keep the re-upload nudge (acts as fallback for any user who never triggers a regeneration).
-- [ ] `manage.py test core.tests.test_views_e2e` passes.
+- [ ] **Scope of deletion (critical — narrowed from earlier PRD draft):** delete ONLY the legacy backfill block. That block is identified by these characteristics:
+  - Backfills `avg_books_per_year`, `num_reading_years`, `books_with_dates` (if missing from `dna_data`).
+  - Backfills `currently_reading_books` and `currently_reading_count`.
+  - Backfills `custom_shelf_count`.
+  - Backfills `cover_url` on `most_niche_book` / `longest_book` / `shortest_book`.
+  - Backfills `page_difference`.
+  - Visually identifiable as a sequence of `if "<key>" not in dna_data:` (or equivalent absence checks) writing into `dna_data`.
+- [ ] **Do NOT delete** the unconditional refresh of `global_averages` / `community_averages` from cache that lives earlier in the same function (around the first ~30 lines of `_enrich_dna_for_display`). Those are NOT backfills — they're hot-path freshness logic that must run on every render.
+- [ ] **Verification before commit:** open the modified file and confirm that `_enrich_dna_for_display` still computes `comparative_text` keys (per US-030's coverage test), still refreshes community averages, and still returns the enriched dict. Only the absence-checking backfill block is gone.
+- [ ] Keep the re-upload nudge (`messages.info(...)` around dashboard render) — it's the fallback for any user who never triggers a regeneration.
+- [ ] `manage.py test core.tests.test_views_e2e core.tests.test_math_accuracy` passes.
 
 ---
 
-#### US-034: Inline trivial defensive checks in `_build_cover_url` and `_sanitize_review_text`
-**Description:** As a maintainer, I want unreachable defensive branches removed.
+#### US-034: REMOVED — defensive guards are tested behavior, not dead code
+**Description:** The third-pass review confirmed both guards have explicit tests:
+- `core/tests/test_currently_reading.py:22–25` asserts `_build_cover_url("123")` returns `None` — depends on the `len(cleaned) < 10` guard.
+- `core/tests/test_sanitize_review.py:50` asserts `_sanitize_review_text(123) == 123` — depends on the `isinstance(text, str)` guard.
 
-**Files:** `core/services/dna_analyser.py` L42–48 (`_sanitize_review_text`), L96–99 (`_build_cover_url`).
+Removing the guards would break both tests, and the simplification value (~4 lines saved) doesn't justify either (a) deleting the tests, or (b) the input-contract risk. **This story is intentionally removed from the run.** Mark `passes: true` at scaffolding time so Ralph skips it; no code changes.
+
+**Files:** (none)
 
 **Acceptance Criteria:**
-- [ ] In `_sanitize_review_text`, drop `or not isinstance(text, str)` from the early-return guard.
-- [ ] In `_build_cover_url`, simplify to `if not isbn13: return None`.
-- [ ] Sanitize-review-text test still passes.
-- [ ] `manage.py test core.tests.test_sanitize_review` passes.
+- [ ] No code changes. Mark `passes: true` in `prd.json` with a `notes` field explaining the removal: `"Removed during third-pass PRD review — guards have explicit tests in test_currently_reading and test_sanitize_review; simplification not worth the test-update churn."`
 
 ---
 
@@ -810,11 +814,11 @@ A story is "done" when:
 **Files:** `core/views.py`, `core/tasks.py`, `core/services/recommendation_service.py`.
 
 **Acceptance Criteria:**
-- [ ] Add module-level constants:
-  - `core/views.py`: `MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024`, `DNA_CACHE_TTL = 3600`.
-  - `core/tasks.py`: `BATCH_LIMIT = 20`, `AGE_THRESHOLD_DAYS = 90`.
-  - `core/services/recommendation_service.py`: `RECOMMENDATION_WEIGHTS = {...}` capturing 0.1, 0.15, 0.3, 0.5, 0.8 with descriptive keys.
-- [ ] All inline literals replaced.
+- [ ] Add or promote to module-level constants:
+  - `core/views.py`: ADD `MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024`, `DNA_CACHE_TTL = 3600` (these are inline literals — replace them).
+  - `core/tasks.py`: PROMOTE existing function-local `BATCH_LIMIT = 20` and `AGE_THRESHOLD_DAYS = 90` (currently inside `anonymize_expired_sessions_task` around L361) to module scope. Don't add duplicates if they already exist at module level.
+  - `core/services/recommendation_service.py`: ADD `RECOMMENDATION_WEIGHTS = {...}` capturing 0.1, 0.15, 0.3, 0.5, 0.8 with descriptive keys (look at the surrounding code to pick meaningful names like `QUALITY`, `RECENCY`, `GENRE_OVERLAP`, etc.).
+- [ ] All inline literals replaced with the named constants.
 - [ ] `manage.py test` passes.
 
 ---
@@ -822,14 +826,15 @@ A story is "done" when:
 #### US-042: Logger severity drift + missing `exc_info=True`
 **Description:** As a maintainer, I want consistent log severity and tracebacks for caught exceptions.
 
-**Files:**
-- `core/tasks.py` L61, L89, L123, L247 — drop `error` to `warning` for `DoesNotExist` outcomes.
-- `core/services/dna_analyser.py` L315 — add `exc_info=True`.
-- `core/services/anonymization_service.py` L54 — add `exc_info=True`.
-- `core/services/llm_service.py` L117 — log with `exc_info=True` instead of returning the error string silently.
+**Files (locate by grep, not line numbers — code has drifted):**
+- `core/tasks.py`: every `logger.error(...)` call that lives inside `except <Model>.DoesNotExist:` blocks should drop to `logger.warning(...)`. Find them: `grep -n "logger.error\|DoesNotExist" core/tasks.py` and pair the lines.
+- `core/services/dna_analyser.py`: the `except` block that logs `"Error saving profile for user ..."` — add `exc_info=True`.
+- `core/services/anonymization_service.py`: the `except Exception` block in `anonymize_session` — add `exc_info=True`.
+- `core/services/llm_service.py`: the JSON parsing / generic exception block that currently returns an error string silently — log with `exc_info=True` before returning.
 
 **Acceptance Criteria:**
-- [ ] Each line updated.
+- [ ] For each `logger.error` inside an `except <Model>.DoesNotExist:` handler in `core/tasks.py`, change to `logger.warning`. Do NOT change `logger.error` inside `except Exception:` handlers (those are correctly `error`-severity).
+- [ ] Add `exc_info=True` to the three sites listed above. Verify with `grep -B1 -A1 "exc_info" core/services/dna_analyser.py core/services/anonymization_service.py core/services/llm_service.py`.
 - [ ] `manage.py test` passes.
 
 ---
