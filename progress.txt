@@ -97,3 +97,35 @@
     Django's test Client makes both keys observable.
 - All 17 tests in `core.tests.test_views_e2e` + `core.tests.test_tasks_integration` pass.
 ---
+
+## 2026-05-14 15:25 — US-004
+- `DEBUG` now defaults to `"False"` in `bibliotype/settings.py`; a startup
+  `ImproperlyConfigured("DEBUG must be False in production")` fires when
+  `DJANGO_ENV=production` is paired with `DEBUG=True`. `ImproperlyConfigured`
+  is imported from `django.core.exceptions` at the top of `settings.py`.
+- Local dev container previously relied on the implicit `DEBUG=True` default,
+  so `docker-compose.local.yml`'s `web` service now explicitly sets
+  `DEBUG=True` and `ALLOWED_HOSTS=localhost,127.0.0.1` (matching the worker
+  service block). Without this, `runserver` failed with "You must set
+  ALLOWED_HOSTS if DEBUG is False".
+- Files changed:
+  - bibliotype/settings.py (default flip + production assert + import)
+  - docker-compose.local.yml (web service: DEBUG/ALLOWED_HOSTS made explicit)
+  - scripts/ralph/prd.json (US-004 passes=true)
+- Learnings for future iterations:
+  - `manage.py check --deploy` against the local dev container reports only
+    pre-existing warnings (W004/W008/W009/W012/W016/W018). The W018 (DEBUG=True)
+    warning is expected locally — it's the contract this story enforces in
+    production via the explicit assert, not via the deploy-check.
+  - Production deploy via `docker-compose.prod.yml` already passes `DEBUG`
+    through from the env file; the prod runbook must now set `DEBUG=False`
+    explicitly (or omit it — the default is False).
+  - AGENTS.md's "Settings invariants" section was pre-populated by the PRD
+    third-pass and already documents both the default and the production
+    assert. No AGENTS.md edit was needed.
+  - **Production cutover note**: ensure the prod `.env` (or whatever supplies
+    `DEBUG` to docker-compose.prod.yml) sets `DEBUG=False` and exports
+    `DJANGO_ENV=production`. With the new assert, a misconfigured `DEBUG=True`
+    + `DJANGO_ENV=production` will refuse to start — by design, fail-loud.
+- Full test suite (354 tests) green in Docker stack.
+---

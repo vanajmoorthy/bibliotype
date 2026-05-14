@@ -4,11 +4,16 @@ import os
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
-DEBUG = os.environ.get("DEBUG", "True") == "True"
+# DEBUG defaults to False (US-004) so a missing env var never silently leaves
+# production in debug mode. Local dev and CI must set DEBUG=True explicitly.
+DEBUG = os.environ.get("DEBUG", "False") == "True"
+if os.environ.get("DJANGO_ENV") == "production" and DEBUG:
+    raise ImproperlyConfigured("DEBUG must be False in production")
 ENABLE_SILK = os.environ.get("ENABLE_SILK", "False") == "True"
 
 # Strict ownership check on anonymous DNA task lookups (US-002). Kill-switch for

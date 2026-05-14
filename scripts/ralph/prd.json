@@ -82,7 +82,7 @@
         "Update any test that relied on `DEBUG=True` defaulting (likely none \u2014 tests use `@override_settings`).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 5
     },
