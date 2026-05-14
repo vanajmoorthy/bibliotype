@@ -97,7 +97,7 @@
         "**Positive test:** unit test verifies a whitelisted command (use a no-op like `check`) executes successfully.",
         "`manage.py test core.tests.test_tasks_unit core.tests.test_tasks_integration` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 6
     },

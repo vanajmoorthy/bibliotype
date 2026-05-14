@@ -129,3 +129,56 @@
     + `DJANGO_ENV=production` will refuse to start — by design, fail-loud.
 - Full test suite (354 tests) green in Docker stack.
 ---
+
+## 2026-05-14 16:35 — US-005
+- Carved `ADMIN_COMMANDS` + `ALLOWED_COMMANDS` out of `core/admin.py` into a new
+  `core/management_command_registry.py` module (single source of truth).
+  `core/admin.py` now imports from it (the `ALLOWED_COMMANDS` symbol is the
+  same `frozenset` object), and `core/tasks.py` imports it at module top and
+  raises `ValueError(f"command not allowed: {command_name}")` as the first
+  statement of `run_management_command_task`. This makes the worker reject
+  unwhitelisted names even when a caller publishes directly to the broker,
+  bypassing the existing HTTP-layer check in `command_run_api`.
+- Files changed:
+  - core/management_command_registry.py (new — module-level list + frozenset)
+  - core/admin.py (deleted inline `ADMIN_COMMANDS`/`ALLOWED_COMMANDS`,
+    imports them from the new module)
+  - core/tasks.py (`from .management_command_registry import ALLOWED_COMMANDS`
+    + first-line whitelist guard in `run_management_command_task`)
+  - core/tests/test_tasks_unit.py (new `RunManagementCommandTaskWhitelistTests`
+    class: 1 negative test that `call_command` is not invoked on a blocked
+    name, 1 empty-string negative test, 1 positive test that a whitelisted
+    name reaches `call_command`).
+  - core/tests/test_integration.py (two pre-existing tests
+    `test_run_management_command_task_captures_output` and
+    `..._captures_error` passed arbitrary names `"test_command"` /
+    `"failing_command"` and now hit the new whitelist guard; switched both
+    to the whitelisted no-op `"analyze_genres"`. Behaviour they assert —
+    stdout capture, CommandError wrapping — is unchanged.)
+  - scripts/ralph/prd.json (US-005 passes=true)
+- Learnings for future iterations:
+  - **Don't import from `core.admin` in `core/tasks.py`.** `core/admin.py`
+    already does a deferred `from .tasks import run_management_command_task`
+    inside `command_run_api`. Lifting `ALLOWED_COMMANDS` to module-top of
+    `tasks.py` and importing it from `admin` would invert the dependency at
+    Django-startup time when the admin module loads. The new
+    `core/management_command_registry.py` module sits below both and is
+    imported by both — no cycle.
+  - **`@shared_task` tasks are callable as plain Python via `.run(...)`.**
+    For pure-logic unit tests (no Celery routing, no broker) prefer
+    `task.run(arg)` over `task.apply()` / `task.delay()` — it bypasses the
+    EagerResult wrapping so `assertRaises(ValueError)` works without
+    `throw=True` / `propagate=True` plumbing. Use `.delay()` only when the
+    test specifically needs the Celery dispatcher (e.g. mocking it to
+    assert "was this enqueued?").
+  - **The `call_command` import inside `run_management_command_task` is
+    intentional.** Patching `core.tasks.call_command` from a test would NOT
+    work because the name isn't bound at module scope; patch
+    `django.core.management.call_command` instead, OR pin the import to
+    a known module path. Existing tests use the latter.
+  - The HTTP layer (`command_run_api`) still validates `command_name not in
+    ALLOWED_COMMANDS` and returns a 400. The task-level guard is the
+    defence-in-depth backstop, not a replacement.
+- Tests in scope passed: `core.tests.test_tasks_unit core.tests.test_tasks_integration
+  core.tests.test_integration` → 67 / 67 green. Full Django suite also exit 0.
+---

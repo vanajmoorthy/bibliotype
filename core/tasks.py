@@ -11,6 +11,7 @@ from django.db.models import Q
 from django.utils import timezone
 from dotenv import load_dotenv
 
+from .management_command_registry import ALLOWED_COMMANDS
 from .models import Author, Book
 from .services.author_service import check_author_mainstream_status
 from .services.dna_analyser import _save_dna_to_profile, calculate_full_dna
@@ -407,6 +408,9 @@ def research_publisher_mainstream_task():
 @shared_task
 def run_management_command_task(command_name: str, args: list = None, kwargs: dict = None):
     """Run a Django management command and store the output in cache."""
+    if command_name not in ALLOWED_COMMANDS:
+        raise ValueError(f"command not allowed: {command_name}")
+
     import io
     from django.core.management import call_command
     from .cache_utils import safe_cache_set
