@@ -12,9 +12,9 @@ You have the **chrome-devtools** MCP tools available (`new_page`, `navigate_page
 - This is **Phase 1** of an 8-phase cleanup. The full PRD is at `tasks/prd-codebase-triage-fixes.md`; the relevant 5 stories are US-001..US-005 (see `progress.txt`).
 - **What changed under the hood:**
   - Anonymous CSV uploads now bind a Redis cache entry `task_owner_<task_id>` to the visitor's session_key (US-001).
-  - `GET /api/task-result/<task_id>/` checks that binding; if `ENFORCE_TASK_OWNERSHIP=True` it returns 403 on mismatch, otherwise it warn-and-allows (US-002).
+  - `GET /api/task-result/<task_id>/` checks that binding and **fails closed** — both cache-miss and session_key mismatch return 403 `{"status": "FORBIDDEN"}` (US-002, post-review hardening). The previous `ENFORCE_TASK_OWNERSHIP` flag was removed.
   - Signup with `task_id_to_claim` validates the task belongs to the visitor's session BEFORE creating the user (US-003).
-  - `DEBUG` env var now defaults to `False`. Local dev MUST set `DEBUG=True` explicitly (US-004). `docker-compose.local.yml` already does this.
+  - `DEBUG` env var now defaults to `False`, and Django refuses to boot with `DEBUG=True` unless `DJANGO_ENV` is `development`, `test`, or `ci` (US-004). `docker-compose.local.yml` sets both for web AND worker services.
   - The Celery `run_management_command_task` enforces its own whitelist (US-005). User-visible: unchanged. Server-internal: stronger.
 
 You will not see the new env vars or cache keys in the UI. Your job is to confirm **all user-visible flows still work** and **the security paths behave correctly**.
@@ -25,7 +25,7 @@ You will not see the new env vars or cache keys in the UI. Your job is to confir
 
 - App URL: **`http://localhost:8000`**
 - Confirm the Docker stack is running first (`docker-compose -f docker-compose.local.yml ps`). If not, ask the user to run `docker-compose -f docker-compose.local.yml up -d` and pause.
-- Test CSV fixtures live at `core/tests/fixtures/csv/` (or `csv/` if the move hasn't happened — try both). Pick a synthetic Goodreads export, e.g. `goodreads_library_export synthetic_lit_fiction1.csv`.
+- Test CSV fixtures live at **`csv/`** at the repo root (NOT `core/tests/fixtures/csv/`). Pick a synthetic Goodreads export, e.g. `csv/goodreads_library_export synthetic_lit_fiction1.csv`.
 - For email-flow tests (signup, password reset), Django writes emails to console by default in dev. To inspect them, tail the web container: `docker-compose -f docker-compose.local.yml logs --tail=200 web | grep -A 20 "Subject:"`.
 - For Redis cache inspection: `docker-compose -f docker-compose.local.yml exec redis redis-cli KEYS 'task_owner_*'`.
 
@@ -65,11 +65,11 @@ For each test below: run the actions, take a screenshot, capture console message
 ### T2 — Authenticated signup (no DNA claim)
 
 1. New page / fresh session. Navigate to `/signup/`.
-2. Fill the form with a fresh email (e.g., `regression-T2-$(date +%s)@example.test`) and a strong password.
+2. Fill the form with a fresh email (e.g., `regression-T2-$(date +%s)@example.test`) and a strong password. **Username max length is 15 chars** — pick something short like `reg<5 digits>`.
 3. Submit.
-4. Expected: redirected to `/dashboard/` (or `/upload/` if no DNA yet). Take a screenshot.
+4. Expected: when signing up with no `task_id` and no session `dna_data`, the view redirects to **`/`** (home, not `/dashboard/`). The logout link in the header is the auth indicator. Take a screenshot.
 5. The user is now logged in. The header should show their email/username.
-6. **PASS** if signup completed and the user is authenticated.
+6. **PASS** if signup completed and the user is authenticated (logout link visible).
 
 ### T3 — Authenticated CSV upload
 
@@ -107,13 +107,13 @@ For each test below: run the actions, take a screenshot, capture console message
 
 ### T7 — Cross-session task_id rejection (Phase 1 specific)
 
-This is the regression test for the US-002 / US-003 security fix. It depends on whether `ENFORCE_TASK_OWNERSHIP=True` is set in the env (check the container: `docker-compose -f docker-compose.local.yml exec web env | grep ENFORCE_TASK_OWNERSHIP`).
+This is the regression test for the US-002 security fix. Phase 1 post-review made the ownership check **unconditional** — there is no env flag to toggle it. Both cache-miss and session_key mismatch return 403.
 
 1. **Open a fresh incognito-style page** (no cookies from prior tests).
 2. Using the task_id you saved from T1, attempt to GET `/api/task-result/<task_id>/` directly (or attempt to view `/task/<task_id>/` then trigger a poll).
-3. **If `ENFORCE_TASK_OWNERSHIP=True`:** expect a 403 response (JSON `{"status": "FORBIDDEN"}` or an error page). Take a screenshot. **PASS**.
-4. **If `ENFORCE_TASK_OWNERSHIP=False` (the PR's default):** the response should still succeed (legacy warn-and-allow), but check the web container logs (`docker-compose -f docker-compose.local.yml logs --tail=100 web | grep "task_owner check skipped"`) and confirm a warning fired. **PASS** if either the 403 OR the warning is observed.
-5. If neither happens, **FAIL** — the security path isn't wired.
+3. **Expected: 403 response with body `{"status": "FORBIDDEN"}`.** Take a screenshot.
+4. Confirm the web logs contain a `task_owner mismatch — cross-session access attempted` warning (`docker-compose -f docker-compose.local.yml logs --tail=200 web | grep task_owner`).
+5. **PASS** only if the 403 fires AND the warning is logged. Anything else (200, 500, or no warning) is **FAIL**.
 
 ### T8 — Signup-time DNA claim (positive + negative)
 
@@ -146,10 +146,19 @@ This is the regression for US-003.
 
 ### T10 — Custom 404
 
-1. Navigate to `http://localhost:8000/this-page-does-not-exist/`.
-2. Verify the custom neobrutalist 404 page renders (NOT Django's debug page).
-3. Take a screenshot.
-4. **PASS** if it's the custom 404.
+Django's debug 404 page always pre-empts `handler404` when `DEBUG=True`, which is the case in `docker-compose.local.yml`. So you will see the yellow Django debug 404 in the browser even on `triage/codebase-fixes` — that is **expected dev behaviour**, not a regression.
+
+1. Navigate to `http://localhost:8000/this-page-does-not-exist/`. Take a screenshot. Expect Django's debug 404 page in DEBUG mode.
+2. Verify the **production** rendering of the custom 404 by invoking the view through Django shell (`docker-compose -f docker-compose.local.yml exec -T web poetry run python manage.py shell`):
+   ```python
+   from django.test import RequestFactory
+   from core.views import handler404
+   r = handler404(RequestFactory().get("/missing/"), exception=None)
+   assert r.status_code == 404
+   assert b"brand-yellow" in r.content
+   assert b"VT323" in r.content
+   ```
+3. **PASS** if (a) the dev request returns Django's debug 404 (confirming nothing else broke) AND (b) the shell render of `custom_404` returns the neobrutalist template (`brand-yellow` and `VT323` present).
 
 ### T11 — Static asset smoke
 
@@ -177,8 +186,8 @@ Write the final report to `scripts/regression/reports/phase1-<timestamp>.md` wit
 ## Environment
 - Branch: triage/codebase-fixes
 - Commit: <git rev-parse HEAD>
-- ENFORCE_TASK_OWNERSHIP: <value from container env>
 - DEBUG: <value from container env>
+- DJANGO_ENV: <value from container env (web AND worker)>
 
 ## Summary
 - Total tests: 12

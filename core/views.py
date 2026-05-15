@@ -1243,9 +1243,7 @@ def get_task_result_view(request, task_id):
     # caller's session. Both cache-miss AND mismatch fail closed — the previous
     # "warn-and-allow" legacy path still wrote DNA into the requester's session,
     # which combined with the signup view's `if "dna_data" in request.session`
-    # branch to re-open the original hijack. `ENFORCE_TASK_OWNERSHIP` is kept
-    # for now but no longer affects the response (only retained for backwards
-    # compat with deploy docs that mention it).
+    # branch to re-open the original hijack.
     owner = safe_cache_get(f"task_owner_{task_id}")
     caller_key = request.session.session_key
     is_owner = owner is not None and caller_key is not None and owner == caller_key

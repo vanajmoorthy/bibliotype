@@ -15,8 +15,7 @@ def _env_bool(name, default=False):
     """Parse a boolean env var accepting common truthy/falsy spellings.
 
     Unrecognized values raise — for security-critical flags we'd rather fail
-    loudly than silently coerce to False (which would be fail-open for flags
-    like `ENFORCE_TASK_OWNERSHIP`).
+    loudly than silently coerce to False.
     """
     raw = os.environ.get(name)
     if raw is None:
@@ -41,14 +40,6 @@ if _django_env not in {"development", "test", "ci"} and DEBUG:
         "Permitted DEBUG=True environments: development, test, ci."
     )
 ENABLE_SILK = _env_bool("ENABLE_SILK", False)
-
-# Strict ownership check on anonymous DNA task lookups (US-002). Originally a
-# kill-switch for legacy in-flight task IDs predating US-001. **Hardened post-
-# review:** `get_task_result_view` and `claim_anonymous_dna_task` now fail
-# closed on cache miss and mismatch regardless of this flag, so its value no
-# longer affects the response. The setting is retained for forward compat with
-# deploy docs that reference it; it has no functional effect today.
-ENFORCE_TASK_OWNERSHIP = _env_bool("ENFORCE_TASK_OWNERSHIP", False)
 
 allowed_hosts_str = os.environ.get("ALLOWED_HOSTS", "")
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(",") if host.strip()]

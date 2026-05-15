@@ -136,8 +136,7 @@ class ViewE2E_Tests(TransactionTestCase):
     def test_task_result_owner_can_fetch_own_task(self, mock_enrich_book, mock_generate_vibe):
         """
         US-002 positive: the session that uploaded a CSV is able to poll its
-        own task_id and gets a SUCCESS response, regardless of whether the
-        strict ownership flag is on.
+        own task_id and gets a SUCCESS response.
         """
         mock_enrich_book.return_value = (None, 0, 0)
         mock_generate_vibe.return_value = ["owner vibe"]
@@ -145,20 +144,21 @@ class ViewE2E_Tests(TransactionTestCase):
         response = self.client.post(reverse("core:upload"), {"csv_file": self.csv_file})
         task_id = response.url.rstrip("/").split("/")[-1]
 
-        with override_settings(ENFORCE_TASK_OWNERSHIP=True):
-            response = self.client.get(reverse("core:get_task_result", kwargs={"task_id": task_id}))
+        response = self.client.get(reverse("core:get_task_result", kwargs={"task_id": task_id}))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "SUCCESS")
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
     @patch("core.book_enrichment_service.enrich_book_from_apis")
-    def test_task_result_rejects_foreign_session_when_enforced(self, mock_enrich_book, mock_generate_vibe):
+    def test_task_result_rejects_foreign_session(self, mock_enrich_book, mock_generate_vibe):
         """
-        US-002 negative (strict): with ENFORCE_TASK_OWNERSHIP=True, a second
-        client that did not upload the file must receive a 403 when polling
-        someone else's task_id, AND no DNA must leak into the attacker's
-        session.
+        US-002 negative: a second client that did not upload the file must
+        receive a 403 when polling someone else's task_id, AND no DNA must
+        leak into the attacker's session. The view fails closed on cache
+        mismatch (post-review hardening — the original warn-and-allow path
+        leaked DNA into the requester's session, which combined with the
+        signup view to re-open the hijack).
         """
         mock_enrich_book.return_value = (None, 0, 0)
         mock_generate_vibe.return_value = ["enforced vibe"]
@@ -168,43 +168,8 @@ class ViewE2E_Tests(TransactionTestCase):
         task_id = upload_response.url.rstrip("/").split("/")[-1]
 
         attacker = Client()
-        with override_settings(ENFORCE_TASK_OWNERSHIP=True):
+        with self.assertLogs("core.views", level="WARNING") as log_capture:
             response = attacker.get(reverse("core:get_task_result", kwargs={"task_id": task_id}))
-
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()["status"], "FORBIDDEN")
-        self.assertNotIn("dna_data", attacker.session)
-        self.assertNotIn("book_ids", attacker.session)
-
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
-    def test_task_result_rejects_foreign_session_even_when_not_enforced(
-        self, mock_enrich_book, mock_generate_vibe
-    ):
-        """
-        US-002 post-review hardening: the ENFORCE_TASK_OWNERSHIP flag is now
-        vestigial — the view fails closed on cache mismatch regardless of its
-        value. The original warn-and-allow path leaked DNA into the attacker's
-        session, which combined with the signup view to re-open the hijack.
-        This test asserts the FORBIDDEN response AND that no DNA leaked into
-        the attacker's session.
-        """
-        mock_enrich_book.return_value = (None, 0, 0)
-        mock_generate_vibe.return_value = ["hardening vibe"]
-
-        uploader = self.client
-        csv_file_2 = SimpleUploadedFile(
-            "goodreads.csv",
-            self.csv_file.read(),
-            content_type="text/csv",
-        )
-        upload_response = uploader.post(reverse("core:upload"), {"csv_file": csv_file_2})
-        task_id = upload_response.url.rstrip("/").split("/")[-1]
-
-        attacker = Client()
-        with override_settings(ENFORCE_TASK_OWNERSHIP=False):
-            with self.assertLogs("core.views", level="WARNING") as log_capture:
-                response = attacker.get(reverse("core:get_task_result", kwargs={"task_id": task_id}))
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()["status"], "FORBIDDEN")

@@ -130,6 +130,17 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str)
       - cache miss on task_owner_<id>  → reject (TTL expired or never bound)
       - session_key mismatch           → reject + warn (real attack signal)
     Any rejection logs hashed session keys (never raw — they're bearer creds).
+
+    DEPLOY ORDERING: this task's positional signature is a security boundary,
+    not a convenience. Workers MUST be restarted in the same deploy as web —
+    Celery has no autoreload, and a stale worker running the pre-US-003
+    2-arg signature crashes with `TypeError` on every claim from new web,
+    silently losing the user's just-uploaded DNA. If you ever need to change
+    this signature again, coordinate the worker restart explicitly or fan
+    out via a versioned task name (e.g. `claim_anonymous_dna_task_v2`) so
+    old and new workers can co-exist during the rolling deploy. Do NOT
+    soften by adding `**kwargs` to "accept" old calls — that re-opens the
+    hijack window the explicit signature was created to close.
     """
     import hashlib
 

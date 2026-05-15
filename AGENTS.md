@@ -24,10 +24,13 @@ file still pick them up.)
 (Populated by Phase 1, 3, 4, 7 stories. Update this section when those land.)
 
 - `DEBUG`: defaults to `False` (US-004). Production raises
-  `ImproperlyConfigured` if `DEBUG=True` is set with `DJANGO_ENV=production`.
-- `ENFORCE_TASK_OWNERSHIP`: kill-switch on the Phase-1 hijack fix (US-002).
-  Default `False`. Production must flip to `True` no later than 1 hour after
-  US-001's deploy.
+  `ImproperlyConfigured` if `DEBUG=True` is set with `DJANGO_ENV` outside
+  `{development, test, ci}`.
+- Anonymous DNA task ownership (US-002, hardened post-review):
+  `get_task_result_view` and `claim_anonymous_dna_task` fail closed on
+  Redis cache-miss AND on `task_owner_<task_id>` ↔ session_key mismatch.
+  No env flag controls this; the previous `ENFORCE_TASK_OWNERSHIP` toggle
+  was removed once the warn-and-allow legacy path was deleted.
 - `ENABLE_PARALLEL_ENRICHMENT`: feature flag for US-027. Default `False`.
   Operator flips to `True` only after confirming Open Library + Google Books
   rate-limit headroom.
