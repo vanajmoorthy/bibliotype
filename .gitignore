@@ -70,3 +70,7 @@ api_cache.json
 # Plans and brainstorms (local only)
 docs/plans/
 docs/brainstorms/
+
+# Local-only Ralph state and worktrees
+.claude/worktrees/
+scripts/ralph/.last-branch

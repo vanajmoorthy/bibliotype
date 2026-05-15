@@ -117,30 +117,71 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
 
 
 @shared_task(bind=True, max_retries=5)
-def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str = None):
+def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str):
+    """
+    Claim cached anonymous DNA for a freshly-signed-up user.
+
+    `session_key` is REQUIRED — callers (production code: `signup_view`) must
+    pass the visitor's pre-login session_key so the task can verify it matches
+    the `task_owner_<task_id>` value stored at upload time (US-001 + US-003).
+
+    Fail-closed policy (post-review hardening):
+      - missing/empty session_key      → reject, clear pending_dna_task_id
+      - cache miss on task_owner_<id>  → reject (TTL expired or never bound)
+      - session_key mismatch           → reject + warn (real attack signal)
+    Any rejection logs hashed session keys (never raw — they're bearer creds).
+    """
+    import hashlib
+
     try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
         logger.error(f"User with id {user_id} not found. Cannot claim task")
         return
 
+    def _hash_key(k):
+        return hashlib.sha256(k.encode()).hexdigest()[:12] if k else "none"
+
+    def _clear_pending_and_return():
+        """Clear the user's pending_dna_task_id so the dashboard doesn't poll forever."""
+        try:
+            user.userprofile.pending_dna_task_id = None
+            user.userprofile.save()
+        except Exception:
+            logger.exception("Failed to clear pending_dna_task_id on claim rejection")
+
+    if not session_key:
+        logger.warning(
+            "claim rejected: missing session_key (direct-broker invocation or bug)",
+            extra={"user_id": user_id, "task_id": task_id},
+        )
+        _clear_pending_and_return()
+        return
+
     from .cache_utils import safe_cache_get
 
-    # US-003: verify the task_id was originally bound to the same session_key
-    # that initiated the signup. The view captures session_key BEFORE login()
-    # rotates it, so this check compares the pre-login key against the value
-    # stored under `task_owner_<task_id>` at upload time (US-001).
     owner_session_key = safe_cache_get(f"task_owner_{task_id}")
-    if owner_session_key is not None and session_key is not None and owner_session_key != session_key:
+    if owner_session_key is None:
+        # TTL expired (1hr) or task_id never bound. Fail closed — the cached
+        # DNA at `dna_result_<task_id>` shares the same TTL so it'd be moot.
+        logger.warning(
+            "claim rejected: task_owner cache miss",
+            extra={"user_id": user_id, "task_id": task_id, "caller_hash": _hash_key(session_key)},
+        )
+        _clear_pending_and_return()
+        return
+
+    if owner_session_key != session_key:
         logger.warning(
             "claim rejected: session_key mismatch",
             extra={
                 "user_id": user_id,
                 "task_id": task_id,
-                "expected_session_key": owner_session_key,
-                "received_session_key": session_key,
+                "owner_hash": _hash_key(owner_session_key),
+                "caller_hash": _hash_key(session_key),
             },
         )
+        _clear_pending_and_return()
         return
 
     cached_dna = safe_cache_get(f"dna_result_{task_id}")

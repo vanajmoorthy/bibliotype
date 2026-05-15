@@ -157,7 +157,8 @@ class ViewE2E_Tests(TransactionTestCase):
         """
         US-002 negative (strict): with ENFORCE_TASK_OWNERSHIP=True, a second
         client that did not upload the file must receive a 403 when polling
-        someone else's task_id.
+        someone else's task_id, AND no DNA must leak into the attacker's
+        session.
         """
         mock_enrich_book.return_value = (None, 0, 0)
         mock_generate_vibe.return_value = ["enforced vibe"]
@@ -172,17 +173,24 @@ class ViewE2E_Tests(TransactionTestCase):
 
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()["status"], "FORBIDDEN")
+        self.assertNotIn("dna_data", attacker.session)
+        self.assertNotIn("book_ids", attacker.session)
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
     @patch("core.book_enrichment_service.enrich_book_from_apis")
-    def test_task_result_warns_but_allows_when_not_enforced(self, mock_enrich_book, mock_generate_vibe):
+    def test_task_result_rejects_foreign_session_even_when_not_enforced(
+        self, mock_enrich_book, mock_generate_vibe
+    ):
         """
-        US-002 negative (legacy mode): with ENFORCE_TASK_OWNERSHIP=False
-        (the default), a foreign session still gets the cached result but a
-        warning is logged so operators can quantify legacy traffic.
+        US-002 post-review hardening: the ENFORCE_TASK_OWNERSHIP flag is now
+        vestigial — the view fails closed on cache mismatch regardless of its
+        value. The original warn-and-allow path leaked DNA into the attacker's
+        session, which combined with the signup view to re-open the hijack.
+        This test asserts the FORBIDDEN response AND that no DNA leaked into
+        the attacker's session.
         """
         mock_enrich_book.return_value = (None, 0, 0)
-        mock_generate_vibe.return_value = ["legacy vibe"]
+        mock_generate_vibe.return_value = ["hardening vibe"]
 
         uploader = self.client
         csv_file_2 = SimpleUploadedFile(
@@ -198,9 +206,18 @@ class ViewE2E_Tests(TransactionTestCase):
             with self.assertLogs("core.views", level="WARNING") as log_capture:
                 response = attacker.get(reverse("core:get_task_result", kwargs={"task_id": task_id}))
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["status"], "SUCCESS")
-        self.assertTrue(any("task_owner check skipped" in msg for msg in log_capture.output))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["status"], "FORBIDDEN")
+        self.assertTrue(
+            any("task_owner mismatch" in msg for msg in log_capture.output),
+            f"expected mismatch warning not found: {log_capture.output}",
+        )
+        # Threat-model assertion: the attacker's session MUST NOT contain
+        # any leaked DNA data after the 403 response. (Original buggy path
+        # wrote `request.session["dna_data"] = cached_result` even on
+        # mismatch — this test would have failed before the fix.)
+        self.assertNotIn("dna_data", attacker.session)
+        self.assertNotIn("book_ids", attacker.session)
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
     @patch("core.book_enrichment_service.enrich_book_from_apis")

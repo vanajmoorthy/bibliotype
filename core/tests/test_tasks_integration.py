@@ -77,10 +77,14 @@ class TaskIntegrationTests(TransactionTestCase):
     def test_claim_anonymous_dna_task(self, mock_async_result, mock_rec_task):
         """
         Tests the claiming task's ability to fetch a result from the Celery backend
-        and save it to a profile.
+        and save it to a profile when the supplied session_key matches the
+        cached task owner (the happy path established by US-001 + US-003).
         """
         user = User.objects.create_user(username="newuser", password="password")
         task_id = "fake-task-id-123"
+        legit_session_key = "legit-uploader-session-key"
+        # Cache the binding the same way upload_view does (US-001).
+        cache.set(f"task_owner_{task_id}", legit_session_key, 3600)
         fake_dna = {"reader_type": "Claimed Reader", "user_stats": {}, "reading_vibe": [], "vibe_data_hash": ""}
 
         mock_result = mock_async_result.return_value
@@ -88,13 +92,73 @@ class TaskIntegrationTests(TransactionTestCase):
         mock_result.successful.return_value = True
         mock_result.get.return_value = fake_dna
 
-        claim_anonymous_dna_task.delay(user.id, task_id)
+        claim_anonymous_dna_task.delay(user.id, task_id, legit_session_key)
 
         user.userprofile.refresh_from_db()
         self.assertIsNotNone(user.userprofile.dna_data)
         self.assertEqual(user.userprofile.reader_type, "Claimed Reader")
 
         mock_async_result.assert_called_with(task_id)
+
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.AsyncResult")
+    def test_claim_anonymous_dna_task_fails_closed_on_cache_miss(self, mock_async_result, mock_rec_task):
+        """
+        Post-review hardening: when `task_owner_<task_id>` is absent from cache
+        (TTL expired or task_id never bound), the claim task MUST reject — the
+        previous behavior silently passed because owner was None, which re-
+        opened the hijack window after the 1-hour TTL.
+
+        Also verifies pending_dna_task_id is cleared so the user's dashboard
+        doesn't poll forever.
+        """
+        user = User.objects.create_user(username="cachemiss", password="password")
+        user.userprofile.pending_dna_task_id = "expired-task-id"
+        user.userprofile.save()
+
+        task_id = "expired-task-id"
+        # NOTE: deliberately do NOT cache.set(f"task_owner_{task_id}", ...)
+
+        with self.assertLogs("core.tasks", level="WARNING") as log_capture:
+            claim_anonymous_dna_task.delay(user.id, task_id, "any-session-key")
+
+        self.assertTrue(
+            any("task_owner cache miss" in msg for msg in log_capture.output),
+            f"expected cache-miss warning not found: {log_capture.output}",
+        )
+        user.userprofile.refresh_from_db()
+        self.assertIsNone(user.userprofile.dna_data)
+        self.assertIsNone(user.userprofile.pending_dna_task_id)
+        mock_async_result.assert_not_called()
+
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.AsyncResult")
+    def test_claim_anonymous_dna_task_fails_closed_on_missing_session_key(
+        self, mock_async_result, mock_rec_task
+    ):
+        """
+        Post-review hardening: empty/missing session_key (e.g. direct broker
+        publish) MUST refuse the claim. The previous default `session_key=None`
+        silently bypassed the ownership check entirely.
+        """
+        user = User.objects.create_user(username="nokeyuser", password="password")
+        user.userprofile.pending_dna_task_id = "some-task"
+        user.userprofile.save()
+
+        task_id = "some-task"
+        cache.set(f"task_owner_{task_id}", "the-real-owner-key", 3600)
+
+        with self.assertLogs("core.tasks", level="WARNING") as log_capture:
+            claim_anonymous_dna_task.delay(user.id, task_id, "")
+
+        self.assertTrue(
+            any("missing session_key" in msg for msg in log_capture.output),
+            f"expected missing-key warning not found: {log_capture.output}",
+        )
+        user.userprofile.refresh_from_db()
+        self.assertIsNone(user.userprofile.dna_data)
+        self.assertIsNone(user.userprofile.pending_dna_task_id)
+        mock_async_result.assert_not_called()
 
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.AsyncResult")
@@ -121,6 +185,9 @@ class TaskIntegrationTests(TransactionTestCase):
 
         user.userprofile.refresh_from_db()
         self.assertIsNone(user.userprofile.dna_data)
+        # Post-review hardening: pending_dna_task_id must be cleared so the
+        # legitimate user's dashboard doesn't poll a doomed task forever.
+        self.assertIsNone(user.userprofile.pending_dna_task_id)
         from core.models import UserBook
 
         self.assertEqual(UserBook.objects.filter(user=user).count(), 0)

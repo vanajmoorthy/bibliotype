@@ -9,19 +9,46 @@ from django.core.exceptions import ImproperlyConfigured
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
+
+
+def _env_bool(name, default=False):
+    """Parse a boolean env var accepting common truthy/falsy spellings.
+
+    Unrecognized values raise — for security-critical flags we'd rather fail
+    loudly than silently coerce to False (which would be fail-open for flags
+    like `ENFORCE_TASK_OWNERSHIP`).
+    """
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    if raw.strip().lower() in {"true", "1", "yes", "on"}:
+        return True
+    if raw.strip().lower() in {"false", "0", "no", "off", ""}:
+        return False
+    raise ImproperlyConfigured(f"Unrecognized boolean value for env var {name}: {raw!r}")
+
+
 # DEBUG defaults to False (US-004) so a missing env var never silently leaves
 # production in debug mode. Local dev and CI must set DEBUG=True explicitly.
-DEBUG = os.environ.get("DEBUG", "False") == "True"
-if os.environ.get("DJANGO_ENV") == "production" and DEBUG:
-    raise ImproperlyConfigured("DEBUG must be False in production")
-ENABLE_SILK = os.environ.get("ENABLE_SILK", "False") == "True"
+DEBUG = _env_bool("DEBUG", False)
+# Refuse to boot with DEBUG=True outside known-safe environments. Default
+# DJANGO_ENV (unset) is treated as production-equivalent for this check —
+# fail-safe. Whitelisted dev envs: "development", "test", "ci".
+_django_env = os.environ.get("DJANGO_ENV", "")
+if _django_env not in {"development", "test", "ci"} and DEBUG:
+    raise ImproperlyConfigured(
+        f"DEBUG must be False when DJANGO_ENV={_django_env!r}. "
+        "Permitted DEBUG=True environments: development, test, ci."
+    )
+ENABLE_SILK = _env_bool("ENABLE_SILK", False)
 
-# Strict ownership check on anonymous DNA task lookups (US-002). Kill-switch for
-# the Phase-1 hijack fix introduced in US-001. Default OFF so legacy task IDs
-# predating US-001 can still be polled; production flips this to True no later
-# than 1 hour after the US-001 deploy, once metrics confirm zero "skipped"
-# warnings (see core.views.get_task_result_view).
-ENFORCE_TASK_OWNERSHIP = os.environ.get("ENFORCE_TASK_OWNERSHIP", "False") == "True"
+# Strict ownership check on anonymous DNA task lookups (US-002). Originally a
+# kill-switch for legacy in-flight task IDs predating US-001. **Hardened post-
+# review:** `get_task_result_view` and `claim_anonymous_dna_task` now fail
+# closed on cache miss and mismatch regardless of this flag, so its value no
+# longer affects the response. The setting is retained for forward compat with
+# deploy docs that reference it; it has no functional effect today.
+ENFORCE_TASK_OWNERSHIP = _env_bool("ENFORCE_TASK_OWNERSHIP", False)
 
 allowed_hosts_str = os.environ.get("ALLOWED_HOSTS", "")
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(",") if host.strip()]

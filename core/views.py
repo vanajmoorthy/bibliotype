@@ -840,18 +840,28 @@ def signup_view(request):
             return render(request, "core/signup.html", {"form": form, "task_id_to_claim": task_id})
 
         if form.is_valid():
-            # US-003: validate the task_id being claimed actually belongs to this
-            # session BEFORE creating the account or calling login(). Django
-            # rotates session_key on login, so capture the pre-login key now
-            # and pass it to the claim task for cache verification.
+            # US-003 (defense in depth): validate the task_id being claimed
+            # actually belongs to this session BEFORE creating the account or
+            # calling login(). Two checks layered:
+            #   1) session["anonymous_task_id"] == POSTed task_id — internal consistency.
+            #   2) cache.get("task_owner_<task_id>") == session.session_key — proves
+            #      the task was originally uploaded from this session, not just
+            #      that the session knows the task_id (which could be POST-tampered).
+            # Django rotates session_key on login, so we capture the pre-login key
+            # now and pass it to the claim task for the final task-level check.
             if task_id_to_claim:
                 expected_task_id = request.session.get("anonymous_task_id")
-                if expected_task_id != task_id_to_claim:
+                cached_owner = safe_cache_get(f"task_owner_{task_id_to_claim}")
+                session_owns_task = expected_task_id == task_id_to_claim
+                cache_owns_task = cached_owner is not None and cached_owner == request.session.session_key
+                if not (session_owns_task and cache_owns_task):
                     logger.warning(
-                        "signup claim rejected: task_id_to_claim does not match session "
-                        "anonymous_task_id (claim=%s, session=%s)",
-                        task_id_to_claim,
-                        expected_task_id,
+                        "signup claim rejected: task_id ownership not verified",
+                        extra={
+                            "task_id_to_claim": task_id_to_claim,
+                            "session_consistent": session_owns_task,
+                            "cache_consistent": cache_owns_task,
+                        },
                     )
                     messages.error(
                         request,
@@ -1229,17 +1239,33 @@ def task_status_view(request, task_id):
 def get_task_result_view(request, task_id):
     from .models import AnonymousUserSession
 
-    # US-002: refuse task_ids that aren't bound to the caller's session so
-    # nobody else can pull this DNA into their own session. The strict check is
-    # gated by ENFORCE_TASK_OWNERSHIP — until it flips on in production we
-    # only log a warning for each unowned lookup so operators can drain legacy
-    # in-flight task IDs from before US-001 shipped.
+    # US-002 (hardened post-review): refuse task_ids that aren't bound to the
+    # caller's session. Both cache-miss AND mismatch fail closed — the previous
+    # "warn-and-allow" legacy path still wrote DNA into the requester's session,
+    # which combined with the signup view's `if "dna_data" in request.session`
+    # branch to re-open the original hijack. `ENFORCE_TASK_OWNERSHIP` is kept
+    # for now but no longer affects the response (only retained for backwards
+    # compat with deploy docs that mention it).
     owner = safe_cache_get(f"task_owner_{task_id}")
     caller_key = request.session.session_key
-    if owner is None or owner != caller_key:
-        if settings.ENFORCE_TASK_OWNERSHIP:
-            return JsonResponse({"status": "FORBIDDEN"}, status=403)
-        logger.warning("task_owner check skipped, key=%s", task_id)
+    is_owner = owner is not None and caller_key is not None and owner == caller_key
+    if not is_owner:
+        import hashlib
+
+        caller_hash = hashlib.sha256(caller_key.encode()).hexdigest()[:12] if caller_key else "none"
+        if owner is None:
+            # TTL expired or task_id never bound (pre-US-001 in-flight, or invalid).
+            logger.info(
+                "task_owner cache miss",
+                extra={"task_id": task_id, "caller_hash": caller_hash},
+            )
+        else:
+            owner_hash = hashlib.sha256(owner.encode()).hexdigest()[:12]
+            logger.warning(
+                "task_owner mismatch — cross-session access attempted",
+                extra={"task_id": task_id, "owner_hash": owner_hash, "caller_hash": caller_hash},
+            )
+        return JsonResponse({"status": "FORBIDDEN"}, status=403)
 
     cached_result = safe_cache_get(f"dna_result_{task_id}")
     if cached_result is not None:

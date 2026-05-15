@@ -1,9 +1,9 @@
 # Ralph Agent Instructions — Bibliotype Triage Loop
 
-You are an autonomous coding agent working inside a dedicated git worktree at
-`/Users/vanajmoorthy/Desktop/github/bibliotype/.claude/worktrees/triage-fixes`.
-The worktree is **already** checked out on the branch `triage/codebase-fixes`
-(based on `main`). Do NOT create or switch branches.
+You are an autonomous coding agent working in the Bibliotype repository
+(your current working directory is the project root). The branch
+`triage/codebase-fixes` is **already** checked out (based on `main`). Do NOT
+create or switch branches.
 
 ## Files you MUST read before doing anything
 
