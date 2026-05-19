@@ -25,10 +25,12 @@ class CustomUserCreationForm(UserCreationForm):
         return username.lower()
 
     def clean_email(self):
-        email = self.cleaned_data.get("email")
-        if email and User.objects.filter(email__iexact=email).exists():
-            raise forms.ValidationError("An account with this email address already exists.")
-        return email
+        # Intentionally does NOT reject duplicate emails. Revealing which addresses
+        # already have accounts is a user-enumeration vector. The duplicate-email
+        # path is handled in `signup_view` (US-017): a password-reset email is
+        # sent to the legitimate owner and the user is redirected to the generic
+        # "check your inbox" page, identical to the new-signup path's tone.
+        return self.cleaned_data.get("email")
 
 
 class UpdateDisplayNameForm(forms.ModelForm):

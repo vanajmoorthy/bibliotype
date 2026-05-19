@@ -284,7 +284,7 @@
         "**Positive test (legitimate flow unchanged):** same as the first negative test \u2014 confirms a fresh signup still works.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 19
     },

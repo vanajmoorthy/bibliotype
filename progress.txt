@@ -574,3 +574,42 @@
     `test_round_trip_dedup_goodreads_then_storygraph` (same one noted in
     US-006, US-008a, US-009, US-012, US-014). Unrelated to this story.
 ---
+
+## 2026-05-19 13:30 — US-017
+- `clean_email` no longer rejects duplicate emails (returns the value
+  unconditionally). `signup_view` now runs an `email__iexact` lookup AFTER
+  Turnstile + form validation but BEFORE the US-003 task ownership check:
+  on hit, it dispatches a password-reset email via `PasswordResetForm`
+  using the same template config as `CustomPasswordResetView`, then
+  redirects to the existing `password_reset_done` page so a duplicate
+  signup is observationally indistinguishable from a forgotten-password
+  request. No new user is created on the duplicate branch.
+- Files changed:
+  - core/forms.py (clean_email no-op + comment explaining why)
+  - core/views.py (imports PasswordResetForm + default_token_generator;
+    duplicate-email short-circuit in signup_view)
+  - core/tests/test_views_e2e.py (new SignupDuplicateEmailTests class:
+    duplicate-email, case-insensitive-duplicate, fresh-email control)
+  - scripts/ralph/prd.json (US-017 passes=true)
+- Learnings for future iterations:
+  - The duplicate-email gate MUST run BEFORE the US-003 task-id check,
+    not after. If reordered, an attacker (or a confused user) who POSTs
+    a task_id from a different session would hit the task-ownership
+    branch FIRST and learn that the email collision exists via the
+    branch-specific error message. Keep US-017 gating ahead of any
+    other per-user logic in signup.
+  - `PasswordResetForm.save()` requires `request=` to compute the
+    `{{ domain }}` and `{{ protocol }}` variables in the reset email
+    template — passing `None` raises. Always include it.
+  - The "check your inbox" page is `password_reset_done` (Django's
+    builtin `PasswordResetDoneView` mounted with our template at
+    `core/password_reset_done.html`). Reusing it makes the duplicate-
+    signup branch and the legitimate forgot-password branch land on
+    identical pixels — that's the enumeration defence.
+  - Test environment note: `black`/`isort` are still not in the venv;
+    matched existing style by hand. The full pre-existing-flake list
+    (`Error 61 connecting to localhost:6379` cascade in test_views_e2e
+    when Redis is down + the SQLite `test_round_trip_dedup_*` flake)
+    is unrelated to this story — confirmed by running the failing tests
+    against `git stash`'d main.
+---

@@ -413,3 +413,107 @@ class ViewE2E_Tests(TransactionTestCase):
 
         user.userprofile.refresh_from_db()
         self.assertIsNone(user.userprofile.pending_dna_task_id)
+
+
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "signup-duplicate-email-tests",
+        }
+    },
+)
+class SignupDuplicateEmailTests(TransactionTestCase):
+    """US-017: signup must not reveal whether an email is already registered.
+
+    On duplicate: short-circuit to the generic "check your inbox" page AND
+    send a password-reset email to the legitimate account. On a new email:
+    proceed normally.
+    """
+
+    def setUp(self):
+        from django.core import mail
+
+        self.client = Client()
+        self.mail = mail
+        mail.outbox = []
+
+    def tearDown(self):
+        from django.db import connections
+
+        for conn in connections.all():
+            if conn.connection is not None:
+                conn.close()
+        connections.close_all()
+        super().tearDown()
+
+    def test_signup_with_duplicate_email_short_circuits_and_sends_reset(self):
+        """Duplicate email: no new user created, password-reset email dispatched,
+        redirect to the same generic 'check your inbox' page used by the
+        password-reset flow."""
+        existing = User.objects.create_user(
+            username="existing",
+            email="taken@test.com",
+            password="ExistingP4ssword!",
+        )
+        user_count_before = User.objects.count()
+
+        response = self.client.post(
+            reverse("core:signup"),
+            {
+                "username": "newcomer",
+                "email": "taken@test.com",
+                "password1": "Brand-New-p4ssword!",
+                "password2": "Brand-New-p4ssword!",
+            },
+        )
+
+        self.assertRedirects(response, reverse("password_reset_done"))
+        self.assertEqual(User.objects.count(), user_count_before)
+        self.assertFalse(User.objects.filter(username="newcomer").exists())
+        self.assertEqual(len(self.mail.outbox), 1)
+        reset_email = self.mail.outbox[0]
+        self.assertIn(existing.email, reset_email.to)
+        self.assertEqual(reset_email.subject, "Reset your Bibliotype password")
+
+    def test_signup_duplicate_email_is_case_insensitive(self):
+        """Duplicate detection must be case-insensitive to match the rest of
+        the email-based auth path (`email__iexact`)."""
+        User.objects.create_user(
+            username="lowercase",
+            email="mixedcase@test.com",
+            password="ExistingP4ssword!",
+        )
+
+        response = self.client.post(
+            reverse("core:signup"),
+            {
+                "username": "newcomer",
+                "email": "MixedCase@Test.com",
+                "password1": "Brand-New-p4ssword!",
+                "password2": "Brand-New-p4ssword!",
+            },
+        )
+
+        self.assertRedirects(response, reverse("password_reset_done"))
+        self.assertFalse(User.objects.filter(username="newcomer").exists())
+        self.assertEqual(len(self.mail.outbox), 1)
+
+    def test_signup_with_fresh_email_creates_user_normally(self):
+        """Negative control: a never-before-seen email completes signup,
+        logs the user in, and dispatches NO reset email."""
+        response = self.client.post(
+            reverse("core:signup"),
+            {
+                "username": "freshuser",
+                "email": "fresh@test.com",
+                "password1": "Brand-New-p4ssword!",
+                "password2": "Brand-New-p4ssword!",
+            },
+        )
+
+        # No DNA / no task to claim → redirect to home (default branch).
+        self.assertRedirects(response, reverse("core:home"))
+        self.assertTrue(User.objects.filter(username="freshuser").exists())
+        self.assertEqual(len(self.mail.outbox), 0)

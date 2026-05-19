@@ -10,8 +10,9 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
 from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import PasswordResetView
 from django.core.exceptions import NON_FIELD_ERRORS
 from django.db import transaction
@@ -844,6 +845,30 @@ def signup_view(request):
             return render(request, "core/signup.html", {"form": form, "task_id_to_claim": task_id})
 
         if form.is_valid():
+            # US-017: if an account already exists for this email, do NOT reveal
+            # that fact to the requester. Trigger a password-reset email to the
+            # legitimate owner (so a user who forgot they had an account gets a
+            # path back in), short-circuit to the "check your inbox" page, and
+            # skip user creation. `clean_email` deliberately does not error on
+            # duplicates so we have to gate it here at the view layer.
+            submitted_email = form.cleaned_data.get("email")
+            if submitted_email and User.objects.filter(email__iexact=submitted_email).exists():
+                reset_form = PasswordResetForm({"email": submitted_email})
+                if reset_form.is_valid():
+                    reset_form.save(
+                        request=request,
+                        use_https=request.is_secure(),
+                        token_generator=default_token_generator,
+                        from_email=None,
+                        email_template_name="core/password_reset_email.html",
+                        subject_template_name="core/password_reset_subject.txt",
+                    )
+                logger.info(
+                    "signup short-circuited: duplicate email; password-reset email dispatched",
+                    extra={"email_hash": hash(submitted_email.lower())},
+                )
+                return redirect("password_reset_done")
+
             # US-003 (defense in depth): validate the task_id being claimed
             # actually belongs to this session BEFORE creating the account or
             # calling login(). Two checks layered:
