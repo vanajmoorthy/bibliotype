@@ -110,7 +110,7 @@
         "Verify nothing imports it (`grep -rn check_models . --exclude-dir=.git`).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 7
     },

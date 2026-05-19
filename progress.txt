@@ -182,3 +182,25 @@
 - Tests in scope passed: `core.tests.test_tasks_unit core.tests.test_tasks_integration
   core.tests.test_integration` → 67 / 67 green. Full Django suite also exit 0.
 ---
+
+## 2026-05-19 12:45 — US-006
+- Deleted `check_models.py` (throwaway Gemini-model-list script in repo root).
+  Pre-deletion grep confirmed no imports outside the PRD / prd.json docs.
+- Files changed:
+  - check_models.py (removed via `git rm`)
+  - scripts/ralph/prd.json (US-006 passes=true)
+- Learnings for future iterations:
+  - Docker daemon was not running this iteration; fell back to
+    `poetry run python manage.py test` (the Bibliotype-specific guardrail
+    in these instructions covers this fallback). 362 tests ran; 361 pass,
+    1 pre-existing SQLite-locking failure in
+    `core.tests.test_math_accuracy.IsbnNormalizationTests.test_round_trip_dedup_goodreads_then_storygraph`.
+    The failure is environmental (SQLite under concurrent test access vs the
+    canonical Postgres stack) and unrelated to deleting a standalone script
+    with no imports — noting here so future iterations don't chase it.
+  - For "delete a stray repo-root script" stories (US-007, US-010, US-011,
+    US-012, US-013), the cheapest sanity check is `Grep` for the filename
+    across the repo with `--exclude-dir=.git`. If matches are only inside
+    `tasks/prd-codebase-triage-fixes.md` and `scripts/ralph/prd.json`, the
+    file is safe to delete — those are work-list documents, not source.
+---
