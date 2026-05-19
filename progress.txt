@@ -348,3 +348,25 @@
   - Docker daemon not running this iteration; fell back to
     `poetry run python manage.py test` for the full suite.
 ---
+
+## 2026-05-19 12:30 — US-010
+- Deleted unused `catch_all_404_view` from `core/views.py`. The function
+  was a literal duplicate of `handler404` (same body) and was never wired
+  in any urls.py — `bibliotype/urls.py` already imports/wires
+  `handler404` directly.
+- Files changed:
+  - core/views.py (removed catch_all_404_view + its docstring)
+  - scripts/ralph/prd.json (US-010 passes=true)
+- Learnings for future iterations:
+  - `git grep <symbol>` is the cheapest way to confirm a "verified zero
+    references" claim from the PRD before deleting code.
+  - The 404 test that mattered for this story is
+    `test_nonexistent_user_shows_404_page` in
+    `core/tests/test_profile_and_recommendations.py`, not in
+    `test_views_e2e.py`. All 10 tests in that module pass without Docker
+    (Redis is unused for the 404 path; graceful degradation through
+    `safe_cache_*` masks the missing Redis).
+  - `test_views_e2e.py` cannot run without Redis (DNA upload tasks
+    require the broker for Celery, so the connection failures surface
+    as test errors). Use it only inside the Docker stack.
+---

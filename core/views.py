@@ -1340,19 +1340,6 @@ def handler404(request, exception=None):
     return render(request, "core/404.html", {"username": username}, status=404)
 
 
-def catch_all_404_view(request, unused_path):
-    """Catch-all view for unmatched URLs that shows our custom 404 page."""
-    path = request.path.strip("/")
-    username = None
-    if path.startswith("u/") and len(path.split("/")) >= 2:
-        # Extract username from path like "u/username" or "u/username/"
-        parts = path.split("/")
-        if parts[0] == "u" and len(parts) > 1:
-            username = parts[1]
-
-    return render(request, "core/404.html", {"username": username}, status=404)
-
-
 class CustomPasswordResetView(PasswordResetView):
     template_name = "core/password_reset_form.html"
     email_template_name = "core/password_reset_email.html"

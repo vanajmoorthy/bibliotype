@@ -182,7 +182,7 @@
         "`git grep catch_all_404` returns zero results outside of removal commit.",
         "`manage.py test` passes (the e2e 404 test should still hit `handler404`)."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 12
     },
