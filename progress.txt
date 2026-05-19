@@ -471,3 +471,30 @@
     `poetry run python manage.py test core.tests.test_profile_and_recommendations`
     (10/10 green) + `manage.py check` (0 issues).
 ---
+
+## 2026-05-19 12:46 — US-014
+- Removed two genuinely-unused imports: `Avg` from
+  `core/services/user_similarity_service.py:3` (whole import line deleted,
+  it was sole symbol) and `Author` from
+  `core/services/anonymization_service.py:3` (kept the other two symbols).
+  Explicitly left `safe_cache_delete` re-export in
+  `core/services/recommendation_service.py:8` untouched (noqa-marked,
+  removed only by US-060).
+- Files changed:
+  - core/services/user_similarity_service.py
+  - core/services/anonymization_service.py
+  - scripts/ralph/prd.json (US-014 passes=true)
+- Learnings for future iterations:
+  - Always grep for the symbol in the affected file BEFORE editing imports
+    to confirm it's truly unused. `grep -n "Avg" <file>` returns one line
+    (the import itself) = safe to remove.
+  - Docker not running this iteration → fell back to `poetry run python
+    manage.py test core.tests.test_cache_refactor core.tests.test_views_e2e
+    core.tests.test_tasks_integration` (50/50 green). The full
+    `manage.py test` shows 361 OK + 1 pre-existing SQLite "database table
+    is locked" flake in `test_math_accuracy.IsbnNormalizationTests.
+    test_round_trip_dedup_goodreads_then_storygraph` — confirmed flake by
+    `git stash && rerun` on baseline (also fails). Environment uses
+    SQLite when Docker/Postgres absent, surfacing concurrency-unfriendly
+    behavior unrelated to import cleanup.
+---

@@ -1,6 +1,6 @@
 import logging
 from django.utils import timezone
-from ..models import AnonymizedReadingProfile, AnonymousUserSession, Author
+from ..models import AnonymizedReadingProfile, AnonymousUserSession
 
 logger = logging.getLogger(__name__)
 

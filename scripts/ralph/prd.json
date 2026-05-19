@@ -239,7 +239,7 @@
         "`manage.py test core.tests.test_cache_refactor` passes (sanity \u2014 the re-export still works).",
         "`manage.py test` passes (full)."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 16
     },
