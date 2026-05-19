@@ -304,3 +304,47 @@
     task-status surfaces stay green, confirming the personal CSVs weren't
     silently a test fixture.
 ---
+
+## 2026-05-19 13:45 — US-009
+- Ported the two root-level CSV-generator scripts into Django BaseCommands:
+  `csv/generate_test_data.py` → `core/management/commands/generate_csvs.py`
+  (renamed to avoid the existing `generate_test_data` command),
+  `csv/generate_synthetic_test_data.py` →
+  `core/management/commands/generate_synthetic_csvs.py`. Original scripts only
+  imported BaseCommand cosmetically and ran their logic from `if __name__ ==
+  '__main__'`; both are now proper `class Command(BaseCommand)` with
+  `add_arguments` (num_users / books_per_user / output_dir / password for
+  generate_csvs; output_dir for generate_synthetic_csvs). `manage.py help`
+  lists both. The 4 stale `from sys.path / django.setup()` boilerplate lines
+  were dropped (BaseCommands run inside the Django process).
+- Default output directory is now `core/tests/fixtures/csv/` instead of the
+  old `csv/` (consistent with US-008a's canonical fixture path; `csv/` is
+  also gitignored after US-008b so writes there would be untracked anyway).
+- Files changed:
+  - core/management/commands/generate_csvs.py (new BaseCommand)
+  - core/management/commands/generate_synthetic_csvs.py (new BaseCommand)
+  - csv/generate_test_data.py (deleted via `git rm`)
+  - csv/generate_synthetic_test_data.py (deleted via `git rm`)
+  - scripts/ralph/prd.json (US-009 passes=true)
+- Learnings for future iterations:
+  - **Ported scripts had `sys.path.insert(...)` + `django.setup()` cargo
+    cult**. BaseCommands run inside the Django process already, so these
+    bootstrap lines must be deleted, not migrated. Keeping them in a
+    management command works but is dead code that confuses future readers.
+  - **The legacy scripts wrote to `csv/` which is now gitignored** (US-008b).
+    For any future story that ports a script using paths like
+    `csv/goodreads_library_export ....csv`, redirect to
+    `core/tests/fixtures/csv/` to keep outputs visible during local dev.
+  - **`generate_test_data` (existing core command, kept) vs `generate_csvs`
+    (new from this story) are now sibling commands.** They share intent
+    (create test_reader{N} users + CSVs) but `generate_csvs` originated from
+    the simpler csv/ script. If a future cleanup story dedups them, the
+    existing `generate_test_data` is the richer/preferred surface; merge
+    into it rather than the other direction.
+  - **Pre-existing SQLite-locking failure** in
+    `core.tests.test_math_accuracy.IsbnNormalizationTests.test_round_trip_dedup_goodreads_then_storygraph`
+    persists this iteration (361/362 green). Same env-only failure noted
+    in US-006 and US-008a entries. Not caused by this story; do not chase.
+  - Docker daemon not running this iteration; fell back to
+    `poetry run python manage.py test` for the full suite.
+---

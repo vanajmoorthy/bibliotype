@@ -170,7 +170,7 @@
         "Delete the old root-level files.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 11
     },
