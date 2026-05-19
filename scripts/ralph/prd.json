@@ -300,7 +300,7 @@
         "**Positive test:** an existing valid Goodreads or StoryGraph fixture still uploads.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 20
     },

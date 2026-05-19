@@ -4,7 +4,9 @@ import math
 import os
 from collections import Counter
 from datetime import date
+from io import StringIO
 
+import pandas as pd
 from celery.result import AsyncResult
 from django.conf import settings
 from django.contrib import messages
@@ -44,6 +46,12 @@ from .forms import CustomUserCreationForm, UpdateDisplayNameForm
 from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
 
 logger = logging.getLogger(__name__)
+
+# Upload validation caps (US-018). 50k rows comfortably covers the largest
+# Goodreads exports observed in the wild; 100 cols is well above any real
+# export schema and rejects pathological inputs before pandas does deep work.
+MAX_UPLOAD_ROWS = 50000
+MAX_UPLOAD_COLUMNS = 100
 
 
 def robots_txt_view(request):
@@ -752,6 +760,42 @@ def upload_view(request):
 
         # utf-8-sig transparently strips BOM if present (some exports include it)
         csv_content = csv_file.read().decode("utf-8-sig")
+
+        # US-018: pre-flight validation. Read only the first MAX_UPLOAD_ROWS rows
+        # so a pathological CSV can't exhaust memory before we even start the
+        # task. Then verify column count and schema look like Goodreads or
+        # StoryGraph before passing csv_content downstream.
+        try:
+            df_head = pd.read_csv(StringIO(csv_content), nrows=MAX_UPLOAD_ROWS)
+        except (pd.errors.ParserError, pd.errors.EmptyDataError, ValueError):
+            messages.error(
+                request,
+                "CSV could not be parsed. Please upload a valid Goodreads or StoryGraph export.",
+            )
+            return redirect("core:home")
+
+        if len(df_head.columns) > MAX_UPLOAD_COLUMNS:
+            messages.error(
+                request,
+                f"CSV has too many columns (limit {MAX_UPLOAD_COLUMNS}). "
+                "Please upload a Goodreads or StoryGraph export.",
+            )
+            return redirect("core:home")
+
+        head_columns = set(df_head.columns)
+        if not ({"Title", "Author"}.issubset(head_columns) or {"Title", "Authors"}.issubset(head_columns)):
+            messages.error(
+                request,
+                "CSV does not look like a Goodreads or StoryGraph export. "
+                "Expected columns: Title and Author/Authors.",
+            )
+            return redirect("core:home")
+
+        # If the input exceeded the row cap, re-serialize the truncated head so
+        # the downstream task doesn't reload the full file. For typical-sized
+        # uploads (well under the cap) we pass csv_content through unchanged.
+        if len(df_head) >= MAX_UPLOAD_ROWS:
+            csv_content = df_head.to_csv(index=False)
 
         if request.user.is_authenticated:
             # Clear old session data so the view will use the updated profile data

@@ -613,3 +613,46 @@
     is unrelated to this story — confirmed by running the failing tests
     against `git stash`'d main.
 ---
+
+## 2026-05-19 14:50 — US-018
+- Added pre-flight CSV validation to `upload_view`: `pd.read_csv` with
+  `nrows=MAX_UPLOAD_ROWS` (50_000) caps memory before the task runs,
+  `MAX_UPLOAD_COLUMNS` (100) rejects pathologically wide CSVs, and a
+  schema check requires the head columns to contain either
+  `{"Title", "Author"}` (Goodreads) or `{"Title", "Authors"}` (StoryGraph).
+  When the row cap is hit, the truncated head is re-serialized to CSV so
+  the downstream task does not reload the full file. Parsing errors fall
+  through to a user-facing "could not be parsed" message.
+- New `UploadValidationTests(TransactionTestCase)` class in
+  `core/tests/test_views_e2e.py` with 5 tests: oversize-row truncation
+  positive, too-many-columns rejection negative, schema-missing rejection
+  negative, valid Goodreads positive, valid StoryGraph positive. Each test
+  patches `core.views.generate_reading_dna_task` so no Celery / broker
+  involvement is required.
+- Files changed:
+  - core/views.py (StringIO + pandas imports at top; MAX_UPLOAD_ROWS /
+    MAX_UPLOAD_COLUMNS constants; pre-flight block inside upload_view)
+  - core/tests/test_views_e2e.py (new UploadValidationTests class)
+  - scripts/ralph/prd.json (US-018 passes=true)
+- Learnings for future iterations:
+  - **Truncation strategy:** `nrows=50000` caps pandas memory by design,
+    but the downstream task still receives the raw `csv_content` string —
+    so the view re-serializes `df_head.to_csv(index=False)` ONLY when the
+    head saturates the cap. For sub-cap uploads this preserves the
+    original byte stream (including any non-canonical pandas formatting
+    the user's tool emitted).
+  - **Schema check is case-sensitive on purpose.** Goodreads emits exactly
+    `Title` and `Author`; StoryGraph emits `Title` and `Authors`. A
+    case-insensitive variant would match malformed exports that the
+    downstream parser would silently fail on, so keep `head_columns =
+    set(df_head.columns)` and use `.issubset(...)` literally.
+  - **`pd.read_csv` raises three distinct exceptions on bad input.**
+    `ParserError` for malformed rows, `EmptyDataError` for empty files,
+    and a bare `ValueError` for some encoding edge cases. The except
+    tuple catches all three; do NOT collapse to `Exception` (would
+    swallow programming errors).
+  - All 5 new tests + the 12 pre-existing tests in
+    `core.tests.test_views_e2e` pass in `poetry run python manage.py test`
+    (Docker not running this iteration). The mocked task pattern means
+    the negative tests run instantly with no Redis/Celery dependency.
+---
