@@ -252,7 +252,7 @@
         "`python manage.py check --deploy` reports zero warnings for the items above (other warnings are OK to log but not regress).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 17
     },

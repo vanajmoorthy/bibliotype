@@ -498,3 +498,25 @@
     SQLite when Docker/Postgres absent, surfacing concurrency-unfriendly
     behavior unrelated to import cleanup.
 ---
+
+## 2026-05-19 13:50 — US-015
+- Added production security headers to `bibliotype/settings.py` inside the
+  `if not DEBUG:` block: `SECURE_HSTS_SECONDS = 31536000`,
+  `SECURE_HSTS_INCLUDE_SUBDOMAINS = True`, `SECURE_HSTS_PRELOAD = True`,
+  `SECURE_CONTENT_TYPE_NOSNIFF = True`, `SECURE_REFERRER_POLICY = "same-origin"`.
+- Files changed:
+  - bibliotype/settings.py (5 lines added inside production block)
+  - scripts/ralph/prd.json (US-015 passes=true)
+- Learnings for future iterations:
+  - To verify deploy-targeted security settings without flipping `.env`,
+    run `DEBUG=False poetry run python manage.py check --deploy`. With
+    these headers in place the only remaining warning is `security.W020`
+    (`ALLOWED_HOSTS must not be empty`) — that one is environmental
+    (empty `.env`/`ALLOWED_HOSTS`), unrelated to header config.
+  - `manage.py test core.tests` shows the same pre-existing SQLite
+    `database table is locked` flake noted in US-014 (one test,
+    `test_round_trip_dedup_goodreads_then_storygraph`). Re-run in
+    isolation passes. Confirmed not caused by settings change.
+  - `black` / `isort` still NOT installed in venv (per Codebase Patterns).
+    The 5 added lines match surrounding 4-space indent style by hand.
+---
