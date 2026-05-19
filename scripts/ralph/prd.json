@@ -196,7 +196,7 @@
         "`manage.py test` passes.",
         "Visit any DNA dashboard locally and confirm the share modal still renders the three themed variants."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 13
     },

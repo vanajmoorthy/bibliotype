@@ -370,3 +370,32 @@
     require the broker for Celery, so the connection failures surface
     as test errors). Use it only inside the Docker stack.
 ---
+
+## 2026-05-19 14:00 — US-011
+- Deleted `core/templates/core/partials/share/card_full.html`. `git grep
+  card_full` confirmed only the three themed variants
+  (`card_full_miami|neon_picnic|sherbet`) remain, all rendered from
+  `core/templates/core/partials/share/share_modal.html`. The bare
+  `card_full.html` was never `{% include %}`d anywhere in app code.
+- Files changed:
+  - core/templates/core/partials/share/card_full.html (deleted via `git rm`)
+  - scripts/ralph/prd.json (US-011 passes=true)
+- Learnings for future iterations:
+  - Pre-flight a deletion with `git grep "<basename>" -- ':!.claude/worktrees'
+    ':!scripts/ralph/prd.json' ':!tasks/prd-codebase-triage-fixes.md'` to
+    filter out the worktree dirs and the PRD's own self-references. The
+    raw `git grep` from the acceptance criteria includes worktree noise.
+  - The deleted file was a 4th-style share card with no theme suffix
+    (purple background, no themed accents). The three themed siblings
+    are full replacements — their structure mirrors `card_full.html`
+    almost line-for-line plus theme classes. Future "delete unused
+    template" stories: confirm sibling templates haven't been forked
+    from the dead one, otherwise the delete is reasonable cleanup.
+  - Docker daemon not running this iteration. Ran
+    `poetry run python manage.py test core.tests.test_profile_and_recommendations`
+    (10 tests, all green) + `manage.py check` (no issues). Template-only
+    deletion has no behavioral test surface, so the cheaper scope was
+    sufficient. Cannot exercise the share modal render without the
+    Docker stack; the markdown PRD's "visit a DNA dashboard locally" step
+    is deferred to the next manual sweep.
+---
