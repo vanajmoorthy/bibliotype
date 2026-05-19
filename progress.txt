@@ -1,0 +1,184 @@
+# Bibliotype triage progress log
+
+## Codebase Patterns
+- Anonymous DNA tasks: bind `task_owner_<task_id>` in cache to
+  `request.session.session_key` at upload time (US-001). Session must be
+  saved first if `session_key is None` (Django doesn't allocate one until
+  first save). Reads of `task_owner_*` happen in `get_task_result_view`
+  (US-002) and `claim_anonymous_dna_task` (US-003).
+- Test environment: `black` / `isort` are NOT installed in the Docker image
+  or the local Poetry venv (not in `pyproject.toml [tool.poetry.group.dev]`,
+  which only has `djlint`). Match existing style by hand and skip the
+  formatter step until they're added as a dev dep.
+
+---
+
+2026-05-10: PRD generated from multi-agent triage report (see tasks/prd-codebase-triage-fixes.md).
+2026-05-10: Ralph harness scaffolded in scripts/ralph/. prd.json has 70 stories across 8 phases.
+
+## 2026-05-14 14:55 — US-001
+- Anonymous branch of `upload_view` now ensures `session_key` exists before
+  dispatching the DNA task and writes `task_owner_<task_id>` to Redis with
+  TTL 3600s. Added e2e test `test_anonymous_upload_binds_task_owner_to_session`.
+- Files changed:
+  - core/views.py (anonymous branch of upload_view)
+  - core/tests/test_views_e2e.py (new positive test)
+  - scripts/ralph/prd.json (US-001 passes=true)
+- Learnings for future iterations:
+  - AGENTS.md "Redis key registry" section was already pre-populated with
+    `task_owner_<task_id>` and the snake_case convention by the PRD third
+    pass, so no AGENTS.md edit was needed for this story. Future stories
+    should still check AGENTS.md before assuming new sections need writing.
+  - `safe_cache_set` is already imported at module top of `core/views.py`
+    — no new import required.
+  - The test passed in the Docker stack with `manage.py test
+    core.tests.test_views_e2e` (8 tests, all green).
+---
+
+## 2026-05-14 15:00 — US-002
+- `get_task_result_view` now reads `task_owner_<task_id>` and compares against
+  `request.session.session_key`. New `ENFORCE_TASK_OWNERSHIP` setting (env
+  `ENFORCE_TASK_OWNERSHIP`, default `False`) gates the strict 403 response;
+  while it's off, a `task_owner check skipped` warning is logged for each
+  unowned lookup so operators can drain pre-US-001 legacy task IDs before
+  flipping the switch.
+- Files changed:
+  - bibliotype/settings.py (new `ENFORCE_TASK_OWNERSHIP` flag)
+  - core/views.py (`get_task_result_view` strict/legacy ownership check)
+  - core/tests/test_views_e2e.py (3 new tests: owner positive, foreign-session
+    strict 403, foreign-session legacy warn-and-allow)
+  - scripts/ralph/prd.json (US-002 passes=true)
+- Learnings for future iterations:
+  - `django.conf.settings` is already imported at the top of `core/views.py`,
+    so reading the flag is `settings.ENFORCE_TASK_OWNERSHIP` — no new import.
+  - `@override_settings` works on this setting because we centralized it in
+    `settings.py` rather than reading `os.environ` at call time inside the
+    view. Future story flags should follow the same pattern so tests stay
+    deterministic.
+  - The legacy-mode test reads `self.csv_file` once for upload and once for a
+    fresh `SimpleUploadedFile` to avoid an empty-payload re-read; needed
+    because `SimpleUploadedFile` doesn't auto-seek between requests.
+  - **Production cutover prerequisite for US-002 (the strict flip)**: deploy
+    US-001 first, wait ≥1 hour, confirm no `task_owner check skipped` warnings
+    in metrics, then set `ENFORCE_TASK_OWNERSHIP=True`.
+- All 11 tests in `core.tests.test_views_e2e` pass.
+---
+
+## 2026-05-14 15:10 — US-003
+- `signup_view` now (a) verifies POSTed `task_id_to_claim` equals
+  `session["anonymous_task_id"]` BEFORE creating the user/calling `login()`,
+  and (b) captures `pre_login_session_key = request.session.session_key`
+  before login() rotates it. The captured key is passed as the new third
+  argument to `claim_anonymous_dna_task.delay(user_id, task_id, session_key)`.
+- `claim_anonymous_dna_task` gained an optional `session_key` argument and
+  refuses to do any DNA write / UserBook creation when
+  `task_owner_<task_id>` is set in cache and the supplied key doesn't match.
+  Logs `claim rejected: session_key mismatch` via `logger.warning(extra={...})`.
+- Files changed:
+  - core/views.py (signup_view: pre-flight task_id check + pre-login key capture)
+  - core/tasks.py (claim_anonymous_dna_task: session_key arg + cache verification)
+  - core/tests/test_views_e2e.py (2 new: cross-session reject, post-rotation positive)
+  - core/tests/test_tasks_integration.py (1 new: direct mismatch invocation)
+  - scripts/ralph/prd.json (US-003 passes=true)
+- Learnings for future iterations:
+  - `core/templates/core/signup.html` does NOT render `form.non_field_errors`,
+    only per-field errors. Validation feedback on signup must go through
+    `messages.error(request, ...)` (rendered by `base.html`'s messages loop) —
+    exactly the existing pattern used for CAPTCHA failures.
+  - `assertContains` against a `messages.error` payload should use the raw
+    apostrophe ("couldn't"), NOT the HTML-encoded entity. Messages are
+    emitted via `{{ message|safe }}` which bypasses auto-escaping.
+  - Django `login()` rotates `request.session.session_key`. To verify task
+    ownership across login, the pre-login key MUST be captured into a local
+    variable BEFORE `login(request, user)` and passed downstream — the
+    post-login key will not match the cache.
+  - Test pattern for verifying rotation: `pre = client.session.session_key;
+    post-login post = client.session.session_key; assertNotEqual(pre, post)`.
+    Django's test Client makes both keys observable.
+- All 17 tests in `core.tests.test_views_e2e` + `core.tests.test_tasks_integration` pass.
+---
+
+## 2026-05-14 15:25 — US-004
+- `DEBUG` now defaults to `"False"` in `bibliotype/settings.py`; a startup
+  `ImproperlyConfigured("DEBUG must be False in production")` fires when
+  `DJANGO_ENV=production` is paired with `DEBUG=True`. `ImproperlyConfigured`
+  is imported from `django.core.exceptions` at the top of `settings.py`.
+- Local dev container previously relied on the implicit `DEBUG=True` default,
+  so `docker-compose.local.yml`'s `web` service now explicitly sets
+  `DEBUG=True` and `ALLOWED_HOSTS=localhost,127.0.0.1` (matching the worker
+  service block). Without this, `runserver` failed with "You must set
+  ALLOWED_HOSTS if DEBUG is False".
+- Files changed:
+  - bibliotype/settings.py (default flip + production assert + import)
+  - docker-compose.local.yml (web service: DEBUG/ALLOWED_HOSTS made explicit)
+  - scripts/ralph/prd.json (US-004 passes=true)
+- Learnings for future iterations:
+  - `manage.py check --deploy` against the local dev container reports only
+    pre-existing warnings (W004/W008/W009/W012/W016/W018). The W018 (DEBUG=True)
+    warning is expected locally — it's the contract this story enforces in
+    production via the explicit assert, not via the deploy-check.
+  - Production deploy via `docker-compose.prod.yml` already passes `DEBUG`
+    through from the env file; the prod runbook must now set `DEBUG=False`
+    explicitly (or omit it — the default is False).
+  - AGENTS.md's "Settings invariants" section was pre-populated by the PRD
+    third-pass and already documents both the default and the production
+    assert. No AGENTS.md edit was needed.
+  - **Production cutover note**: ensure the prod `.env` (or whatever supplies
+    `DEBUG` to docker-compose.prod.yml) sets `DEBUG=False` and exports
+    `DJANGO_ENV=production`. With the new assert, a misconfigured `DEBUG=True`
+    + `DJANGO_ENV=production` will refuse to start — by design, fail-loud.
+- Full test suite (354 tests) green in Docker stack.
+---
+
+## 2026-05-14 16:35 — US-005
+- Carved `ADMIN_COMMANDS` + `ALLOWED_COMMANDS` out of `core/admin.py` into a new
+  `core/management_command_registry.py` module (single source of truth).
+  `core/admin.py` now imports from it (the `ALLOWED_COMMANDS` symbol is the
+  same `frozenset` object), and `core/tasks.py` imports it at module top and
+  raises `ValueError(f"command not allowed: {command_name}")` as the first
+  statement of `run_management_command_task`. This makes the worker reject
+  unwhitelisted names even when a caller publishes directly to the broker,
+  bypassing the existing HTTP-layer check in `command_run_api`.
+- Files changed:
+  - core/management_command_registry.py (new — module-level list + frozenset)
+  - core/admin.py (deleted inline `ADMIN_COMMANDS`/`ALLOWED_COMMANDS`,
+    imports them from the new module)
+  - core/tasks.py (`from .management_command_registry import ALLOWED_COMMANDS`
+    + first-line whitelist guard in `run_management_command_task`)
+  - core/tests/test_tasks_unit.py (new `RunManagementCommandTaskWhitelistTests`
+    class: 1 negative test that `call_command` is not invoked on a blocked
+    name, 1 empty-string negative test, 1 positive test that a whitelisted
+    name reaches `call_command`).
+  - core/tests/test_integration.py (two pre-existing tests
+    `test_run_management_command_task_captures_output` and
+    `..._captures_error` passed arbitrary names `"test_command"` /
+    `"failing_command"` and now hit the new whitelist guard; switched both
+    to the whitelisted no-op `"analyze_genres"`. Behaviour they assert —
+    stdout capture, CommandError wrapping — is unchanged.)
+  - scripts/ralph/prd.json (US-005 passes=true)
+- Learnings for future iterations:
+  - **Don't import from `core.admin` in `core/tasks.py`.** `core/admin.py`
+    already does a deferred `from .tasks import run_management_command_task`
+    inside `command_run_api`. Lifting `ALLOWED_COMMANDS` to module-top of
+    `tasks.py` and importing it from `admin` would invert the dependency at
+    Django-startup time when the admin module loads. The new
+    `core/management_command_registry.py` module sits below both and is
+    imported by both — no cycle.
+  - **`@shared_task` tasks are callable as plain Python via `.run(...)`.**
+    For pure-logic unit tests (no Celery routing, no broker) prefer
+    `task.run(arg)` over `task.apply()` / `task.delay()` — it bypasses the
+    EagerResult wrapping so `assertRaises(ValueError)` works without
+    `throw=True` / `propagate=True` plumbing. Use `.delay()` only when the
+    test specifically needs the Celery dispatcher (e.g. mocking it to
+    assert "was this enqueued?").
+  - **The `call_command` import inside `run_management_command_task` is
+    intentional.** Patching `core.tasks.call_command` from a test would NOT
+    work because the name isn't bound at module scope; patch
+    `django.core.management.call_command` instead, OR pin the import to
+    a known module path. Existing tests use the latter.
+  - The HTTP layer (`command_run_api`) still validates `command_name not in
+    ALLOWED_COMMANDS` and returns a 400. The task-level guard is the
+    defence-in-depth backstop, not a replacement.
+- Tests in scope passed: `core.tests.test_tasks_unit core.tests.test_tasks_integration
+  core.tests.test_integration` → 67 / 67 green. Full Django suite also exit 0.
+---

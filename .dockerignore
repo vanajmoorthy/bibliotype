@@ -35,3 +35,12 @@ staticfiles/
 
 # README
 README.md
+
+# Internal triage / planning artifacts — not needed in production image.
+# These contain rollout schedules and dev-only context that should not ship.
+scripts/ralph/
+scripts/regression/
+tasks/
+progress.txt
+AGENTS.md
+.claude/

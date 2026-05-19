@@ -740,7 +740,7 @@ class AdminCommandRunnerIntegrationTests(TestCase):
 
         mock_call_command.side_effect = write_output
 
-        result = run_management_command_task("test_command")
+        result = run_management_command_task("analyze_genres")
         self.assertEqual(result["status"], "success")
         self.assertIn("Command output here", result["stdout"])
 
@@ -751,7 +751,7 @@ class AdminCommandRunnerIntegrationTests(TestCase):
 
         mock_call_command.side_effect = CommandError("Something went wrong")
 
-        result = run_management_command_task("failing_command")
+        result = run_management_command_task("analyze_genres")
         self.assertEqual(result["status"], "error")
         self.assertIn("Something went wrong", result["error"])
 

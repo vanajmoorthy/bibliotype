@@ -317,3 +317,42 @@ class MoodPaceDistributionTests(TestCase):
         self.assertEqual(source, "goodreads")
         self.assertNotIn("Moods", result_df.columns)
         self.assertNotIn("Pace", result_df.columns)
+
+
+class RunManagementCommandTaskWhitelistTests(TestCase):
+    """Defence-in-depth: even a caller who publishes directly to the broker must
+    not be able to invoke an arbitrary management command. The HTTP API in
+    `core/admin.py` already checks `ALLOWED_COMMANDS`, but the worker rechecks
+    so a compromised broker / future caller can't bypass it."""
+
+    def test_run_management_command_task_rejects_non_whitelisted_name(self):
+        from core.tasks import run_management_command_task
+
+        with patch("django.core.management.call_command") as mock_call_command:
+            with self.assertRaises(ValueError) as ctx:
+                run_management_command_task.run("flush")
+
+        self.assertIn("command not allowed", str(ctx.exception))
+        self.assertIn("flush", str(ctx.exception))
+        mock_call_command.assert_not_called()
+
+    def test_run_management_command_task_rejects_empty_name(self):
+        from core.tasks import run_management_command_task
+
+        with patch("django.core.management.call_command") as mock_call_command:
+            with self.assertRaises(ValueError):
+                run_management_command_task.run("")
+
+        mock_call_command.assert_not_called()
+
+    def test_run_management_command_task_runs_whitelisted_command(self):
+        """Positive path: a whitelisted name reaches `call_command`."""
+        from core.tasks import run_management_command_task
+
+        with patch("django.core.management.call_command") as mock_call_command:
+            result = run_management_command_task.run("analyze_genres")
+
+        mock_call_command.assert_called_once()
+        called_args, called_kwargs = mock_call_command.call_args
+        self.assertEqual(called_args[0], "analyze_genres")
+        self.assertEqual(result["status"], "success")

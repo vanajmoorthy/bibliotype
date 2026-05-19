@@ -4,12 +4,42 @@ import os
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
-DEBUG = os.environ.get("DEBUG", "True") == "True"
-ENABLE_SILK = os.environ.get("ENABLE_SILK", "False") == "True"
+
+
+def _env_bool(name, default=False):
+    """Parse a boolean env var accepting common truthy/falsy spellings.
+
+    Unrecognized values raise — for security-critical flags we'd rather fail
+    loudly than silently coerce to False.
+    """
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    if raw.strip().lower() in {"true", "1", "yes", "on"}:
+        return True
+    if raw.strip().lower() in {"false", "0", "no", "off", ""}:
+        return False
+    raise ImproperlyConfigured(f"Unrecognized boolean value for env var {name}: {raw!r}")
+
+
+# DEBUG defaults to False (US-004) so a missing env var never silently leaves
+# production in debug mode. Local dev and CI must set DEBUG=True explicitly.
+DEBUG = _env_bool("DEBUG", False)
+# Refuse to boot with DEBUG=True outside known-safe environments. Default
+# DJANGO_ENV (unset) is treated as production-equivalent for this check —
+# fail-safe. Whitelisted dev envs: "development", "test", "ci".
+_django_env = os.environ.get("DJANGO_ENV", "")
+if _django_env not in {"development", "test", "ci"} and DEBUG:
+    raise ImproperlyConfigured(
+        f"DEBUG must be False when DJANGO_ENV={_django_env!r}. "
+        "Permitted DEBUG=True environments: development, test, ci."
+    )
+ENABLE_SILK = _env_bool("ENABLE_SILK", False)
 
 allowed_hosts_str = os.environ.get("ALLOWED_HOSTS", "")
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(",") if host.strip()]

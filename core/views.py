@@ -801,10 +801,19 @@ def upload_view(request):
 
             return redirect(processing_url)
         else:
-            result = generate_reading_dna_task.delay(csv_content, None, request.session.session_key)
+            # Ensure the session has a session_key so we can bind ownership of
+            # the task to this caller. Without this, an attacker who guesses or
+            # leaks the task_id could pull another visitor's DNA into their
+            # own session.
+            if request.session.session_key is None:
+                request.session.save()
+            session_key = request.session.session_key
+
+            result = generate_reading_dna_task.delay(csv_content, None, session_key)
             task_id = result.id
 
             request.session["anonymous_task_id"] = task_id
+            safe_cache_set(f"task_owner_{task_id}", session_key, 3600)
             request.session.save()
 
             return redirect("core:task_status", task_id=task_id)
@@ -831,6 +840,38 @@ def signup_view(request):
             return render(request, "core/signup.html", {"form": form, "task_id_to_claim": task_id})
 
         if form.is_valid():
+            # US-003 (defense in depth): validate the task_id being claimed
+            # actually belongs to this session BEFORE creating the account or
+            # calling login(). Two checks layered:
+            #   1) session["anonymous_task_id"] == POSTed task_id — internal consistency.
+            #   2) cache.get("task_owner_<task_id>") == session.session_key — proves
+            #      the task was originally uploaded from this session, not just
+            #      that the session knows the task_id (which could be POST-tampered).
+            # Django rotates session_key on login, so we capture the pre-login key
+            # now and pass it to the claim task for the final task-level check.
+            if task_id_to_claim:
+                expected_task_id = request.session.get("anonymous_task_id")
+                cached_owner = safe_cache_get(f"task_owner_{task_id_to_claim}")
+                session_owns_task = expected_task_id == task_id_to_claim
+                cache_owns_task = cached_owner is not None and cached_owner == request.session.session_key
+                if not (session_owns_task and cache_owns_task):
+                    logger.warning(
+                        "signup claim rejected: task_id ownership not verified",
+                        extra={
+                            "task_id_to_claim": task_id_to_claim,
+                            "session_consistent": session_owns_task,
+                            "cache_consistent": cache_owns_task,
+                        },
+                    )
+                    messages.error(
+                        request,
+                        "We couldn't verify that this Bibliotype belongs to your current session. "
+                        "Please upload your library again from this browser.",
+                    )
+                    return render(request, "core/signup.html", {"form": form, "task_id_to_claim": task_id})
+
+            pre_login_session_key = request.session.session_key
+
             user = form.save()
             login(request, user)
 
@@ -839,7 +880,7 @@ def signup_view(request):
             if task_id_to_claim:
                 user.userprofile.pending_dna_task_id = task_id_to_claim
                 user.userprofile.save()
-                claim_anonymous_dna_task.delay(user.id, task_id_to_claim)
+                claim_anonymous_dna_task.delay(user.id, task_id_to_claim, pre_login_session_key)
 
                 # Track signup and DNA claim
                 track_user_signed_up(
@@ -1197,6 +1238,32 @@ def task_status_view(request, task_id):
 
 def get_task_result_view(request, task_id):
     from .models import AnonymousUserSession
+
+    # US-002 (hardened post-review): refuse task_ids that aren't bound to the
+    # caller's session. Both cache-miss AND mismatch fail closed — the previous
+    # "warn-and-allow" legacy path still wrote DNA into the requester's session,
+    # which combined with the signup view's `if "dna_data" in request.session`
+    # branch to re-open the original hijack.
+    owner = safe_cache_get(f"task_owner_{task_id}")
+    caller_key = request.session.session_key
+    is_owner = owner is not None and caller_key is not None and owner == caller_key
+    if not is_owner:
+        import hashlib
+
+        caller_hash = hashlib.sha256(caller_key.encode()).hexdigest()[:12] if caller_key else "none"
+        if owner is None:
+            # TTL expired or task_id never bound (pre-US-001 in-flight, or invalid).
+            logger.info(
+                "task_owner cache miss",
+                extra={"task_id": task_id, "caller_hash": caller_hash},
+            )
+        else:
+            owner_hash = hashlib.sha256(owner.encode()).hexdigest()[:12]
+            logger.warning(
+                "task_owner mismatch — cross-session access attempted",
+                extra={"task_id": task_id, "owner_hash": owner_hash, "caller_hash": caller_hash},
+            )
+        return JsonResponse({"status": "FORBIDDEN"}, status=403)
 
     cached_result = safe_cache_get(f"dna_result_{task_id}")
     if cached_result is not None:
