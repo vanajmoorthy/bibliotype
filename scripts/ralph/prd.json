@@ -223,7 +223,7 @@
         "Same verification as US-012.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 15
     },

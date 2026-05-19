@@ -432,3 +432,42 @@
     persists this iteration (361/362 green). Same environmental issue
     noted in US-006, US-008a, US-009. Docker daemon not running.
 ---
+
+## 2026-05-19 13:40 — US-013
+- Deleted the final batch of confirmed-dead one-shot management commands:
+  `core/management/commands/reset_genres.py`,
+  `core/management/commands/seed_test_books.py`, and
+  `core/management/commands/seed_mainstream_publishers.py`. Pre-deletion
+  grep showed each name only in work-list docs (`progress.txt`,
+  `scripts/ralph/prd.json`, `tasks/prd-codebase-triage-fixes.md`) plus
+  each command's own `.py` file — no `call_command` callers, no Celery
+  beat references, no source imports of the `Command` classes.
+- `manage.py help` no longer lists any of the three under `[core]`;
+  remaining core commands (e.g. `analyze_genres`, `backfill_covers`) are
+  still registered. With US-012, this completes the entire dead-command
+  cleanup mandated by the triage report.
+- Files changed:
+  - core/management/commands/reset_genres.py (deleted via `git rm`)
+  - core/management/commands/seed_test_books.py (deleted via `git rm`)
+  - core/management/commands/seed_mainstream_publishers.py (deleted via `git rm`)
+  - scripts/ralph/prd.json (US-013 passes=true)
+- Learnings for future iterations:
+  - `seed_mainstream_publishers.py` imported `MAINSTREAM_PUBLISHERS_HIERARCHY`
+    from `core.dna_constants` — the constant itself stays alive and is
+    still used by the genre/publisher classification path. Deleting the
+    consumer doesn't orphan the constant, but future cleanup stories that
+    propose removing `MAINSTREAM_PUBLISHERS_HIERARCHY` should still grep
+    `core/services/` and `core/dna_constants.py` consumers first.
+  - `seed_test_books.py` hard-coded a personal CSV path
+    (`csv/goodreads_library_export anya.csv`) that was already removed by
+    US-008b. The command would have failed at runtime even before this
+    deletion — another confirmation it was dead.
+  - For management-command deletion stories, `manage.py help | grep
+    <name>` is the cheapest post-delete verification, and `manage.py
+    check` is sufficient to catch any orphaned import in the remaining
+    command graph. No test suite invocation is strictly necessary for a
+    pure-file deletion that grep proved untouched.
+  - Docker daemon not running this iteration; fell back to scoped
+    `poetry run python manage.py test core.tests.test_profile_and_recommendations`
+    (10/10 green) + `manage.py check` (0 issues).
+---
