@@ -520,3 +520,57 @@
   - `black` / `isort` still NOT installed in venv (per Codebase Patterns).
     The 5 added lines match surrounding 4-space indent style by hand.
 ---
+
+## 2026-05-19 14:05 — US-016
+- Added `django-ratelimit ^4.1.0` via `poetry add` (pyproject.toml + poetry.lock).
+- Refactored login flow in `core/views.py`: original body moved into
+  `_login_view_throttled(request)` decorated with
+  `@ratelimit(key="ip", rate="5/m", method="POST", block=True)`. The public
+  `login_view(request)` wraps `_login_view_throttled` in `try/except Ratelimited`
+  and renders `core/login.html` with `status=429` and a `NON_FIELD_ERRORS`
+  entry of "Too many attempts. Please try again in a minute." — picked up by
+  the login template's existing `{% if form.non_field_errors %}` block.
+- New test file `core/tests/test_login_ratelimit.py` with the two
+  AC-mandated tests: 6th POST returns 429 + template error (negative),
+  5th POST with valid credentials still authenticates (positive). Both use
+  a unique-LOCATION LocMemCache + `cache.clear()` in setUp/tearDown to
+  isolate rate-limit counters between tests and from any other test run.
+- Files changed:
+  - pyproject.toml (django-ratelimit added)
+  - poetry.lock (regenerated)
+  - core/views.py (decorator stack + Ratelimited handler + 4 new imports)
+  - core/tests/test_login_ratelimit.py (new, 2 tests)
+  - scripts/ralph/prd.json (US-016 passes=true)
+- Learnings for future iterations:
+  - **`@ratelimit(..., block=True)` raises `Ratelimited` BEFORE the view body
+    runs**, so a try/except inside the decorated view itself can't catch
+    it. Two clean patterns: (a) inner-function split with outer wrapper
+    catching the exception (what we did here — keeps the decorator visibly
+    on the rate-limited function), or (b) `process_exception` middleware
+    to convert globally. We picked (a) because it's view-local and avoids
+    a global hook; if US-020 (api ratelimit) needs JSON responses we can
+    duplicate the pattern there or refactor to middleware later.
+  - **`Ratelimited` inherits from `django.core.exceptions.PermissionDenied`**
+    in django-ratelimit 4.x, so without our wrapper Django's default 403
+    handler would fire — NOT 429. The 429 is our contract; the wrapper is
+    essential.
+  - **`form.add_error(None, msg)` on an unbound `AuthenticationForm` fails**
+    with `AttributeError: 'AuthenticationForm' object has no attribute
+    'cleaned_data'`. Django's `add_error` requires `full_clean()` to have
+    populated `_errors`/`cleaned_data`. Calling `full_clean()` first adds
+    "required" errors for every empty field. The clean workaround is to
+    directly assign `form._errors = ErrorDict()` and
+    `form._errors[NON_FIELD_ERRORS] = ErrorList([msg])` — the template
+    `{{ form.non_field_errors }}` pulls from this dict and renders.
+  - **django-ratelimit's IP key uses `request.META["REMOTE_ADDR"]`**, which
+    Django's test `Client` defaults to `127.0.0.1`. No `REMOTE_ADDR`
+    monkey-patching needed in tests — same-client repeat POSTs accumulate
+    against the same counter.
+  - **The cache backing `RATELIMIT_USE_CACHE` (default `"default"`) must
+    support atomic increment**. `LocMemCache` does, but it's per-process —
+    so tests need `cache.clear()` in `setUp`/`tearDown` to isolate. Across
+    test classes, override the `LOCATION` for a fresh store.
+  - Full suite: 364 tests, 1 pre-existing SQLite-locking flake in
+    `test_round_trip_dedup_goodreads_then_storygraph` (same one noted in
+    US-006, US-008a, US-009, US-012, US-014). Unrelated to this story.
+---

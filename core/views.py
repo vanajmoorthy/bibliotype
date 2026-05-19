@@ -13,12 +13,16 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.contrib.auth.views import PasswordResetView
+from django.core.exceptions import NON_FIELD_ERRORS
 from django.db import transaction
 from django.db.models import Count, Q
+from django.forms.utils import ErrorDict, ErrorList
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
+from django_ratelimit.decorators import ratelimit
+from django_ratelimit.exceptions import Ratelimited
 
 from .analytics.events import (
     track_anonymous_dna_claimed,
@@ -929,7 +933,8 @@ def signup_view(request):
     return render(request, "core/signup.html", {"form": form, "task_id_to_claim": task_id})
 
 
-def login_view(request):
+@ratelimit(key="ip", rate="5/m", method="POST", block=True)
+def _login_view_throttled(request):
     if request.method == "POST":
         email = request.POST.get("username")
         password = request.POST.get("password")
@@ -967,6 +972,17 @@ def login_view(request):
     form.fields["username"].label = "Email"
 
     return render(request, "core/login.html", {"form": form})
+
+
+def login_view(request):
+    try:
+        return _login_view_throttled(request)
+    except Ratelimited:
+        form = AuthenticationForm()
+        form.fields["username"].label = "Email"
+        form._errors = ErrorDict()
+        form._errors[NON_FIELD_ERRORS] = ErrorList(["Too many attempts. Please try again in a minute."])
+        return render(request, "core/login.html", {"form": form}, status=429)
 
 
 @login_required

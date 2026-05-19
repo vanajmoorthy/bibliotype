@@ -268,7 +268,7 @@
         "**Positive test:** 5th login POST in same window with VALID credentials still authenticates successfully.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 18
     },
