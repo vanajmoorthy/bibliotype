@@ -399,3 +399,36 @@
     Docker stack; the markdown PRD's "visit a DNA dashboard locally" step
     is deferred to the next manual sweep.
 ---
+
+## 2026-05-19 13:30 — US-012
+- Deleted three confirmed-dead one-shot management commands:
+  `core/management/commands/create_users_from_csvs.py`,
+  `core/management/commands/populate_test_dna.py`, and
+  `core/management/commands/re_enrich_all_books.py`. Pre-deletion grep
+  confirmed each symbol appears only in work-list docs (`progress.txt`,
+  `scripts/ralph/prd.json`, `tasks/prd-codebase-triage-fixes.md`) — no
+  source imports, no Celery beat schedules, no `call_command` callers.
+- `manage.py help` confirms all three are gone from the `[core]` group;
+  the US-013 trio (`reset_genres`, `seed_test_books`,
+  `seed_mainstream_publishers`) remains listed for next iteration.
+- Files changed:
+  - core/management/commands/create_users_from_csvs.py (deleted via `git rm`)
+  - core/management/commands/populate_test_dna.py (deleted via `git rm`)
+  - core/management/commands/re_enrich_all_books.py (deleted via `git rm`)
+  - scripts/ralph/prd.json (US-012 passes=true)
+- Learnings for future iterations:
+  - **`create_users_from_csvs.py` still had a dangling reference noted in
+    the US-008b learnings** (docstring example pointing at a deleted
+    personal CSV path). Deleting the file makes that note obsolete — no
+    follow-up needed in any other file.
+  - For management-command deletion stories, the cheapest sanity check is
+    `manage.py help` post-`git rm`. If the command name still appears in
+    the output, Django is still loading the file from somewhere (typo in
+    the path, stale `.pyc`, or a sibling `commands/` dir under a different
+    app). Here, all three vanished cleanly — confirming they were
+    standalone with no plugin/proxy registration.
+  - Pre-existing SQLite-locking failure in
+    `core.tests.test_math_accuracy.IsbnNormalizationTests.test_round_trip_dedup_goodreads_then_storygraph`
+    persists this iteration (361/362 green). Same environmental issue
+    noted in US-006, US-008a, US-009. Docker daemon not running.
+---

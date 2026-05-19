@@ -211,7 +211,7 @@
         "`manage.py test` passes.",
         "`progress.txt`: list of removed commands."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 14
     },
