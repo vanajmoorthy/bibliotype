@@ -140,7 +140,7 @@
         "`progress.txt`: note where test fixtures now live and the `TEST_FIXTURES_DIR` constant name.",
         "`manage.py test` passes \u2014 must remain green for the whole story (no intermediate broken state)."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 9
     },

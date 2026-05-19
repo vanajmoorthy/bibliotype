@@ -216,3 +216,42 @@
     untracked" stories can be one-shot: `git ls-files <glob>` empty + glob
     present in `.gitignore` → mark pass, no code commit.
 ---
+
+## 2026-05-19 13:15 — US-008a
+- Moved 19 synthetic + 5 test_reader CSV fixtures and the three subdirectories
+  (`test/`, `test_storygraph/`, `test-csvs/`) from `csv/` into
+  `core/tests/fixtures/csv/`. `core/tests/__init__.py` now exposes
+  `TEST_FIXTURES_DIR = Path(__file__).parent / "fixtures" / "csv"` for any
+  future test that needs a path on disk. (Current tests use
+  `SimpleUploadedFile` inline, so no test imports needed updating.)
+- Updated `core/management/commands/generate_test_data.py` (the one NOT
+  slated for deletion) to write generated CSVs at
+  `core/tests/fixtures/csv/...` instead of `csv/...`. The two commands that
+  also referenced `csv/...` — `seed_test_books.py` (US-013) and
+  `create_users_from_csvs.py` (US-012) — are slated for deletion and were
+  intentionally left untouched. The two root-level generator scripts
+  `csv/generate_test_data.py` and `csv/generate_synthetic_test_data.py`
+  are out of scope (US-009 moves them into management commands).
+- Files changed:
+  - core/tests/__init__.py (populated `TEST_FIXTURES_DIR` constant)
+  - core/tests/fixtures/csv/ (new directory; 24 CSVs + 3 subdirs moved here via `git mv`)
+  - csv/ (24 CSVs + 3 subdirs removed by the same `git mv`)
+  - core/management/commands/generate_test_data.py (two `csv/` path strings updated)
+  - scripts/ralph/prd.json (US-008a passes=true)
+- Learnings for future iterations:
+  - **Fixtures live at `core/tests/fixtures/csv/`** and the path constant is
+    `from core.tests import TEST_FIXTURES_DIR`. Use it whenever a future
+    test needs to read a real CSV from disk rather than constructing
+    `SimpleUploadedFile` inline.
+  - **No test files referenced `csv/` paths at runtime** — confirmed via
+    `grep -rn "csv/" core/tests/`. Existing tests all build payloads inline
+    with `SimpleUploadedFile`, so the move was test-neutral. This matched
+    the PRD's "test files don't actually reference csv/... paths" note.
+  - **`git mv` preserves history** across the move — verified `git status`
+    after the moves showed renames, not delete+add pairs.
+  - Pre-existing SQLite-locking failure in
+    `core.tests.test_math_accuracy.IsbnNormalizationTests.test_round_trip_dedup_goodreads_then_storygraph`
+    is the only failure (361/362 green) and is unrelated to this story —
+    same failure noted in the US-006 entry above. Docker daemon not
+    running this iteration; fell back to `poetry run python manage.py test`.
+---
