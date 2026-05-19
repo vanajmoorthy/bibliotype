@@ -28,6 +28,8 @@ from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 from django_ratelimit.exceptions import Ratelimited
 
+from .ratelimit_utils import client_ip_key, get_real_client_ip
+
 from .analytics.events import (
     track_anonymous_dna_claimed,
     track_anonymous_dna_displayed,
@@ -885,7 +887,7 @@ def signup_view(request):
         from .turnstile import verify_turnstile_token
 
         turnstile_token = request.POST.get("cf-turnstile-response", "")
-        if not verify_turnstile_token(turnstile_token, remote_ip=request.META.get("REMOTE_ADDR")):
+        if not verify_turnstile_token(turnstile_token, remote_ip=get_real_client_ip(request)):
             messages.error(request, "CAPTCHA verification failed. Please try again.")
             return render(request, "core/signup.html", {"form": form, "task_id_to_claim": task_id})
 
@@ -1003,7 +1005,7 @@ def signup_view(request):
     return render(request, "core/signup.html", {"form": form, "task_id_to_claim": task_id})
 
 
-@ratelimit(key="ip", rate="5/m", method="POST", block=True)
+@ratelimit(key=client_ip_key, rate="5/m", method="POST", block=True)
 def _login_view_throttled(request):
     if request.method == "POST":
         email = request.POST.get("username")
@@ -1447,7 +1449,7 @@ class CustomPasswordResetView(PasswordResetView):
         from .turnstile import verify_turnstile_token
 
         turnstile_token = self.request.POST.get("cf-turnstile-response", "")
-        if not verify_turnstile_token(turnstile_token, remote_ip=self.request.META.get("REMOTE_ADDR")):
+        if not verify_turnstile_token(turnstile_token, remote_ip=get_real_client_ip(self.request)):
             form.add_error(None, "CAPTCHA verification failed. Please try again.")
             return self.form_invalid(form)
 
