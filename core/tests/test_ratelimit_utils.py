@@ -18,6 +18,18 @@ class RealClientIpTests(TestCase):
         request = self.factory.get("/", HTTP_X_FORWARDED_FOR="203.0.113.7, 10.0.0.1")
         self.assertEqual(get_real_client_ip(request), "203.0.113.7")
 
+    def test_prefers_x_real_ip_over_x_forwarded_for(self):
+        # Defends against XFF spoofing: a client can prepend a forged value
+        # to X-Forwarded-For because Nginx *appends* rather than replaces.
+        # X-Real-IP is set by Nginx to $remote_addr (the TCP peer) and
+        # cannot be spoofed through the proxy.
+        request = self.factory.get(
+            "/",
+            HTTP_X_FORWARDED_FOR="1.2.3.4, 10.0.0.1",  # attacker-forged leftmost
+            HTTP_X_REAL_IP="203.0.113.99",              # Nginx-set, trustworthy
+        )
+        self.assertEqual(get_real_client_ip(request), "203.0.113.99")
+
     def test_falls_back_to_remote_addr_when_no_forwarded_headers(self):
         request = self.factory.get("/", REMOTE_ADDR="198.51.100.42")
         self.assertEqual(get_real_client_ip(request), "198.51.100.42")
