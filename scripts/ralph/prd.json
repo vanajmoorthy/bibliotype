@@ -124,7 +124,7 @@
         "If everything is already clean, this story commits no changes \u2014 mark `passes: true` in `prd.json` and append a one-line `progress.txt` entry confirming the verification.",
         "`manage.py test` passes (sanity)."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 8
     },

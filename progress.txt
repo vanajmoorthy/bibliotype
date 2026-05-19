@@ -204,3 +204,15 @@
     `tasks/prd-codebase-triage-fixes.md` and `scripts/ralph/prd.json`, the
     file is safe to delete — those are work-list documents, not source.
 ---
+
+## 2026-05-19 13:00 — US-007
+- Verified `git ls-files '*.prof'` returns 0 results and `.gitignore:25` already
+  contains `*.prof`. No changes required — pure verification per the story's
+  "everything is already clean" branch.
+- Files changed:
+  - scripts/ralph/prd.json (US-007 passes=true)
+- Learnings for future iterations:
+  - PR #103 (already merged) handled the actual untracking. Future "verify
+    untracked" stories can be one-shot: `git ls-files <glob>` empty + glob
+    present in `.gitignore` → mark pass, no code commit.
+---
