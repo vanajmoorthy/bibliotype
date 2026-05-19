@@ -155,7 +155,7 @@
         "`manage.py test` passes.",
         "**Note in `progress.txt`:** \"Personal Goodreads CSVs removed from repo on YYYY-MM-DD; check git history if regression analysis ever needs them.\""
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 10
     },

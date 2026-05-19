@@ -255,3 +255,52 @@
     same failure noted in the US-006 entry above. Docker daemon not
     running this iteration; fell back to `poetry run python manage.py test`.
 ---
+
+## 2026-05-19 13:30 — US-008b
+- Personal Goodreads CSVs removed from repo on 2026-05-19; check git history
+  if regression analysis ever needs them.
+- `git rm` the three tracked personal exports
+  (`csv/goodreads_library_export anya.csv`,
+  `csv/goodreads_library_export niamh.csv`,
+  `csv/goodreads_library_export(1).csv`). `csv/.DS_Store` was untracked, so a
+  plain `rm` was sufficient — `git rm` would have errored. `.gitignore` now
+  ignores `csv/` (canonical fixtures live in `core/tests/fixtures/csv/` per
+  US-008a) and adds `*.DS_Store` alongside the existing `.DS_Store` line.
+  `.claude/worktrees/` is already present at `.gitignore:75`, so left
+  unchanged.
+- `csv/` still contains the two generator scripts
+  (`generate_test_data.py`, `generate_synthetic_test_data.py`) tracked from
+  before this story; US-009 will `git mv` them into
+  `core/management/commands/`. Per AC, did NOT `rmdir csv/` — the directory
+  is not empty until US-009 completes.
+- Files changed:
+  - .gitignore (added `*.DS_Store` after `.DS_Store`; added `csv/` block
+    after the "Scraped data and caches" section)
+  - csv/goodreads_library_export anya.csv (deleted)
+  - csv/goodreads_library_export niamh.csv (deleted)
+  - csv/goodreads_library_export(1).csv (deleted)
+  - scripts/ralph/prd.json (US-008b passes=true)
+- Learnings for future iterations:
+  - **Stale references survive in soon-to-be-deleted command files.** `git grep`
+    for the deleted CSV names still flags
+    `core/management/commands/seed_test_books.py:21` (a default path) and
+    `core/management/commands/create_users_from_csvs.py:36` (a docstring
+    example). Both files are slated for deletion in US-013 and US-012
+    respectively, so leaving the dangling references for one iteration is
+    fine — the test suite never exercises these one-shot scripts. Don't
+    chase these refs in unrelated stories.
+  - **Adding a directory to `.gitignore` does NOT untrack files already
+    committed.** `csv/generate_*.py` remain tracked even after `csv/` is
+    ignored. `.gitignore` only affects untracked files. To untrack, `git rm
+    --cached` or `git mv` is required. US-009 will use `git mv`.
+  - **`git rm` errors on untracked paths.** `csv/.DS_Store` was never in
+    `git ls-files`, so `git rm csv/.DS_Store` would have failed. Use plain
+    `rm` for untracked OS-cruft; AC wording aside, `git rm` is only for
+    tracked paths.
+  - Docker daemon not running this iteration; fell back to
+    `poetry run python manage.py test core.tests.test_views_e2e
+    core.tests.test_tasks_unit`. 31 tests green. Did not run the full suite
+    (pure file-deletion story with no code paths touched), but the upload +
+    task-status surfaces stay green, confirming the personal CSVs weren't
+    silently a test fixture.
+---
