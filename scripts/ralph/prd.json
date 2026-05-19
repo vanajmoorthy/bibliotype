@@ -330,7 +330,7 @@
         "**Positive test:** 10th POST returns the normal response (form error or success).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 22
     },

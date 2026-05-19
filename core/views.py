@@ -1109,9 +1109,8 @@ def update_display_name_view(request):
     return redirect("core:display_dna")
 
 
-@login_required
-@require_POST
-def update_username_api(request):
+@ratelimit(key="user", rate="10/m", method="POST", block=True)
+def _update_username_api_throttled(request):
     try:
         data = json.loads(request.body)
         new_username = data.get("username")
@@ -1134,6 +1133,15 @@ def update_username_api(request):
         logger.error(f"Error in update_username_api: {e}", exc_info=True)
 
         return JsonResponse({"status": "error", "message": "An unexpected server error occurred."}, status=500)
+
+
+@login_required
+@require_POST
+def update_username_api(request):
+    try:
+        return _update_username_api_throttled(request)
+    except Ratelimited:
+        return JsonResponse({"error": "Too many attempts, try again later."}, status=429)
 
 
 @login_required

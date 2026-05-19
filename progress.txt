@@ -693,3 +693,36 @@
     and `test_profile_and_recommendations` (10 tests) both pass clean
     when run on their own.
 ---
+
+## 2026-05-19 15:50 — US-020
+- `update_username_api` is now rate-limited per-authenticated-user at 10
+  POSTs/minute via `django_ratelimit`. Followed the existing
+  `_login_view_throttled` two-function pattern: the inner
+  `_update_username_api_throttled` carries the `@ratelimit(key="user", ...)`
+  decorator; the public `update_username_api` keeps `@login_required` +
+  `@require_POST`, calls the throttled body, and catches `Ratelimited` to
+  return `JsonResponse({"error": "Too many attempts, try again later."},
+  status=429)`.
+- Files changed:
+  - core/views.py (split throttled inner fn + Ratelimited catch wrapper)
+  - core/tests/test_update_username_ratelimit.py (new; 2 tests: 11th POST 429
+    + 10th POST normal response)
+  - scripts/ralph/prd.json (US-020 passes=true)
+- Learnings for future iterations:
+  - `key="user"` for `@ratelimit` requires `request.user.is_authenticated`,
+    so the outer wrapper MUST keep `@login_required` ahead of any throttled
+    call to avoid anonymous KeyError paths. Confirmed by reusing the
+    login-view layering pattern.
+  - Tests need `@override_settings(RATELIMIT_ENABLE=True, CACHES=...locmem)`
+    — same boilerplate as `test_login_ratelimit.py`. There's no global
+    `RATELIMIT_ENABLE=True` in `bibliotype/settings.py` yet (rate-limited
+    views work in prod because `django_ratelimit` defaults to enabled
+    when `cache` is reachable), but each test still sets it explicitly
+    AND clears the cache in setUp/tearDown to keep counters isolated.
+  - The positive test asserts `status_code != 429` and accepts either
+    `200` (valid form save) or `400` (form validation error) on the 10th
+    POST because the test posts increasing display-names that may collide
+    or fail length validation — the key assertion is "not 429".
+  - `black`/`isort` still not installed (see Codebase Patterns); style
+    matched by hand against existing test/view patterns.
+---
