@@ -345,7 +345,7 @@
         "**Concurrency-safety check:** run `manage.py test core.tests.test_storygraph_integration core.tests.test_tasks_integration` 5 times consecutively (loop). Tests must pass deterministically every run. If any run fails order-dependently, the worker count is exposing a real bug \u2014 investigate before completing the story. Capture run output in `progress.txt`.",
         "`manage.py test core.tests.test_storygraph_integration core.tests.test_tasks_integration` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 23
     },

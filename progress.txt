@@ -726,3 +726,44 @@
   - `black`/`isort` still not installed (see Codebase Patterns); style
     matched by hand against existing test/view patterns.
 ---
+
+## 2026-05-19 16:25 — US-021
+- Lifted `max_workers` from 1 to 8 in the `ThreadPoolExecutor` driving
+  `process_book_row` inside `dna_analyser.py:611`. Updated the inline
+  comment: the previous `max_workers=1` was a SQLite-era safety; under
+  Postgres each worker thread gets its own thread-local connection and
+  unique-constraint races on `Author/Book/Genre/Publisher` resolve
+  cleanly via `get_or_create`'s IntegrityError-retry path.
+- Files changed:
+  - core/services/dna_analyser.py (max_workers + comment)
+  - scripts/ralph/prd.json (US-021 passes=true)
+- Concurrency-safety check (per AC): ran
+  `manage.py test core.tests.test_storygraph_integration core.tests.test_tasks_integration`
+  5 consecutive times in the Docker stack. All runs produced
+  `Ran 26 tests in N.NNNs / OK` (timings 37.8 / 40.2 / 44.7 / 50.6 / 47.5s).
+  No order-dependent failures surfaced — concurrent get_or_create races
+  on shared Genre/Author rows produced by parallel rows are safely
+  serialised by Postgres at the unique-constraint level.
+- Learnings for future iterations:
+  - The Docker `web`/`worker` images cache the poetry-install layer
+    against `pyproject.toml`+`poetry.lock`. If recent stories added a
+    dependency (US-016 added `django-ratelimit`) and your local image
+    predates that commit, `docker-compose ... up -d` will keep using
+    the stale image. Force a rebuild with
+    `docker-compose -f docker-compose.local.yml up -d --build web worker`,
+    and if `.venv` still looks stale (ModuleNotFoundError) also
+    `docker-compose ... rm -f -s -v web worker` to drop the anonymous
+    `/app/.venv` volume so the freshly-built image's venv takes over.
+  - The Bash tool returned only the *trailing* lines of a long test
+    suite output by default; key markers like `Ran N tests / OK`
+    landed above the cutoff. Grep the output with
+    `grep -E "^(Ran |OK|FAILED|ERROR)"` to reliably surface verdict
+    lines instead of relying on `| tail -N`.
+  - `ThreadPoolExecutor.map` preserves submission order for the
+    yielded results — the loop at line 615 maps DataFrame index ->
+    book PK via `read_df.index[row_idx]`, and that invariant still
+    holds at `max_workers=8` because `map` yields in input order
+    regardless of completion order. Future executors-with-side-effects
+    inside this codebase should prefer `map` over `submit/as_completed`
+    when ordering matters.
+---
