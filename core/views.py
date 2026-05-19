@@ -22,6 +22,7 @@ from django.db.models import Count, Q
 from django.forms.utils import ErrorDict, ErrorList
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
@@ -1078,7 +1079,10 @@ def update_privacy_view(request):
         public_url = request.build_absolute_uri(
             reverse("core:public_profile", kwargs={"username": request.user.username})
         )
-        message_text = f'Your profile is now public! Share it here: <a href="{public_url}" class="hover:bg-brand-yellow font-bold underline" target="_blank">{public_url}</a>'
+        message_text = render_to_string(
+            "core/partials/messages_with_link.html",
+            {"public_url": public_url, "username": request.user.username},
+        )
         messages.success(request, message_text)
     else:
         messages.success(request, "Your profile is now private.")

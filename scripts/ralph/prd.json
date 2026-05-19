@@ -315,7 +315,7 @@
         "**Manual browser check:** `dev-browser` skill \u2014 toggle privacy on, confirm message renders identically (link present, message visible, link target equal to public profile URL).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 21
     },

@@ -656,3 +656,40 @@
     (Docker not running this iteration). The mocked task pattern means
     the negative tests run instantly with no Redis/Celery dependency.
 ---
+
+## 2026-05-19 14:55 — US-019
+- `update_privacy_view` now renders the privacy-toggle success message via
+  `render_to_string("core/partials/messages_with_link.html", ...)` instead
+  of an f-string that concatenated raw HTML around `request.build_absolute_uri()`.
+  The new partial uses `{% url 'core:public_profile' username=username %}`
+  for the actual href (relative, never tainted by Host header) and
+  auto-escapes `{{ public_url }}` for the visible link text.
+- Files changed:
+  - core/views.py (import `render_to_string`; rewrite message construction)
+  - core/templates/core/partials/messages_with_link.html (new)
+  - scripts/ralph/prd.json (US-019 passes=true)
+- Learnings for future iterations:
+  - `core/templates/core/base.html` displays flash messages with
+    `{{ message|safe }}` (line 235). So whatever you put in
+    `messages.success(...)` is rendered as HTML — but the safer pattern is
+    to pre-render via `render_to_string` so Django auto-escaping runs on
+    the dynamic bits at render time. The `|safe` filter in base.html then
+    just unwraps the already-escaped HTML.
+  - `{% url %}` works fine inside `render_to_string` without passing a
+    request — it doesn't need RequestContext, just the URL namespace.
+    Verified with a one-liner shell check that outputs `/u/alice/` for the
+    href and HTML-escapes `<script>` in the visible text.
+  - Manual `dev-browser` check (in PRD AC) was NOT performed this
+    iteration — Docker daemon not running. The visual output of the
+    rendered partial was verified via a `render_to_string` shell call:
+    href resolves to `/u/<username>/`, visible text is escaped. Anyone
+    running this iteration through a UI sanity pass should still load
+    `/dashboard/`, toggle privacy on, and confirm the link is clickable.
+  - Test caveat: `core.tests.test_math_accuracy` has a pre-existing
+    SQLite "database table is locked" flake on
+    `test_round_trip_dedup_goodreads_then_storygraph` when running the
+    full `manage.py test core` suite. Reproduced before my change touched
+    anything in the math module — unrelated. `test_views_e2e` (20 tests)
+    and `test_profile_and_recommendations` (10 tests) both pass clean
+    when run on their own.
+---
