@@ -607,8 +607,12 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
                 return fresh_book_instance, [g.name for g in fresh_book_instance.genres.all()], original_row
 
-            # Use single worker to avoid SQLite database lock issues
-            with ThreadPoolExecutor(max_workers=1) as executor:
+            # 8 workers is safe under Postgres: row-level locking + a thread-local
+            # connection per worker means concurrent get_or_create on Author/Book/Genre/
+            # Publisher is resolved by the unique constraints rather than serialising at
+            # the executor level. The legacy max_workers=1 was a vestige of SQLite's
+            # database-wide write lock and is no longer needed in the prod stack.
+            with ThreadPoolExecutor(max_workers=8) as executor:
                 results = []
                 processed = 0
                 row_dicts = read_df.to_dict("records")

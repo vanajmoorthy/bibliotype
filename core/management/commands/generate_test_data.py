@@ -57,7 +57,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"\nGenerated {num_users} test users and CSVs!"))
         self.stdout.write("\nGenerated files:")
         for i in range(1, num_users + 1):
-            self.stdout.write(f"  - csv/goodreads_library_export test_reader{i}.csv")
+            self.stdout.write(f"  - core/tests/fixtures/csv/goodreads_library_export test_reader{i}.csv")
 
         self.stdout.write(f"\nAll test users have password: testpass123")
 
@@ -197,7 +197,7 @@ class Command(BaseCommand):
             )
 
         # Write to CSV file
-        filename = f"csv/goodreads_library_export {username}.csv"
+        filename = f"core/tests/fixtures/csv/goodreads_library_export {username}.csv"
 
         with open(filename, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)

@@ -319,6 +319,20 @@ def _create_userbooks_from_anonymous_session(user, session_key):
 
 @shared_task(bind=True)
 def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, session_key: str = None):
+    # US-018 defense-in-depth: the upload view caps payload size before dispatch,
+    # but the task must also bound its own input — any future caller (mgmt commands,
+    # internal scripts, direct broker publishes) bypasses the HTTP layer. Cap on
+    # newline count is cheap and runs before pandas does any deep parsing work.
+    # Constant mirrors `core.views.MAX_UPLOAD_ROWS`; kept local to avoid an
+    # import cycle between views ↔ tasks.
+    MAX_TASK_ROWS = 50000
+    if csv_file_content.count("\n") > MAX_TASK_ROWS + 1:  # +1 for header
+        logger.error(
+            f"generate_reading_dna_task rejected oversize CSV: "
+            f"{csv_file_content.count(chr(10))} newlines > {MAX_TASK_ROWS}"
+        )
+        raise ValueError(f"CSV exceeds {MAX_TASK_ROWS}-row cap")
+
     logger.info("Running the latest (refactored) version of the Celery task")
     start_time = time.time()
     task_id = self.request.id

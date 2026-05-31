@@ -1,0 +1,7 @@
+Your profile is now public! Share it here:
+<a
+    href="{% url 'core:public_profile' username=username %}"
+    class="hover:bg-brand-yellow font-bold underline"
+    target="_blank"
+    >{{ public_url }}</a
+>

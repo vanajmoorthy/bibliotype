@@ -1,6 +1,5 @@
 import numpy as np
 from collections import Counter, defaultdict
-from django.db.models import Avg
 from ..models import UserBook, User, Book, Author, AnonymousUserSession, AnonymizedReadingProfile
 import logging
 

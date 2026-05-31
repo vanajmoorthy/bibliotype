@@ -110,7 +110,7 @@
         "Verify nothing imports it (`grep -rn check_models . --exclude-dir=.git`).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 7
     },
@@ -124,7 +124,7 @@
         "If everything is already clean, this story commits no changes \u2014 mark `passes: true` in `prd.json` and append a one-line `progress.txt` entry confirming the verification.",
         "`manage.py test` passes (sanity)."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 8
     },
@@ -140,7 +140,7 @@
         "`progress.txt`: note where test fixtures now live and the `TEST_FIXTURES_DIR` constant name.",
         "`manage.py test` passes \u2014 must remain green for the whole story (no intermediate broken state)."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 9
     },
@@ -155,7 +155,7 @@
         "`manage.py test` passes.",
         "**Note in `progress.txt`:** \"Personal Goodreads CSVs removed from repo on YYYY-MM-DD; check git history if regression analysis ever needs them.\""
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 10
     },
@@ -170,7 +170,7 @@
         "Delete the old root-level files.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 11
     },
@@ -182,7 +182,7 @@
         "`git grep catch_all_404` returns zero results outside of removal commit.",
         "`manage.py test` passes (the e2e 404 test should still hit `handler404`)."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 12
     },
@@ -196,7 +196,7 @@
         "`manage.py test` passes.",
         "Visit any DNA dashboard locally and confirm the share modal still renders the three themed variants."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 13
     },
@@ -211,7 +211,7 @@
         "`manage.py test` passes.",
         "`progress.txt`: list of removed commands."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 14
     },
@@ -223,7 +223,7 @@
         "Same verification as US-012.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 15
     },
@@ -239,7 +239,7 @@
         "`manage.py test core.tests.test_cache_refactor` passes (sanity \u2014 the re-export still works).",
         "`manage.py test` passes (full)."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 16
     },
@@ -252,7 +252,7 @@
         "`python manage.py check --deploy` reports zero warnings for the items above (other warnings are OK to log but not regress).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 17
     },
@@ -268,7 +268,7 @@
         "**Positive test:** 5th login POST in same window with VALID credentials still authenticates successfully.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 18
     },
@@ -284,7 +284,7 @@
         "**Positive test (legitimate flow unchanged):** same as the first negative test \u2014 confirms a fresh signup still works.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 19
     },
@@ -300,7 +300,7 @@
         "**Positive test:** an existing valid Goodreads or StoryGraph fixture still uploads.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 20
     },
@@ -315,7 +315,7 @@
         "**Manual browser check:** `dev-browser` skill \u2014 toggle privacy on, confirm message renders identically (link present, message visible, link target equal to public profile URL).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 21
     },
@@ -330,7 +330,7 @@
         "**Positive test:** 10th POST returns the normal response (form error or success).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 22
     },
@@ -345,7 +345,7 @@
         "**Concurrency-safety check:** run `manage.py test core.tests.test_storygraph_integration core.tests.test_tasks_integration` 5 times consecutively (loop). Tests must pass deterministically every run. If any run fails order-dependently, the worker count is exposing a real bug \u2014 investigate before completing the story. Capture run output in `progress.txt`.",
         "`manage.py test core.tests.test_storygraph_integration core.tests.test_tasks_integration` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 23
     },

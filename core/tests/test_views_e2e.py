@@ -413,3 +413,230 @@ class ViewE2E_Tests(TransactionTestCase):
 
         user.userprofile.refresh_from_db()
         self.assertIsNone(user.userprofile.pending_dna_task_id)
+
+
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "signup-duplicate-email-tests",
+        }
+    },
+)
+class SignupDuplicateEmailTests(TransactionTestCase):
+    """US-017: signup must not reveal whether an email is already registered.
+
+    On duplicate: short-circuit to the generic "check your inbox" page AND
+    send a password-reset email to the legitimate account. On a new email:
+    proceed normally.
+    """
+
+    def setUp(self):
+        from django.core import mail
+
+        self.client = Client()
+        self.mail = mail
+        mail.outbox = []
+
+    def tearDown(self):
+        from django.db import connections
+
+        for conn in connections.all():
+            if conn.connection is not None:
+                conn.close()
+        connections.close_all()
+        super().tearDown()
+
+    def test_signup_with_duplicate_email_short_circuits_and_sends_reset(self):
+        """Duplicate email: no new user created, password-reset email dispatched,
+        redirect to the same generic 'check your inbox' page used by the
+        password-reset flow."""
+        existing = User.objects.create_user(
+            username="existing",
+            email="taken@test.com",
+            password="ExistingP4ssword!",
+        )
+        user_count_before = User.objects.count()
+
+        response = self.client.post(
+            reverse("core:signup"),
+            {
+                "username": "newcomer",
+                "email": "taken@test.com",
+                "password1": "Brand-New-p4ssword!",
+                "password2": "Brand-New-p4ssword!",
+            },
+        )
+
+        self.assertRedirects(response, reverse("password_reset_done"))
+        self.assertEqual(User.objects.count(), user_count_before)
+        self.assertFalse(User.objects.filter(username="newcomer").exists())
+        self.assertEqual(len(self.mail.outbox), 1)
+        reset_email = self.mail.outbox[0]
+        self.assertIn(existing.email, reset_email.to)
+        self.assertEqual(reset_email.subject, "Reset your Bibliotype password")
+
+    def test_signup_duplicate_email_is_case_insensitive(self):
+        """Duplicate detection must be case-insensitive to match the rest of
+        the email-based auth path (`email__iexact`)."""
+        User.objects.create_user(
+            username="lowercase",
+            email="mixedcase@test.com",
+            password="ExistingP4ssword!",
+        )
+
+        response = self.client.post(
+            reverse("core:signup"),
+            {
+                "username": "newcomer",
+                "email": "MixedCase@Test.com",
+                "password1": "Brand-New-p4ssword!",
+                "password2": "Brand-New-p4ssword!",
+            },
+        )
+
+        self.assertRedirects(response, reverse("password_reset_done"))
+        self.assertFalse(User.objects.filter(username="newcomer").exists())
+        self.assertEqual(len(self.mail.outbox), 1)
+
+    def test_signup_with_fresh_email_creates_user_normally(self):
+        """Negative control: a never-before-seen email completes signup,
+        logs the user in, and dispatches NO reset email."""
+        response = self.client.post(
+            reverse("core:signup"),
+            {
+                "username": "freshuser",
+                "email": "fresh@test.com",
+                "password1": "Brand-New-p4ssword!",
+                "password2": "Brand-New-p4ssword!",
+            },
+        )
+
+        # No DNA / no task to claim → redirect to home (default branch).
+        self.assertRedirects(response, reverse("core:home"))
+        self.assertTrue(User.objects.filter(username="freshuser").exists())
+        self.assertEqual(len(self.mail.outbox), 0)
+
+
+@override_settings(
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "upload-validation-tests",
+        }
+    },
+)
+class UploadValidationTests(TransactionTestCase):
+    """US-018: upload_view must reject pathological CSVs before queueing a task.
+
+    Validation reads only the head (nrows=MAX_UPLOAD_ROWS) so a pathological
+    file can't OOM the validation pass. Files exceeding the row cap are
+    truncated; column-count overflow or missing schema columns are rejected
+    outright.
+    """
+
+    def setUp(self):
+        self.client = Client()
+
+    def tearDown(self):
+        from django.db import connections
+
+        for conn in connections.all():
+            if conn.connection is not None:
+                conn.close()
+        connections.close_all()
+        super().tearDown()
+
+    @staticmethod
+    def _make_csv(name, content_bytes):
+        return SimpleUploadedFile(name, content_bytes, content_type="text/csv")
+
+    @patch("core.views.generate_reading_dna_task")
+    def test_oversize_row_count_is_truncated_not_rejected(self, mock_task):
+        """50_001-row CSV is accepted; csv_content passed to the task has at
+        most MAX_UPLOAD_ROWS data rows (header + 50000 = 50001 lines)."""
+        from core.views import MAX_UPLOAD_ROWS
+
+        mock_task.delay.return_value = MagicMock(id="truncated-task-id")
+
+        header = "Title,Author,Exclusive Shelf,My Rating,ISBN13"
+        rows = "\n".join(
+            f"Book {i},Author {i},read,4,978000000{i:04d}" for i in range(MAX_UPLOAD_ROWS + 1)
+        )
+        csv_content = (header + "\n" + rows).encode("utf-8")
+        upload = self._make_csv("big.csv", csv_content)
+
+        response = self.client.post(reverse("core:upload"), {"csv_file": upload})
+
+        self.assertEqual(response.status_code, 302)
+        # Upload should NOT redirect back to home with an error.
+        self.assertNotEqual(response.url, reverse("core:home"))
+        mock_task.delay.assert_called_once()
+
+        sent_csv = mock_task.delay.call_args[0][0]
+        sent_data_rows = sent_csv.strip().split("\n")[1:]  # drop header
+        self.assertLessEqual(len(sent_data_rows), MAX_UPLOAD_ROWS)
+
+    @patch("core.views.generate_reading_dna_task")
+    def test_too_many_columns_is_rejected(self, mock_task):
+        """101-column CSV is rejected outright; no task is dispatched."""
+        from core.views import MAX_UPLOAD_COLUMNS
+
+        bad_headers = ["Title", "Author"] + [f"Col{i}" for i in range(MAX_UPLOAD_COLUMNS)]
+        bad_row = ["t", "a"] + ["x"] * MAX_UPLOAD_COLUMNS
+        csv_content = (",".join(bad_headers) + "\n" + ",".join(bad_row)).encode("utf-8")
+        upload = self._make_csv("wide.csv", csv_content)
+
+        response = self.client.post(reverse("core:upload"), {"csv_file": upload}, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "too many columns")
+        mock_task.delay.assert_not_called()
+
+    @patch("core.views.generate_reading_dna_task")
+    def test_missing_schema_columns_is_rejected(self, mock_task):
+        """A CSV without Title + Author/Authors is rejected with the schema error."""
+        bad = b"FooBar,Baz\n1,2\n3,4\n"
+        upload = self._make_csv("not-goodreads.csv", bad)
+
+        response = self.client.post(reverse("core:upload"), {"csv_file": upload}, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "does not look like a Goodreads or StoryGraph export")
+        mock_task.delay.assert_not_called()
+
+    @patch("core.views.generate_reading_dna_task")
+    def test_valid_goodreads_csv_still_uploads(self, mock_task):
+        """Positive control: a Goodreads-shaped CSV passes validation and the
+        task is dispatched with the original csv_content."""
+        mock_task.delay.return_value = MagicMock(id="happy-task-id")
+
+        good = (
+            b"Title,Author,Exclusive Shelf,My Rating,ISBN13\n"
+            b"Dune,Frank Herbert,read,5,9780441172719\n"
+        )
+        upload = self._make_csv("goodreads.csv", good)
+
+        response = self.client.post(reverse("core:upload"), {"csv_file": upload})
+
+        self.assertEqual(response.status_code, 302)
+        mock_task.delay.assert_called_once()
+
+    @patch("core.views.generate_reading_dna_task")
+    def test_valid_storygraph_csv_still_uploads(self, mock_task):
+        """Positive control: a StoryGraph-shaped CSV (Authors, plural) passes
+        validation. Schema check accepts either Goodreads or StoryGraph
+        signature column sets."""
+        mock_task.delay.return_value = MagicMock(id="sg-task-id")
+
+        sg = (
+            b"Title,Authors,Read Status,Star Rating,ISBN/UID\n"
+            b"Project Hail Mary,Andy Weir,read,5,9780593135204\n"
+        )
+        upload = self._make_csv("storygraph.csv", sg)
+
+        response = self.client.post(reverse("core:upload"), {"csv_file": upload})
+
+        self.assertEqual(response.status_code, 302)
+        mock_task.delay.assert_called_once()

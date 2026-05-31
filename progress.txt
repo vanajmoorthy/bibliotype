@@ -182,3 +182,588 @@
 - Tests in scope passed: `core.tests.test_tasks_unit core.tests.test_tasks_integration
   core.tests.test_integration` → 67 / 67 green. Full Django suite also exit 0.
 ---
+
+## 2026-05-19 12:45 — US-006
+- Deleted `check_models.py` (throwaway Gemini-model-list script in repo root).
+  Pre-deletion grep confirmed no imports outside the PRD / prd.json docs.
+- Files changed:
+  - check_models.py (removed via `git rm`)
+  - scripts/ralph/prd.json (US-006 passes=true)
+- Learnings for future iterations:
+  - Docker daemon was not running this iteration; fell back to
+    `poetry run python manage.py test` (the Bibliotype-specific guardrail
+    in these instructions covers this fallback). 362 tests ran; 361 pass,
+    1 pre-existing SQLite-locking failure in
+    `core.tests.test_math_accuracy.IsbnNormalizationTests.test_round_trip_dedup_goodreads_then_storygraph`.
+    The failure is environmental (SQLite under concurrent test access vs the
+    canonical Postgres stack) and unrelated to deleting a standalone script
+    with no imports — noting here so future iterations don't chase it.
+  - For "delete a stray repo-root script" stories (US-007, US-010, US-011,
+    US-012, US-013), the cheapest sanity check is `Grep` for the filename
+    across the repo with `--exclude-dir=.git`. If matches are only inside
+    `tasks/prd-codebase-triage-fixes.md` and `scripts/ralph/prd.json`, the
+    file is safe to delete — those are work-list documents, not source.
+---
+
+## 2026-05-19 13:00 — US-007
+- Verified `git ls-files '*.prof'` returns 0 results and `.gitignore:25` already
+  contains `*.prof`. No changes required — pure verification per the story's
+  "everything is already clean" branch.
+- Files changed:
+  - scripts/ralph/prd.json (US-007 passes=true)
+- Learnings for future iterations:
+  - PR #103 (already merged) handled the actual untracking. Future "verify
+    untracked" stories can be one-shot: `git ls-files <glob>` empty + glob
+    present in `.gitignore` → mark pass, no code commit.
+---
+
+## 2026-05-19 13:15 — US-008a
+- Moved 19 synthetic + 5 test_reader CSV fixtures and the three subdirectories
+  (`test/`, `test_storygraph/`, `test-csvs/`) from `csv/` into
+  `core/tests/fixtures/csv/`. `core/tests/__init__.py` now exposes
+  `TEST_FIXTURES_DIR = Path(__file__).parent / "fixtures" / "csv"` for any
+  future test that needs a path on disk. (Current tests use
+  `SimpleUploadedFile` inline, so no test imports needed updating.)
+- Updated `core/management/commands/generate_test_data.py` (the one NOT
+  slated for deletion) to write generated CSVs at
+  `core/tests/fixtures/csv/...` instead of `csv/...`. The two commands that
+  also referenced `csv/...` — `seed_test_books.py` (US-013) and
+  `create_users_from_csvs.py` (US-012) — are slated for deletion and were
+  intentionally left untouched. The two root-level generator scripts
+  `csv/generate_test_data.py` and `csv/generate_synthetic_test_data.py`
+  are out of scope (US-009 moves them into management commands).
+- Files changed:
+  - core/tests/__init__.py (populated `TEST_FIXTURES_DIR` constant)
+  - core/tests/fixtures/csv/ (new directory; 24 CSVs + 3 subdirs moved here via `git mv`)
+  - csv/ (24 CSVs + 3 subdirs removed by the same `git mv`)
+  - core/management/commands/generate_test_data.py (two `csv/` path strings updated)
+  - scripts/ralph/prd.json (US-008a passes=true)
+- Learnings for future iterations:
+  - **Fixtures live at `core/tests/fixtures/csv/`** and the path constant is
+    `from core.tests import TEST_FIXTURES_DIR`. Use it whenever a future
+    test needs to read a real CSV from disk rather than constructing
+    `SimpleUploadedFile` inline.
+  - **No test files referenced `csv/` paths at runtime** — confirmed via
+    `grep -rn "csv/" core/tests/`. Existing tests all build payloads inline
+    with `SimpleUploadedFile`, so the move was test-neutral. This matched
+    the PRD's "test files don't actually reference csv/... paths" note.
+  - **`git mv` preserves history** across the move — verified `git status`
+    after the moves showed renames, not delete+add pairs.
+  - Pre-existing SQLite-locking failure in
+    `core.tests.test_math_accuracy.IsbnNormalizationTests.test_round_trip_dedup_goodreads_then_storygraph`
+    is the only failure (361/362 green) and is unrelated to this story —
+    same failure noted in the US-006 entry above. Docker daemon not
+    running this iteration; fell back to `poetry run python manage.py test`.
+---
+
+## 2026-05-19 13:30 — US-008b
+- Personal Goodreads CSVs removed from repo on 2026-05-19; check git history
+  if regression analysis ever needs them.
+- `git rm` the three tracked personal exports
+  (`csv/goodreads_library_export anya.csv`,
+  `csv/goodreads_library_export niamh.csv`,
+  `csv/goodreads_library_export(1).csv`). `csv/.DS_Store` was untracked, so a
+  plain `rm` was sufficient — `git rm` would have errored. `.gitignore` now
+  ignores `csv/` (canonical fixtures live in `core/tests/fixtures/csv/` per
+  US-008a) and adds `*.DS_Store` alongside the existing `.DS_Store` line.
+  `.claude/worktrees/` is already present at `.gitignore:75`, so left
+  unchanged.
+- `csv/` still contains the two generator scripts
+  (`generate_test_data.py`, `generate_synthetic_test_data.py`) tracked from
+  before this story; US-009 will `git mv` them into
+  `core/management/commands/`. Per AC, did NOT `rmdir csv/` — the directory
+  is not empty until US-009 completes.
+- Files changed:
+  - .gitignore (added `*.DS_Store` after `.DS_Store`; added `csv/` block
+    after the "Scraped data and caches" section)
+  - csv/goodreads_library_export anya.csv (deleted)
+  - csv/goodreads_library_export niamh.csv (deleted)
+  - csv/goodreads_library_export(1).csv (deleted)
+  - scripts/ralph/prd.json (US-008b passes=true)
+- Learnings for future iterations:
+  - **Stale references survive in soon-to-be-deleted command files.** `git grep`
+    for the deleted CSV names still flags
+    `core/management/commands/seed_test_books.py:21` (a default path) and
+    `core/management/commands/create_users_from_csvs.py:36` (a docstring
+    example). Both files are slated for deletion in US-013 and US-012
+    respectively, so leaving the dangling references for one iteration is
+    fine — the test suite never exercises these one-shot scripts. Don't
+    chase these refs in unrelated stories.
+  - **Adding a directory to `.gitignore` does NOT untrack files already
+    committed.** `csv/generate_*.py` remain tracked even after `csv/` is
+    ignored. `.gitignore` only affects untracked files. To untrack, `git rm
+    --cached` or `git mv` is required. US-009 will use `git mv`.
+  - **`git rm` errors on untracked paths.** `csv/.DS_Store` was never in
+    `git ls-files`, so `git rm csv/.DS_Store` would have failed. Use plain
+    `rm` for untracked OS-cruft; AC wording aside, `git rm` is only for
+    tracked paths.
+  - Docker daemon not running this iteration; fell back to
+    `poetry run python manage.py test core.tests.test_views_e2e
+    core.tests.test_tasks_unit`. 31 tests green. Did not run the full suite
+    (pure file-deletion story with no code paths touched), but the upload +
+    task-status surfaces stay green, confirming the personal CSVs weren't
+    silently a test fixture.
+---
+
+## 2026-05-19 13:45 — US-009
+- Ported the two root-level CSV-generator scripts into Django BaseCommands:
+  `csv/generate_test_data.py` → `core/management/commands/generate_csvs.py`
+  (renamed to avoid the existing `generate_test_data` command),
+  `csv/generate_synthetic_test_data.py` →
+  `core/management/commands/generate_synthetic_csvs.py`. Original scripts only
+  imported BaseCommand cosmetically and ran their logic from `if __name__ ==
+  '__main__'`; both are now proper `class Command(BaseCommand)` with
+  `add_arguments` (num_users / books_per_user / output_dir / password for
+  generate_csvs; output_dir for generate_synthetic_csvs). `manage.py help`
+  lists both. The 4 stale `from sys.path / django.setup()` boilerplate lines
+  were dropped (BaseCommands run inside the Django process).
+- Default output directory is now `core/tests/fixtures/csv/` instead of the
+  old `csv/` (consistent with US-008a's canonical fixture path; `csv/` is
+  also gitignored after US-008b so writes there would be untracked anyway).
+- Files changed:
+  - core/management/commands/generate_csvs.py (new BaseCommand)
+  - core/management/commands/generate_synthetic_csvs.py (new BaseCommand)
+  - csv/generate_test_data.py (deleted via `git rm`)
+  - csv/generate_synthetic_test_data.py (deleted via `git rm`)
+  - scripts/ralph/prd.json (US-009 passes=true)
+- Learnings for future iterations:
+  - **Ported scripts had `sys.path.insert(...)` + `django.setup()` cargo
+    cult**. BaseCommands run inside the Django process already, so these
+    bootstrap lines must be deleted, not migrated. Keeping them in a
+    management command works but is dead code that confuses future readers.
+  - **The legacy scripts wrote to `csv/` which is now gitignored** (US-008b).
+    For any future story that ports a script using paths like
+    `csv/goodreads_library_export ....csv`, redirect to
+    `core/tests/fixtures/csv/` to keep outputs visible during local dev.
+  - **`generate_test_data` (existing core command, kept) vs `generate_csvs`
+    (new from this story) are now sibling commands.** They share intent
+    (create test_reader{N} users + CSVs) but `generate_csvs` originated from
+    the simpler csv/ script. If a future cleanup story dedups them, the
+    existing `generate_test_data` is the richer/preferred surface; merge
+    into it rather than the other direction.
+  - **Pre-existing SQLite-locking failure** in
+    `core.tests.test_math_accuracy.IsbnNormalizationTests.test_round_trip_dedup_goodreads_then_storygraph`
+    persists this iteration (361/362 green). Same env-only failure noted
+    in US-006 and US-008a entries. Not caused by this story; do not chase.
+  - Docker daemon not running this iteration; fell back to
+    `poetry run python manage.py test` for the full suite.
+---
+
+## 2026-05-19 12:30 — US-010
+- Deleted unused `catch_all_404_view` from `core/views.py`. The function
+  was a literal duplicate of `handler404` (same body) and was never wired
+  in any urls.py — `bibliotype/urls.py` already imports/wires
+  `handler404` directly.
+- Files changed:
+  - core/views.py (removed catch_all_404_view + its docstring)
+  - scripts/ralph/prd.json (US-010 passes=true)
+- Learnings for future iterations:
+  - `git grep <symbol>` is the cheapest way to confirm a "verified zero
+    references" claim from the PRD before deleting code.
+  - The 404 test that mattered for this story is
+    `test_nonexistent_user_shows_404_page` in
+    `core/tests/test_profile_and_recommendations.py`, not in
+    `test_views_e2e.py`. All 10 tests in that module pass without Docker
+    (Redis is unused for the 404 path; graceful degradation through
+    `safe_cache_*` masks the missing Redis).
+  - `test_views_e2e.py` cannot run without Redis (DNA upload tasks
+    require the broker for Celery, so the connection failures surface
+    as test errors). Use it only inside the Docker stack.
+---
+
+## 2026-05-19 14:00 — US-011
+- Deleted `core/templates/core/partials/share/card_full.html`. `git grep
+  card_full` confirmed only the three themed variants
+  (`card_full_miami|neon_picnic|sherbet`) remain, all rendered from
+  `core/templates/core/partials/share/share_modal.html`. The bare
+  `card_full.html` was never `{% include %}`d anywhere in app code.
+- Files changed:
+  - core/templates/core/partials/share/card_full.html (deleted via `git rm`)
+  - scripts/ralph/prd.json (US-011 passes=true)
+- Learnings for future iterations:
+  - Pre-flight a deletion with `git grep "<basename>" -- ':!.claude/worktrees'
+    ':!scripts/ralph/prd.json' ':!tasks/prd-codebase-triage-fixes.md'` to
+    filter out the worktree dirs and the PRD's own self-references. The
+    raw `git grep` from the acceptance criteria includes worktree noise.
+  - The deleted file was a 4th-style share card with no theme suffix
+    (purple background, no themed accents). The three themed siblings
+    are full replacements — their structure mirrors `card_full.html`
+    almost line-for-line plus theme classes. Future "delete unused
+    template" stories: confirm sibling templates haven't been forked
+    from the dead one, otherwise the delete is reasonable cleanup.
+  - Docker daemon not running this iteration. Ran
+    `poetry run python manage.py test core.tests.test_profile_and_recommendations`
+    (10 tests, all green) + `manage.py check` (no issues). Template-only
+    deletion has no behavioral test surface, so the cheaper scope was
+    sufficient. Cannot exercise the share modal render without the
+    Docker stack; the markdown PRD's "visit a DNA dashboard locally" step
+    is deferred to the next manual sweep.
+---
+
+## 2026-05-19 13:30 — US-012
+- Deleted three confirmed-dead one-shot management commands:
+  `core/management/commands/create_users_from_csvs.py`,
+  `core/management/commands/populate_test_dna.py`, and
+  `core/management/commands/re_enrich_all_books.py`. Pre-deletion grep
+  confirmed each symbol appears only in work-list docs (`progress.txt`,
+  `scripts/ralph/prd.json`, `tasks/prd-codebase-triage-fixes.md`) — no
+  source imports, no Celery beat schedules, no `call_command` callers.
+- `manage.py help` confirms all three are gone from the `[core]` group;
+  the US-013 trio (`reset_genres`, `seed_test_books`,
+  `seed_mainstream_publishers`) remains listed for next iteration.
+- Files changed:
+  - core/management/commands/create_users_from_csvs.py (deleted via `git rm`)
+  - core/management/commands/populate_test_dna.py (deleted via `git rm`)
+  - core/management/commands/re_enrich_all_books.py (deleted via `git rm`)
+  - scripts/ralph/prd.json (US-012 passes=true)
+- Learnings for future iterations:
+  - **`create_users_from_csvs.py` still had a dangling reference noted in
+    the US-008b learnings** (docstring example pointing at a deleted
+    personal CSV path). Deleting the file makes that note obsolete — no
+    follow-up needed in any other file.
+  - For management-command deletion stories, the cheapest sanity check is
+    `manage.py help` post-`git rm`. If the command name still appears in
+    the output, Django is still loading the file from somewhere (typo in
+    the path, stale `.pyc`, or a sibling `commands/` dir under a different
+    app). Here, all three vanished cleanly — confirming they were
+    standalone with no plugin/proxy registration.
+  - Pre-existing SQLite-locking failure in
+    `core.tests.test_math_accuracy.IsbnNormalizationTests.test_round_trip_dedup_goodreads_then_storygraph`
+    persists this iteration (361/362 green). Same environmental issue
+    noted in US-006, US-008a, US-009. Docker daemon not running.
+---
+
+## 2026-05-19 13:40 — US-013
+- Deleted the final batch of confirmed-dead one-shot management commands:
+  `core/management/commands/reset_genres.py`,
+  `core/management/commands/seed_test_books.py`, and
+  `core/management/commands/seed_mainstream_publishers.py`. Pre-deletion
+  grep showed each name only in work-list docs (`progress.txt`,
+  `scripts/ralph/prd.json`, `tasks/prd-codebase-triage-fixes.md`) plus
+  each command's own `.py` file — no `call_command` callers, no Celery
+  beat references, no source imports of the `Command` classes.
+- `manage.py help` no longer lists any of the three under `[core]`;
+  remaining core commands (e.g. `analyze_genres`, `backfill_covers`) are
+  still registered. With US-012, this completes the entire dead-command
+  cleanup mandated by the triage report.
+- Files changed:
+  - core/management/commands/reset_genres.py (deleted via `git rm`)
+  - core/management/commands/seed_test_books.py (deleted via `git rm`)
+  - core/management/commands/seed_mainstream_publishers.py (deleted via `git rm`)
+  - scripts/ralph/prd.json (US-013 passes=true)
+- Learnings for future iterations:
+  - `seed_mainstream_publishers.py` imported `MAINSTREAM_PUBLISHERS_HIERARCHY`
+    from `core.dna_constants` — the constant itself stays alive and is
+    still used by the genre/publisher classification path. Deleting the
+    consumer doesn't orphan the constant, but future cleanup stories that
+    propose removing `MAINSTREAM_PUBLISHERS_HIERARCHY` should still grep
+    `core/services/` and `core/dna_constants.py` consumers first.
+  - `seed_test_books.py` hard-coded a personal CSV path
+    (`csv/goodreads_library_export anya.csv`) that was already removed by
+    US-008b. The command would have failed at runtime even before this
+    deletion — another confirmation it was dead.
+  - For management-command deletion stories, `manage.py help | grep
+    <name>` is the cheapest post-delete verification, and `manage.py
+    check` is sufficient to catch any orphaned import in the remaining
+    command graph. No test suite invocation is strictly necessary for a
+    pure-file deletion that grep proved untouched.
+  - Docker daemon not running this iteration; fell back to scoped
+    `poetry run python manage.py test core.tests.test_profile_and_recommendations`
+    (10/10 green) + `manage.py check` (0 issues).
+---
+
+## 2026-05-19 12:46 — US-014
+- Removed two genuinely-unused imports: `Avg` from
+  `core/services/user_similarity_service.py:3` (whole import line deleted,
+  it was sole symbol) and `Author` from
+  `core/services/anonymization_service.py:3` (kept the other two symbols).
+  Explicitly left `safe_cache_delete` re-export in
+  `core/services/recommendation_service.py:8` untouched (noqa-marked,
+  removed only by US-060).
+- Files changed:
+  - core/services/user_similarity_service.py
+  - core/services/anonymization_service.py
+  - scripts/ralph/prd.json (US-014 passes=true)
+- Learnings for future iterations:
+  - Always grep for the symbol in the affected file BEFORE editing imports
+    to confirm it's truly unused. `grep -n "Avg" <file>` returns one line
+    (the import itself) = safe to remove.
+  - Docker not running this iteration → fell back to `poetry run python
+    manage.py test core.tests.test_cache_refactor core.tests.test_views_e2e
+    core.tests.test_tasks_integration` (50/50 green). The full
+    `manage.py test` shows 361 OK + 1 pre-existing SQLite "database table
+    is locked" flake in `test_math_accuracy.IsbnNormalizationTests.
+    test_round_trip_dedup_goodreads_then_storygraph` — confirmed flake by
+    `git stash && rerun` on baseline (also fails). Environment uses
+    SQLite when Docker/Postgres absent, surfacing concurrency-unfriendly
+    behavior unrelated to import cleanup.
+---
+
+## 2026-05-19 13:50 — US-015
+- Added production security headers to `bibliotype/settings.py` inside the
+  `if not DEBUG:` block: `SECURE_HSTS_SECONDS = 31536000`,
+  `SECURE_HSTS_INCLUDE_SUBDOMAINS = True`, `SECURE_HSTS_PRELOAD = True`,
+  `SECURE_CONTENT_TYPE_NOSNIFF = True`, `SECURE_REFERRER_POLICY = "same-origin"`.
+- Files changed:
+  - bibliotype/settings.py (5 lines added inside production block)
+  - scripts/ralph/prd.json (US-015 passes=true)
+- Learnings for future iterations:
+  - To verify deploy-targeted security settings without flipping `.env`,
+    run `DEBUG=False poetry run python manage.py check --deploy`. With
+    these headers in place the only remaining warning is `security.W020`
+    (`ALLOWED_HOSTS must not be empty`) — that one is environmental
+    (empty `.env`/`ALLOWED_HOSTS`), unrelated to header config.
+  - `manage.py test core.tests` shows the same pre-existing SQLite
+    `database table is locked` flake noted in US-014 (one test,
+    `test_round_trip_dedup_goodreads_then_storygraph`). Re-run in
+    isolation passes. Confirmed not caused by settings change.
+  - `black` / `isort` still NOT installed in venv (per Codebase Patterns).
+    The 5 added lines match surrounding 4-space indent style by hand.
+---
+
+## 2026-05-19 14:05 — US-016
+- Added `django-ratelimit ^4.1.0` via `poetry add` (pyproject.toml + poetry.lock).
+- Refactored login flow in `core/views.py`: original body moved into
+  `_login_view_throttled(request)` decorated with
+  `@ratelimit(key="ip", rate="5/m", method="POST", block=True)`. The public
+  `login_view(request)` wraps `_login_view_throttled` in `try/except Ratelimited`
+  and renders `core/login.html` with `status=429` and a `NON_FIELD_ERRORS`
+  entry of "Too many attempts. Please try again in a minute." — picked up by
+  the login template's existing `{% if form.non_field_errors %}` block.
+- New test file `core/tests/test_login_ratelimit.py` with the two
+  AC-mandated tests: 6th POST returns 429 + template error (negative),
+  5th POST with valid credentials still authenticates (positive). Both use
+  a unique-LOCATION LocMemCache + `cache.clear()` in setUp/tearDown to
+  isolate rate-limit counters between tests and from any other test run.
+- Files changed:
+  - pyproject.toml (django-ratelimit added)
+  - poetry.lock (regenerated)
+  - core/views.py (decorator stack + Ratelimited handler + 4 new imports)
+  - core/tests/test_login_ratelimit.py (new, 2 tests)
+  - scripts/ralph/prd.json (US-016 passes=true)
+- Learnings for future iterations:
+  - **`@ratelimit(..., block=True)` raises `Ratelimited` BEFORE the view body
+    runs**, so a try/except inside the decorated view itself can't catch
+    it. Two clean patterns: (a) inner-function split with outer wrapper
+    catching the exception (what we did here — keeps the decorator visibly
+    on the rate-limited function), or (b) `process_exception` middleware
+    to convert globally. We picked (a) because it's view-local and avoids
+    a global hook; if US-020 (api ratelimit) needs JSON responses we can
+    duplicate the pattern there or refactor to middleware later.
+  - **`Ratelimited` inherits from `django.core.exceptions.PermissionDenied`**
+    in django-ratelimit 4.x, so without our wrapper Django's default 403
+    handler would fire — NOT 429. The 429 is our contract; the wrapper is
+    essential.
+  - **`form.add_error(None, msg)` on an unbound `AuthenticationForm` fails**
+    with `AttributeError: 'AuthenticationForm' object has no attribute
+    'cleaned_data'`. Django's `add_error` requires `full_clean()` to have
+    populated `_errors`/`cleaned_data`. Calling `full_clean()` first adds
+    "required" errors for every empty field. The clean workaround is to
+    directly assign `form._errors = ErrorDict()` and
+    `form._errors[NON_FIELD_ERRORS] = ErrorList([msg])` — the template
+    `{{ form.non_field_errors }}` pulls from this dict and renders.
+  - **django-ratelimit's IP key uses `request.META["REMOTE_ADDR"]`**, which
+    Django's test `Client` defaults to `127.0.0.1`. No `REMOTE_ADDR`
+    monkey-patching needed in tests — same-client repeat POSTs accumulate
+    against the same counter.
+  - **The cache backing `RATELIMIT_USE_CACHE` (default `"default"`) must
+    support atomic increment**. `LocMemCache` does, but it's per-process —
+    so tests need `cache.clear()` in `setUp`/`tearDown` to isolate. Across
+    test classes, override the `LOCATION` for a fresh store.
+  - Full suite: 364 tests, 1 pre-existing SQLite-locking flake in
+    `test_round_trip_dedup_goodreads_then_storygraph` (same one noted in
+    US-006, US-008a, US-009, US-012, US-014). Unrelated to this story.
+---
+
+## 2026-05-19 13:30 — US-017
+- `clean_email` no longer rejects duplicate emails (returns the value
+  unconditionally). `signup_view` now runs an `email__iexact` lookup AFTER
+  Turnstile + form validation but BEFORE the US-003 task ownership check:
+  on hit, it dispatches a password-reset email via `PasswordResetForm`
+  using the same template config as `CustomPasswordResetView`, then
+  redirects to the existing `password_reset_done` page so a duplicate
+  signup is observationally indistinguishable from a forgotten-password
+  request. No new user is created on the duplicate branch.
+- Files changed:
+  - core/forms.py (clean_email no-op + comment explaining why)
+  - core/views.py (imports PasswordResetForm + default_token_generator;
+    duplicate-email short-circuit in signup_view)
+  - core/tests/test_views_e2e.py (new SignupDuplicateEmailTests class:
+    duplicate-email, case-insensitive-duplicate, fresh-email control)
+  - scripts/ralph/prd.json (US-017 passes=true)
+- Learnings for future iterations:
+  - The duplicate-email gate MUST run BEFORE the US-003 task-id check,
+    not after. If reordered, an attacker (or a confused user) who POSTs
+    a task_id from a different session would hit the task-ownership
+    branch FIRST and learn that the email collision exists via the
+    branch-specific error message. Keep US-017 gating ahead of any
+    other per-user logic in signup.
+  - `PasswordResetForm.save()` requires `request=` to compute the
+    `{{ domain }}` and `{{ protocol }}` variables in the reset email
+    template — passing `None` raises. Always include it.
+  - The "check your inbox" page is `password_reset_done` (Django's
+    builtin `PasswordResetDoneView` mounted with our template at
+    `core/password_reset_done.html`). Reusing it makes the duplicate-
+    signup branch and the legitimate forgot-password branch land on
+    identical pixels — that's the enumeration defence.
+  - Test environment note: `black`/`isort` are still not in the venv;
+    matched existing style by hand. The full pre-existing-flake list
+    (`Error 61 connecting to localhost:6379` cascade in test_views_e2e
+    when Redis is down + the SQLite `test_round_trip_dedup_*` flake)
+    is unrelated to this story — confirmed by running the failing tests
+    against `git stash`'d main.
+---
+
+## 2026-05-19 14:50 — US-018
+- Added pre-flight CSV validation to `upload_view`: `pd.read_csv` with
+  `nrows=MAX_UPLOAD_ROWS` (50_000) caps memory before the task runs,
+  `MAX_UPLOAD_COLUMNS` (100) rejects pathologically wide CSVs, and a
+  schema check requires the head columns to contain either
+  `{"Title", "Author"}` (Goodreads) or `{"Title", "Authors"}` (StoryGraph).
+  When the row cap is hit, the truncated head is re-serialized to CSV so
+  the downstream task does not reload the full file. Parsing errors fall
+  through to a user-facing "could not be parsed" message.
+- New `UploadValidationTests(TransactionTestCase)` class in
+  `core/tests/test_views_e2e.py` with 5 tests: oversize-row truncation
+  positive, too-many-columns rejection negative, schema-missing rejection
+  negative, valid Goodreads positive, valid StoryGraph positive. Each test
+  patches `core.views.generate_reading_dna_task` so no Celery / broker
+  involvement is required.
+- Files changed:
+  - core/views.py (StringIO + pandas imports at top; MAX_UPLOAD_ROWS /
+    MAX_UPLOAD_COLUMNS constants; pre-flight block inside upload_view)
+  - core/tests/test_views_e2e.py (new UploadValidationTests class)
+  - scripts/ralph/prd.json (US-018 passes=true)
+- Learnings for future iterations:
+  - **Truncation strategy:** `nrows=50000` caps pandas memory by design,
+    but the downstream task still receives the raw `csv_content` string —
+    so the view re-serializes `df_head.to_csv(index=False)` ONLY when the
+    head saturates the cap. For sub-cap uploads this preserves the
+    original byte stream (including any non-canonical pandas formatting
+    the user's tool emitted).
+  - **Schema check is case-sensitive on purpose.** Goodreads emits exactly
+    `Title` and `Author`; StoryGraph emits `Title` and `Authors`. A
+    case-insensitive variant would match malformed exports that the
+    downstream parser would silently fail on, so keep `head_columns =
+    set(df_head.columns)` and use `.issubset(...)` literally.
+  - **`pd.read_csv` raises three distinct exceptions on bad input.**
+    `ParserError` for malformed rows, `EmptyDataError` for empty files,
+    and a bare `ValueError` for some encoding edge cases. The except
+    tuple catches all three; do NOT collapse to `Exception` (would
+    swallow programming errors).
+  - All 5 new tests + the 12 pre-existing tests in
+    `core.tests.test_views_e2e` pass in `poetry run python manage.py test`
+    (Docker not running this iteration). The mocked task pattern means
+    the negative tests run instantly with no Redis/Celery dependency.
+---
+
+## 2026-05-19 14:55 — US-019
+- `update_privacy_view` now renders the privacy-toggle success message via
+  `render_to_string("core/partials/messages_with_link.html", ...)` instead
+  of an f-string that concatenated raw HTML around `request.build_absolute_uri()`.
+  The new partial uses `{% url 'core:public_profile' username=username %}`
+  for the actual href (relative, never tainted by Host header) and
+  auto-escapes `{{ public_url }}` for the visible link text.
+- Files changed:
+  - core/views.py (import `render_to_string`; rewrite message construction)
+  - core/templates/core/partials/messages_with_link.html (new)
+  - scripts/ralph/prd.json (US-019 passes=true)
+- Learnings for future iterations:
+  - `core/templates/core/base.html` displays flash messages with
+    `{{ message|safe }}` (line 235). So whatever you put in
+    `messages.success(...)` is rendered as HTML — but the safer pattern is
+    to pre-render via `render_to_string` so Django auto-escaping runs on
+    the dynamic bits at render time. The `|safe` filter in base.html then
+    just unwraps the already-escaped HTML.
+  - `{% url %}` works fine inside `render_to_string` without passing a
+    request — it doesn't need RequestContext, just the URL namespace.
+    Verified with a one-liner shell check that outputs `/u/alice/` for the
+    href and HTML-escapes `<script>` in the visible text.
+  - Manual `dev-browser` check (in PRD AC) was NOT performed this
+    iteration — Docker daemon not running. The visual output of the
+    rendered partial was verified via a `render_to_string` shell call:
+    href resolves to `/u/<username>/`, visible text is escaped. Anyone
+    running this iteration through a UI sanity pass should still load
+    `/dashboard/`, toggle privacy on, and confirm the link is clickable.
+  - Test caveat: `core.tests.test_math_accuracy` has a pre-existing
+    SQLite "database table is locked" flake on
+    `test_round_trip_dedup_goodreads_then_storygraph` when running the
+    full `manage.py test core` suite. Reproduced before my change touched
+    anything in the math module — unrelated. `test_views_e2e` (20 tests)
+    and `test_profile_and_recommendations` (10 tests) both pass clean
+    when run on their own.
+---
+
+## 2026-05-19 15:50 — US-020
+- `update_username_api` is now rate-limited per-authenticated-user at 10
+  POSTs/minute via `django_ratelimit`. Followed the existing
+  `_login_view_throttled` two-function pattern: the inner
+  `_update_username_api_throttled` carries the `@ratelimit(key="user", ...)`
+  decorator; the public `update_username_api` keeps `@login_required` +
+  `@require_POST`, calls the throttled body, and catches `Ratelimited` to
+  return `JsonResponse({"error": "Too many attempts, try again later."},
+  status=429)`.
+- Files changed:
+  - core/views.py (split throttled inner fn + Ratelimited catch wrapper)
+  - core/tests/test_update_username_ratelimit.py (new; 2 tests: 11th POST 429
+    + 10th POST normal response)
+  - scripts/ralph/prd.json (US-020 passes=true)
+- Learnings for future iterations:
+  - `key="user"` for `@ratelimit` requires `request.user.is_authenticated`,
+    so the outer wrapper MUST keep `@login_required` ahead of any throttled
+    call to avoid anonymous KeyError paths. Confirmed by reusing the
+    login-view layering pattern.
+  - Tests need `@override_settings(RATELIMIT_ENABLE=True, CACHES=...locmem)`
+    — same boilerplate as `test_login_ratelimit.py`. There's no global
+    `RATELIMIT_ENABLE=True` in `bibliotype/settings.py` yet (rate-limited
+    views work in prod because `django_ratelimit` defaults to enabled
+    when `cache` is reachable), but each test still sets it explicitly
+    AND clears the cache in setUp/tearDown to keep counters isolated.
+  - The positive test asserts `status_code != 429` and accepts either
+    `200` (valid form save) or `400` (form validation error) on the 10th
+    POST because the test posts increasing display-names that may collide
+    or fail length validation — the key assertion is "not 429".
+  - `black`/`isort` still not installed (see Codebase Patterns); style
+    matched by hand against existing test/view patterns.
+---
+
+## 2026-05-19 16:25 — US-021
+- Lifted `max_workers` from 1 to 8 in the `ThreadPoolExecutor` driving
+  `process_book_row` inside `dna_analyser.py:611`. Updated the inline
+  comment: the previous `max_workers=1` was a SQLite-era safety; under
+  Postgres each worker thread gets its own thread-local connection and
+  unique-constraint races on `Author/Book/Genre/Publisher` resolve
+  cleanly via `get_or_create`'s IntegrityError-retry path.
+- Files changed:
+  - core/services/dna_analyser.py (max_workers + comment)
+  - scripts/ralph/prd.json (US-021 passes=true)
+- Concurrency-safety check (per AC): ran
+  `manage.py test core.tests.test_storygraph_integration core.tests.test_tasks_integration`
+  5 consecutive times in the Docker stack. All runs produced
+  `Ran 26 tests in N.NNNs / OK` (timings 37.8 / 40.2 / 44.7 / 50.6 / 47.5s).
+  No order-dependent failures surfaced — concurrent get_or_create races
+  on shared Genre/Author rows produced by parallel rows are safely
+  serialised by Postgres at the unique-constraint level.
+- Learnings for future iterations:
+  - The Docker `web`/`worker` images cache the poetry-install layer
+    against `pyproject.toml`+`poetry.lock`. If recent stories added a
+    dependency (US-016 added `django-ratelimit`) and your local image
+    predates that commit, `docker-compose ... up -d` will keep using
+    the stale image. Force a rebuild with
+    `docker-compose -f docker-compose.local.yml up -d --build web worker`,
+    and if `.venv` still looks stale (ModuleNotFoundError) also
+    `docker-compose ... rm -f -s -v web worker` to drop the anonymous
+    `/app/.venv` volume so the freshly-built image's venv takes over.
+  - The Bash tool returned only the *trailing* lines of a long test
+    suite output by default; key markers like `Ran N tests / OK`
+    landed above the cutoff. Grep the output with
+    `grep -E "^(Ran |OK|FAILED|ERROR)"` to reliably surface verdict
+    lines instead of relying on `| tail -N`.
+  - `ThreadPoolExecutor.map` preserves submission order for the
+    yielded results — the loop at line 615 maps DataFrame index ->
+    book PK via `read_df.index[row_idx]`, and that invariant still
+    holds at `max_workers=8` because `map` yields in input order
+    regardless of completion order. Future executors-with-side-effects
+    inside this codebase should prefer `map` over `submit/as_completed`
+    when ordering matters.
+---

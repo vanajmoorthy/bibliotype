@@ -29,6 +29,7 @@ django_cache
 
 # OS files
 .DS_Store
+*.DS_Store
 Thumbs.db
 
 # IDEs
@@ -66,6 +67,9 @@ db_dump.json
 # Scraped data and caches
 scraped_html/
 api_cache.json
+
+# Local CSV exports / generator artifacts (canonical fixtures live in core/tests/fixtures/csv/)
+csv/
 
 # Plans and brainstorms (local only)
 docs/plans/
