@@ -496,7 +496,7 @@
         "`python manage.py migrate` applies cleanly.",
         "`manage.py test` passes (migrations replay)."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 33
     },

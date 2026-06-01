@@ -1093,3 +1093,27 @@
     the directional check (visible → invisible) still works.
 - All 14 tests in `core.tests.test_profile_and_recommendations` pass.
 ---
+
+## 2026-06-01 18:16 — US-028
+- Added `db_index=True` to `Book.google_books_last_checked` to support
+  the enrichment scheduler's polling query. Generated migration
+  `0027_alter_book_google_books_last_checked.py` (single AlterField op).
+- Files changed:
+  - core/models.py (db_index=True on Book.google_books_last_checked)
+  - core/migrations/0027_alter_book_google_books_last_checked.py (new)
+  - scripts/ralph/prd.json (US-028 passes=true)
+- Learnings for future iterations:
+  - `makemigrations` correctly produces a single AlterField when toggling
+    `db_index` on an existing nullable DateTimeField — no data migration
+    needed and the index is built lazily by PostgreSQL.
+  - Pre-existing test failure unrelated to this story:
+    `core.tests.test_cache_refactor.SaveDnaInvalidationTests
+    .test_save_dna_triggers_recommendation_generation` — confirmed by
+    re-running on stashed-clean working tree against `fa8e902`. The test
+    expects `generate_recommendations_task(self.user.id)` (called as a
+    function) but the production code calls `.delay(user_id)`. Likely
+    drift from US-023 (which switched the dispatch to `.delay()`). This
+    is in the test, not the production code path. Worth flagging when a
+    later story touches `_save_dna_to_profile` or that test module.
+- 77 tests in `core.tests.test_integration` + `core.tests.test_tasks_integration` + `core.tests.test_views_e2e` pass.
+---

@@ -72,7 +72,7 @@ class Book(models.Model):
 
     google_books_average_rating = models.FloatField(null=True, blank=True)
     google_books_ratings_count = models.PositiveIntegerField(default=0)
-    google_books_last_checked = models.DateTimeField(null=True, blank=True, default=None)
+    google_books_last_checked = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
 
     class Meta:
         unique_together = ("normalized_title", "author")
