@@ -1141,3 +1141,35 @@
     unrelated — re-confirmed against the stashed-clean working tree.
 - 28 tests in `core.tests.test_views_e2e` + `core.tests.test_tasks_integration` pass.
 ---
+
+## 2026-06-01 18:27 — US-030
+- Deleted the duplicated `comparative_text` block (35 lines) in
+  `core/services/dna_analyser.py` and removed the now-dead key from the
+  `dna = { ... }` dict literal. `_enrich_dna_for_display` in `core/views.py`
+  is the single source of truth and unconditionally writes
+  `length_direction`, `length_pct`, `age_direction`, `age_pct`,
+  `bpy_direction`, `bpy_pct` on every render call.
+- Added coverage test
+  `test_enrich_dna_populates_comparative_text_when_absent` in
+  `core/tests/test_number_line.py`. It asserts the helper input lacks
+  `comparative_text`, then verifies all six keys are populated by
+  `_enrich_dna_for_display`. The pre-existing
+  `test_enrich_dna_produces_comparative_text` is retained as a smoke test;
+  the new test is stricter (asserts absence first).
+- Files changed:
+  - core/services/dna_analyser.py (deleted 35-line block + dict key)
+  - core/tests/test_number_line.py (new coverage test)
+  - scripts/ralph/prd.json (US-030 passes=true)
+- Learnings for future iterations:
+  - PRD line numbers can drift across iterations. US-030 said "L984–1018"
+    but the actual block was at L991–1025 after prior commits. Always
+    grep for the symbol (`comparative_text` here) rather than trusting
+    line numbers from the PRD.
+  - `dna_analyser.calculate_full_dna()` produces the persisted/cached DNA;
+    `_enrich_dna_for_display()` re-derives display-only fields at render
+    time. Anything that can be re-derived cheaply at render time belongs
+    in the enricher, not the analyser — keeps stored DNA smaller and lets
+    us evolve display logic without re-running expensive DNA generation.
+- All 91 tests in `core.tests.test_views_e2e + test_math_accuracy +
+  test_number_line` pass.
+---

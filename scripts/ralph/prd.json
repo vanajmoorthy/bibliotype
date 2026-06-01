@@ -523,7 +523,7 @@
         "**Coverage test:** add a test asserting that `_enrich_dna_for_display(dna_data)` populates each of the listed `comparative_text` keys when called on a fresh `dna_data` dict that lacks them.",
         "`manage.py test core.tests.test_views_e2e core.tests.test_math_accuracy` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 35
     },

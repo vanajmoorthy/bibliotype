@@ -137,6 +137,17 @@ class EnrichDnaTests(TestCase):
         self.assertIn("bpy_direction", ct)
         self.assertIn("bpy_pct", ct)
 
+    def test_enrich_dna_populates_comparative_text_when_absent(self):
+        """`_enrich_dna_for_display` is the single source of truth: when the
+        dna_data dict comes in without `comparative_text` (post US-030 — the
+        analyser no longer emits it), enrichment must populate all six keys."""
+        dna = _make_dna_data()
+        self.assertNotIn("comparative_text", dna)
+        result = _enrich_dna_for_display(dna)
+        ct = result["comparative_text"]
+        for key in ("length_direction", "length_pct", "age_direction", "age_pct", "bpy_direction", "bpy_pct"):
+            self.assertIn(key, ct, f"missing key: {key}")
+
     def test_enrich_dna_length_direction_longer(self):
         """User avg book length > community avg → 'longer'."""
         dna = _make_dna_data()

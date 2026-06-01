@@ -988,41 +988,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             if total_user_books > 0:
                 mainstream_score = round((mainstream_books_count / total_user_books) * 100)
 
-        # Build comparative_text dict for template rendering
-        comparative_text = {}
-        if percentiles:
-            # Book length: higher percentile = longer books
-            len_pct = percentiles.get("avg_book_length", 50)
-            user_len = user_base_stats["avg_book_length"]
-            comm_len = community_averages.get("avg_book_length")
-            if comm_len and user_len >= comm_len:
-                comparative_text["length_direction"] = "longer"
-                comparative_text["length_pct"] = round(len_pct, 1)
-            else:
-                comparative_text["length_direction"] = "shorter"
-                comparative_text["length_pct"] = round(100 - len_pct, 1)
-
-            # Book age: higher percentile = older books (inverted in percentile engine)
-            year_pct = percentiles.get("avg_publish_year", 50)
-            user_year = user_base_stats["avg_publish_year"]
-            comm_year = community_averages.get("avg_publish_year")
-            if comm_year and user_year <= comm_year:
-                comparative_text["age_direction"] = "older"
-                comparative_text["age_pct"] = round(year_pct, 1)
-            else:
-                comparative_text["age_direction"] = "newer"
-                comparative_text["age_pct"] = round(100 - year_pct, 1)
-
-            # Books per year
-            bpy_pct = percentiles.get("avg_books_per_year", 50)
-            user_bpy = user_base_stats.get("avg_books_per_year", 0)
-            comm_bpy = community_averages.get("avg_books_per_year")
-            if comm_bpy and user_bpy >= comm_bpy:
-                comparative_text["bpy_direction"] = "more"
-                comparative_text["bpy_pct"] = round(bpy_pct, 1)
-            else:
-                comparative_text["bpy_direction"] = "fewer"
-                comparative_text["bpy_pct"] = round(100 - bpy_pct, 1)
+        # comparative_text is computed at render time by _enrich_dna_for_display
+        # in core/views.py (single source of truth — values would be overwritten
+        # anyway, so don't bother computing them here).
 
         # StoryGraph mood and pace distributions (empty for Goodreads)
         mood_distribution = []
@@ -1043,7 +1011,6 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             "bibliotype_percentiles": percentiles,
             "global_averages": GLOBAL_AVERAGES,
             "community_averages": community_averages,
-            "comparative_text": comparative_text,
             "most_niche_book": most_niche_book,
             "reader_type": reader_type,
             "reader_type_explanation": explanation,
