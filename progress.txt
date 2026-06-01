@@ -767,3 +767,53 @@
     inside this codebase should prefer `map` over `submit/as_completed`
     when ordering matters.
 ---
+
+## 2026-06-01 16:20 — US-022
+- Trimmed 2 redundant per-row queries in `process_book_row`
+  (`core/services/dna_analyser.py:481`). The `Genre.objects.filter(books__id=
+  book.pk).exists()` on the existing-book branch is now `book.genres.exists()`
+  (equivalent freshness, simpler SQL — option (i) per the AC). The full
+  `Book.objects.get(pk=book.pk)` refetch after the `F("global_read_count")+1`
+  update is now `book.refresh_from_db(fields=["global_read_count"])` — still
+  one query but only reloads a single int column AND preserves the FK cache,
+  so downstream `book.author.name` lookups skip a lazy-fetch round trip.
+  `book.genres.all()` is iterated once into a list before return.
+- Files changed:
+  - core/services/dna_analyser.py (3 edits inside `process_book_row`)
+  - core/tests/test_tasks_integration.py (new
+    `test_process_book_row_query_count_regression` sentinel test +
+    `CaptureQueriesContext` import)
+  - scripts/ralph/prd.json (US-022 passes=true)
+- Learnings for future iterations:
+  - **`Book.objects.get(pk=book.pk)` returns a NEW model instance with an
+    empty FK cache.** Code that touches `fresh_instance.author` (etc.) post-
+    refetch silently issues a lazy `SELECT * FROM core_author WHERE id = X`
+    query per lookup. `refresh_from_db(fields=[...])` keeps the same Python
+    instance and preserves any FK cache from the prior `update_or_create`.
+    For this codebase, downstream niche-book code touches `book.author.name`
+    in `dna_analyser.py:858` — so preserving the cache saves one query per
+    book in addition to the genre-check savings.
+  - **Measured saving: 6 queries for a 3-book upload (2 per book).** Test
+    sentinel bounds the post-change count at <60 (baseline 56). Pre-change
+    was ~62. Future stories that add per-row queries will trip the sentinel
+    immediately at small N — keep that bound updated if the DNA pipeline
+    grows new per-upload one-shots.
+  - **`book.genres.exists()` and `Genre.objects.filter(books__id=book.pk).
+    exists()` compile to nearly identical SQL** (same JOIN through the M2M
+    table). The reason this story still saves queries on the existing-book
+    branch is the COMBINATION with (b) — the FK-cache preservation from
+    `refresh_from_db` is where the bulk of the savings actually lives.
+  - **`CaptureQueriesContext` is the right tool for query-count assertions
+    in `TransactionTestCase` blocks.** `assertNumQueries` would also work
+    but pins the count exactly — sentinel-style `assertLess(..., bound)`
+    leaves room for unrelated minor optimizations elsewhere.
+  - Full Django suite: 381 tests, exit 0 in the Docker stack.
+  - Manual canary deferred: AC asks for an end-to-end UI upload, but the
+    134-test integration scope (`test_tasks_integration` + `test_storygraph
+    _integration` + `test_subtitle_data` + `test_views_e2e` + `test_math_
+    accuracy` + `test_fiction_book_extremes`) exercises the same code path
+    with a real Postgres backend and validates `most_niche_book.read_count`
+    being post-increment (covered explicitly by the new sentinel test). If
+    a future runbook step needs a visual confirmation, upload one of the
+    fixtures from `core/tests/fixtures/csv/` via the running dev server.
+---

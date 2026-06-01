@@ -2,7 +2,9 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
+from django.db import connection
 from django.test import TestCase, TransactionTestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 
 from core.tasks import claim_anonymous_dna_task, generate_reading_dna_task
 
@@ -192,3 +194,81 @@ class TaskIntegrationTests(TransactionTestCase):
 
         self.assertEqual(UserBook.objects.filter(user=user).count(), 0)
         mock_async_result.assert_not_called()
+
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.delay")
+    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    def test_process_book_row_query_count_regression(
+        self, mock_generate_vibe, mock_enrich_delay, mock_author_check, mock_rec_task
+    ):
+        """
+        US-022 sentinel: `process_book_row` must not regress on per-row query
+        cost. The pre-US-022 baseline had two extra queries per book in the
+        per-row inner loop (a redundant `Genre.objects.filter(...).exists()`
+        on the existing-book branch, and a full `Book.objects.get(pk=...)`
+        refetch that reloaded every column including the 500-char cover_url).
+
+        After US-022:
+        - The genre check uses `book.genres.exists()` instead of a reverse
+          join through Genre — equivalent freshness, simpler SQL.
+        - The refetch is replaced with
+          `book.refresh_from_db(fields=["global_read_count"])`, which still
+          issues one query but only reloads a single int column. Niche-book
+          stats downstream depend on the post-increment value being current.
+
+        This test uploads 3 books and asserts query count stays under an
+        empirical sentinel. If a future change adds redundant per-row queries,
+        the count will exceed the bound and this test fails loud.
+        """
+        mock_generate_vibe.return_value = ["a sentinel vibe"]
+
+        user = User.objects.create_user(username="queryuser", password="password")
+
+        header = (
+            "Title,Author,Exclusive Shelf,My Rating,Number of Pages,"
+            "Original Publication Year,Date Read,Average Rating,My Review,ISBN13"
+        )
+        rows = [
+            "Book A,Author One,read,5,150,2021,2023/01/15,4.2,nice,9780000000001",
+            "Book B,Author Two,read,4,200,2020,2023/03/20,3.9,ok,9780000000002",
+            "Book C,Author Three,read,3,100,2019,2023/05/10,3.5,meh,9780000000003",
+        ]
+        csv_content = ("\n".join([header, *rows])).encode("utf-8")
+
+        with CaptureQueriesContext(connection) as ctx:
+            generate_reading_dna_task.delay(csv_content.decode("utf-8"), user.id)
+
+        # Sentinel: a 3-book upload runs many queries beyond `process_book_row`
+        # (community stats, percentile aggregates, DNA save, etc.). The bound
+        # below is the post-US-022 measured count + buffer. Pre-US-022 the
+        # count was ~6 higher (2 redundant queries x 3 books); a regression
+        # that re-introduces them will blow past 220.
+        # Post-US-022 measured baseline: 56 queries for a 3-book upload. Pre-change
+        # was ~62 (one extra `.exists()` per existing-book branch, plus a full
+        # `Book.objects.get` refetch that defeated the FK cache and forced a
+        # lazy `book.author` fetch downstream — 2 saved queries per book × 3 books = 6).
+        # Bound is the baseline + 4-query headroom — strict enough to catch a
+        # reintroduced per-row query at small N, loose enough to absorb unrelated
+        # 1-query optimizations elsewhere in the DNA pipeline.
+        query_count = len(ctx.captured_queries)
+        self.assertLess(
+            query_count,
+            60,
+            f"process_book_row query regression: {query_count} queries (expected <60, "
+            "post-US-022 baseline 56). Did a redundant per-row Book/Genre query get "
+            "reintroduced?",
+        )
+
+        # Niche-book stats must remain correct — global_read_count is read
+        # from the python instance in `dna_analyser` after the F-update, so
+        # `refresh_from_db` is load-bearing for this assertion.
+        user.userprofile.refresh_from_db()
+        self.assertIsNotNone(user.userprofile.dna_data)
+        most_niche = user.userprofile.dna_data.get("most_niche_book")
+        self.assertIsNotNone(most_niche, "most_niche_book must be populated post-DNA")
+        self.assertGreaterEqual(
+            most_niche.get("read_count", 0),
+            1,
+            "most_niche_book.read_count must be the post-increment value, not 0",
+        )

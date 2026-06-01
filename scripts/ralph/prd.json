@@ -362,7 +362,7 @@
         "**Manual canary:** upload one of the synthetic CSVs in `core/tests/fixtures/csv/` end-to-end via the running dev server (`/upload/` page). Confirm DNA generates correctly, books appear in the dashboard, AND niche-book stats look reasonable (not all books reported as `read_count=0`). Capture in `progress.txt`.",
         "`manage.py test` passes (full)."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 24
     },

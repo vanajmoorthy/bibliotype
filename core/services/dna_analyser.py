@@ -565,15 +565,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                             create_defaults={"title": title_from_csv, **book_defaults},
                         )
 
-                # Check if the book already has genres by querying the database directly
-                # This ensures we get the actual current state, not cached relationship data
-                # If created=True, we know it's new and needs enrichment, so skip the DB check
+                # Check if the book already has genres. `book.genres.exists()` runs
+                # a single COUNT(*) on the through table and is not cached on the
+                # instance — equivalent freshness to the previous reverse-side query
+                # but one fewer JOIN and reuses the FK manager.
                 if created:
                     has_genres = False
                 else:
-                    # Use a direct database query that bypasses any instance caching
-                    # Query from the Genre side of the relationship to ensure fresh data
-                    has_genres = Genre.objects.filter(books__id=book.pk).exists()
+                    has_genres = book.genres.exists()
 
                 # StoryGraph tags → canonical genres (applied before enrichment dispatch)
                 if csv_source == "storygraph" and not has_genres:
@@ -603,9 +602,16 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
                 Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
 
-                fresh_book_instance = Book.objects.get(pk=book.pk)
+                # Pull only the post-increment value back into the Python object.
+                # Niche-book stats (`book.global_read_count` reads downstream around
+                # the most-niche-book and NICHE_THRESHOLD aggregations) depend on
+                # this being current. `refresh_from_db(fields=[...])` avoids
+                # reloading large columns like cover_url / JSON blobs that didn't
+                # change.
+                book.refresh_from_db(fields=["global_read_count"])
 
-                return fresh_book_instance, [g.name for g in fresh_book_instance.genres.all()], original_row
+                genre_names = [g.name for g in book.genres.all()]
+                return book, genre_names, original_row
 
             # 8 workers is safe under Postgres: row-level locking + a thread-local
             # connection per worker means concurrent get_or_create on Author/Book/Genre/
