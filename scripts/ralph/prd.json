@@ -404,7 +404,7 @@
         "Existing recommendation tests pass.",
         "`manage.py test core.tests.test_recommendations` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 27
     },

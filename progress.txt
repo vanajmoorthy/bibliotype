@@ -888,3 +888,38 @@
   `core.tests.test_views_e2e` + `core.tests.test_tasks_integration` (27/27)
   → all green in Docker stack.
 ---
+
+## 2026-06-01 16:45 — US-025
+- Replaced both `AnonymizedReadingProfile.objects.order_by("?")[:100]` call
+  sites in `_collect_candidates_for_user` (L486) and
+  `_collect_candidates_for_anonymous` (L542) with the AC-specified pattern:
+  `ids = list(...values_list("id", flat=True)); sampled = random.sample(ids,
+  min(len(ids), 100)); profiles = list(...filter(id__in=sampled))`. Added
+  `import random` to the module's stdlib import block. Both sites cache the
+  result for 1hr via `anon_profiles_sample`, so the new sample shape is
+  identical (list of model instances) — no consumer code change needed.
+- Files changed:
+  - core/services/recommendation_service.py (import + 2 call sites)
+  - scripts/ralph/prd.json (US-025 passes=true)
+- Learnings for future iterations:
+  - **`order_by("?")` on Postgres compiles to `ORDER BY random()`** which is
+    a full-table scan + sort. For tables of any meaningful size this is
+    O(N log N) on every cache miss. Sampling ids first is O(N) for the id
+    fetch + O(K) for `random.sample`, then an `IN`-clause SELECT which uses
+    the primary-key index. Win is biggest as N grows.
+  - **`random.sample` raises ValueError when sample size > population**.
+    The `min(len(ids), 100)` guard is essential — without it, a fresh DB
+    with <100 anonymized profiles would 500 on every recs cache miss.
+  - **`values_list("id", flat=True)` on a model with PK `id` is a single
+    column index-only scan in Postgres** (cheaper than `values_list("pk")`
+    which sometimes triggers a SELECT *). Stick with `"id"` literal.
+  - The cached value (`anon_profiles_sample`) is a list of model instances
+    pickled into Redis. Switching the sampling strategy keeps the shape
+    identical; the only observable difference is that on cache miss the
+    100 instances come back via `filter(id__in=...)` in arbitrary PK order
+    rather than `random()` order, but downstream code iterates the list
+    without ordering assumptions.
+- Tests in scope: `core.tests.test_recommendations` (18/18) +
+  `core.tests.test_profile_and_recommendations` (12/12) → 30/30 green in
+  Docker stack.
+---
