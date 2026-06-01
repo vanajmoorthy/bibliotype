@@ -435,7 +435,7 @@
         "Existing enrichment tests pass with `CELERY_TASK_ALWAYS_EAGER=True`.",
         "`manage.py test core.tests.test_integration core.tests.test_enrichment_stats` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 29
     },

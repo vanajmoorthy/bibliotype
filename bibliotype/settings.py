@@ -41,6 +41,13 @@ if _django_env not in {"development", "test", "ci"} and DEBUG:
     )
 ENABLE_SILK = _env_bool("ENABLE_SILK", False)
 
+# US-027: when True, skip the per-call `time.sleep(1.2)` throttle in
+# `core/book_enrichment_service.py`. The Celery `rate_limit="30/m"` on
+# `enrich_book_task` is the unconditional safety net. Flip to True only after
+# confirming Open Library + Google Books rate-limit headroom — see AGENTS.md
+# "Settings invariants".
+ENABLE_PARALLEL_ENRICHMENT = _env_bool("ENABLE_PARALLEL_ENRICHMENT", False)
+
 allowed_hosts_str = os.environ.get("ALLOWED_HOSTS", "")
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(",") if host.strip()]
 

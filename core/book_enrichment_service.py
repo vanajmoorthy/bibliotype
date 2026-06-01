@@ -4,6 +4,7 @@ import re
 import time
 
 import requests
+from django.conf import settings
 from django.db import IntegrityError
 from django.utils import timezone
 
@@ -14,6 +15,16 @@ from .models import Author, Book, Genre, Publisher
 logger = logging.getLogger(__name__)
 
 GOOGLE_BOOKS_API_KEY = os.getenv("GOOGLE_BOOKS_API_KEY")
+
+
+def _throttle():
+    """US-027: per-call sleep between external API hits.
+
+    Skipped when `settings.ENABLE_PARALLEL_ENRICHMENT` is True; the Celery
+    `rate_limit="30/m"` on `enrich_book_task` is the unconditional safety net.
+    """
+    if not settings.ENABLE_PARALLEL_ENRICHMENT:
+        time.sleep(1.2)
 
 
 def _clean_title_for_api(title):
@@ -170,7 +181,7 @@ def _fetch_work_genres(work_key, book_title, session, book_details, slow_down=Fa
     work_url = f"https://openlibrary.org{work_key}.json"
     work_response = session.get(work_url, timeout=5)
     if slow_down:
-        time.sleep(1.2)
+        _throttle()
     if work_response.status_code == 200:
         work_data = work_response.json()
         raw_subjects = work_data.get("subjects", [])
@@ -206,7 +217,7 @@ def _fetch_from_open_library(book, session, slow_down=False):
             res = session.get(isbn_url, timeout=5)
             api_calls += 1
             if slow_down:
-                time.sleep(1.2)
+                _throttle()
 
             if res.status_code == 200:
                 edition_data = res.json()
@@ -232,7 +243,7 @@ def _fetch_from_open_library(book, session, slow_down=False):
         res = session.get(search_url, params=search_params, timeout=10)
         api_calls += 1
         if slow_down:
-            time.sleep(1.2)
+            _throttle()
 
         res.raise_for_status()
         search_data = res.json()
@@ -259,7 +270,7 @@ def _fetch_from_open_library(book, session, slow_down=False):
             edition_response = session.get(edition_url, timeout=5)
             api_calls += 1
             if slow_down:
-                time.sleep(1.2)
+                _throttle()
             if edition_response.status_code == 200:
                 _extract_edition_data(edition_response.json(), book_details)
 
@@ -296,7 +307,7 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
         res = session.get(url, timeout=10)
 
         if slow_down:
-            time.sleep(1.2)
+            _throttle()
 
         res.raise_for_status()
         data = res.json()

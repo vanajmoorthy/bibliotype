@@ -79,7 +79,7 @@ def check_author_mainstream_status_task(author_id: int, user_id: int = None, upl
         raise
 
 
-@shared_task(bind=True, max_retries=3)
+@shared_task(bind=True, max_retries=3, rate_limit="30/m")
 def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str = None):
     """Enrich a single book with data from Open Library and Google Books APIs.
 

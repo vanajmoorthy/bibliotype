@@ -951,3 +951,43 @@
 - Tests in scope: full `core.tests` ran (383 tests, 382 pass). Only the
   pre-existing unrelated failure above.
 ---
+
+## 2026-06-01 17:55 — US-027
+- Added `ENABLE_PARALLEL_ENRICHMENT` env flag (default False) to
+  `bibliotype/settings.py`. New module-level `_throttle()` helper in
+  `core/book_enrichment_service.py` does `time.sleep(1.2)` only when the
+  flag is False; the 5 existing `if slow_down: time.sleep(1.2)` sites now
+  call `if slow_down: _throttle()`. `enrich_book_task` gained an
+  unconditional `rate_limit="30/m"` on its `@shared_task` decorator —
+  ships as the safety net regardless of the flag. Parallel enrichment
+  lands disabled. Operator must set `ENABLE_PARALLEL_ENRICHMENT=True`
+  and validate Open Library + Google Books rate-limit headroom before
+  enabling.
+- Files changed:
+  - bibliotype/settings.py (new `ENABLE_PARALLEL_ENRICHMENT` flag)
+  - core/book_enrichment_service.py (`_throttle` helper + 5 call sites)
+  - core/tasks.py (`rate_limit="30/m"` on `enrich_book_task`)
+  - scripts/ralph/prd.json (US-027 passes=true)
+- Learnings for future iterations:
+  - The `slow_down=False` default param on each helper already gates the
+    sleep at call time; the new `_throttle()` adds a second, settings-level
+    gate. The two stack: `slow_down` is the caller's choice (only True from
+    the main task path), the settings flag is the operator's choice. Both
+    must be True for the sleep to fire — fail-safe by construction.
+  - `rate_limit` is a per-worker limit in Celery (30/m means each worker
+    processes ≤30 enrichment tasks per minute). With a single worker this
+    is conservative; with N workers the effective ceiling is 30N/m. PRD
+    chose 30/m as a single-worker default because Open Library's published
+    courtesy rate is ~100/m and we want headroom for retries.
+  - Existing enrichment tests use `mock.patch` on `requests.Session.get`
+    and assert on call counts, not on wall-clock timing. The settings flag
+    is invisible to them — they pass under both states. No tests are
+    coupled to the sleep behavior.
+  - `from django.conf import settings` was not previously imported in
+    `book_enrichment_service.py`. Added at the top of the third-party block
+    alongside the existing `import requests` (PEP-8 grouping puts Django
+    imports with third-party).
+- Tests in scope: `core.tests.test_enrichment_stats` +
+  `core.tests.test_integration` (59/59) → all green in Docker stack.
+- `manage.py makemigrations --check --dry-run`: no changes detected.
+---
