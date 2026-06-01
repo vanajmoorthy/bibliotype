@@ -1102,3 +1102,20 @@ class RegenerateRecommendationsCommandTests(TestCase):
         output = out.getvalue()
 
         self.assertNotIn("nodna", output)
+
+
+# ──────────────────────────────────────────────
+# Module-load: precompiled genre alias patterns
+# ──────────────────────────────────────────────
+
+
+class GenreAliasPrecompileTests(TestCase):
+    """US-027b: alias regexes are compiled once at import, not per book per alias."""
+
+    def test_compiled_alias_patterns_built_at_module_load(self):
+        from core.book_enrichment_service import _COMPILED_ALIAS_PATTERNS
+
+        self.assertGreater(len(_COMPILED_ALIAS_PATTERNS), 0)
+        pattern, canonical_name = _COMPILED_ALIAS_PATTERNS[0]
+        self.assertTrue(hasattr(pattern, "search"))
+        self.assertIsInstance(canonical_name, str)

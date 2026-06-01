@@ -16,6 +16,14 @@ logger = logging.getLogger(__name__)
 
 GOOGLE_BOOKS_API_KEY = os.getenv("GOOGLE_BOOKS_API_KEY")
 
+# US-027b: Precompile alias regexes at import time so we don't re-run
+# `re.compile(r"\b" + re.escape(alias) + r"\b")` once per book per alias.
+# Longest aliases first so e.g. "science fiction" beats "science".
+_COMPILED_ALIAS_PATTERNS = [
+    (re.compile(r"\b" + re.escape(alias) + r"\b"), CANONICAL_GENRE_MAP[alias])
+    for alias in sorted(CANONICAL_GENRE_MAP.keys(), key=len, reverse=True)
+]
+
 
 def _throttle():
     """US-027: per-call sleep between external API hits.
@@ -45,10 +53,6 @@ def _clean_and_canonicalize_genres(subjects):
 
     canonical_genres = set()
 
-    # Sort aliases by length (longest first) to match most specific terms first
-    # This prevents "science" from matching before "science fiction"
-    sorted_aliases = sorted(CANONICAL_GENRE_MAP.keys(), key=len, reverse=True)
-
     for subject in subjects:
         s_lower = subject.lower().strip()
 
@@ -57,14 +61,8 @@ def _clean_and_canonicalize_genres(subjects):
             continue
 
         matched = False
-        for alias in sorted_aliases:
-            # Use word boundaries to ensure we match whole phrases
-            # This helps avoid matching partial words (e.g., "science" in "social science")
-            pattern = r"\b" + re.escape(alias) + r"\b"
-
-            if re.search(pattern, s_lower):
-                canonical_name = CANONICAL_GENRE_MAP[alias]
-
+        for pattern, canonical_name in _COMPILED_ALIAS_PATTERNS:
+            if pattern.search(s_lower):
                 # Double-check canonical name isn't excluded
                 if canonical_name not in EXCLUDED_GENRES:
                     canonical_genres.add(canonical_name)
@@ -90,7 +88,6 @@ def _canonicalize_google_books_categories(categories):
         return set()
 
     canonical_genres = set()
-    sorted_aliases = sorted(CANONICAL_GENRE_MAP.keys(), key=len, reverse=True)
 
     for category in categories:
         # Google Books categories often have separators like "Fiction / Literary Fiction"
@@ -105,12 +102,8 @@ def _canonicalize_google_books_categories(categories):
                 continue
 
             matched = False
-            for alias in sorted_aliases:
-                pattern = r"\b" + re.escape(alias) + r"\b"
-
-                if re.search(pattern, part_lower):
-                    canonical_name = CANONICAL_GENRE_MAP[alias]
-
+            for pattern, canonical_name in _COMPILED_ALIAS_PATTERNS:
+                if pattern.search(part_lower):
                     if canonical_name not in EXCLUDED_GENRES:
                         canonical_genres.add(canonical_name)
                         matched = True

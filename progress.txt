@@ -991,3 +991,38 @@
   `core.tests.test_integration` (59/59) → all green in Docker stack.
 - `manage.py makemigrations --check --dry-run`: no changes detected.
 ---
+
+## 2026-06-01 17:00 — US-027b
+- Genre-alias regex patterns now compile **once at module load** of
+  `core/book_enrichment_service.py` into `_COMPILED_ALIAS_PATTERNS` (a list
+  of `(compiled_pattern, canonical_name)` tuples, sorted longest-alias-first
+  to keep "science fiction" winning over "science"). Both
+  `_clean_and_canonicalize_genres` and `_canonicalize_google_books_categories`
+  now iterate the precompiled list instead of re-running `re.escape` +
+  `re.compile` per subject/category per alias.
+- Files changed:
+  - core/book_enrichment_service.py (module-level constant + both helpers)
+  - core/tests/test_integration.py (new `GenreAliasPrecompileTests`)
+  - scripts/ralph/prd.json (US-027b passes=true)
+- Learnings for future iterations:
+  - The PRD's regex literal is `r"\b" + re.escape(a) + r"\b"`; this is
+    intentionally a string-concatenation expression (not an f-string) because
+    `re.escape` may emit backslashes that an f-string would still
+    backslash-quote. Match it verbatim.
+  - The list-of-tuples shape `[(pattern, canonical_name), ...]` is critical:
+    iterating tuples avoids one dict-lookup per alias per book inside the
+    hot loop. Both helpers benefit since they ran the same loop body.
+  - Genre-canonicalization tests (`test_integration.test_enrich_book_*`,
+    `test_storygraph_integration.test_storygraph_tags_apply_canonical_*`,
+    `test_math_accuracy.test_*canonical*`, `test_fiction_book_extremes.*`)
+    all pass unchanged — semantics are byte-for-byte equivalent.
+  - The new module-load test is intentionally tiny: it asserts the list is
+    non-empty and that element 0 is a `(compiled_pattern, str)` tuple. This
+    is the canary the PRD asked for — if a future refactor zeroes out the
+    list or accidentally swaps element shape, this test fails fast without
+    needing a real enrichment fixture.
+- Tests in scope: `core.tests.test_integration` + `core.tests.test_enrichment_stats`
+  (60/60), plus genre-related suites (`test_math_accuracy`,
+  `test_fiction_book_extremes`, `test_storygraph_integration`, 73/73) →
+  all green in Docker stack.
+---

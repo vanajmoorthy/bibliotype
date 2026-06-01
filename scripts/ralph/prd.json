@@ -451,7 +451,7 @@
         "`manage.py test core.tests.test_integration core.tests.test_enrichment_stats` passes.",
         "`progress.txt`: note that genre-pattern compilation now happens at import time."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 30
     },
