@@ -465,7 +465,7 @@
         "**Positive test:** existing dashboard tests still pass.",
         "`manage.py test core.tests.test_views_e2e` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 31
     },

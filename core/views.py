@@ -637,16 +637,21 @@ def display_dna_view(request):
                         top_books_data = request.session.get("top_book_ids", [])
                         book_ratings = request.session.get("book_ratings", {})
 
-                        # Create a minimal AnonymousUserSession from dna_data
-                        anon_session = AnonymousUserSession.objects.create(
+                        # Recreate (or refresh) the AnonymousUserSession from dna_data.
+                        # Use update_or_create so a concurrent dashboard request that
+                        # already created the row doesn't blow up the second caller
+                        # with a unique-constraint IntegrityError.
+                        anon_session, _ = AnonymousUserSession.objects.update_or_create(
                             session_key=request.session.session_key,
-                            dna_data=dna_data,
-                            books_data=books_data,
-                            top_books_data=top_books_data,
-                            genre_distribution=genre_dist,
-                            author_distribution=author_dist,
-                            book_ratings=book_ratings,  # Store ratings if available
-                            expires_at=timezone.now() + timedelta(days=7),
+                            defaults={
+                                "dna_data": dna_data,
+                                "books_data": books_data,
+                                "top_books_data": top_books_data,
+                                "genre_distribution": genre_dist,
+                                "author_distribution": author_dist,
+                                "book_ratings": book_ratings,
+                                "expires_at": timezone.now() + timedelta(days=7),
+                            },
                         )
 
                         # Now try to get recommendations

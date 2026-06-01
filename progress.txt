@@ -1026,3 +1026,42 @@
   `test_fiction_book_extremes`, `test_storygraph_integration`, 73/73) →
   all green in Docker stack.
 ---
+
+## 2026-06-01 18:05 — US-024b
+- `display_dna_view`'s AnonymousUserSession-recreate fallback now uses
+  `update_or_create(session_key=..., defaults={...})` instead of
+  `create(...)`. Same payload, but a concurrent dashboard request that
+  already inserted the row no longer 500s the second caller on the
+  unique-constraint collision.
+- Files changed:
+  - core/views.py (`display_dna_view` recreate branch, ~L640–L655)
+  - core/tests/test_views_e2e.py (new negative test
+    `test_anonymous_session_recreation_is_idempotent`)
+  - scripts/ralph/prd.json (US-024b passes=true)
+- Learnings for future iterations:
+  - The recreate fallback is wrapped in `try/except Exception as
+    recreate_error: logger.error(...)`. The old `create()` IntegrityError
+    would be swallowed and logged, NOT raised — so an idempotency test
+    can't `assertRaises(IntegrityError)`. Instead, assert
+    `assertNoLogs("core.views", level="ERROR")` while calling the view
+    repeatedly under a forced-recreate condition. Confirmed by toggling
+    back to `create()` locally: that variant emits the
+    "Error recreating anonymous session" ERROR line.
+  - To force the recreate branch deterministically, patch the manager
+    method directly with `patch.object(AnonymousUserSession.objects,
+    "get", side_effect=AnonymousUserSession.DoesNotExist)`. The model is
+    imported locally inside `display_dna_view`, so a
+    `patch("core.views.AnonymousUserSession")` decorator won't intercept
+    it — patching the manager attribute on the class works regardless of
+    import site.
+  - `get_recommendations_for_anonymous` is also imported locally inside
+    the view (from `core.services.recommendation_service`), so mock it at
+    the source module path: `patch("core.services.recommendation_service.
+    get_recommendations_for_anonymous", return_value=[])`. Otherwise the
+    test exercises the entire recommendation engine for no reason.
+  - Pattern for "needs a session_key" anonymous tests: `session =
+    self.client.session; session["dna_data"] = {...}; session.save()`
+    then `session.session_key` is populated. No upload required, which
+    keeps the test fast (~0.3s).
+- All 21 tests in `core.tests.test_views_e2e` pass.
+---
