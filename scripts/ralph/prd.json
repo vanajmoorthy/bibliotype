@@ -376,7 +376,7 @@
         "Tests still pass with `CELERY_TASK_ALWAYS_EAGER=True` (which makes `.delay()` synchronous in tests anyway).",
         "`manage.py test core.tests.test_recommendations core.tests.test_tasks_integration` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 25
     },

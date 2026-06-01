@@ -817,3 +817,28 @@
     a future runbook step needs a visual confirmation, upload one of the
     fixtures from `core/tests/fixtures/csv/` via the running dev server.
 ---
+
+## 2026-06-01 16:25 — US-023
+- `_save_dna_to_profile` in `core/services/dna_analyser.py` now dispatches
+  recommendations via `generate_recommendations_task.delay(profile.user.id)`
+  and drops the try/except wrapper — Celery's retry/error path handles task
+  failures, and DNA-task latency no longer includes synchronous recs.
+- Files changed:
+  - core/services/dna_analyser.py (.delay + remove try/except + log update)
+  - scripts/ralph/prd.json (US-023 passes=true)
+- Learnings for future iterations:
+  - Under `CELERY_TASK_ALWAYS_EAGER=True` (set in tests),
+    `task.delay(...)` runs the body inline and propagates exceptions when
+    `CELERY_TASK_EAGER_PROPAGATES=True` — so removing the try/except did
+    not regress the existing recs tests. The Bibliotype test config sets
+    both flags (per CLAUDE.md), making `.delay()` behave identically to a
+    direct call in tests.
+  - The previous inline call carried a stale comment claiming "the caller
+    is already in an async task, so there's no benefit to spawning another."
+    That reasoning ignored DNA-task latency budgets — the `.delay()` path
+    decouples DNA task duration from recs build duration. Future stories
+    should be skeptical of comments that justify keeping work synchronous
+    inside an already-async task.
+- Tests in scope: `core.tests.test_recommendations` + `core.tests.test_tasks_integration`
+  → 25/25 green in Docker stack.
+---

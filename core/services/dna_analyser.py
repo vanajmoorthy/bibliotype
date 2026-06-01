@@ -299,17 +299,10 @@ def _save_dna_to_profile(profile, dna_data):
         safe_cache_delete(f"similar_users_{profile.user.id}")
         safe_cache_delete(f"user_recommendations_{profile.user.id}")
 
-        # Generate recommendations inline — the caller is already in an async task,
-        # so there's no benefit to spawning another. This ensures recommendations
-        # are ready when the dashboard loads.
         from ..tasks import generate_recommendations_task
 
-        try:
-            generate_recommendations_task(profile.user.id)
-            logger.info(f"Generated recommendations inline for user {profile.user.username}")
-        except Exception as e:
-            logger.error(f"Inline recommendation generation failed for {profile.user.username}: {e}", exc_info=True)
-            # Non-fatal — dashboard will show pending state and the view will retry
+        generate_recommendations_task.delay(profile.user.id)
+        logger.info(f"Dispatched recommendations task for user {profile.user.username}")
 
     except Exception as e:
         logger.error(f"Error saving profile for user {profile.user.username}: {e}")
