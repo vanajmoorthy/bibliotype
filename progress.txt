@@ -1117,3 +1117,27 @@
     later story touches `_save_dna_to_profile` or that test module.
 - 77 tests in `core.tests.test_integration` + `core.tests.test_tasks_integration` + `core.tests.test_views_e2e` pass.
 ---
+
+## 2026-06-01 18:25 — US-029
+- Added composite partial index `userprofile_recs_partial_idx` on
+  `UserProfile(visible_in_recommendations, is_public) WHERE dna_data IS NOT NULL`.
+  Supports the `find_similar_users` candidate query. Added a `Meta` class to
+  `UserProfile` (none existed previously) and imported
+  `from django.db.models import Q` to express the partial condition.
+  `makemigrations` produced `0028_userprofile_userprofile_recs_partial_idx.py`
+  (single AddIndex op).
+- Files changed:
+  - core/models.py (add `Meta.indexes` with partial index + Q import)
+  - core/migrations/0028_userprofile_userprofile_recs_partial_idx.py (new)
+  - scripts/ralph/prd.json (US-029 passes=true)
+- Learnings for future iterations:
+  - Partial indexes via `condition=Q(...)` translate cleanly through Django's
+    migration autodetector into PostgreSQL `CREATE INDEX ... WHERE ...` —
+    no special migration plumbing required.
+  - `UserProfile` previously had no `Meta` class; future stories adding ordering
+    or constraints to that model can now extend the new `Meta` block.
+  - The pre-existing `test_save_dna_triggers_recommendation_generation`
+    failure (flagged in the US-028 entry) is still present and still
+    unrelated — re-confirmed against the stashed-clean working tree.
+- 28 tests in `core.tests.test_views_e2e` + `core.tests.test_tasks_integration` pass.
+---

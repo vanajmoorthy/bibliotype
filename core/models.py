@@ -2,6 +2,7 @@ import re
 
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -141,6 +142,15 @@ class UserProfile(models.Model):
     visible_in_recommendations = models.BooleanField(
         default=True, help_text="Allow other users to see you as a recommendation source"
     )
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["visible_in_recommendations", "is_public"],
+                condition=Q(dna_data__isnull=False),
+                name="userprofile_recs_partial_idx",
+            ),
+        ]
 
     def __str__(self):
         return f"DNA for {self.user.username}"

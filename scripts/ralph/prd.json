@@ -509,7 +509,7 @@
         "Migration applies cleanly.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 34
     },
