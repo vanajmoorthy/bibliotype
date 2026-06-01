@@ -43,7 +43,7 @@ from .analytics.events import (
     track_user_logged_in,
     track_user_signed_up,
 )
-from .cache_utils import safe_cache_get, safe_cache_set
+from .cache_utils import safe_cache_add, safe_cache_get, safe_cache_set
 from .dna_constants import CANONICAL_GENRE_MAP, FICTION_GENRES, GLOBAL_AVERAGES, NONFICTION_GENRES
 from .forms import CustomUserCreationForm, UpdateDisplayNameForm
 from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
@@ -574,12 +574,20 @@ def display_dna_view(request):
                     recommendations = stored_recs
                     logger.info(f"Loaded {len(recommendations)} stored recommendations for user {request.user.id}")
                 else:
-                    # No stored recommendations yet - they're being generated asynchronously
-                    # Trigger generation if not already in progress (safety net)
-                    from .tasks import generate_recommendations_task
+                    # No stored recommendations yet - they're being generated asynchronously.
+                    # Sentinel-guard via cache.add so concurrent dashboard polls don't
+                    # spawn duplicate tasks. The sentinel is deleted when the task
+                    # finishes (in generate_recommendations_task's finally block).
+                    if safe_cache_add(f"recs_dispatching_{request.user.id}", 1, timeout=300):
+                        from .tasks import generate_recommendations_task
 
-                    generate_recommendations_task.delay(request.user.id)
-                    logger.info(f"No stored recommendations for user {request.user.id}, triggered generation")
+                        generate_recommendations_task.delay(request.user.id)
+                        logger.info(f"No stored recommendations for user {request.user.id}, triggered generation")
+                    else:
+                        logger.info(
+                            f"Skipped duplicate recommendations dispatch for user {request.user.id} "
+                            f"(sentinel held)"
+                        )
                     recommendations = []
 
                 # Track recommendations displayed (only if we have some)

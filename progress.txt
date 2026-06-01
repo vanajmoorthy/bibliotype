@@ -842,3 +842,49 @@
 - Tests in scope: `core.tests.test_recommendations` + `core.tests.test_tasks_integration`
   → 25/25 green in Docker stack.
 ---
+
+## 2026-06-01 17:35 — US-024
+- `display_dna_view` now sentinel-guards the safety-net recommendations
+  dispatch via `safe_cache_add("recs_dispatching_<user_id>", 1, timeout=300)`.
+  5 concurrent dashboard polls collapse to 1 task dispatch. The sentinel is
+  cleared in `generate_recommendations_task`'s `finally` block, but ONLY on
+  terminal exit — on `self.retry(...)` the sentinel is preserved (via a
+  `clear_sentinel_on_exit` flag) so duplicate dispatches stay blocked across
+  the retry countdown. New `safe_cache_add()` wrapper in `cache_utils.py`
+  fails open (returns True) on Redis errors so cache unavailability never
+  blocks task dispatch.
+- Files changed:
+  - core/cache_utils.py (new `safe_cache_add` wrapper)
+  - core/views.py (sentinel guard around dispatch in `display_dna_view`)
+  - core/tasks.py (terminal-exit sentinel cleanup in `generate_recommendations_task`)
+  - core/tests/test_profile_and_recommendations.py (2 new tests:
+    5-concurrent-poll collapse + sentinel cleared on task success)
+  - scripts/ralph/prd.json (US-024 passes=true)
+- Learnings for future iterations:
+  - `cache.add()` is atomic in Django's cache framework — returns True only
+    when the key was newly set. The `safe_cache_*` family was missing an
+    `add` wrapper; future stories that need atomic set-if-absent semantics
+    (e.g. distributed locks, dispatch guards) should use `safe_cache_add()`.
+    Fail-open on Redis errors matches the rest of the safe wrappers and
+    keeps task dispatch from getting stuck when the cache is unavailable.
+  - Celery's `self.retry(...)` raises `Retry`, which propagates through
+    `try/except Exception`. A naive `finally` block would clear the sentinel
+    on retry too, breaking the guard during the retry countdown. The fix is
+    a sticky flag set to `False` in the retry-bound except branch BEFORE
+    the `raise self.retry(...)`, then checked in `finally`.
+  - The `generate_recommendations_task` lazy-imports `safe_cache_delete`
+    inside the function body. Moving it to the top of the function (alongside
+    the new `safe_cache_delete(f"recs_dispatching_{user_id}")` call) avoids
+    a second import in `finally` and keeps both delete sites consistent.
+  - Test pattern for `mock.patch` on Celery tasks that the SUT imports lazily:
+    patch the canonical reference (`core.tasks.generate_recommendations_task.delay`),
+    not the local import inside the view — the view's lazy import binds to
+    the patched object at call time.
+  - The `cache.clear()` call inside the test is required because
+    `LocMemCache` persists state across test methods within the same
+    TestCase (it's process-scoped, not request-scoped); without it the
+    sentinel from a prior test could leak in.
+- Tests in scope: `core.tests.test_profile_and_recommendations` (12/12) +
+  `core.tests.test_views_e2e` + `core.tests.test_tasks_integration` (27/27)
+  → all green in Docker stack.
+---

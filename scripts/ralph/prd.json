@@ -390,7 +390,7 @@
         "New regression test: 5 simultaneous dashboard renders produce only 1 task dispatch (use `mock.patch` on `.delay`).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 26
     },

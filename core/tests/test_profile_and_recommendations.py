@@ -218,6 +218,61 @@ class RecommendationsTestCase(TestCase):
         # The template should render the recommendations section
         self.assertIn("recommendations", response.context)
 
+    def test_concurrent_dashboard_polls_dispatch_recommendations_task_once(self):
+        """US-024: cache.add sentinel collapses 5 concurrent dashboard renders into 1 task dispatch."""
+        from django.core.cache import cache
+
+        # Pre-clear cache state and force the "no stored recs" branch.
+        cache.clear()
+        self.user1.userprofile.dna_data = {
+            "top_genres": [("fantasy", 10)],
+            "top_authors": [(self.author1.normalized_name, 5)],
+        }
+        self.user1.userprofile.recommendations_data = None
+        self.user1.userprofile.save()
+
+        self.client.login(username="testuser1", password="test123")
+
+        # Patch .delay on the imported symbol used inside display_dna_view.
+        # The task is imported lazily inside the view, so we patch the
+        # canonical reference in core.tasks.
+        with patch("core.tasks.generate_recommendations_task.delay") as mock_delay:
+            for _ in range(5):
+                response = self.client.get(reverse("core:display_dna"))
+                self.assertEqual(response.status_code, 200)
+
+            self.assertEqual(
+                mock_delay.call_count,
+                1,
+                f"Expected exactly 1 task dispatch across 5 polls; got {mock_delay.call_count}",
+            )
+            mock_delay.assert_called_once_with(self.user1.id)
+
+        # Sentinel should still be held (task never ran, so finally didn't fire).
+        self.assertEqual(cache.get(f"recs_dispatching_{self.user1.id}"), 1)
+
+    def test_recs_dispatch_sentinel_cleared_on_task_completion(self):
+        """US-024: generate_recommendations_task clears its dispatch sentinel on success."""
+        from django.core.cache import cache
+
+        from core.tasks import generate_recommendations_task
+
+        cache.clear()
+        self.user1.userprofile.dna_data = {
+            "top_genres": [("fantasy", 10)],
+            "top_authors": [(self.author1.normalized_name, 5)],
+        }
+        self.user1.userprofile.save()
+
+        # Simulate the dashboard's prior dispatch having seeded the sentinel.
+        cache.set(f"recs_dispatching_{self.user1.id}", 1, timeout=300)
+        self.assertEqual(cache.get(f"recs_dispatching_{self.user1.id}"), 1)
+
+        # Run the task synchronously (CELERY_TASK_ALWAYS_EAGER is on).
+        generate_recommendations_task.delay(self.user1.id)
+
+        self.assertIsNone(cache.get(f"recs_dispatching_{self.user1.id}"))
+
     def test_anonymous_user_gets_recommendations(self):
         """Test that anonymous users can have sessions created (skips recommendation generation)"""
         # This test verifies AnonymousUserSession can be created with all required fields
