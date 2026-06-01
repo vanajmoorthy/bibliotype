@@ -419,7 +419,7 @@
         "Manual check (dev-browser): admin changelist for genres and publishers loads with same numbers but fewer queries (verify via Silk in DEBUG).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 28
     },

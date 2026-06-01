@@ -5,6 +5,7 @@ from django.contrib import admin
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
+from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.urls import path
@@ -46,9 +47,12 @@ class GenreAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     ordering = ("name",)
 
-    @admin.display(description="Books")
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(book_count_annot=Count("books"))
+
+    @admin.display(description="Books", ordering="book_count_annot")
     def book_count(self, obj):
-        return obj.books.count()
+        return obj.book_count_annot
 
 
 @admin.register(Author)
@@ -70,9 +74,12 @@ class PublisherAdmin(admin.ModelAdmin):
     readonly_fields = ("mainstream_last_checked",)
     ordering = ("name",)
 
-    @admin.display(description="Books")
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(book_count_annot=Count("books"))
+
+    @admin.display(description="Books", ordering="book_count_annot")
     def book_count(self, obj):
-        return obj.books.count()
+        return obj.book_count_annot
 
 
 @admin.register(Book)

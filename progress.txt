@@ -923,3 +923,31 @@
   `core.tests.test_profile_and_recommendations` (12/12) → 30/30 green in
   Docker stack.
 ---
+
+## 2026-06-01 17:50 — US-026
+- `GenreAdmin` and `PublisherAdmin` now override `get_queryset` to annotate
+  `book_count_annot=Count("books")`, and the `book_count` display methods
+  return the annotation directly. Eliminates N+1 `obj.books.count()` on the
+  admin changelist for each row. `@admin.display(ordering=...)` sets
+  `admin_order_field` so columns remain sortable.
+- Files changed:
+  - core/admin.py (Count import + get_queryset on both admins + display
+    method bodies)
+  - scripts/ralph/prd.json (US-026 passes=true)
+- Learnings for future iterations:
+  - `Book.genres` (M2M) and `Book.publisher` (FK) both use
+    `related_name="books"`, so a single `Count("books")` works for both
+    `GenreAdmin` and `PublisherAdmin`.
+  - Prefer `@admin.display(description=..., ordering=...)` over assigning
+    `.admin_order_field` to the function object — same effect, kept on the
+    decorator line. Verified at runtime via `manage.py shell`.
+  - Pre-existing failure in
+    `core.tests.test_cache_refactor.SaveDnaInvalidationTests.test_save_dna_triggers_recommendation_generation`
+    confirmed present on `triage/codebase-fixes` HEAD before this change
+    (stashed working tree, reran, still failed). Fallout from US-023 (.delay
+    dispatch) that the test wasn't updated to expect. NOT caused by US-026;
+    not in scope here. A future story should patch the assertion to
+    `mock_rec_task.delay.assert_called_once_with(...)`.
+- Tests in scope: full `core.tests` ran (383 tests, 382 pass). Only the
+  pre-existing unrelated failure above.
+---
