@@ -1065,3 +1065,31 @@
     keeps the test fast (~0.3s).
 - All 21 tests in `core.tests.test_views_e2e` pass.
 ---
+
+## 2026-06-01 17:10 — US-024c
+- `update_recommendation_visibility` now invalidates `user_recommendations_<id>`
+  and `similar_users_<id>` on every toggle. When toggling FROM visible TO
+  invisible it also flushes `public_users_for_recs_sample` and logs
+  `user opted out of recs; cleared candidate sample cache`.
+- AGENTS.md Redis registry corrected: the canonical key is
+  `user_recommendations_<user_id>` (not `recs_<user_id>` as the prior entry
+  claimed) and a new `similar_users_<user_id>` entry was added.
+- Files changed:
+  - core/views.py (added safe_cache_delete import; cache invalidation logic in update_recommendation_visibility)
+  - core/tests/test_profile_and_recommendations.py (new RecommendationVisibilityCacheInvalidationTestCase with 2 tests)
+  - AGENTS.md (Redis key registry corrections)
+  - scripts/ralph/prd.json (US-024c passes=true)
+- Learnings for future iterations:
+  - `logger` is already module-level in `core/views.py` (line 51), no import
+    of `logging` needed.
+  - `safe_cache_delete` was NOT in the existing cache_utils import line —
+    only `safe_cache_add/get/set` were imported. Adding it kept the imports
+    alphabetised.
+  - The PRD's AGENTS.md cross-check was load-bearing: the registry entry for
+    `recs_<user_id>` was actually wrong (real key is `user_recommendations_<id>`).
+    Future stories that touch caching should reconcile AGENTS.md against the
+    real code (`grep` the literal key string) before trusting it.
+  - The `was_visible` snapshot must be captured BEFORE `profile.save()` so
+    the directional check (visible → invisible) still works.
+- All 14 tests in `core.tests.test_profile_and_recommendations` pass.
+---

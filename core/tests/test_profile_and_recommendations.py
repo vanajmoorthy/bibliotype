@@ -371,3 +371,83 @@ class RecommendationsTestCase(TestCase):
         self.assertEqual(ratings, test_ratings)
         self.assertEqual(ratings.get(1), 5)
         self.assertEqual(ratings.get(2), 4)
+
+
+@override_settings(
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_STORE_EAGER_RESULT=True,
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "us-024c-snowflake",
+        }
+    },
+)
+class RecommendationVisibilityCacheInvalidationTestCase(TestCase):
+    """US-024c: toggling visibility must invalidate recommendation caches."""
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username="vis_toggle_user",
+            email="vis@test.com",
+            password="testpass123",
+        )
+        self.user.userprofile.is_public = True
+        self.user.userprofile.dna_data = {"reader_type": "Visibility Toggler"}
+        self.user.userprofile.save()
+        self.client.login(username="vis_toggle_user", password="testpass123")
+
+    def _seed_caches(self):
+        from core.cache_utils import safe_cache_set
+
+        safe_cache_set(f"user_recommendations_{self.user.id}", ["rec_a", "rec_b"], 900)
+        safe_cache_set(f"similar_users_{self.user.id}", [{"user_id": 99}], 1800)
+        safe_cache_set("public_users_for_recs_sample", [{"user_id": self.user.id}], 1800)
+
+    def test_visible_to_invisible_clears_all_three_caches(self):
+        from core.cache_utils import safe_cache_get
+
+        self.user.userprofile.visible_in_recommendations = True
+        self.user.userprofile.save()
+        self._seed_caches()
+
+        response = self.client.post(
+            reverse("core:update_recommendation_visibility"),
+            {"visible_in_recommendations": "false"},
+        )
+        self.assertEqual(response.status_code, 302)
+
+        self.user.userprofile.refresh_from_db()
+        self.assertFalse(self.user.userprofile.visible_in_recommendations)
+
+        self.assertIsNone(safe_cache_get(f"user_recommendations_{self.user.id}"))
+        self.assertIsNone(safe_cache_get(f"similar_users_{self.user.id}"))
+        self.assertIsNone(safe_cache_get("public_users_for_recs_sample"))
+
+    def test_invisible_to_visible_preserves_candidate_pool(self):
+        from core.cache_utils import safe_cache_get
+
+        self.user.userprofile.visible_in_recommendations = False
+        self.user.userprofile.save()
+        self._seed_caches()
+
+        response = self.client.post(
+            reverse("core:update_recommendation_visibility"),
+            {"visible_in_recommendations": "true"},
+        )
+        self.assertEqual(response.status_code, 302)
+
+        self.user.userprofile.refresh_from_db()
+        self.assertTrue(self.user.userprofile.visible_in_recommendations)
+
+        # Per-user caches still get cleared so the new visibility state is
+        # reflected on the next read.
+        self.assertIsNone(safe_cache_get(f"user_recommendations_{self.user.id}"))
+        self.assertIsNone(safe_cache_get(f"similar_users_{self.user.id}"))
+        # But the shared candidate sample is NOT flushed on the
+        # invisible -> visible direction.
+        self.assertEqual(
+            safe_cache_get("public_users_for_recs_sample"),
+            [{"user_id": self.user.id}],
+        )

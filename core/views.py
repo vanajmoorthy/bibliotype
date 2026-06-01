@@ -43,7 +43,7 @@ from .analytics.events import (
     track_user_logged_in,
     track_user_signed_up,
 )
-from .cache_utils import safe_cache_add, safe_cache_get, safe_cache_set
+from .cache_utils import safe_cache_add, safe_cache_delete, safe_cache_get, safe_cache_set
 from .dna_constants import CANONICAL_GENRE_MAP, FICTION_GENRES, GLOBAL_AVERAGES, NONFICTION_GENRES
 from .forms import CustomUserCreationForm, UpdateDisplayNameForm
 from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
@@ -1165,8 +1165,23 @@ def update_recommendation_visibility(request):
     """Toggle visibility in recommendations"""
     is_visible = request.POST.get("visible_in_recommendations") == "true"
     profile = request.user.userprofile
+    was_visible = profile.visible_in_recommendations
     profile.visible_in_recommendations = is_visible
     profile.save()
+
+    # Invalidate caches keyed on this user's recommendation/similarity output so
+    # the toggle takes effect immediately (US-024c).
+    safe_cache_delete(f"user_recommendations_{request.user.id}")
+    safe_cache_delete(f"similar_users_{request.user.id}")
+
+    # When opting OUT, also flush the candidate-pool cache so the user is
+    # dropped from other readers' similarity searches on the next refresh.
+    if was_visible and not is_visible:
+        safe_cache_delete("public_users_for_recs_sample")
+        logger.info(
+            "user opted out of recs; cleared candidate sample cache",
+            extra={"user_id": request.user.id},
+        )
 
     # Track settings update
     track_settings_updated(request.user.id, setting_type="recommendation_visibility")

@@ -482,7 +482,7 @@
         "**Test (invisible \u2192 visible):** toggling back on does NOT clear `public_users_for_recs_sample` (only one direction warrants the candidate-pool flush).",
         "`manage.py test core.tests.test_profile_and_recommendations` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 32
     },
