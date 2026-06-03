@@ -588,7 +588,7 @@
         "Keep the re-upload nudge (`messages.info(...)` around dashboard render) \u2014 it's the fallback for any user who never triggers a regeneration.",
         "`manage.py test core.tests.test_views_e2e core.tests.test_math_accuracy` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 39
     },

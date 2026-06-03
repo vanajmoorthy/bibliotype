@@ -1280,3 +1280,28 @@
     silently break any legacy row written before this story shipped.
 - All 392 tests pass.
 ---
+
+## 2026-06-03 12:25 — US-033
+- Removed legacy DNA-data backfill block from `_enrich_dna_for_display`
+  in `core/views.py`. Deleted the absence-checking writes for
+  `avg_books_per_year` / `num_reading_years` / `books_with_dates`,
+  `currently_reading_books` / `currently_reading_count`,
+  `custom_shelf_count`, `cover_url` on niche/longest/shortest books, and
+  `page_difference`. Kept the unconditional refresh of `global_averages`,
+  `community_averages`, percentiles, `comparative_text`, and
+  `number_line_ranges`. Kept the re-upload nudge in `display_dna_view`.
+- Files changed:
+  - core/views.py (`_enrich_dna_for_display`: backfill block removed,
+    docstring updated)
+  - scripts/ralph/prd.json (US-033 passes=true)
+- Learnings for future iterations:
+  - Blocking pre-flight check passed via existing line
+    `2026-06-03: regenerate_dna run in production` in progress.txt (added
+    by an earlier ops cutover commit). The PRD's regex match is enough —
+    no extra operator-name parsing.
+  - `user_stats = dna_data.get("user_stats", {})` MUST remain after the
+    deletion because the percentile cache key and `comparative_text`
+    block both read from it. Only `stats_by_year` / `dated_book_count`
+    became dead after the deletion.
+- All 61 tests in `core.tests.test_views_e2e core.tests.test_math_accuracy` pass.
+---
