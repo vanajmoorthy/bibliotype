@@ -1324,3 +1324,41 @@
     import inside the task.
 - All 7 tests in `core.tests.test_tasks_integration` pass.
 ---
+
+## 2026-06-03 11:30 — US-035b
+- `_canonicalize_google_books_categories` is now a 4-line wrapper that flattens
+  each category on `/` and delegates to `_clean_and_canonicalize_genres`.
+  Removed the duplicated lowercase-strip / EXCLUDED_GENRES skip /
+  `_COMPILED_ALIAS_PATTERNS` loop / canonical-not-excluded re-check / debug
+  log block (~33 lines collapsed to 4). The `[:5]` cap at the call site in
+  `_fetch_from_open_library` (line ~514) is unchanged — kept the cap at the
+  call site per the AC.
+- Added snapshot test `test_canonicalize_google_books_categories_snapshot`
+  in `core/tests/test_integration.py` to lock in the pre-refactor outputs
+  for the three PRD fixture inputs:
+  - `["Fiction/Romance", "Self-Help"]` → `{"romance", "self-help"}`
+  - `["Juvenile Fiction"]` → `set()`
+  - `["Computers/Programming Languages"]` → `set()`
+- Files changed:
+  - core/book_enrichment_service.py (`_canonicalize_google_books_categories`)
+  - core/tests/test_integration.py (new snapshot test method on
+    `BookEnrichmentIntegrationTests`)
+  - scripts/ralph/prd.json (US-035b passes=true)
+- Learnings for future iterations:
+  - The two GB and OL canonicalization paths were already semantically
+    identical *after* the GB split-on-`/`; verified via direct invocation
+    of the pre-refactor function against the fixtures. The
+    "Risk note: order of priority application may differ subtly" in the
+    PRD didn't bite because both paths used the same
+    `_COMPILED_ALIAS_PATTERNS` (longest-alias-first) ordering even before
+    the dedup — there was no separate Google-specific ordering to drift
+    away from.
+  - `_clean_and_canonicalize_genres` takes any iterable of strings; no
+    need to dedupe before passing (it returns a set).
+  - When verifying semantic equivalence of a refactor against fixtures,
+    `poetry run python -c "..."` with the required minimal env vars
+    (`SECRET_KEY`, `GEMINI_API_KEY`, `POSTGRES_*`) is enough to bootstrap
+    Django and call services directly — no need to spin up Docker just
+    to compute three outputs.
+- All 61 tests in `core.tests.test_integration core.tests.test_enrichment_stats` pass.
+---

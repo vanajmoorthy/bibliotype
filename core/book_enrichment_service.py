@@ -82,39 +82,14 @@ def _canonicalize_google_books_categories(categories):
     Canonicalize Google Books categories into our genre taxonomy.
 
     Google Books categories are often more accurate than Open Library subjects.
-    They come formatted like: "Fiction / Literary" or "History / Ancient / Rome"
+    They come formatted like: "Fiction / Literary" or "History / Ancient / Rome",
+    so we split on `/` first and then delegate to `_clean_and_canonicalize_genres`.
     """
     if not categories:
         return set()
 
-    canonical_genres = set()
-
-    for category in categories:
-        # Google Books categories often have separators like "Fiction / Literary Fiction"
-        # We want to check each part
-        parts = category.split("/")
-
-        for part in parts:
-            part_lower = part.strip().lower()
-
-            # Skip if excluded
-            if part_lower in EXCLUDED_GENRES:
-                continue
-
-            matched = False
-            for pattern, canonical_name in _COMPILED_ALIAS_PATTERNS:
-                if pattern.search(part_lower):
-                    if canonical_name not in EXCLUDED_GENRES:
-                        canonical_genres.add(canonical_name)
-                        matched = True
-                        logger.debug(f"Matched Google Books category '{part}' to genre '{canonical_name}'")
-                        break
-
-            # Debug unmatched parts
-            if not matched:
-                logger.debug(f"Could not match Google Books category part: '{part.strip()}'")
-
-    return canonical_genres
+    flat = [part for cat in categories for part in cat.split("/")]
+    return _clean_and_canonicalize_genres(flat)
 
 
 def get_book_details_for_seeder(title: str, author: str, session: requests.Session) -> dict:

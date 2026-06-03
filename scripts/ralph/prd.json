@@ -629,7 +629,7 @@
         "`manage.py test core.tests.test_integration core.tests.test_enrichment_stats` passes.",
         "**Risk note:** order of priority application may differ subtly because Google Books had its own ordering. The snapshot test catches drift."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 42
     },
