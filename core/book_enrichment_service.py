@@ -11,6 +11,7 @@ from django.utils import timezone
 from .analytics.events import track_external_api_call
 from .dna_constants import CANONICAL_GENRE_MAP, EXCLUDED_GENRES
 from .models import Author, Book, Genre, Publisher
+from .services._book_urls import cover_url_from_isbn, cover_url_from_olid
 
 logger = logging.getLogger(__name__)
 
@@ -502,9 +503,9 @@ def enrich_book_from_apis(book, session, slow_down=False):
     if not book.cover_url:
         new_cover_url = None
         if ol_data.get("cover_id"):
-            new_cover_url = f"https://covers.openlibrary.org/b/id/{ol_data['cover_id']}-M.jpg"
+            new_cover_url = cover_url_from_olid(ol_data["cover_id"])
         elif book.isbn13:
-            new_cover_url = f"https://covers.openlibrary.org/b/isbn/{book.isbn13}-M.jpg"
+            new_cover_url = cover_url_from_isbn(book.isbn13)
 
         if not new_cover_url and gb_data.get("thumbnail_url"):
             new_cover_url = gb_data["thumbnail_url"]

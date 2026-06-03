@@ -1434,3 +1434,41 @@
     calls elsewhere is a safe cleanup pattern.
 - Test results: 388 passing, 5 pre-existing failures (US-033 fallout — see above).
 ---
+
+## 2026-06-03 12:00 — US-038
+- Extracted Open Library cover URL construction into a single helper module
+  `core/services/_book_urls.py` exposing `cover_url_from_isbn(isbn)` and
+  `cover_url_from_olid(olid)`. Replaced all four hardcoded f-string URLs
+  (`book_enrichment_service.py` x2, `backfill_covers.py` x2) and the
+  `OPEN_LIBRARY_COVER_URL` constant + inline `_build_cover_url` body in
+  `dna_analyser.py`. Kept `_build_cover_url` importable from
+  `core.services.dna_analyser` as a backwards-compat alias so the existing
+  `test_currently_reading.BuildCoverUrlTests` and the four in-file call
+  sites within `dna_analyser.py` continue to work unchanged.
+- Files changed:
+  - core/services/_book_urls.py (new)
+  - core/services/dna_analyser.py (drop OPEN_LIBRARY_COVER_URL + body of
+    _build_cover_url; import + alias to cover_url_from_isbn)
+  - core/book_enrichment_service.py (L505, L507: use new helpers)
+  - core/management/commands/backfill_covers.py (L66, L149: use new helpers)
+  - scripts/ralph/prd.json (US-038 passes=true)
+- Learnings for future iterations:
+  - The PRD names the second helper `cover_url_from_olid`, but the Open
+    Library URL it builds (`/b/id/{n}-M.jpg`) is keyed by an integer cover
+    id (from `cover_i` / `cover_id` in the search/works API), NOT an OLID
+    like `OL1234W`. The PRD spec name was followed verbatim; future readers
+    should know "olid" here is misnomer for "Open Library cover id".
+  - Backwards-compat re-export pattern for renamed/moved helpers:
+    `from core.services._book_urls import cover_url_from_isbn` followed by
+    `_build_cover_url = cover_url_from_isbn` keeps old import paths working
+    without touching existing tests. Useful precedent for the upcoming
+    US-051 split that will move `_build_cover_url` to
+    `core/services/dna/utils.py`.
+  - Test results for this story: `core.tests.test_backfill_covers` 4/4 pass
+    (the PRD's acceptance criterion). `core.tests.test_currently_reading`
+    has 1 pre-existing failure (`EnrichDnaBackwardCompatTests.
+    test_old_dna_gets_currently_reading_defaults`, KeyError on
+    `currently_reading_books`) that is unrelated to this story — verified by
+    running the same test on a `git stash`ed clean tree and seeing the same
+    failure.
+---

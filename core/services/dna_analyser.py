@@ -15,7 +15,13 @@ from django.db import IntegrityError
 from django.db.models import F
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
+from core.services._book_urls import cover_url_from_isbn
 from core.services.llm_service import generate_vibe_with_llm
+
+# Backwards-compatible re-export: tests and earlier call sites import
+# `_build_cover_url` from this module. The implementation now lives in
+# `core/services/_book_urls.py` as `cover_url_from_isbn`.
+_build_cover_url = cover_url_from_isbn
 
 from ..dna_constants import (
     CANONICAL_GENRE_MAP,
@@ -62,9 +68,6 @@ def _cover_initial(title):
     return title[0].upper() if title else "?"
 
 
-OPEN_LIBRARY_COVER_URL = "https://covers.openlibrary.org/b/isbn/{isbn}-M.jpg"
-
-
 def _isbn_to_isbn13(raw):
     """Normalize an ISBN-10 or ISBN-13 to its 13-digit form.
 
@@ -87,16 +90,6 @@ def _isbn_to_isbn13(raw):
         check = (10 - (total % 10)) % 10
         return prefix + str(check)
     return None
-
-
-def _build_cover_url(isbn13: str | None) -> str | None:
-    """Construct an Open Library Covers API URL from an ISBN13. No HTTP request needed."""
-    if not isbn13:
-        return None
-    cleaned = str(isbn13).strip().strip('="')
-    if not cleaned or len(cleaned) < 10:
-        return None
-    return OPEN_LIBRARY_COVER_URL.format(isbn=cleaned[:13])
 
 
 # Goodreads column names serve as the internal canonical schema.

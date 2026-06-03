@@ -670,7 +670,7 @@
         "Replace all four hardcoded URLs.",
         "`manage.py test core.tests.test_backfill_covers` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 45
     },
