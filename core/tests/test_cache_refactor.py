@@ -258,7 +258,8 @@ class SaveDnaInvalidationTests(TestCase):
         dna = {"reader_type": "Test", "user_stats": {}, "reading_vibe": [], "vibe_data_hash": "h"}
         _save_dna_to_profile(self.user.userprofile, dna)
 
-        mock_rec_task.assert_called_once_with(self.user.id)
+        # US-023: dispatch is now async via .delay()
+        mock_rec_task.delay.assert_called_once_with(self.user.id)
 
 
 @override_settings(
