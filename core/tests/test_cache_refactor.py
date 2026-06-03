@@ -289,6 +289,59 @@ class TaskInvalidationTests(TestCase):
         result = cache.get(f"user_recommendations_{user.id}")
         self.assertIsNone(result)
 
+    @patch("core.services.recommendation_service.get_recommendations_for_user")
+    def test_recommendations_task_bakes_book_dict_and_badge_class(self, mock_get_recs):
+        """US-032: stored recs include rec['book'] dict + primary_source_user.badge_class."""
+        author = Author.objects.create(name="Bake Author")
+        book = Book.objects.create(title="Bake Book", author=author, average_rating=4.6)
+
+        mock_get_recs.return_value = [
+            {
+                "book": book,
+                "confidence": 0.75,
+                "score": 1.2,
+                "recommender_count": 1,
+                "genre_alignment": 0.5,
+                "sources": [
+                    {
+                        "type": "similar_user",
+                        "user_id": 99,
+                        "username": "twin",
+                        "match_quality": "Literary twin",
+                        "similarity_score": 0.9,
+                    }
+                ],
+                "explanation_components": {},
+            }
+        ]
+
+        user = User.objects.create_user(username="bakeuser", password="test123")
+        user.userprofile.dna_data = {"reader_type": "Test"}
+        user.userprofile.save()
+
+        from core.tasks import generate_recommendations_task
+
+        generate_recommendations_task(user.id)
+        user.userprofile.refresh_from_db()
+
+        stored = user.userprofile.recommendations_data
+        self.assertEqual(len(stored), 1)
+        rec = stored[0]
+
+        self.assertIn("book", rec)
+        self.assertEqual(rec["book"]["id"], book.id)
+        self.assertEqual(rec["book"]["title"], "Bake Book")
+        self.assertEqual(rec["book"]["author"], {"name": "Bake Author"})
+        self.assertEqual(rec["book"]["average_rating"], 4.6)
+
+        # Legacy flat keys still present for dual-shape safety.
+        self.assertEqual(rec["book_id"], book.id)
+        self.assertEqual(rec["book_title"], "Bake Book")
+
+        # primary_source_user.badge_class is baked from BADGE_COLOR_MAP.
+        self.assertIn("primary_source_user", rec)
+        self.assertEqual(rec["primary_source_user"]["badge_class"], "bg-badge-5")
+
 
 @override_settings(
     CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "cache-refactor-tests"}}

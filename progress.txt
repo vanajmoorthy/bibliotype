@@ -1247,3 +1247,36 @@
     objects directly with its own series-key logic.
 - All 388 tests pass.
 ---
+
+## 2026-06-03 11:18 — US-032
+- `generate_recommendations_task` now bakes `rec["book"]` (the nested dict
+  templates expect) and `primary_source_user.badge_class` into
+  `processed_recs` before saving to `UserProfile.recommendations_data`.
+  `display_dna_view` and `public_profile_view` no longer mutate every rec
+  inside an 18-line for-loop — they now run a single guard
+  `if "book" not in rec: rec["book"] = _expand_book_dict(rec, BADGE_COLOR_MAP)`
+  for dual-shape compat with legacy DB rows. `_expand_book_dict` lives in
+  `core/views.py` next to `BADGE_COLOR_MAP`.
+- Files changed:
+  - core/tasks.py (bake `book` dict + badge_class in storage loop)
+  - core/views.py (`_expand_book_dict` helper, collapse both view loops)
+  - core/tests/test_cache_refactor.py (new: storage bakes both fields)
+  - core/tests/test_recommendations.py (new: dual-shape rendering in
+    `display_dna_view` and `public_profile_view`)
+  - scripts/ralph/prd.json (US-032 passes=true)
+- Learnings for future iterations:
+  - **Follow-up note (per US-032 PRD AC):** US-032 ships dual-shape compat.
+    After ≥30 days OR after a forced `regenerate_recommendations` run, the
+    legacy fallback (`if 'book' not in rec`) can be removed in a follow-up
+    story. Earliest safe removal date: 2026-07-03.
+  - `core/tasks.py` cannot `from .views import ...` at module top — views
+    already does `from .tasks import ...`. The fix is a function-local
+    import inside `generate_recommendations_task` (matches the existing
+    pattern at `views.py:582`). This is the canonical workaround for
+    views↔tasks constant sharing until Phase 8 splits both modules.
+  - When baking display-tier fields at storage time, keep the legacy flat
+    keys (`book_title`, `book_author`, etc.) — they remain the source of
+    truth for the `_expand_book_dict` fallback, so dropping them now would
+    silently break any legacy row written before this story shipped.
+- All 392 tests pass.
+---

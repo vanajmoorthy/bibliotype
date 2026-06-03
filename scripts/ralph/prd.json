@@ -572,7 +572,7 @@
         "**Follow-up note in `progress.txt`:** \"US-032 ships dual-shape compat. After \u226530 days OR after a forced `regenerate_recommendations` run, the legacy fallback (`if 'book' not in rec`) can be removed in a follow-up story.\"",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 38
     },

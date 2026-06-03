@@ -532,6 +532,22 @@ BADGE_COLOR_MAP = {
 }
 
 
+def _expand_book_dict(rec, badge_color_map):
+    # Legacy fallback: stored recs predating US-032 only have flat
+    # `book_*` keys. Reconstruct the nested template shape and bake
+    # the `primary_source_user.badge_class` here so both views can
+    # collapse the old 18-line for-loop to a single guard.
+    if rec.get("primary_source_user"):
+        match_quality = rec["primary_source_user"].get("match_quality", "")
+        rec["primary_source_user"]["badge_class"] = badge_color_map.get(match_quality, "bg-brand-purple")
+    return {
+        "id": rec.get("book_id"),
+        "title": rec.get("book_title", "Unknown Title"),
+        "author": {"name": rec.get("book_author", "Unknown Author")},
+        "average_rating": rec.get("book_average_rating"),
+    }
+
+
 def display_dna_view(request):
     is_processing = request.GET.get("processing") == "true"
 
@@ -556,20 +572,8 @@ def display_dna_view(request):
                     stored_recs = user_profile.recommendations_data
 
                     for rec in stored_recs:
-                        # Create nested book structure for template compatibility
-                        rec["book"] = {
-                            "id": rec.get("book_id"),
-                            "title": rec.get("book_title", "Unknown Title"),
-                            "author": {"name": rec.get("book_author", "Unknown Author")},
-                            "average_rating": rec.get("book_average_rating"),
-                        }
-
-                        # Add badge classes for display (these aren't stored in DB)
-                        if rec.get("primary_source_user"):
-                            match_quality = rec["primary_source_user"].get("match_quality", "")
-                            rec["primary_source_user"]["badge_class"] = BADGE_COLOR_MAP.get(
-                                match_quality, "bg-brand-purple"
-                            )
+                        if "book" not in rec:
+                            rec["book"] = _expand_book_dict(rec, BADGE_COLOR_MAP)
 
                     recommendations = stored_recs
                     logger.info(f"Loaded {len(recommendations)} stored recommendations for user {request.user.id}")
@@ -1299,19 +1303,8 @@ def public_profile_view(request, username):
                     stored_recs = profile.recommendations_data
 
                     for rec in stored_recs:
-                        rec["book"] = {
-                            "id": rec.get("book_id"),
-                            "title": rec.get("book_title", "Unknown Title"),
-                            "author": {"name": rec.get("book_author", "Unknown Author")},
-                            "average_rating": rec.get("book_average_rating"),
-                        }
-
-                        # Add badge classes for display (these aren't stored in DB)
-                        if rec.get("primary_source_user"):
-                            match_quality = rec["primary_source_user"].get("match_quality", "")
-                            rec["primary_source_user"]["badge_class"] = BADGE_COLOR_MAP.get(
-                                match_quality, "bg-brand-purple"
-                            )
+                        if "book" not in rec:
+                            rec["book"] = _expand_book_dict(rec, BADGE_COLOR_MAP)
 
                     recommendations = stored_recs
                     logger.info(

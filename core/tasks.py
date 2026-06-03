@@ -580,13 +580,17 @@ def generate_recommendations_task(self, user_id: int):
 
         recommendations = get_recommendations_for_user(user, limit=6)
 
+        # Imported here to avoid a circular import with core.views.
+        from .views import BADGE_COLOR_MAP
+
         processed_recs = []
         for rec in recommendations:
+            book = rec["book"]
             processed_rec = {
-                "book_id": rec["book"].id,
-                "book_title": rec["book"].title,
-                "book_author": rec["book"].author.name,
-                "book_average_rating": rec["book"].average_rating,
+                "book_id": book.id,
+                "book_title": book.title,
+                "book_author": book.author.name,
+                "book_average_rating": book.average_rating,
                 "confidence": rec.get("confidence", 0),
                 "confidence_pct": int(rec.get("confidence", 0) * 100),
                 "score": rec.get("score", 0),
@@ -594,6 +598,14 @@ def generate_recommendations_task(self, user_id: int):
                 "genre_alignment": rec.get("genre_alignment", 0),
                 "sources": rec.get("sources", []),
                 "explanation_components": rec.get("explanation_components", {}),
+                # US-032: bake the nested book dict templates expect, so
+                # views no longer need to reconstruct it on every render.
+                "book": {
+                    "id": book.id,
+                    "title": book.title,
+                    "author": {"name": book.author.name},
+                    "average_rating": book.average_rating,
+                },
             }
 
             primary_source_user = None
@@ -605,6 +617,10 @@ def generate_recommendations_task(self, user_id: int):
                         primary_source_user = source
 
             if primary_source_user:
+                # US-032: bake badge_class alongside the source so the view
+                # can skip the legacy expansion when "book" is already set.
+                match_quality = primary_source_user.get("match_quality", "")
+                primary_source_user["badge_class"] = BADGE_COLOR_MAP.get(match_quality, "bg-brand-purple")
                 processed_rec["primary_source_user"] = primary_source_user
 
             processed_recs.append(processed_rec)
