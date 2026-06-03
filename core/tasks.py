@@ -1,15 +1,12 @@
 import logging
-import os
 import time
 
-import google.generativeai as genai
 import requests
 from celery import shared_task
 from celery.result import AsyncResult
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.utils import timezone
-from dotenv import load_dotenv
 
 from .management_command_registry import ALLOWED_COMMANDS
 from .models import Author, Book
@@ -23,16 +20,7 @@ from .analytics.events import (
     track_anonymous_dna_claimed,
 )
 
-load_dotenv()
-
 logger = logging.getLogger(__name__)
-
-api_key = os.getenv("GEMINI_API_KEY")
-
-if api_key:
-    genai.configure(api_key=api_key)
-else:
-    logger.warning("GEMINI_API_KEY environment variable not found. Vibe generation will be disabled.")
 
 
 @shared_task

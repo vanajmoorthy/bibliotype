@@ -657,7 +657,7 @@
         "`manage.py test` passes.",
         "`progress.txt`: note that LLM model is now configurable via env var."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 44
     },

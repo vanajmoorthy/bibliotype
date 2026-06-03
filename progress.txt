@@ -1385,3 +1385,52 @@
   - All 78 tests across `test_integration`, `test_tasks_integration`,
     `test_views_e2e` pass after the change.
 ---
+
+## 2026-06-03 12:50 — US-037
+- Reconciled Gemini model ids across services. Added `GEMINI_API_KEY` and
+  `GEMINI_MODEL` (default `gemini-2.5-flash`, env-overridable) to
+  `bibliotype/settings.py`. Created `core/services/_gemini.py` exposing
+  `client()` (returns a configured `GenerativeModel`, or `None` if no API
+  key). `llm_service.generate_vibe_with_llm` and
+  `publisher_service.research_publisher_identity` now both call
+  `_gemini.client()` and inherit the model id from settings — previously
+  they hard-coded `gemini-2.0-flash-lite` and `models/gemini-2.5-flash`
+  respectively. LLM model is now configurable via the `GEMINI_MODEL`
+  env var. Deleted dead `genai`/`api_key` block in `core/tasks.py` L29–34
+  (configured a client that was never used because actual generation lives
+  in llm_service/publisher_service). Removed redundant `load_dotenv()` and
+  unused `os` import from tasks.py (manage.py already calls load_dotenv;
+  Docker/celery inherit env from the shell).
+- Files changed:
+  - bibliotype/settings.py (new GEMINI_API_KEY + GEMINI_MODEL)
+  - core/services/_gemini.py (NEW: single configure/client helper)
+  - core/services/llm_service.py (uses _gemini.client(); drops module-level configure)
+  - core/services/publisher_service.py (uses _gemini.client(); drops module-level configure)
+  - core/tasks.py (deletes dead genai/api_key block + load_dotenv)
+  - scripts/ralph/prd.json (US-037 passes=true)
+- Learnings for future iterations:
+  - Three pre-existing test failures in `core/tests/test_number_line.py`
+    (`test_backfill_adds_books_with_dates`, `test_enrich_dna_backfills_avg_books_per_year`,
+    `test_backfill_books_with_dates_empty_stats_by_year`,
+    `test_backfill_uses_dated_books_not_total_books`) and
+    `core/tests/test_currently_reading.py`
+    (`test_old_dna_gets_currently_reading_defaults`) are US-033 fallout
+    (the legacy DNA backfill block was deleted in commit 84aafe3). Verified
+    by stashing my changes and rerunning — the same 5 failures occurred.
+    Not introduced by US-037. May need a follow-up story to delete or
+    rewrite those tests.
+  - `_gemini.client()` returns `None` instead of raising when the API key
+    is missing, so callers must null-check the model. Both new call sites
+    do (`if model is None: return early`). Module-level `_warned_missing_key`
+    flag stops the log from repeating once per process.
+  - Tests don't patch `genai` directly anywhere — they only patch
+    `core.services.dna_analyser.generate_vibe_with_llm` and
+    `core.services.publisher_service.research_publisher_identity`. So the
+    refactor is invisible to the test suite as long as those two public
+    function signatures stay intact.
+  - `manage.py` already calls `load_dotenv()` at import time. There is no
+    need to repeat it in tasks.py (Celery worker inherits env from the
+    shell / docker-compose env_file). Removing redundant `load_dotenv()`
+    calls elsewhere is a safe cleanup pattern.
+- Test results: 388 passing, 5 pre-existing failures (US-033 fallout — see above).
+---
