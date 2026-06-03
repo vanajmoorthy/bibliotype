@@ -413,11 +413,10 @@ class GlobalPopularityFallbackTestCase(TestCase):
 
     def test_global_fallback_has_discovery_explanation(self):
         """Global fallback recommendations get a 'discovery' explanation component."""
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _build_user_context, _get_fallback_candidates
 
-        engine = RecommendationEngine()
-        context = engine._build_user_context(self.user)
-        fallback = engine._get_fallback_candidates(context, limit=6)
+        context = _build_user_context(self.user)
+        fallback = _get_fallback_candidates(context, limit=6)
 
         # Verify fallback candidates have global_popularity source type
         for book_id, candidate in fallback.items():
@@ -439,11 +438,10 @@ class GlobalPopularityFallbackTestCase(TestCase):
         )
         extra_book.genres.add(self.genre)
 
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _build_user_context, _get_fallback_candidates
 
-        engine = RecommendationEngine()
-        context = engine._build_user_context(self.user)
-        fallback = engine._get_fallback_candidates(context, limit=10)
+        context = _build_user_context(self.user)
+        fallback = _get_fallback_candidates(context, limit=10)
 
         # Count books per author in global_popularity candidates
         author_counts = {}
@@ -466,11 +464,10 @@ class GlobalPopularityFallbackTestCase(TestCase):
             google_books_ratings_count=100000,
         )
 
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _build_user_context, _get_fallback_candidates
 
-        engine = RecommendationEngine()
-        context = engine._build_user_context(self.user)
-        fallback = engine._get_fallback_candidates(context, limit=10)
+        context = _build_user_context(self.user)
+        fallback = _get_fallback_candidates(context, limit=10)
 
         fallback_ids = set(fallback.keys())
         self.assertNotIn(low_book.id, fallback_ids)

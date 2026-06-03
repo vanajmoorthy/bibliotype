@@ -320,14 +320,10 @@ class RecommendationsTestCase(TestCase):
             expires_at=timezone.now() + timedelta(days=7),
         )
 
-        # Mock the recommendation engine to avoid expensive queries
-        from unittest.mock import patch, MagicMock
+        # Mock the recommendation function to avoid expensive queries
+        from unittest.mock import patch
 
-        with patch("core.services.recommendation_service.RecommendationEngine") as mock_engine_class:
-            mock_engine = MagicMock()
-            mock_engine.get_recommendations_for_anonymous.return_value = []
-            mock_engine_class.return_value = mock_engine
-
+        with patch("core.services.recommendation_service.get_recommendations_for_anonymous", return_value=[]):
             # Just verify the function can be imported
             from core.services.recommendation_service import get_recommendations_for_anonymous
 

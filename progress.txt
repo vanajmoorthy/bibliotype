@@ -10,6 +10,15 @@
   or the local Poetry venv (not in `pyproject.toml [tool.poetry.group.dev]`,
   which only has `djlint`). Match existing style by hand and skip the
   formatter step until they're added as a dev dep.
+- Class-to-module-functions refactor (US-031a recipe): replace
+  `class Foo: __init__` defaults with module constants; each
+  `def method(self, ...)` becomes `def method(...)`; `self.attr` →
+  `MODULE_CONSTANT`; `self.helper()` → `helper()`. `@patch` paths drop the
+  `.ClassName` segment: `pkg.mod.ClassName.method` → `pkg.mod.method`. If
+  the class had a method AND a same-named convenience function that wrapped
+  it with extra behavior (e.g. caching), keep both layers — public name
+  stays on the wrapper; pipeline gets an `_uncached` (or similar) underscore
+  prefix.
 
 ---
 
@@ -1174,3 +1183,42 @@
   test_number_line` pass.
 ---
 2026-06-03: regenerate_dna run in production
+
+## 2026-06-03 11:55 — US-031a
+- Converted `RecommendationEngine` class to module-level functions in
+  `core/services/recommendation_service.py`. `__init__` defaults are now
+  module constants (`MIN_SIMILARITY = 0.15`, `QUALITY_THRESHOLD = 3.5`);
+  `diversity_factor` removed entirely (was set, never read). Public entry
+  points: `get_recommendations_for_user` (caches internally, was the method)
+  and `get_recommendations_for_anonymous` (caching wrapper around new
+  internal `_get_recommendations_for_anonymous_uncached`).
+- Files changed:
+  - core/services/recommendation_service.py (class → functions)
+  - core/tests/test_cache_refactor.py (engine.X → X, patch path rewrite)
+  - core/tests/test_currently_reading.py (5 boost tests rewritten)
+  - core/tests/test_recommendations.py (3 fallback tests rewritten)
+  - core/tests/test_profile_and_recommendations.py (patch target rewrite)
+  - docs/ARCHITECTURE.md (description updated)
+  - scripts/ralph/prd.json (US-031a passes=true)
+- Learnings for future iterations:
+  - The old class had a method `get_recommendations_for_anonymous` (uncached
+    pipeline) and a convenience function with the same name (cached wrapper).
+    To preserve byte-identical behavior I kept BOTH layers — the public
+    `get_recommendations_for_anonymous` is the caching wrapper; the inner
+    pipeline lives at `_get_recommendations_for_anonymous_uncached`. Tests
+    that bypassed the cache via `engine.get_recommendations_for_anonymous`
+    (notably `test_anonymous_cache_returns_empty_for_missing_session`) now
+    call the uncached internal directly.
+  - The `@patch` rewrite is mechanical: drop the `.RecommendationEngine`
+    segment in the dotted path. e.g.
+    `core.services.recommendation_service.RecommendationEngine.X` →
+    `core.services.recommendation_service.X`. Same goes for `patch()` in a
+    `with` block — see the rewrite in
+    `test_profile_and_recommendations.py:326` for the pattern.
+  - `from .services.recommendation_service import get_recommendations_for_user`
+    inside `core/tasks.py:generate_recommendations_task` works fine with the
+    new module-function form — the patch in `test_cache_refactor.py` targets
+    `core.services.recommendation_service.get_recommendations_for_user`,
+    which is the attribute the inline import re-resolves at call time.
+- All 388 tests pass.
+---

@@ -541,7 +541,7 @@
         "**Final verification:** `git grep RecommendationEngine` returns ZERO matches (this includes strings inside `@patch` decorators).",
         "**Risk note:** highest-risk story in the PRD. If full test suite goes red, do NOT loosen tests \u2014 investigate semantic divergence in the converted functions."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 36
     },

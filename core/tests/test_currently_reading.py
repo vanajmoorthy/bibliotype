@@ -218,63 +218,58 @@ class RecommendationCurrentlyReadingBoostTests(TestCase):
         self.book.genres.add(self.genre)
 
     def test_matching_author_gives_boost(self):
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _calculate_currently_reading_boost
 
-        engine = RecommendationEngine()
         context = {
             "currently_reading_authors": {self.author.id},
             "currently_reading_genres": set(),
         }
 
-        boost = engine._calculate_currently_reading_boost(self.book, context)
+        boost = _calculate_currently_reading_boost(self.book, context)
         self.assertGreater(boost, 0)
         self.assertGreaterEqual(boost, 0.10)
 
     def test_matching_genre_gives_boost(self):
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _calculate_currently_reading_boost
 
-        engine = RecommendationEngine()
         context = {
             "currently_reading_authors": set(),
             "currently_reading_genres": {"fantasy"},
         }
 
-        boost = engine._calculate_currently_reading_boost(self.book, context)
+        boost = _calculate_currently_reading_boost(self.book, context)
         self.assertGreater(boost, 0)
 
     def test_no_match_gives_zero(self):
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _calculate_currently_reading_boost
 
-        engine = RecommendationEngine()
         context = {
             "currently_reading_authors": set(),
             "currently_reading_genres": set(),
         }
 
-        boost = engine._calculate_currently_reading_boost(self.book, context)
+        boost = _calculate_currently_reading_boost(self.book, context)
         self.assertEqual(boost, 0.0)
 
     def test_boost_capped_at_015(self):
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _calculate_currently_reading_boost
 
-        engine = RecommendationEngine()
         # Both author and genre match
         context = {
             "currently_reading_authors": {self.author.id},
             "currently_reading_genres": {"fantasy"},
         }
 
-        boost = engine._calculate_currently_reading_boost(self.book, context)
+        boost = _calculate_currently_reading_boost(self.book, context)
         self.assertLessEqual(boost, 0.15)
 
     def test_empty_context_keys_handled(self):
         """Context without currently_reading keys should return 0."""
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _calculate_currently_reading_boost
 
-        engine = RecommendationEngine()
         context = {}
 
-        boost = engine._calculate_currently_reading_boost(self.book, context)
+        boost = _calculate_currently_reading_boost(self.book, context)
         self.assertEqual(boost, 0.0)
 
 
