@@ -9,7 +9,7 @@ from django.db import IntegrityError
 from django.utils import timezone
 
 from .analytics.events import track_external_api_call
-from .dna_constants import CANONICAL_GENRE_MAP, EXCLUDED_GENRES
+from .dna_constants import CANONICAL_GENRE_MAP, EXCLUDED_GENRES, GENRE_PRIORITY
 from .models import Author, Book, Genre, Publisher
 from .services._book_urls import cover_url_from_isbn, cover_url_from_olid
 
@@ -365,38 +365,9 @@ def enrich_book_from_apis(book, session, slow_down=False):
             logger.debug(f"Adding genres for '{book.title}': {new_genres}")
 
             # Limit to top 5-6 genres max - prioritize specific over generic
-            genre_priority = [
-                # Fiction genres (most specific to generic)
-                "fantasy",
-                "science fiction",
-                "dystopian",
-                "thriller",
-                "horror",
-                "historical fiction",
-                "romance",
-                "humorous fiction",
-                "young adult",
-                "short stories",
-                # Non-fiction genres
-                "biography",
-                "philosophy",
-                "psychology",
-                "history",
-                "social science",
-                "non-fiction",
-                "science",
-                "nature",
-                "art & music",
-                "travel",
-                # Generic/classics
-                "classics",
-                "plays & drama",
-                "children's literature",
-            ]
-
             # Sort genres by priority (most specific first)
             prioritized_genres = sorted(
-                new_genres, key=lambda g: genre_priority.index(g) if g in genre_priority else 999
+                new_genres, key=lambda g: GENRE_PRIORITY.index(g) if g in GENRE_PRIORITY else 999
             )
 
             # Take top 5-6 genres (aim for 5, allow up to 6 if they're all highly specific)
@@ -457,33 +428,9 @@ def enrich_book_from_apis(book, session, slow_down=False):
                     # Clear ALL existing genres and replace with Google Books (more accurate)
                     book.genres.clear()
 
-                    genre_priority = [
-                        "fantasy",
-                        "science fiction",
-                        "dystopian",
-                        "thriller",
-                        "horror",
-                        "historical fiction",
-                        "romance",
-                        "humorous fiction",
-                        "young adult",
-                        "short stories",
-                        "biography",
-                        "philosophy",
-                        "psychology",
-                        "history",
-                        "social science",
-                        "non-fiction",
-                        "science",
-                        "nature",
-                        "art & music",
-                        "travel",
-                        "classics",
-                        "plays & drama",
-                        "children's literature",
-                    ]
                     prioritized_genres = sorted(
-                        canonical_google_genres, key=lambda g: genre_priority.index(g) if g in genre_priority else 999
+                        canonical_google_genres,
+                        key=lambda g: GENRE_PRIORITY.index(g) if g in GENRE_PRIORITY else 999,
                     )
 
                     # Take top 5 (Google Books categories are usually more accurate)

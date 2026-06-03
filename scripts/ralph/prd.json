@@ -683,7 +683,7 @@
         "Both call sites import and use it; cap difference handled with a `[:N]` slice at call site.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 46
     },

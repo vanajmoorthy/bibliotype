@@ -1472,3 +1472,34 @@
     running the same test on a `git stash`ed clean tree and seeing the same
     failure.
 ---
+
+## 2026-06-03 13:15 — US-039
+- Hoisted the duplicated `genre_priority` list out of
+  `core/book_enrichment_service.py` (two identical 23-item copies in the OL
+  and Google Books branches) into a single module-level `GENRE_PRIORITY`
+  constant in `core/dna_constants.py`. Both call sites now import and use it;
+  the OL branch keeps its 5-vs-6 conditional cap, the Google Books branch
+  keeps its hard `[:5]` slice.
+- Files changed:
+  - core/dna_constants.py (new `GENRE_PRIORITY` constant, placed above
+    `NICHE_THRESHOLD` so it sits near the other genre-related constants)
+  - core/book_enrichment_service.py (import added; two inline list literals
+    deleted; sort key now references `GENRE_PRIORITY`)
+  - scripts/ralph/prd.json (US-039 passes=true)
+- Learnings for future iterations:
+  - The two inline lists were byte-for-byte identical (23 entries: fantasy
+    through children's literature). The "cap difference" the PRD warns about
+    is handled entirely at the call site via `[:5]` vs the OL branch's
+    conditional 5-or-6 — the priority list itself never differed.
+  - `dna_constants.py` ends with an `assert _classified == _all_canonical`
+    sanity check for `FICTION_GENRES | NONFICTION_GENRES`. `GENRE_PRIORITY`
+    is a *priority list*, not a classification set, so it does NOT need to be
+    added to that assertion (and items like "non-fiction", "classics" would
+    break it). Confirmed by running test_integration + test_storygraph_
+    integration + test_views_e2e (91/91 pass) post-change.
+  - Pre-existing failures unrelated to this story: 2 failures + 2 errors in
+    `core.tests.test_number_line.EnrichDnaTests` (all about backfilling
+    `books_with_dates` / `avg_books_per_year`). Verified by running the same
+    suite on a `git stash`ed clean tree — same failures present.
+---
+
