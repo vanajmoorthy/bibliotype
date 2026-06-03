@@ -218,57 +218,37 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str)
         _clear_pending_and_return()
         return
 
-    cached_dna = safe_cache_get(f"dna_result_{task_id}")
     cached_session_key = safe_cache_get(f"session_key_{task_id}")
+    dna_data = safe_cache_get(f"dna_result_{task_id}")
 
-    if cached_dna:
+    if dna_data:
         logger.info(f"Found cached DNA for task {task_id}. Saving to user {user_id}")
-        _save_dna_to_profile(user.userprofile, cached_dna)
-
-        # Try to create UserBooks from AnonymousUserSession if it exists
-        if cached_session_key:
-            _create_userbooks_from_anonymous_session(user, cached_session_key)
-
-        user.userprofile.pending_dna_task_id = None
-        user.userprofile.save()
-        logger.info(f"Successfully claimed and saved DNA for user {user_id} from task {task_id}")
-
-        # Track anonymous DNA claimed
-        track_anonymous_dna_claimed(
-            user_id=user_id,
-            task_id=task_id,
-            session_key=cached_session_key,
-        )
-        return
-
-    result = AsyncResult(task_id)
-
-    if result.ready():
-        if result.successful():
-            dna_data = result.get()
-            _save_dna_to_profile(user.userprofile, dna_data)
-
-            # Try to create UserBooks from AnonymousUserSession if session_key was cached
-            if cached_session_key:
-                _create_userbooks_from_anonymous_session(user, cached_session_key)
-
-            user.userprofile.pending_dna_task_id = None
-            user.userprofile.save()
-            logger.info(f"Successfully claimed and saved DNA for user {user_id} from task {task_id}")
-
-            # Track anonymous DNA claimed
-            track_anonymous_dna_claimed(
-                user_id=user_id,
-                task_id=task_id,
-                session_key=cached_session_key,
-            )
-        else:
+    else:
+        result = AsyncResult(task_id)
+        if not result.ready():
+            logger.info(f"Task {task_id} not ready yet. Retrying claim for user {user_id} in 10s")
+            raise self.retry(countdown=10, exc=Exception(f"Task {task_id} not ready"))
+        if not result.successful():
             logger.error(f"Task {task_id} failed. Cannot claim DNA for user {user_id}")
             user.userprofile.pending_dna_task_id = None
             user.userprofile.save()
-    else:
-        logger.info(f"Task {task_id} not ready yet. Retrying claim for user {user_id} in 10s")
-        raise self.retry(countdown=10, exc=Exception(f"Task {task_id} not ready"))
+            return
+        dna_data = result.get()
+
+    _save_dna_to_profile(user.userprofile, dna_data)
+
+    if cached_session_key:
+        _create_userbooks_from_anonymous_session(user, cached_session_key)
+
+    user.userprofile.pending_dna_task_id = None
+    user.userprofile.save()
+    logger.info(f"Successfully claimed and saved DNA for user {user_id} from task {task_id}")
+
+    track_anonymous_dna_claimed(
+        user_id=user_id,
+        task_id=task_id,
+        session_key=cached_session_key,
+    )
 
 
 def _create_userbooks_from_anonymous_session(user, session_key):

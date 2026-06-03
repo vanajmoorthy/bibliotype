@@ -614,7 +614,7 @@
         "Existing claim integration test still passes.",
         "`manage.py test core.tests.test_tasks_integration` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 41
     },

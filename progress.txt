@@ -1305,3 +1305,22 @@
     became dead after the deletion.
 - All 61 tests in `core.tests.test_views_e2e core.tests.test_math_accuracy` pass.
 ---
+
+## 2026-06-03 11:25 — US-035
+- Collapsed the duplicated cache-hit / AsyncResult-hit branches in
+  `claim_anonymous_dna_task`. Both branches now resolve `dna_data` into a
+  single variable, then share one save/create-userbooks/clear-pending/track
+  block. The "task failed" and "retry not-ready" paths still exit early
+  inside the AsyncResult fallback.
+- Files changed:
+  - core/tasks.py (lines ~221-251)
+  - scripts/ralph/prd.json (US-035 passes=true)
+- Learnings for future iterations:
+  - Refactor pattern for "two branches converge to identical tail" — invert
+    the control flow: resolve the variable first (cache → else AsyncResult
+    with early returns for not-ready/failed), then run the shared tail once
+    unconditionally. Avoids touching the security pre-checks above.
+  - `AsyncResult` is still imported only at module top; no need to lazy
+    import inside the task.
+- All 7 tests in `core.tests.test_tasks_integration` pass.
+---

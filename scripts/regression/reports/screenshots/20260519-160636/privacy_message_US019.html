@@ -1,0 +1,3930 @@
+
+<!doctype html>
+<html lang="en" class="h-full">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+        
+        <title>Bibliotype – Dashboard</title>
+        <meta
+            name="description"
+            content="
+    View your personalised reading DNA dashboard with insights into your literary personality, favourite genres, reading
+    statistics, and book recommendations.
+"
+        />
+        <meta
+            name="keywords"
+            content="
+    reading DNA dashboard, literary personality results, reading statistics, genre analysis, book recommendations,
+    reading insights
+"
+        />
+        <meta name="author" content="Bibliotype" />
+        <meta
+            name="robots"
+            content="noindex, nofollow"
+        />
+        <meta name="language" content="English" />
+        <meta name="revisit-after" content="7 days" />
+        <meta name="theme-color" content="#f5f5f5" />
+        <meta name="format-detection" content="telephone=no" />
+        <link
+            rel="canonical"
+            href="http://localhost:8000/dashboard/"
+        />
+        <link rel="alternate" hreflang="en" href="http://localhost:8000/dashboard/" />
+
+        
+        <meta property="og:type" content="website" />
+        <meta
+            property="og:url"
+            content="http://localhost:8000/dashboard/"
+        />
+        <meta property="og:title" content="Bibliotype - Discover Your Reading DNA" />
+        <meta
+            property="og:description"
+            content="
+                Discover your unique reading DNA and literary personality type. Get personalised insights into your
+                reading habits and book preferences.
+            "
+        />
+        <meta
+            property="og:image"
+            content="http://localhost:8000/static/android-chrome-512x512.png"
+        />
+        <meta property="og:image:width" content="512" />
+        <meta property="og:image:height" content="512" />
+        <meta property="og:image:alt" content="Bibliotype - Reading DNA Logo" />
+        <meta property="og:site_name" content="Bibliotype" />
+        <meta property="og:locale" content="en_US" />
+
+        
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta
+            name="twitter:url"
+            content="http://localhost:8000/dashboard/"
+        />
+        <meta
+            name="twitter:title"
+            content="Bibliotype - Discover Your Reading DNA"
+        />
+        <meta
+            name="twitter:description"
+            content="
+                Discover your unique reading DNA and literary personality type. Get personalised insights into your
+                reading habits.
+            "
+        />
+        <meta
+            name="twitter:image"
+            content="http://localhost:8000/static/android-chrome-512x512.png"
+        />
+        <meta
+            name="twitter:image:alt"
+            content="Bibliotype - Reading DNA Logo"
+        />
+
+        
+        <link
+            rel="icon"
+            type="image/svg+xml"
+            href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧬</text></svg>"
+        />
+        <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png" />
+        <link rel="shortcut icon" href="/static/favicon.ico" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+        <link rel="manifest" href="/static/site.webmanifest" />
+
+        
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+
+        
+        <link
+            rel="preload"
+            href="https://fonts.googleapis.com/css2?family=VT323&display=swap"
+            as="style"
+            onload="this.onload=null;this.rel='stylesheet'"
+        />
+        <noscript>
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap" />
+        </noscript>
+        <link href="/static/dist/output.css" rel="stylesheet" />
+
+        
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "WebApplication",
+                "name": "Bibliotype",
+                "alternateName": "Reading DNA",
+                "url": "http://localhost:8000",
+                "description": "Discover your unique reading DNA and literary personality type. Upload your Goodreads data to get personalised insights into your reading habits, favourite genres, and book preferences.",
+                "applicationCategory": "UtilityApplication",
+                "operatingSystem": "Web",
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "USD"
+                },
+                "featureList": [
+                    "Reading DNA Analysis",
+                    "Literary Personality Types",
+                    "Genre & Author Insights",
+                    "Reading Statistics Dashboard",
+                    "Community Benchmarking",
+                    "AI-Powered Reading Vibe"
+                ],
+                "screenshot": "http://localhost:8000/static/android-chrome-512x512.png"
+            }
+        </script>
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "Organization",
+                "name": "Bibliotype",
+                "url": "http://localhost:8000",
+                "logo": "http://localhost:8000/static/android-chrome-512x512.png",
+                "description": "Discover your unique reading DNA and literary personality type.",
+                "sameAs": ["https://github.com/vanajmoorthy/bibliotype"]
+            }
+        </script>
+        
+
+        
+        
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
+
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.8/dist/cdn.min.js"></script>
+
+        
+        
+            <script>
+                !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys getNextSurveyStep onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+                posthog.init('phc_pllMlznD5mSLC3Ad2Klz5z1kWfwr8U71ACDjULYfrUs', {
+                    api_host: 'https://eu.i.posthog.com',
+                    person_profiles: 'identified_only',
+                    cookieless_mode: 'always',
+                });
+                
+                    posthog.identify('45');
+                
+            </script>
+        
+    </head>
+    <body class="bg-brand-background text-brand-text grid-background flex h-full flex-col font-sans antialiased">
+        <div class="bg-brand-green border-brand-text border-b-2 px-4 py-3 text-center text-lg">
+            Bibliotype is currently in beta while I finish development and iron out the kinks. Thank you for being a
+            beta tester — I'd hugely appreciate it if you could fill out
+            <a
+                href="https://forms.gle/EoZAbYdigngwFdpm9"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="hover:bg-brand-yellow font-bold underline"
+                >this feedback form</a
+            >!
+        </div>
+        <nav class="p-4">
+            <div class="container mx-auto flex items-center justify-between">
+                <a
+                    href="/"
+                    class="text-brand-text text-2xl font-bold tracking-widest uppercase md:text-3xl"
+                >
+                    🧬<span class="border-brand-text border-b-2 lg:px-1">Bibliotype</span>
+                </a>
+                <div class="flex items-center space-x-2 text-base font-bold uppercase md:space-x-4 md:text-lg">
+                    
+                        
+                        
+                        
+                            
+    
+        <a
+            href="/dashboard/"
+            class="hover:bg-brand-pink border-brand-text shadow-neo-sm border-2 bg-white px-2 whitespace-nowrap transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+            >Dashboard</a
+        >
+    
+
+
+                        
+                        
+                            
+    
+        <a
+            href="/logout/"
+            class="hover:bg-brand-cyan border-brand-text shadow-neo-sm border-2 bg-white px-2 whitespace-nowrap transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+            >Logout</a
+        >
+    
+
+
+                        
+                    
+                </div>
+            </div>
+        </nav>
+        <main class="container mx-auto flex-grow p-2 md:p-6">
+            
+                
+                    <div
+                        x-data="{ show: true }"
+                        x-show="show"
+                        class="border-brand-text shadow-neo 
+                            bg-brand-green text-brand-text
+                         relative mb-6 border-2 p-4 text-lg font-bold"
+                        role="alert"
+                    >
+                        <span>Success! We're updating your Reading DNA. Your dashboard will update automatically when it's ready!</span>
+                        <button
+    type="button"
+    class="border-brand-text text-brand-text shadow-neo-sm border-2 bg-white px-2 text-2xl leading-none font-bold hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 absolute top-2 right-3 cursor-pointer"
+    @click="show = false"
+    >
+    &times;
+</button>
+
+                    </div>
+                
+                    <div
+                        x-data="{ show: true }"
+                        x-show="show"
+                        class="border-brand-text shadow-neo 
+                            bg-brand-green text-brand-text
+                         relative mb-6 border-2 p-4 text-lg font-bold"
+                        role="alert"
+                    >
+                        <span>Your profile is now public! Share it here:
+<a
+    href="/u/p3u4812/"
+    class="hover:bg-brand-yellow font-bold underline"
+    target="_blank"
+    >http://localhost:8000/u/p3u4812/</a
+>
+</span>
+                        <button
+    type="button"
+    class="border-brand-text text-brand-text shadow-neo-sm border-2 bg-white px-2 text-2xl leading-none font-bold hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 absolute top-2 right-3 cursor-pointer"
+    @click="show = false"
+    >
+    &times;
+</button>
+
+                    </div>
+                
+            
+            
+    <div class="mx-auto h-full max-w-4xl space-y-6 p-2">
+        
+            <div x-data="shareModalData()" class="space-y-6">
+                <script id="dna-data" type="application/json">{"csv_source": "goodreads", "top_genres": [["fantasy", 9], ["science fiction", 7], ["historical fiction", 6], ["thriller", 5], ["young adult", 5], ["psychology", 5], ["history", 5], ["social science", 5], ["romance", 4], ["mythology \u0026 folklore", 3]], "user_stats": {"avg_book_length": 360, "avg_publish_year": 1999, "books_with_dates": 19, "total_books_read": 25, "total_pages_read": 8997, "num_reading_years": 2, "avg_books_per_year": 9.5}, "reader_type": "Comfort Rereader", "top_authors": [["J.K. Rowling", 2], ["Terry Pratchett", 2], ["Herman Melville", 1], ["George R.R. Martin", 1], ["Caleb Azumah Nelson", 1], ["Bren\u00e9 Brown", 1], ["Kathryn Stockett", 1], ["Valeria Luiselli", 1], ["Andrea Lawlor", 1], ["Michael Morpurgo", 1]], "longest_book": {"title": "A Game of Thrones (A Song of Ice and Fire, #1)", "author": "George R.R. Martin", "initial": "G", "cover_url": "https://covers.openlibrary.org/b/id/15123748-M.jpg", "page_count": 835}, "reading_vibe": ["error generating vibe", "api call failed"], "shortest_book": {"title": "Moby Dick", "author": "Herman Melville", "initial": "M", "cover_url": "https://covers.openlibrary.org/b/id/10544254-M.jpg", "page_count": 48}, "stats_by_year": [{"year": 2024, "count": 4, "avg_rating": 2.25}, {"year": 2025, "count": 15, "avg_rating": 3.0}], "vibe_data_hash": "5c7098dfcce3d005493ea3cb1805ea6aabe561392df832dfc184603edec42840", "global_averages": {"avg_books_per_year": 7, "avg_book_length_pages": 375, "avg_publish_year": 2009}, "most_niche_book": {"title": "Moby Dick", "author": "Herman Melville", "initial": "M", "cover_url": "https://covers.openlibrary.org/b/id/10544254-M.jpg", "read_count": 5}, "niche_threshold": 5, "page_difference": 787, "comparative_text": {"length_direction": "longer", "length_pct": 68.6, "age_direction": "newer", "age_pct": 31.4, "bpy_direction": "fewer", "bpy_pct": 54.2}, "top_reader_types": [{"type": "Comfort Rereader", "score": 45}, {"type": "Small Press Supporter", "score": 19}, {"type": "Fantasy Fanatic", "score": 17}], "mood_distribution": [], "niche_books_count": 14, "pace_distribution": [], "community_averages": {"avg_book_length": 329.3, "avg_publish_year": 1960.2, "total_books_read": 52.2, "avg_books_per_year": 11.3}, "contrariness_color": "bg-brand-orange", "contrariness_label": "Very contrarian", "custom_shelf_count": 0, "number_line_ranges": {"pages": {"min": 300, "max": 400, "min_label": "300 pages", "max_label": "400 pages"}, "year": {"min": 1960, "max": 2026, "min_label": "1960 CE", "max_label": "2026 CE"}, "bpy": {"min": 0, "max": 20, "min_label": "0 per year", "max_label": "20 per year"}}, "reader_type_scores": {"Tome Tussler": 12, "Social Savant": 5, "Fantasy Fanatic": 17, "Modern Maverick": 6, "Nature Nut Case": 1, "Comfort Rereader": 45, "Classic Collector": 2, "Non-Fiction Ninja": 3, "Novella Navigator": 5, "Self Help Scholar": 1, "Small Press Supporter": 19, "Philosophical Philomath": 1, "Versatile Valedictorian": 15}, "total_reviews_count": 13, "unique_genres_count": 25, "enrichment_finalized": true, "most_negative_review": {"Title": "Stoner", "Author": "John  Williams", "my_review": "Not my cup of tea. Found it boring.", "sentiment": -0.3182}, "most_positive_review": {"Title": "Eileen", "Author": "Ottessa Moshfegh", "my_review": "Amazing book! Really enjoyed the writing style.", "sentiment": 0.8264}, "ratings_distribution": {"1": 1, "2": 3, "3": 3, "4": 6, "5": 6}, "unique_authors_count": 23, "avg_rating_difference": 1.02, "average_rating_overall": 3.68, "bibliotype_percentiles": {"avg_book_length": 68.64406779661016, "avg_publish_year": 68.64406779661016, "total_books_read": 54.23728813559322, "avg_books_per_year": 45.76271186440678}, "negative_reviews_count": 2, "positive_reviews_count": 6, "currently_reading_books": [{"title": "Good Omens", "author": "Neil Gaiman", "initial": "G", "cover_url": "https://covers.openlibrary.org/b/id/10482258-M.jpg", "page_count": 354}, {"title": "A Thousand Splendid Suns", "author": "Khaled Hosseini", "initial": "T", "cover_url": "https://covers.openlibrary.org/b/id/8579790-M.jpg", "page_count": 372}, {"title": "The Hate U Give", "author": "Angie Thomas", "initial": "H", "cover_url": "https://covers.openlibrary.org/b/isbn/9780062498533-M.jpg", "page_count": 453}], "currently_reading_count": 3, "reader_type_explanation": "Your library isn't just a collection of books read once. You return to stories like old friends, finding new meaning with each visit.", "top_controversial_books": [{"Title": "Stoner", "Author": "John  Williams", "my_rating": 1.0, "average_rating": 4.35, "rating_difference": 3.3499999999999996}, {"Title": "Moby Dick", "Author": "Herman Melville", "my_rating": 5.0, "average_rating": 3.5, "rating_difference": 1.5}, {"Title": "Wolf Hall", "Author": "Hilary Mantel", "my_rating": 5.0, "average_rating": 3.5, "rating_difference": 1.5}], "fiction_nonfiction_split": {"fiction_count": 18, "nonfiction_count": 7}, "mainstream_score_percent": 68, "controversial_books_count": 19}</script>
+                <h1 class="mb-4 text-center text-5xl font-bold tracking-widest uppercase md:mb-8">
+                    <span class="relative z-10">
+                        
+                            <div
+    x-data="{ editing: false, newName: 'p3u4812', originalName: 'p3u4812', errorMessage: '',  get isNewNameValid() { return this.newName.trim() !== '' && this.newName.length <= 15; },  updateUsername: function() { if (!this.isNewNameValid) return; this.errorMessage = ''; fetch('/api/update-username/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': 'fZEt2PmBRZQsGfSbvJo9puaeo0VuVIaMYgG9jknlvwcasxYGcm8mxo2qg3NBbeXt' }, body: JSON.stringify({ username: this.newName }) }) .then(response => response.json()) .then(data => { if (data.status === 'success') { window.location.reload(); } else { this.errorMessage = data.message; } }) .catch(() => { this.errorMessage = 'Could not connect to the server.'; }); } }"
+    class="inline-block"
+>
+    <div
+        x-show="!editing"
+        class="flex flex-col items-center justify-center gap-y-2 text-4xl sm:text-5xl md:flex-row md:gap-x-3"
+    >
+        <div class="inline-flex items-center">
+            <div
+                @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
+                class="group relative cursor-pointer"
+            >
+                <span
+                    class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"
+                ></span>
+                <span class="relative z-20 px-2" x-text="originalName"></span>
+                <div class="text-brand-text absolute -right-2 -bottom-2 z-30">
+                    <svg
+                        class="h-7 w-7"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                    >
+                        <path
+                            d="M14 0l2 2-2 2-2-2 2-2zM12 2l2 2-8 8H4v-2l8-8zM2 12v2h2l-l-2-2z"
+                        />
+                    </svg>
+                </div>
+            </div>
+            <span x-text="originalName.toLowerCase().endsWith('s') ? `'` : `'s`"></span>
+        </div>
+        <span>Bibliotype</span>
+    </div>
+    <div x-show="editing" x-cloak class="flex justify-center">
+        <form
+            @submit.prevent="updateUsername"
+            @keydown.escape.window="editing = false; newName = originalName"
+            class="inline-flex items-stretch gap-4"
+        >
+            <input
+                type="text"
+                x-ref="usernameInput"
+                x-model="newName"
+                maxlength="15"
+                class="border-brand-text focus:border-brand-purple w-full border-2 bg-white p-1 text-4xl font-bold tracking-widest uppercase focus:outline-none sm:text-5xl"
+            />
+            
+    
+        <button
+            type="submit"
+            class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 cursor-pointer text-xl"
+            :disabled="!isNewNameValid" :class="{ 'opacity-50 cursor-not-allowed': !isNewNameValid }"
+            >
+            Save
+        </button>
+    
+
+
+        </form>
+    </div>
+    <div x-show="editing && newName.length > 15" class="mt-2 text-lg font-bold text-red-600">
+        Display name cannot be more than 15 characters.
+    </div>
+    <div
+        x-show="editing && errorMessage"
+        x-text="errorMessage"
+        class="mt-2 text-lg font-bold text-red-600"
+    ></div>
+</div>
+
+                        
+                    </span>
+                </h1>
+
+                
+    
+    <div id="vibe-container"
+         x-data="{
+             allColors: ['#40e7aa', '#ffb4dd', '#ffa75e', '#8bbfff'],
+             colors: [],
+             init() {
+                 let shuffled = [...this.allColors].sort(() => Math.random() - 0.5);
+                 this.colors = shuffled.slice(0, 2);
+             }
+         }"
+         class="mb-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-2 text-center text-xl italic md:mb-8 md:gap-y-4">
+        
+            
+            <span class="vibe-item whitespace-nowrap px-2 py-0 text-gray-700 mb-1 mt-1"
+                  :style="'background-color:' + colors[0]">error generating vibe</span>
+        
+            
+                <span class="vibe-separator font-bold text-blue-400 mx-1">·</span>
+            
+            <span class="vibe-item whitespace-nowrap px-2 py-0 text-gray-700 mb-1 mt-1"
+                  :style="'background-color:' + colors[1]">api call failed</span>
+        
+    </div>
+    
+
+
+                
+    <div class="bg-brand-purple border-brand-text shadow-neo border-2 p-4 text-center sm:p-6">
+        
+        <div class="text-lg uppercase">Your Reader Type is...</div>
+        <div class="mt-1 text-5xl font-bold tracking-widest uppercase">Comfort Rereader</div>
+        
+            <p class="mx-auto mt-4 max-w-2xl text-lg">Your library isn&#x27;t just a collection of books read once. You return to stories like old friends, finding new meaning with each visit.</p>
+        
+    </div>
+
+
+                <button
+    type="button"
+    @click="shareModalOpen = true"
+    class="bg-brand-pink border-brand-text shadow-neo flex w-full cursor-pointer items-center justify-center gap-3 border-2 px-6 py-4 text-xl font-bold uppercase tracking-wider transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-1 active:translate-y-1"
+>
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+    </svg>
+    Share Your Bibliotype
+</button>
+
+                
+                    <template x-teleport="body">
+    <div
+        x-show="shareModalOpen"
+        x-cloak
+        x-effect="document.body.classList.toggle('overflow-hidden', shareModalOpen)"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        @keydown.escape.window="shareModalOpen = false"
+        @click.self="shareModalOpen = false"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/80"
+        style="height: 100dvh; height: 100vh;"
+    >
+        <div class="flex max-h-full w-full max-w-5xl flex-col items-center overflow-y-auto p-4" @click.self="shareModalOpen = false">
+            <div class="mb-3 flex w-full shrink-0 items-center justify-between px-2">
+                <h2 class="text-2xl font-bold tracking-wider uppercase text-white">Share Your Bibliotype</h2>
+                
+    <button
+        type="button"
+        class="shadow-neo bg-brand-pink border-brand-text border-2 p-1 transition-all hover:shadow-none active:translate-x-px active:translate-y-px cursor-pointer"
+        @click="shareModalOpen = false"
+        >
+        <svg class="text-brand-text h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+    </button>
+
+
+            </div>
+
+            <div class="flex w-full shrink-0 gap-4 overflow-x-auto pb-3 snap-x snap-mandatory px-[calc(50%-160px)]" style="-webkit-overflow-scrolling: touch; scroll-padding-inline: calc(50% - 160px);">
+                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                    <div x-ref="cardIdentity">
+                        <div class="flex h-[568px] w-[320px] flex-col justify-between border-2 border-brand-text bg-brand-purple p-6">
+    <div>
+        <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
+        <div class="mt-4 text-center">
+            <p class="text-base uppercase">My Reader Type is...</p>
+            <p class="mt-1 text-3xl font-bold tracking-wider uppercase">Comfort Rereader</p>
+        </div>
+        
+            <div class="mt-4">
+                <p class="mb-2 text-center text-xs font-bold uppercase opacity-70">Reading Vibes</p>
+                <div class="flex flex-wrap justify-center gap-1.5">
+                    
+                        <span class="border-2 border-brand-text px-2 py-0.5 text-sm font-bold" style="background-color: #40e7aa;">error generating vibe</span>
+                    
+                        <span class="border-2 border-brand-text px-2 py-0.5 text-sm font-bold" style="background-color: #ffb4dd;">api call failed</span>
+                    
+                </div>
+            </div>
+        
+        
+            <div class="mt-8 space-y-1.5">
+                <p class="text-xs font-bold uppercase">Top Traits</p>
+                
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-brand-text font-bold bg-yellow-300">1</span>
+                        <span class="font-bold">Comfort Rereader</span>
+                        <span class="ml-auto text-xs opacity-70">45</span>
+                    </div>
+                
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-brand-text font-bold bg-gray-300">2</span>
+                        <span class="font-bold">Small Press Supporter</span>
+                        <span class="ml-auto text-xs opacity-70">19</span>
+                    </div>
+                
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-brand-text font-bold bg-amber-500">3</span>
+                        <span class="font-bold">Fantasy Fanatic</span>
+                        <span class="ml-auto text-xs opacity-70">17</span>
+                    </div>
+                
+            </div>
+        
+        
+            <p class="mt-4 text-xs leading-snug opacity-80">Your library isn&#x27;t just a collection of books read once. You return to stories like old friends, finding new meaning with each visit.</p>
+        
+    </div>
+    <p class="text-center text-xs font-bold tracking-wider uppercase opacity-60">bibliotype.app/u/p3u4812</p>
+</div>
+
+                    </div>
+                    <button
+                        @click="shareImage($refs.cardIdentity, 'bibliotype-reader-type.png')"
+                        type="button"
+                        class="bg-brand-purple border-brand-text shadow-neo-sm mt-2 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                    >
+                        <span x-text="shareButtonLabel">Share</span>
+                    </button>
+                </div>
+
+                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                    <div x-ref="cardStats">
+                        
+<div class="flex h-[568px] w-[320px] flex-col justify-between border-2 border-brand-text bg-brand-yellow p-6">
+    <div>
+        <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
+        <p class="mt-1 text-center text-lg font-bold uppercase">By The Numbers</p>
+        <div class="mt-4 space-y-2">
+            <div class="border-2 border-brand-text bg-brand-pink p-3 text-center">
+                <div class="text-4xl font-bold">25</div>
+                <div class="text-sm uppercase">Books Read</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div class="border-2 border-brand-text bg-brand-green p-2 text-center">
+                    <div class="text-2xl font-bold">8,997</div>
+                    <div class="text-xs uppercase">Pages</div>
+                </div>
+                <div class="border-2 border-brand-text bg-brand-cyan p-2 text-center">
+                    <div class="text-2xl font-bold">3.68</div>
+                    <div class="text-xs uppercase">Avg Rating</div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div class="border-2 border-brand-text bg-brand-cyan p-2 text-center">
+                    <div class="text-2xl font-bold">360</div>
+                    <div class="text-xs uppercase">Avg Pages</div>
+                </div>
+                <div class="border-2 border-brand-text bg-brand-green p-2 text-center">
+                    
+                        <div class="text-2xl font-bold">9.5</div>
+                        <div class="text-xs uppercase">Books/Year</div>
+                    
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div class="border-2 border-brand-text bg-brand-green p-2 text-center">
+                    <div class="text-2xl font-bold">23</div>
+                    <div class="text-xs uppercase">Authors</div>
+                </div>
+                <div class="border-2 border-brand-text bg-brand-cyan p-2 text-center">
+                    <div class="text-2xl font-bold">25</div>
+                    <div class="text-xs uppercase">Genres</div>
+                </div>
+            </div>
+            
+                <div class="border-2 border-brand-text bg-white p-2">
+                    <div class="mb-1 flex items-center justify-between text-xs">
+                        <span class="font-bold">2024</span>
+                        <span class="text-[10px] font-bold uppercase">Reading Timeline</span>
+                        <span class="font-bold">2025</span>
+                    </div>
+                    <div class="flex h-4 items-end gap-px">
+                        
+                            <div class="flex-1 bg-brand-text" style="height: 4px; min-height: 2px; max-height: 16px;"></div>
+                        
+                            <div class="flex-1 bg-brand-text" style="height: 15px; min-height: 2px; max-height: 16px;"></div>
+                        
+                    </div>
+                </div>
+            
+        </div>
+    </div>
+    <p class="text-center text-xs font-bold tracking-wider uppercase opacity-60">bibliotype.app/u/p3u4812</p>
+</div>
+
+                    </div>
+                    <button
+                        @click="shareImage($refs.cardStats, 'bibliotype-stats.png')"
+                        type="button"
+                        class="bg-brand-yellow border-brand-text shadow-neo-sm mt-2 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                    >
+                        <span x-text="shareButtonLabel">Share</span>
+                    </button>
+                </div>
+
+                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                    <div x-ref="cardTaste">
+                        <div class="flex h-[568px] w-[320px] flex-col justify-between border-2 border-brand-text bg-brand-green p-6">
+    <div>
+        <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
+        <p class="mt-1 text-center text-lg font-bold uppercase">Top Authors & Genres</p>
+        
+            <div class="mt-3">
+                <p class="text-xs font-bold uppercase">Top Genres</p>
+                <div class="mt-1.5 space-y-1">
+                    
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center border-2 border-brand-text text-xs font-bold" style="background-color: #ffb4dd;">1</span>
+                            <span class="font-bold capitalize">fantasy</span>
+                            <span class="ml-auto text-xs opacity-70">9</span>
+                        </div>
+                    
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center border-2 border-brand-text text-xs font-bold" style="background-color: #40e7aa;">2</span>
+                            <span class="font-bold capitalize">science fiction</span>
+                            <span class="ml-auto text-xs opacity-70">7</span>
+                        </div>
+                    
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center border-2 border-brand-text text-xs font-bold" style="background-color: #ffa75e;">3</span>
+                            <span class="font-bold capitalize">historical fiction</span>
+                            <span class="ml-auto text-xs opacity-70">6</span>
+                        </div>
+                    
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center border-2 border-brand-text text-xs font-bold" style="background-color: #8bbfff;">4</span>
+                            <span class="font-bold capitalize">thriller</span>
+                            <span class="ml-auto text-xs opacity-70">5</span>
+                        </div>
+                    
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center border-2 border-brand-text text-xs font-bold" style="background-color: #FFE9CE;">5</span>
+                            <span class="font-bold capitalize">young adult</span>
+                            <span class="ml-auto text-xs opacity-70">5</span>
+                        </div>
+                    
+                </div>
+            </div>
+        
+        
+            <div class="mt-3">
+                <p class="text-xs font-bold uppercase">Top Authors</p>
+                <div class="mt-1.5 space-y-1">
+                    
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center border-2 border-brand-text text-xs font-bold" style="background-color: #ffb4dd;">1</span>
+                            <span class="font-bold">J.K. Rowling</span>
+                            <span class="ml-auto text-xs opacity-70">2</span>
+                        </div>
+                    
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center border-2 border-brand-text text-xs font-bold" style="background-color: #40e7aa;">2</span>
+                            <span class="font-bold">Terry Pratchett</span>
+                            <span class="ml-auto text-xs opacity-70">2</span>
+                        </div>
+                    
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center border-2 border-brand-text text-xs font-bold" style="background-color: #ffa75e;">3</span>
+                            <span class="font-bold">Herman Melville</span>
+                            <span class="ml-auto text-xs opacity-70">1</span>
+                        </div>
+                    
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center border-2 border-brand-text text-xs font-bold" style="background-color: #8bbfff;">4</span>
+                            <span class="font-bold">George R.R. Martin</span>
+                            <span class="ml-auto text-xs opacity-70">1</span>
+                        </div>
+                    
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="flex h-5 w-5 shrink-0 items-center justify-center border-2 border-brand-text text-xs font-bold" style="background-color: #FFE9CE;">5</span>
+                            <span class="font-bold">Caleb Azumah Nelson</span>
+                            <span class="ml-auto text-xs opacity-70">1</span>
+                        </div>
+                    
+                </div>
+            </div>
+        
+        
+            <div class="mt-3 border-2 border-brand-text bg-white p-2">
+                <p class="text-[10px] font-bold uppercase">Most Niche Read</p>
+                <p class="mt-0.5 text-xs font-bold">Moby Dick</p>
+                <p class="text-[10px] opacity-70">by Herman Melville</p>
+            </div>
+        
+        
+            <div class="mt-3 border-t-2 border-brand-text pt-2 text-center text-xs">
+                
+                    <span class="font-bold">25</span> genres explored
+                
+                 · 
+                
+                    <span class="font-bold">23</span> authors read
+                
+            </div>
+        
+    </div>
+    <p class="text-center text-xs font-bold tracking-wider uppercase opacity-60">bibliotype.app/u/p3u4812</p>
+</div>
+
+                    </div>
+                    <button
+                        @click="shareImage($refs.cardTaste, 'bibliotype-taste.png')"
+                        type="button"
+                        class="bg-brand-green border-brand-text shadow-neo-sm mt-2 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                    >
+                        <span x-text="shareButtonLabel">Share</span>
+                    </button>
+                </div>
+
+                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                    <div x-ref="cardMainstream">
+                        <div class="flex h-[568px] w-[320px] flex-col justify-between border-2 border-brand-text bg-brand-orange p-5">
+    <div>
+        <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
+        <p class="mt-1 text-center text-lg font-bold uppercase">Mainstream Meter</p>
+        <div class="mt-3 text-center">
+            <div class="text-6xl font-bold">68%</div>
+            <p class="mt-1 text-xs">of my books are considered mainstream</p>
+        </div>
+        <div class="mt-3">
+            <div class="h-5 w-full border-2 border-brand-text bg-white">
+                <div class="h-full bg-yellow-300"
+                     style="width: 68%;"></div>
+            </div>
+            <div class="mt-0.5 flex justify-between text-[10px] font-bold uppercase">
+                <span>Niche</span>
+                <span>Mainstream</span>
+            </div>
+        </div>
+        
+            <div class="mt-3 border-2 border-brand-text bg-white p-2">
+                <p class="text-[10px] font-bold uppercase">Most Niche Read</p>
+                <p class="mt-0.5 text-xs font-bold leading-tight">Moby Dick</p>
+                <p class="text-[10px]">by Herman Melville</p>
+                <p class="text-[10px] italic opacity-70">Only 5 readers found!</p>
+            </div>
+        
+        
+            <div class="mt-2.5">
+                <p class="text-[10px] font-bold uppercase">Hot Takes</p>
+                
+                    <div class="mt-1 border-2 border-brand-text bg-white p-1.5">
+                        <p class="text-xs font-bold leading-tight">Stoner</p>
+                        <div class="mt-0.5 flex items-center gap-1 text-[10px]">
+                            <span class="w-10 shrink-0 font-bold">Me 1.0</span>
+                            <div class="flex-1 h-2.5 border border-brand-text bg-gray-100 relative">
+                                <div class="absolute top-0 left-0 h-full bg-brand-pink" style="width: 20%;"></div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1 text-[10px]">
+                            <span class="w-10 shrink-0 font-bold">Avg 4.35</span>
+                            <div class="flex-1 h-2.5 border border-brand-text bg-gray-100 relative">
+                                <div class="absolute top-0 left-0 h-full bg-brand-cyan" style="width: 87%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <div class="mt-1 border-2 border-brand-text bg-white p-1.5">
+                        <p class="text-xs font-bold leading-tight">Moby Dick</p>
+                        <div class="mt-0.5 flex items-center gap-1 text-[10px]">
+                            <span class="w-10 shrink-0 font-bold">Me 5.0</span>
+                            <div class="flex-1 h-2.5 border border-brand-text bg-gray-100 relative">
+                                <div class="absolute top-0 left-0 h-full bg-brand-pink" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1 text-[10px]">
+                            <span class="w-10 shrink-0 font-bold">Avg 3.5</span>
+                            <div class="flex-1 h-2.5 border border-brand-text bg-gray-100 relative">
+                                <div class="absolute top-0 left-0 h-full bg-brand-cyan" style="width: 70%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                
+            </div>
+        
+    </div>
+    <p class="text-center text-xs font-bold tracking-wider uppercase opacity-60">bibliotype.app/u/p3u4812</p>
+</div>
+
+                    </div>
+                    <button
+                        @click="shareImage($refs.cardMainstream, 'bibliotype-mainstream.png')"
+                        type="button"
+                        class="bg-brand-orange border-brand-text shadow-neo-sm mt-2 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                    >
+                        <span x-text="shareButtonLabel">Share</span>
+                    </button>
+                </div>
+
+                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                    <div x-ref="cardFullSherbet">
+                        
+<div class="border-brand-text bg-brand-purple flex h-[568px] w-[320px] flex-col border-2 p-5">
+    <div class="min-h-0 flex-1 overflow-hidden">
+        <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
+        <div class="border-brand-text bg-brand-pink shadow-neo-sm mt-2 border-2 px-2.5 py-1.5 text-center">
+            <p class="text-xs uppercase">My Reader Type is...</p>
+            <p class="text-xl font-bold tracking-wider uppercase">Comfort Rereader</p>
+        </div>
+        
+            <div class="mt-2">
+                <p class="mb-1 text-center text-[10px] font-bold uppercase opacity-70">Reading Vibes</p>
+                <div class="flex flex-wrap justify-center gap-1">
+                    
+                        <span
+                            class="border-brand-text bg-brand-cyan shadow-neo-sm border px-1.5 py-0.5 text-xs font-bold"
+                            >error generating vibe</span
+                        >
+                    
+                        <span
+                            class="border-brand-text bg-brand-green shadow-neo-sm border px-1.5 py-0.5 text-xs font-bold"
+                            >api call failed</span
+                        >
+                    
+                </div>
+            </div>
+        
+        <div class="mt-2 grid grid-cols-3 gap-1.5">
+            <div class="border-brand-text bg-brand-yellow border-2 p-1.5 text-center">
+                <div class="text-lg font-bold">25</div>
+                <div class="text-[10px] uppercase">Books</div>
+            </div>
+            <div class="border-brand-text bg-brand-yellow border-2 p-1.5 text-center">
+                <div class="text-lg font-bold">8,997</div>
+                <div class="text-[10px] uppercase">Pages</div>
+            </div>
+            <div class="border-brand-text bg-brand-yellow border-2 p-1.5 text-center">
+                <div class="text-lg font-bold">3.68</div>
+                <div class="text-[10px] uppercase">Avg Rating</div>
+            </div>
+        </div>
+        <div class="mt-2 grid grid-cols-2 gap-2">
+            
+                <div>
+                    <p class="text-[10px] font-bold uppercase">Top Genres</p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-green shadow-neo-sm inline-block border px-1 font-bold capitalize"
+                                >fantasy</span
+                            >
+                        </p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-green shadow-neo-sm inline-block border px-1 font-bold capitalize"
+                                >science fiction</span
+                            >
+                        </p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-green shadow-neo-sm inline-block border px-1 font-bold capitalize"
+                                >historical fiction</span
+                            >
+                        </p>
+                    
+                </div>
+            
+            
+                <div>
+                    <p class="text-[10px] font-bold uppercase">Top Authors</p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-orange shadow-neo-sm inline-block border px-1 font-bold"
+                                >J.K. Rowling</span
+                            >
+                        </p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-orange shadow-neo-sm inline-block border px-1 font-bold"
+                                >Terry Pratchett</span
+                            >
+                        </p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-orange shadow-neo-sm inline-block border px-1 font-bold"
+                                >Herman Melville</span
+                            >
+                        </p>
+                    
+                </div>
+            
+        </div>
+        <div class="border-brand-text bg-brand-cyan shadow-neo-sm mt-2 border-2 px-2 py-1 text-center">
+            <p class="text-xs uppercase">
+                <span class="text-xl font-bold">68%</span> of my books are mainstream
+            </p>
+            
+                <p class="mt-0.5 text-[10px] leading-tight opacity-80">
+                    Nichest: Moby Dick
+                </p>
+            
+        </div>
+    </div>
+    
+        <div class="mt-1.5 flex shrink-0 flex-wrap gap-1">
+            
+                <span
+                    class="border-brand-text bg-brand-pink shadow-neo-sm border px-1.5 py-0.5 text-[10px] font-bold"
+                    >Comfort Rereader</span
+                >
+            
+                <span
+                    class="border-brand-text bg-brand-green shadow-neo-sm border px-1.5 py-0.5 text-[10px] font-bold"
+                    >Small Press Supporter</span
+                >
+            
+                <span
+                    class="border-brand-text bg-brand-yellow shadow-neo-sm border px-1.5 py-0.5 text-[10px] font-bold"
+                    >Fantasy Fanatic</span
+                >
+            
+        </div>
+    
+    <p class="mt-auto shrink-0 pt-2 text-center text-xs font-bold tracking-wider uppercase opacity-60">
+        bibliotype.app/u/p3u4812
+    </p>
+</div>
+
+                    </div>
+                    <button
+                        @click="shareImage($refs.cardFullSherbet, 'bibliotype-full.png')"
+                        type="button"
+                        class="bg-brand-pink border-brand-text shadow-neo-sm mt-2 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                    >
+                        <span x-text="shareButtonLabel">Share</span> — Sherbet
+                    </button>
+                </div>
+
+                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                    <div x-ref="cardFullNeonPicnic">
+                        
+<div class="border-brand-text bg-brand-purple flex h-[568px] w-[320px] flex-col border-2 p-5">
+    <div class="min-h-0 flex-1 overflow-hidden">
+        <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
+        <div class="border-brand-text bg-brand-green shadow-neo-sm mt-2 border-2 px-2.5 py-1.5 text-center">
+            <p class="text-xs uppercase">My Reader Type is...</p>
+            <p class="text-xl font-bold tracking-wider uppercase">Comfort Rereader</p>
+        </div>
+        
+            <div class="mt-2">
+                <p class="mb-1 text-center text-[10px] font-bold uppercase opacity-70">Reading Vibes</p>
+                <div class="flex flex-wrap justify-center gap-1">
+                    
+                        <span
+                            class="border-brand-text bg-brand-yellow shadow-neo-sm border px-1.5 py-0.5 text-xs font-bold"
+                            >error generating vibe</span
+                        >
+                    
+                        <span
+                            class="border-brand-text bg-brand-cyan shadow-neo-sm border px-1.5 py-0.5 text-xs font-bold"
+                            >api call failed</span
+                        >
+                    
+                </div>
+            </div>
+        
+        <div class="mt-2 grid grid-cols-3 gap-1.5">
+            <div class="border-brand-text bg-brand-cyan border-2 p-1.5 text-center">
+                <div class="text-lg font-bold">25</div>
+                <div class="text-[10px] uppercase">Books</div>
+            </div>
+            <div class="border-brand-text bg-brand-cyan border-2 p-1.5 text-center">
+                <div class="text-lg font-bold">8,997</div>
+                <div class="text-[10px] uppercase">Pages</div>
+            </div>
+            <div class="border-brand-text bg-brand-cyan border-2 p-1.5 text-center">
+                <div class="text-lg font-bold">3.68</div>
+                <div class="text-[10px] uppercase">Avg Rating</div>
+            </div>
+        </div>
+        <div class="mt-2 grid grid-cols-2 gap-2">
+            
+                <div>
+                    <p class="text-[10px] font-bold uppercase">Top Genres</p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-orange shadow-neo-sm inline-block border px-1 font-bold capitalize"
+                                >fantasy</span
+                            >
+                        </p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-orange shadow-neo-sm inline-block border px-1 font-bold capitalize"
+                                >science fiction</span
+                            >
+                        </p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-orange shadow-neo-sm inline-block border px-1 font-bold capitalize"
+                                >historical fiction</span
+                            >
+                        </p>
+                    
+                </div>
+            
+            
+                <div>
+                    <p class="text-[10px] font-bold uppercase">Top Authors</p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-yellow shadow-neo-sm inline-block border px-1 font-bold"
+                                >J.K. Rowling</span
+                            >
+                        </p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-yellow shadow-neo-sm inline-block border px-1 font-bold"
+                                >Terry Pratchett</span
+                            >
+                        </p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-yellow shadow-neo-sm inline-block border px-1 font-bold"
+                                >Herman Melville</span
+                            >
+                        </p>
+                    
+                </div>
+            
+        </div>
+        <div class="border-brand-text bg-brand-pink shadow-neo-sm mt-2 border-2 px-2 py-1 text-center">
+            <p class="text-xs uppercase">
+                <span class="text-xl font-bold">68%</span> of my books are mainstream
+            </p>
+            
+                <p class="mt-0.5 text-[10px] leading-tight opacity-80">
+                    Nichest: Moby Dick
+                </p>
+            
+        </div>
+    </div>
+    
+        <div class="mt-1.5 flex shrink-0 flex-wrap gap-1">
+            
+                <span
+                    class="border-brand-text bg-brand-green shadow-neo-sm border px-1.5 py-0.5 text-[10px] font-bold"
+                    >Comfort Rereader</span
+                >
+            
+                <span
+                    class="border-brand-text bg-brand-cyan shadow-neo-sm border px-1.5 py-0.5 text-[10px] font-bold"
+                    >Small Press Supporter</span
+                >
+            
+                <span
+                    class="border-brand-text bg-brand-orange shadow-neo-sm border px-1.5 py-0.5 text-[10px] font-bold"
+                    >Fantasy Fanatic</span
+                >
+            
+        </div>
+    
+    <p class="mt-auto shrink-0 pt-2 text-center text-xs font-bold tracking-wider uppercase opacity-60">
+        bibliotype.app/u/p3u4812
+    </p>
+</div>
+
+                    </div>
+                    <button
+                        @click="shareImage($refs.cardFullNeonPicnic, 'bibliotype-full.png')"
+                        type="button"
+                        class="bg-brand-green border-brand-text shadow-neo-sm mt-2 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                    >
+                        <span x-text="shareButtonLabel">Share</span> — Neon Picnic
+                    </button>
+                </div>
+
+                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                    <div x-ref="cardFullMiami">
+                        
+<div class="border-brand-text bg-brand-purple flex h-[568px] w-[320px] flex-col border-2 p-5">
+    <div class="min-h-0 flex-1 overflow-hidden">
+        <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
+        <div class="border-brand-text bg-brand-cyan shadow-neo-sm mt-2 border-2 px-2.5 py-1.5 text-center">
+            <p class="text-xs uppercase">My Reader Type is...</p>
+            <p class="text-xl font-bold tracking-wider uppercase">Comfort Rereader</p>
+        </div>
+        
+            <div class="mt-2">
+                <p class="mb-1 text-center text-[10px] font-bold uppercase opacity-70">Reading Vibes</p>
+                <div class="flex flex-wrap justify-center gap-1">
+                    
+                        <span
+                            class="border-brand-text bg-brand-pink shadow-neo-sm border px-1.5 py-0.5 text-xs font-bold"
+                            >error generating vibe</span
+                        >
+                    
+                        <span
+                            class="border-brand-text bg-brand-orange shadow-neo-sm border px-1.5 py-0.5 text-xs font-bold"
+                            >api call failed</span
+                        >
+                    
+                </div>
+            </div>
+        
+        <div class="mt-2 grid grid-cols-3 gap-1.5">
+            <div class="border-brand-text bg-brand-pink border-2 p-1.5 text-center">
+                <div class="text-lg font-bold">25</div>
+                <div class="text-[10px] uppercase">Books</div>
+            </div>
+            <div class="border-brand-text bg-brand-pink border-2 p-1.5 text-center">
+                <div class="text-lg font-bold">8,997</div>
+                <div class="text-[10px] uppercase">Pages</div>
+            </div>
+            <div class="border-brand-text bg-brand-pink border-2 p-1.5 text-center">
+                <div class="text-lg font-bold">3.68</div>
+                <div class="text-[10px] uppercase">Avg Rating</div>
+            </div>
+        </div>
+        <div class="mt-2 grid grid-cols-2 gap-2">
+            
+                <div>
+                    <p class="text-[10px] font-bold uppercase">Top Genres</p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-cyan shadow-neo-sm inline-block border px-1 font-bold capitalize"
+                                >fantasy</span
+                            >
+                        </p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-cyan shadow-neo-sm inline-block border px-1 font-bold capitalize"
+                                >science fiction</span
+                            >
+                        </p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-cyan shadow-neo-sm inline-block border px-1 font-bold capitalize"
+                                >historical fiction</span
+                            >
+                        </p>
+                    
+                </div>
+            
+            
+                <div>
+                    <p class="text-[10px] font-bold uppercase">Top Authors</p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-orange shadow-neo-sm inline-block border px-1 font-bold"
+                                >J.K. Rowling</span
+                            >
+                        </p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-orange shadow-neo-sm inline-block border px-1 font-bold"
+                                >Terry Pratchett</span
+                            >
+                        </p>
+                    
+                        <p class="mt-1 text-xs">
+                            <span
+                                class="border-brand-text bg-brand-orange shadow-neo-sm inline-block border px-1 font-bold"
+                                >Herman Melville</span
+                            >
+                        </p>
+                    
+                </div>
+            
+        </div>
+        <div class="border-brand-text bg-brand-orange shadow-neo-sm mt-2 border-2 px-2 py-1 text-center">
+            <p class="text-xs uppercase">
+                <span class="text-xl font-bold">68%</span> of my books are mainstream
+            </p>
+            
+                <p class="mt-0.5 text-[10px] leading-tight opacity-80">
+                    Nichest: Moby Dick
+                </p>
+            
+        </div>
+    </div>
+    
+        <div class="mt-1.5 flex shrink-0 flex-wrap gap-1">
+            
+                <span
+                    class="border-brand-text bg-brand-pink shadow-neo-sm border px-1.5 py-0.5 text-[10px] font-bold"
+                    >Comfort Rereader</span
+                >
+            
+                <span
+                    class="border-brand-text bg-brand-cyan shadow-neo-sm border px-1.5 py-0.5 text-[10px] font-bold"
+                    >Small Press Supporter</span
+                >
+            
+                <span
+                    class="border-brand-text bg-brand-orange shadow-neo-sm border px-1.5 py-0.5 text-[10px] font-bold"
+                    >Fantasy Fanatic</span
+                >
+            
+        </div>
+    
+    <p class="mt-auto shrink-0 pt-2 text-center text-xs font-bold tracking-wider uppercase opacity-60">
+        bibliotype.app/u/p3u4812
+    </p>
+</div>
+
+                    </div>
+                    <button
+                        @click="shareImage($refs.cardFullMiami, 'bibliotype-full.png')"
+                        type="button"
+                        class="bg-brand-orange border-brand-text shadow-neo-sm mt-2 w-full cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                    >
+                        <span x-text="shareButtonLabel">Share</span> — Miami Vice
+                    </button>
+                </div>
+            </div>
+
+            <p class="mt-1 shrink-0 text-center text-sm text-white/60">Swipe to see all cards</p>
+        </div>
+    </div>
+</template>
+
+<style>
+    .share-card-wrapper {
+        transform-origin: top center;
+    }
+    @media (max-height: 740px) {
+        .share-card-wrapper {
+            transform: scale(0.85);
+            margin-bottom: -85px;
+        }
+    }
+    @media (max-height: 640px) {
+        .share-card-wrapper {
+            transform: scale(0.75);
+            margin-bottom: -142px;
+        }
+    }
+</style>
+
+<script>
+    var _cachedFontEmbedCSS = null;
+
+    async function getEmbeddedFontCSS() {
+        if (_cachedFontEmbedCSS) return _cachedFontEmbedCSS;
+
+        try {
+            const cssResponse = await fetch("https://fonts.googleapis.com/css2?family=VT323&display=swap");
+            let css = await cssResponse.text();
+
+            const urlRegex = /url\((https:\/\/fonts\.gstatic\.com[^)]+)\)/g;
+            const matches = [...css.matchAll(urlRegex)];
+
+            for (const match of matches) {
+                const fontResponse = await fetch(match[1]);
+                const fontBlob = await fontResponse.blob();
+                const base64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(fontBlob);
+                });
+                css = css.replace(match[0], `url(${base64})`);
+            }
+
+            _cachedFontEmbedCSS = css;
+            return css;
+        } catch (e) {
+            console.error("Failed to embed font:", e);
+            return null;
+        }
+    }
+
+    function shareModalData() {
+        return {
+            shareModalOpen: false,
+            shareButtonLabel: (navigator.canShare && navigator.canShare({ files: [new File([""], "t.png", { type: "image/png" })] })) ? "Share" : "Download",
+
+            async shareImage(cardEl, filename) {
+                if (typeof htmlToImage === "undefined") {
+                    console.error("html-to-image not loaded");
+                    return;
+                }
+
+                await document.fonts.ready;
+                const fontEmbedCSS = await getEmbeddedFontCSS();
+
+                try {
+                    const options = { pixelRatio: 2 };
+                    if (fontEmbedCSS) {
+                        options.fontEmbedCSS = fontEmbedCSS;
+                    }
+
+                    const blob = await htmlToImage.toBlob(cardEl, options);
+
+                    if (!blob) return;
+
+                    const file = new File([blob], filename, { type: "image/png" });
+
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: "My Bibliotype",
+                                text: "Check out my reading DNA on Bibliotype!",
+                            });
+                            return;
+                        } catch (e) {
+                            if (e.name === "AbortError") return;
+                        }
+                    }
+
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = filename;
+                    a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 5000);
+                } catch (e) {
+                    console.error("Failed to generate share image:", e);
+                }
+            },
+        };
+    }
+</script>
+
+                
+                
+    <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+        <h2 class="mb-4 text-2xl font-bold uppercase">Top Reader Traits</h2>
+        <ol class="space-y-2 text-lg">
+            
+                
+                    
+                        <li class="flex items-center justify-between p-2 border-2 border-brand-text bg-yellow-300 shadow-neo-sm">
+  <div class="flex items-center">
+    <span class="font-bold text-xl mr-4">#1</span>
+    <span class="font-bold">Comfort Rereader</span>
+  </div>
+  <div class="font-bold px-3 py-1 border-2 border-yellow-500 bg-white">45</div>
+</li>
+
+                    
+                
+            
+                
+                    
+                        <li class="flex items-center justify-between p-2 border-2 border-brand-text bg-gray-300 shadow-neo-sm">
+  <div class="flex items-center">
+    <span class="font-bold text-xl mr-4">#2</span>
+    <span class="font-bold">Small Press Supporter</span>
+  </div>
+  <div class="font-bold px-3 py-1 border-2 border-gray-500 bg-white">19</div>
+</li>
+
+                    
+                
+            
+                
+                    
+                        <li class="flex items-center justify-between p-2 border-2 border-brand-text bg-amber-500 shadow-neo-sm">
+  <div class="flex items-center">
+    <span class="font-bold text-xl mr-4">#3</span>
+    <span class="font-bold">Fantasy Fanatic</span>
+  </div>
+  <div class="font-bold px-3 py-1 border-2 border-amber-700 bg-white">17</div>
+</li>
+
+                    
+                
+            
+        </ol>
+    </div>
+
+
+                
+
+<div class="enrichment-row grid grid-cols-1 gap-6 md:grid-cols-3"
+     x-data="{
+         hasAnimated: false,
+         books: 0,
+         pages: 0,
+         rating: 0,
+         targetBooks: 25,
+         targetPages: 8997,
+         targetRating: 3.68,
+
+         fmtPages(v) { return Math.round(v).toLocaleString(); },
+         fmtRating(v) { return v.toFixed(1); },
+
+         animate() {
+             const duration = 800;
+             let startTimestamp = null;
+             const step = (timestamp) => {
+                 if (!startTimestamp) startTimestamp = timestamp;
+                 const elapsed = timestamp - startTimestamp;
+                 const progress = Math.min(elapsed / duration, 1);
+                 const eased = 0.5 - Math.cos(progress * Math.PI) / 2;
+
+                 this.books = Math.round(this.targetBooks * eased);
+                 this.pages = Math.round(this.targetPages * eased);
+                 this.rating = this.targetRating * eased;
+
+                 if (progress < 1) {
+                     window.requestAnimationFrame(step);
+                 } else {
+                     this.books = this.targetBooks;
+                     this.pages = this.targetPages;
+                     this.rating = this.targetRating;
+                 }
+             };
+             window.requestAnimationFrame(step);
+         },
+
+         init() {
+             const observer = new IntersectionObserver((entries) => {
+                 if (entries[0].isIntersecting && !this.hasAnimated) {
+                     this.hasAnimated = true;
+                     this.animate();
+                     observer.unobserve(this.$el);
+                 }
+             }, { threshold: 0.3 });
+             observer.observe(this.$el);
+         }
+     }"
+     x-init="init()">
+    <div class="bg-brand-yellow border-brand-text shadow-neo border-2 p-6 text-center">
+        <div class="text-5xl font-bold" x-text="books">25</div>
+        <div class="mt-2 text-lg uppercase">Total Books Read</div>
+    </div>
+    <div class="bg-brand-pink border-brand-text shadow-neo relative border-2 p-6 text-center">
+        
+
+
+        <div x-data
+             class="transition-opacity duration-500 "
+             :class="{ 'opacity-60': $store.enrichment?.pages_any_missing }">
+            <div id="stat-pages" class="text-5xl font-bold" x-text="fmtPages(pages)">8,997</div>
+            <div class="mt-2 text-lg uppercase">Total Pages Read</div>
+        </div>
+    </div>
+    <div class="bg-brand-cyan border-brand-text shadow-neo border-2 p-6 text-center">
+        <div class="text-5xl font-bold" x-text="fmtRating(rating)">3.68</div>
+        <div class="mt-2 text-lg uppercase">Overall Rating</div>
+    </div>
+</div>
+
+
+                <div class="border-brand-text shadow-neo border-2 bg-white p-4 sm:p-6">
+    <h2 class="mb-1 text-2xl font-bold uppercase">Comparative Analytics</h2>
+    <p class="mb-3 text-base italic text-gray-500">How you compare to global averages and the Bibliotype community</p>
+    
+        <div class="space-y-4 text-lg">
+            <!-- Average Book Length -->
+            <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
+                
+                <div x-data
+                     class="transition-opacity duration-500 "
+                     :class="{ 'opacity-60': $store.enrichment?.pages_any_missing }">
+                <p>
+                    The average length of books you read is
+                    <strong><span id="stat-avg-length">360</span> pages</strong>.
+                </p>
+                <p class="mt-1 text-base">
+                    This is <strong>longer</strong> than
+                    <strong>68.6%</strong> of
+                    other Bibliotype readers.
+                </p>
+                <p class="mt-1 text-sm text-gray-500">
+                    The average length of a book read by the average reader is 375 pages.
+                    <a href="https://wordsrated.com/book-length-statistics/" target="_blank" rel="noopener" class="underline hover:text-brand-text">[source]</a>
+                </p>
+                
+
+
+<div class="number-line-wrap mt-2 mb-1"
+     x-data="{
+         min: 300,
+         max: 400,
+         userVal: 360,
+         compVal: 329.3,
+         thirdVal: 375,
+         unit: 'pages',
+         decimals: 0,
+         userCssColor: 'var(--color-brand-pink)',
+         compCssColor: 'var(--color-brand-cyan)',
+         thirdCssColor: 'var(--color-brand-green)',
+
+         hasAnimated: false,
+         animProgress: 0,
+
+         clamp(v) { return Math.max(this.min, Math.min(this.max, v)); },
+         pct(v)   { return ((this.clamp(v) - this.min) / (this.max - this.min)) * 100; },
+         fmt(v)   { return this.decimals > 0 ? Number(v).toFixed(this.decimals) : Math.round(v); },
+
+         get userPct()   { return this.pct(this.userVal); },
+         get compPct()   { return this.pct(this.compVal); },
+         get hasThird()  { return this.thirdVal !== null; },
+         get thirdPct()  { return this.hasThird ? this.pct(this.thirdVal) : 0; },
+
+         get animUserPct()  { return this.userPct  * (0.75 + 0.25 * this.animProgress); },
+         get animCompPct()  { return this.compPct  * (0.75 + 0.25 * this.animProgress); },
+         get animThirdPct() { return this.thirdPct * (0.75 + 0.25 * this.animProgress); },
+
+         get animBands() {
+             let items = [
+                 { pct: this.animUserPct, color: this.userCssColor },
+                 { pct: this.animCompPct, color: this.compCssColor },
+             ];
+             if (this.hasThird) {
+                 items.push({ pct: this.animThirdPct, color: this.thirdCssColor });
+             }
+             items.sort((a, b) => a.pct - b.pct);
+             let result = [];
+             for (let i = 0; i < items.length - 1; i++) {
+                 result.push({
+                     left: items[i].pct,
+                     width: items[i + 1].pct - items[i].pct,
+                     colorL: items[i].color,
+                     colorR: items[i + 1].color,
+                 });
+             }
+             return result;
+         },
+
+         bandStyle(band) {
+             return 'background:linear-gradient(to right,' + band.colorL + ',' + band.colorR + ');' +
+                    'opacity:0.5;' +
+                    '-webkit-mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);' +
+                    'mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);';
+         },
+
+         animate() {
+             const duration = 600;
+             let startTimestamp = null;
+             const step = (timestamp) => {
+                 if (!startTimestamp) startTimestamp = timestamp;
+                 const elapsed = timestamp - startTimestamp;
+                 const mainProgress = Math.min(elapsed / duration, 1);
+                 this.animProgress = 0.5 - Math.cos(mainProgress * Math.PI) / 2;
+
+                 if (mainProgress < 1) {
+                     window.requestAnimationFrame(step);
+                 } else {
+                     this.animProgress = 1;
+                 }
+             };
+             window.requestAnimationFrame(step);
+         },
+
+         init() {
+             const observer = new IntersectionObserver((entries) => {
+                 if (entries[0].isIntersecting && !this.hasAnimated) {
+                     this.hasAnimated = true;
+                     this.animate();
+                     observer.unobserve(this.$el);
+                 }
+             }, { threshold: 0.3 });
+             observer.observe(this.$el);
+         }
+     }"
+     x-init="init()">
+
+    <!-- ── TRACK ── -->
+    <div class="relative" style="height: 32px;">
+        <div class="border-brand-text absolute inset-x-0 bottom-0 h-3 border-2 bg-gray-100">
+            <!-- Gradient-hatched bands between each pair of adjacent markers -->
+            <template x-for="(band, idx) in animBands" :key="idx">
+                <div class="absolute top-0 h-full"
+                     :style="'left:' + band.left + '%; width:' + band.width + '%;' + bandStyle(band)"></div>
+            </template>
+        </div>
+
+        <!-- User tick stem + diamond -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animUserPct + '%'">
+            <div class="bg-brand-pink border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-pink h-4 w-4 rotate-45 border-2"></div>
+            </div>
+        </div>
+
+        <!-- Compare tick stem + square -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animCompPct + '%'">
+            <div class="bg-brand-cyan border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-cyan h-4 w-4 border-2"></div>
+            </div>
+        </div>
+
+        
+        <!-- Third tick stem + circle -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animThirdPct + '%'">
+            <div class="bg-brand-green border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-green h-4 w-4 rounded-full border-2"></div>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- ── ENDPOINT LABELS + LEGEND ── -->
+    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+        <span class="text-gray-500">300 pages</span>
+        <div class="flex flex-1 flex-wrap justify-center items-center gap-x-3 gap-y-0.5">
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-pink border-brand-text inline-block h-2.5 w-2.5 rotate-45 border"></span>
+                <span x-text="fmt(userVal) + (unit ? ' ' + unit : '') + ' You'"></span>
+            </span>
+            
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-cyan border-brand-text inline-block h-2.5 w-2.5 border"></span>
+                <span x-text="fmt(compVal) + (unit ? ' ' + unit : '') + ' Community'"></span>
+            </span>
+            
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-green border-brand-text inline-block h-2.5 w-2.5 rounded-full border"></span>
+                <span x-text="fmt(thirdVal) + (unit ? ' ' + unit : '') + ' World Avg'"></span>
+            </span>
+            
+        </div>
+        <span class="text-gray-500">400 pages</span>
+    </div>
+</div>
+
+
+                </div>
+            </div>
+
+            <!-- Average Book Age -->
+            <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
+                
+                <div x-data
+                     class="transition-opacity duration-500 "
+                     :class="{ 'opacity-60': $store.enrichment?.year_any_missing }">
+                <p>
+                    The average age of books you read is from
+                    <strong>1999</strong>.
+                </p>
+                <p class="mt-1 text-base">
+                    Your reading tastes are <strong>newer</strong> than
+                    <strong>31.4%</strong> of
+                    other Bibliotype readers.
+                </p>
+                <p class="mt-1 text-sm text-gray-500">
+                    The average publish year of a book read by the average reader is 2009.
+                    <a href="https://ammar-alyousfi.com/2020/goodreads-books-statistics" target="_blank" rel="noopener" class="underline hover:text-brand-text">[source]</a>
+                </p>
+                
+
+
+<div class="number-line-wrap mt-2 mb-1"
+     x-data="{
+         min: 1960,
+         max: 2026,
+         userVal: 1999,
+         compVal: 1960.2,
+         thirdVal: 2009,
+         unit: 'CE',
+         decimals: 0,
+         userCssColor: 'var(--color-brand-pink)',
+         compCssColor: 'var(--color-brand-cyan)',
+         thirdCssColor: 'var(--color-brand-green)',
+
+         hasAnimated: false,
+         animProgress: 0,
+
+         clamp(v) { return Math.max(this.min, Math.min(this.max, v)); },
+         pct(v)   { return ((this.clamp(v) - this.min) / (this.max - this.min)) * 100; },
+         fmt(v)   { return this.decimals > 0 ? Number(v).toFixed(this.decimals) : Math.round(v); },
+
+         get userPct()   { return this.pct(this.userVal); },
+         get compPct()   { return this.pct(this.compVal); },
+         get hasThird()  { return this.thirdVal !== null; },
+         get thirdPct()  { return this.hasThird ? this.pct(this.thirdVal) : 0; },
+
+         get animUserPct()  { return this.userPct  * (0.75 + 0.25 * this.animProgress); },
+         get animCompPct()  { return this.compPct  * (0.75 + 0.25 * this.animProgress); },
+         get animThirdPct() { return this.thirdPct * (0.75 + 0.25 * this.animProgress); },
+
+         get animBands() {
+             let items = [
+                 { pct: this.animUserPct, color: this.userCssColor },
+                 { pct: this.animCompPct, color: this.compCssColor },
+             ];
+             if (this.hasThird) {
+                 items.push({ pct: this.animThirdPct, color: this.thirdCssColor });
+             }
+             items.sort((a, b) => a.pct - b.pct);
+             let result = [];
+             for (let i = 0; i < items.length - 1; i++) {
+                 result.push({
+                     left: items[i].pct,
+                     width: items[i + 1].pct - items[i].pct,
+                     colorL: items[i].color,
+                     colorR: items[i + 1].color,
+                 });
+             }
+             return result;
+         },
+
+         bandStyle(band) {
+             return 'background:linear-gradient(to right,' + band.colorL + ',' + band.colorR + ');' +
+                    'opacity:0.5;' +
+                    '-webkit-mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);' +
+                    'mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);';
+         },
+
+         animate() {
+             const duration = 600;
+             let startTimestamp = null;
+             const step = (timestamp) => {
+                 if (!startTimestamp) startTimestamp = timestamp;
+                 const elapsed = timestamp - startTimestamp;
+                 const mainProgress = Math.min(elapsed / duration, 1);
+                 this.animProgress = 0.5 - Math.cos(mainProgress * Math.PI) / 2;
+
+                 if (mainProgress < 1) {
+                     window.requestAnimationFrame(step);
+                 } else {
+                     this.animProgress = 1;
+                 }
+             };
+             window.requestAnimationFrame(step);
+         },
+
+         init() {
+             const observer = new IntersectionObserver((entries) => {
+                 if (entries[0].isIntersecting && !this.hasAnimated) {
+                     this.hasAnimated = true;
+                     this.animate();
+                     observer.unobserve(this.$el);
+                 }
+             }, { threshold: 0.3 });
+             observer.observe(this.$el);
+         }
+     }"
+     x-init="init()">
+
+    <!-- ── TRACK ── -->
+    <div class="relative" style="height: 32px;">
+        <div class="border-brand-text absolute inset-x-0 bottom-0 h-3 border-2 bg-gray-100">
+            <!-- Gradient-hatched bands between each pair of adjacent markers -->
+            <template x-for="(band, idx) in animBands" :key="idx">
+                <div class="absolute top-0 h-full"
+                     :style="'left:' + band.left + '%; width:' + band.width + '%;' + bandStyle(band)"></div>
+            </template>
+        </div>
+
+        <!-- User tick stem + diamond -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animUserPct + '%'">
+            <div class="bg-brand-pink border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-pink h-4 w-4 rotate-45 border-2"></div>
+            </div>
+        </div>
+
+        <!-- Compare tick stem + square -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animCompPct + '%'">
+            <div class="bg-brand-cyan border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-cyan h-4 w-4 border-2"></div>
+            </div>
+        </div>
+
+        
+        <!-- Third tick stem + circle -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animThirdPct + '%'">
+            <div class="bg-brand-green border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-green h-4 w-4 rounded-full border-2"></div>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- ── ENDPOINT LABELS + LEGEND ── -->
+    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+        <span class="text-gray-500">1960 CE</span>
+        <div class="flex flex-1 flex-wrap justify-center items-center gap-x-3 gap-y-0.5">
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-pink border-brand-text inline-block h-2.5 w-2.5 rotate-45 border"></span>
+                <span x-text="fmt(userVal) + (unit ? ' ' + unit : '') + ' You'"></span>
+            </span>
+            
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-cyan border-brand-text inline-block h-2.5 w-2.5 border"></span>
+                <span x-text="fmt(compVal) + (unit ? ' ' + unit : '') + ' Community'"></span>
+            </span>
+            
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-green border-brand-text inline-block h-2.5 w-2.5 rounded-full border"></span>
+                <span x-text="fmt(thirdVal) + (unit ? ' ' + unit : '') + ' World Avg'"></span>
+            </span>
+            
+        </div>
+        <span class="text-gray-500">2026 CE</span>
+    </div>
+</div>
+
+
+                </div>
+            </div>
+
+            <!-- Books Per Year -->
+            <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
+                <p>
+                    You've read
+                    <strong>19 books</strong>
+                    
+                        across <strong>2 years</strong>, averaging
+                        <strong>9.5 books a year</strong>.
+                    
+                </p>
+                
+                    <p class="mt-1 text-base">
+                        This is <strong>fewer</strong> than
+                        <strong>54.2%</strong> of
+                        other Bibliotype readers.
+                    </p>
+                    <p class="mt-1 text-sm text-gray-500">
+                        The average reader reads 7 books a year.
+                        <a href="https://wordsrated.com/reading-statistics/" target="_blank" rel="noopener" class="underline hover:text-brand-text">[source]</a>
+                    </p>
+                    
+
+
+<div class="number-line-wrap mt-2 mb-1"
+     x-data="{
+         min: 0,
+         max: 20,
+         userVal: 9.5,
+         compVal: 11.3,
+         thirdVal: 7,
+         unit: 'per year',
+         decimals: 1,
+         userCssColor: 'var(--color-brand-pink)',
+         compCssColor: 'var(--color-brand-cyan)',
+         thirdCssColor: 'var(--color-brand-green)',
+
+         hasAnimated: false,
+         animProgress: 0,
+
+         clamp(v) { return Math.max(this.min, Math.min(this.max, v)); },
+         pct(v)   { return ((this.clamp(v) - this.min) / (this.max - this.min)) * 100; },
+         fmt(v)   { return this.decimals > 0 ? Number(v).toFixed(this.decimals) : Math.round(v); },
+
+         get userPct()   { return this.pct(this.userVal); },
+         get compPct()   { return this.pct(this.compVal); },
+         get hasThird()  { return this.thirdVal !== null; },
+         get thirdPct()  { return this.hasThird ? this.pct(this.thirdVal) : 0; },
+
+         get animUserPct()  { return this.userPct  * (0.75 + 0.25 * this.animProgress); },
+         get animCompPct()  { return this.compPct  * (0.75 + 0.25 * this.animProgress); },
+         get animThirdPct() { return this.thirdPct * (0.75 + 0.25 * this.animProgress); },
+
+         get animBands() {
+             let items = [
+                 { pct: this.animUserPct, color: this.userCssColor },
+                 { pct: this.animCompPct, color: this.compCssColor },
+             ];
+             if (this.hasThird) {
+                 items.push({ pct: this.animThirdPct, color: this.thirdCssColor });
+             }
+             items.sort((a, b) => a.pct - b.pct);
+             let result = [];
+             for (let i = 0; i < items.length - 1; i++) {
+                 result.push({
+                     left: items[i].pct,
+                     width: items[i + 1].pct - items[i].pct,
+                     colorL: items[i].color,
+                     colorR: items[i + 1].color,
+                 });
+             }
+             return result;
+         },
+
+         bandStyle(band) {
+             return 'background:linear-gradient(to right,' + band.colorL + ',' + band.colorR + ');' +
+                    'opacity:0.5;' +
+                    '-webkit-mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);' +
+                    'mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);';
+         },
+
+         animate() {
+             const duration = 600;
+             let startTimestamp = null;
+             const step = (timestamp) => {
+                 if (!startTimestamp) startTimestamp = timestamp;
+                 const elapsed = timestamp - startTimestamp;
+                 const mainProgress = Math.min(elapsed / duration, 1);
+                 this.animProgress = 0.5 - Math.cos(mainProgress * Math.PI) / 2;
+
+                 if (mainProgress < 1) {
+                     window.requestAnimationFrame(step);
+                 } else {
+                     this.animProgress = 1;
+                 }
+             };
+             window.requestAnimationFrame(step);
+         },
+
+         init() {
+             const observer = new IntersectionObserver((entries) => {
+                 if (entries[0].isIntersecting && !this.hasAnimated) {
+                     this.hasAnimated = true;
+                     this.animate();
+                     observer.unobserve(this.$el);
+                 }
+             }, { threshold: 0.3 });
+             observer.observe(this.$el);
+         }
+     }"
+     x-init="init()">
+
+    <!-- ── TRACK ── -->
+    <div class="relative" style="height: 32px;">
+        <div class="border-brand-text absolute inset-x-0 bottom-0 h-3 border-2 bg-gray-100">
+            <!-- Gradient-hatched bands between each pair of adjacent markers -->
+            <template x-for="(band, idx) in animBands" :key="idx">
+                <div class="absolute top-0 h-full"
+                     :style="'left:' + band.left + '%; width:' + band.width + '%;' + bandStyle(band)"></div>
+            </template>
+        </div>
+
+        <!-- User tick stem + diamond -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animUserPct + '%'">
+            <div class="bg-brand-pink border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-pink h-4 w-4 rotate-45 border-2"></div>
+            </div>
+        </div>
+
+        <!-- Compare tick stem + square -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animCompPct + '%'">
+            <div class="bg-brand-cyan border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-cyan h-4 w-4 border-2"></div>
+            </div>
+        </div>
+
+        
+        <!-- Third tick stem + circle -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animThirdPct + '%'">
+            <div class="bg-brand-green border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-green h-4 w-4 rounded-full border-2"></div>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- ── ENDPOINT LABELS + LEGEND ── -->
+    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+        <span class="text-gray-500">0 per year</span>
+        <div class="flex flex-1 flex-wrap justify-center items-center gap-x-3 gap-y-0.5">
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-pink border-brand-text inline-block h-2.5 w-2.5 rotate-45 border"></span>
+                <span x-text="fmt(userVal) + (unit ? ' ' + unit : '') + ' You'"></span>
+            </span>
+            
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-cyan border-brand-text inline-block h-2.5 w-2.5 border"></span>
+                <span x-text="fmt(compVal) + (unit ? ' ' + unit : '') + ' Community'"></span>
+            </span>
+            
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-green border-brand-text inline-block h-2.5 w-2.5 rounded-full border"></span>
+                <span x-text="fmt(thirdVal) + (unit ? ' ' + unit : '') + ' World Avg'"></span>
+            </span>
+            
+        </div>
+        <span class="text-gray-500">20 per year</span>
+    </div>
+</div>
+
+
+                
+                <p class="mt-2 text-xs text-gray-400">
+                    * Based on books with a recorded finish date. If this seems low, some books
+                    on your "read" shelf may be missing a read date.
+                </p>
+            </div>
+        </div>
+    
+</div>
+
+
+                <div class="enrichment-row grid grid-cols-1 gap-8 md:grid-cols-2">
+                    <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+    <h2 class="mb-1 text-center text-2xl font-bold uppercase">Most Niche Read</h2>
+    
+        <p class="mb-4 text-center text-base italic text-gray-500">We found 14 books in your library read by 5 or fewer people</p>
+    
+    
+        <div class="scroll-fade-up flex flex-1 flex-col items-center justify-center" x-data="{ imgFailed: false, imgLoaded: false }">
+            
+                <!-- Hidden img that always loads; drives Alpine state -->
+                <img
+                    src="https://covers.openlibrary.org/b/id/10544254-M.jpg"
+                    alt="Cover of Moby Dick"
+                    class="absolute h-0 w-0 opacity-0"
+                    fetchpriority="low"
+                    x-on:error="imgFailed = true"
+                    x-on:load="imgLoaded = true; if ($el.naturalWidth < 10) imgFailed = true"
+                />
+                <!-- Crosshatch loading placeholder -->
+                <div
+                    x-show="!imgLoaded && !imgFailed"
+                    class="cover-crosshatch border-brand-text shadow-neo-sm h-40 w-[6.75rem] border-2"
+                ></div>
+                <!-- Loaded cover -->
+                <div
+                    x-show="imgLoaded && !imgFailed"
+                    x-cloak
+                    class="border-brand-text shadow-neo-sm h-40 w-[6.75rem] overflow-hidden border-2"
+                >
+                    <img
+                        src="https://covers.openlibrary.org/b/id/10544254-M.jpg"
+                        alt="Cover of Moby Dick"
+                        class="h-full w-full object-cover"
+                        fetchpriority="low"
+                    />
+                </div>
+                <!-- Letter fallback -->
+                <div
+                    x-show="imgFailed"
+                    x-cloak
+                    class="bg-brand-purple border-brand-text shadow-neo-sm flex h-40 w-[6.75rem] items-center justify-center border-2 text-5xl font-bold"
+                >
+                    M
+                </div>
+            
+            <p class="mt-3 text-center text-xl font-bold">Moby Dick</p>
+            <p class="text-center text-lg text-gray-600">by Herman Melville</p>
+        </div>
+    
+</div>
+
+                    <div class="border-brand-text shadow-neo relative border-2 bg-white p-6">
+    
+
+
+    <h2 class="mb-1 text-center text-2xl font-bold uppercase">Mainstream Meter</h2>
+    <p class="mb-4 text-center text-base italic text-gray-500">How mainstream the books in your library are</p>
+    <div class="">
+    <!-- Alpine.js component for the gauge logic -->
+    
+    <div x-data="{
+        // --- STATE ---
+        score: 68,
+        animatedScore: 0,
+        displayedScore: 0,
+        hasAnimated: false,
+
+        // --- GETTERS ---
+        get rotation() {
+            const clampedScore = Math.max(-5, Math.min(105, this.animatedScore));
+            return (clampedScore / 100) * 180 - 90;
+        },
+
+        animate() {
+            const duration = 1000;
+            let startTimestamp = null;
+
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const elapsed = timestamp - startTimestamp;
+                const mainProgress = Math.min(elapsed / duration, 1);
+                const easedMainProgress = 0.5 - Math.cos(mainProgress * Math.PI) / 2;
+
+                this.animatedScore = this.score * easedMainProgress;
+                this.displayedScore = Math.round(this.score * easedMainProgress);
+
+                if (mainProgress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    this.animatedScore = this.score;
+                    this.displayedScore = Math.round(this.score);
+                }
+            };
+
+            window.requestAnimationFrame(step);
+        },
+
+        init() {
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting && !this.hasAnimated) {
+                    this.hasAnimated = true;
+                    this.animate(); // This one call now handles everything.
+                    observer.unobserve(this.$el);
+                }
+            }, { threshold: 0.5 });
+            observer.observe(this.$el);
+        }
+    }" x-init="init()">
+        <div class="scroll-fade-up relative mx-auto h-32 w-64" style="filter: drop-shadow(4px 4px 0px #1f2937)">
+
+            <!-- Layer 1: The Semicircle Container (with the necessary clipping) -->
+            <div class="absolute top-0 left-0 h-full w-full overflow-hidden">
+                <!-- The actual gradient circle that gets clipped -->
+                <div class="absolute top-0 left-0 h-64 w-64 rounded-full border-4 border-brand-text"
+                    style="background-image: conic-gradient(
+                        from 180deg,
+                        #00c27a 0% 37.5%,    /* Niche: score 0-25% → conic 25-37.5% visible */
+                        #ffc107 37.5% 62.5%, /* Normal: score 25-75% → conic 37.5-62.5% visible */
+                        #ff5c5c 62.5% 100%   /* Mainstream: score 75-100% → conic 62.5-75% visible */
+                        );">
+                </div>
+            </div>
+
+         <!-- Border at 25% mark (niche/normal boundary) -->
+            <div class="absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2 bg-brand-text"
+                 style="transform: rotate(-45deg);"></div>
+
+         <!-- Border at 75% mark (normal/mainstream boundary) -->
+            <div class="absolute bottom-0 left-1/2 h-32 w-0.75 origin-bottom -translate-x-1/2 bg-brand-text"
+                 style="transform: rotate(45deg);"></div>
+
+            <!-- Layer 2: SVG for Text (Not clipped, sits on top) -->
+            <svg class="absolute top-0 left-0 h-64 w-64 z-10" viewBox="0 0 256 256" overflow="visible">
+                <defs>
+                    <!-- Slightly smaller radius (110 vs 116) to bring labels ~5px inward from the arc edge -->
+                    <path id="semicircle" d="M 18,128 A 110,110 0 0,1 238,128" fill="none"/>
+                </defs>
+                <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
+                    <textPath href="#semicircle" startOffset="12%" text-anchor="middle">niche</textPath>
+                </text>
+                <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
+                    <textPath href="#semicircle" startOffset="50%" text-anchor="middle">normal</textPath>
+                </text>
+                <text fill="#1f2237" dy="4" font-family="VT323, monospace" font-size="15" font-weight="bold">
+                    <textPath href="#semicircle" startOffset="88%" text-anchor="middle">mainstream</textPath>
+                </text>
+            </svg>
+
+
+            <div class="absolute -bottom-4 border-brand-text border-4 left-0 w-full h-4 z-[15]"
+                 style="background: repeating-linear-gradient(45deg, #6b7280 0px, #6b7280 4px, #4b5563 4px, #4b5563 7px);"></div>
+
+
+            <!-- Note: Increased width to w-3 to make the taper more visible -->
+            <div class="absolute bottom-0 left-1/2 h-24 w-3 origin-bottom z-20"
+                 :style="`transform: translateX(-50%) rotate(${rotation}deg);`">
+
+                <!-- The SVG element defines the shape and its appearance -->
+                <svg width="100%" height="100%" viewBox="0 0 12 96" preserveAspectRatio="none"
+                     xmlns="http://www.w3.org/2000/svg">
+
+                    <!-- The polygon's points are calculated based on the 12x96 viewBox -->
+                    <polygon points="0,96 12,96 6,0"
+                             class="fill-gray-200 stroke-brand-text"
+                             stroke-width="2"
+                             stroke-linejoin="miter" />
+                </svg>
+            </div>
+
+            <!-- Layer 4: The Pivot Point (Not clipped, sits on the very top) -->
+
+            <div class="absolute bottom-0 left-1/2 h-7 w-7 -translate-x-1/2 translate-y-1/2 rounded-full border-2 border-brand-text bg-gray-200 z-29"></div>
+            <div class="absolute bottom-0 left-1/2 h-4 w-4 -translate-x-1/2 translate-y-1/2 rounded-full  bg-brand-text z-30"></div>
+
+
+        </div>
+
+
+        <!-- The descriptive text below the meter -->
+        <p class="mt-6 text-center text-lg">
+            <strong id="mainstream-score" x-text="displayedScore + '%'"></strong> of the books in your library are considered
+            "mainstream," based on author and publisher popularity.
+        </p>
+    </div>
+    </div>
+</div>
+
+
+                </div>
+
+                
+<div class="enrichment-row grid grid-cols-1 gap-8 md:grid-cols-2">
+    <!-- Top Genres section -->
+    <div x-data="{
+             shown: false,
+             colors: ['#ffb4dd', '#40e7aa', '#ffa75e', '#8bbfff', '#FFE9CE', '#ff647c', '#ffe56c', '#A1CDF1', '#9af6d4', '#fe9393'],
+             init() {
+                 this.$refs.genreList?.querySelectorAll(':scope > li').forEach((li, i) => {
+                     li.style.opacity = '0';
+                     li.style.transform = 'translateX(-16px)';
+                     li.style.transition = 'opacity 350ms ease-out, transform 350ms ease-out';
+                     li.style.transitionDelay = (i * 80) + 'ms';
+                 });
+                 const observer = new IntersectionObserver((entries) => {
+                     if (entries[0].isIntersecting && !this.shown) {
+                         this.shown = true;
+                         this.$refs.genreList?.querySelectorAll(':scope > li').forEach((li) => {
+                             li.style.opacity = '1';
+                             li.style.transform = 'translateX(0)';
+                         });
+                         observer.unobserve(this.$el);
+                     }
+                 }, { threshold: 0.3 });
+                 observer.observe(this.$el);
+             }
+         }"
+         x-init="init()"
+         class="border-brand-text shadow-neo relative overflow-hidden border-2 bg-white p-6">
+        
+
+
+        <h2 class="mb-1 text-2xl font-bold uppercase md:pr-36">Top Genres</h2>
+        
+            <div class="flex items-start justify-between md:!block md:!max-h-none " style="max-height: 5rem;">
+                
+                    <p class="mb-2 text-base italic text-gray-500 md:mb-6 md:pr-36">We found 25 unique genres in your library</p>
+                
+                <div class="enrichment-corner-chart chart-drop-shadow chart-await h-28 w-28 flex-shrink-0 md:!absolute md:!top-2 md:!right-2 md:!h-32 md:!w-32" style="position: relative; top: -2.5rem; right: -0.6rem;">
+                    <canvas id="topGenresChart"></canvas>
+                </div>
+            </div>
+            <ol class="space-y-2 text-lg " x-ref="genreList">
+                
+                    <li class="capitalize">
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-yellow"
+                              :style="{ 'background-color': colors[0] }">
+                            fantasy
+                        </span>
+                        (9 books)
+                    </li>
+                
+                    <li class="capitalize">
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-yellow"
+                              :style="{ 'background-color': colors[1] }">
+                            science fiction
+                        </span>
+                        (7 books)
+                    </li>
+                
+                    <li class="capitalize">
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-yellow"
+                              :style="{ 'background-color': colors[2] }">
+                            historical fiction
+                        </span>
+                        (6 books)
+                    </li>
+                
+                    <li class="capitalize">
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-yellow"
+                              :style="{ 'background-color': colors[3] }">
+                            thriller
+                        </span>
+                        (5 books)
+                    </li>
+                
+                    <li class="capitalize">
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-yellow"
+                              :style="{ 'background-color': colors[4] }">
+                            young adult
+                        </span>
+                        (5 books)
+                    </li>
+                
+                    <li class="capitalize">
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-yellow"
+                              :style="{ 'background-color': colors[5] }">
+                            psychology
+                        </span>
+                        (5 books)
+                    </li>
+                
+                    <li class="capitalize">
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-yellow"
+                              :style="{ 'background-color': colors[6] }">
+                            history
+                        </span>
+                        (5 books)
+                    </li>
+                
+                    <li class="capitalize">
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-yellow"
+                              :style="{ 'background-color': colors[7] }">
+                            social science
+                        </span>
+                        (5 books)
+                    </li>
+                
+                    <li class="capitalize">
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-yellow"
+                              :style="{ 'background-color': colors[8] }">
+                            romance
+                        </span>
+                        (4 books)
+                    </li>
+                
+                    <li class="capitalize">
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-yellow"
+                              :style="{ 'background-color': colors[9] }">
+                            mythology &amp; folklore
+                        </span>
+                        (3 books)
+                    </li>
+                
+            </ol>
+        
+    </div>
+    <!-- Top Authors section -->
+    <div x-data="{
+             shown: false,
+             colors: ['#ffb4dd', '#40e7aa', '#ffa75e', '#8bbfff', '#FFE9CE', '#ff647c', '#ffe56c', '#A1CDF1', '#9af6d4', '#fe9393'],
+             init() {
+                 this.$refs.authorList?.querySelectorAll(':scope > li').forEach((li, i) => {
+                     li.style.opacity = '0';
+                     li.style.transform = 'translateX(-16px)';
+                     li.style.transition = 'opacity 350ms ease-out, transform 350ms ease-out';
+                     li.style.transitionDelay = (i * 80) + 'ms';
+                 });
+                 const observer = new IntersectionObserver((entries) => {
+                     if (entries[0].isIntersecting && !this.shown) {
+                         this.shown = true;
+                         this.$refs.authorList?.querySelectorAll(':scope > li').forEach((li) => {
+                             li.style.opacity = '1';
+                             li.style.transform = 'translateX(0)';
+                         });
+                         observer.unobserve(this.$el);
+                     }
+                 }, { threshold: 0.3 });
+                 observer.observe(this.$el);
+             }
+         }"
+         x-init="init()"
+         class="border-brand-text shadow-neo relative overflow-hidden border-2 bg-white p-6">
+        <h2 class="mb-1 text-2xl font-bold uppercase md:pr-36">Top Authors</h2>
+        
+            <div class="flex items-start justify-between md:!block md:!max-h-none" style="max-height: 5rem;">
+                
+                    <p class="mb-2 text-base italic text-gray-500 md:mb-6 md:pr-36">We found 23 unique authors in your library</p>
+                
+                <div class="enrichment-corner-chart chart-drop-shadow chart-await h-28 w-28 flex-shrink-0 md:!absolute md:!top-2 md:!right-2 md:!h-32 md:!w-32" style="position: relative; top: -2.5rem; right: -0.6rem;">
+                    <canvas id="topAuthorsChart"></canvas>
+                </div>
+            </div>
+            <ol class="space-y-2 text-lg" x-ref="authorList">
+                
+                    <li>
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-cyan"
+                              :style="{ 'background-color': colors[0] }">
+                            J.K. Rowling
+                        </span>
+                        (2 books)
+                    </li>
+                
+                    <li>
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-cyan"
+                              :style="{ 'background-color': colors[1] }">
+                            Terry Pratchett
+                        </span>
+                        (2 books)
+                    </li>
+                
+                    <li>
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-cyan"
+                              :style="{ 'background-color': colors[2] }">
+                            Herman Melville
+                        </span>
+                        (1 books)
+                    </li>
+                
+                    <li>
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-cyan"
+                              :style="{ 'background-color': colors[3] }">
+                            George R.R. Martin
+                        </span>
+                        (1 books)
+                    </li>
+                
+                    <li>
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-cyan"
+                              :style="{ 'background-color': colors[4] }">
+                            Caleb Azumah Nelson
+                        </span>
+                        (1 books)
+                    </li>
+                
+                    <li>
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-cyan"
+                              :style="{ 'background-color': colors[5] }">
+                            Brené Brown
+                        </span>
+                        (1 books)
+                    </li>
+                
+                    <li>
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-cyan"
+                              :style="{ 'background-color': colors[6] }">
+                            Kathryn Stockett
+                        </span>
+                        (1 books)
+                    </li>
+                
+                    <li>
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-cyan"
+                              :style="{ 'background-color': colors[7] }">
+                            Valeria Luiselli
+                        </span>
+                        (1 books)
+                    </li>
+                
+                    <li>
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-cyan"
+                              :style="{ 'background-color': colors[8] }">
+                            Andrea Lawlor
+                        </span>
+                        (1 books)
+                    </li>
+                
+                    <li>
+                        <span class="border-brand-text border-2 px-2 py-1 font-bold mr-2 bg-brand-cyan"
+                              :style="{ 'background-color': colors[9] }">
+                            Michael Morpurgo
+                        </span>
+                        (1 books)
+                    </li>
+                
+            </ol>
+        
+    </div>
+</div>
+
+
+                <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+    <h2 class="mb-1 text-2xl font-bold uppercase">Review Analysis</h2>
+    
+        <p class="mb-4 text-base italic text-gray-500">
+            Across 13 reviews we found 6 positive and 2 negative reviews
+        </p>
+    
+    <div class="grid grid-cols-1 gap-6 text-lg md:grid-cols-2">
+        <div>
+            <h3 class="text-xl font-bold uppercase">Most Positive Review</h3>
+            
+                <p class="mt-2 font-bold">Eileen</p>
+                
+                <blockquote class="border-brand-text shadow-neo-sm mt-2 border-2 bg-brand-green p-3">
+                    "Amazing book! Really enjoyed the writing style."
+                </blockquote>
+            
+        </div>
+        <div>
+            <h3 class="text-xl font-bold uppercase">Most Negative Review</h3>
+            
+                <p class="mt-2 font-bold">Stoner</p>
+                
+                <blockquote class="border-brand-text shadow-neo-sm mt-2 border-2 bg-brand-orange p-3">
+                    "Not my cup of tea. Found it boring."
+                </blockquote>
+            
+        </div>
+    </div>
+</div>
+
+
+                
+                    <div class="enrichment-row grid grid-cols-1 gap-8 md:grid-cols-2">
+                        
+                            <div class="border-brand-text shadow-neo relative flex flex-col border-2 bg-white p-6">
+    
+
+
+    <h2 class="mb-1 text-center text-2xl font-bold uppercase">Fiction vs Nonfiction</h2>
+    <p class="text-center text-base text-gray-500 italic">
+        How your library splits between fiction and nonfiction
+    </p>
+    <div class="flex flex-1 flex-col items-center justify-center py-4 ">
+        <div class="chart-await mx-auto" style="height: 220px; width: 220px">
+            <canvas id="fictionNonfictionChart"></canvas>
+        </div>
+    </div>
+    
+        
+        <div class="flex items-center justify-center gap-6 text-lg ">
+            <div class="flex items-center gap-2">
+                <span
+                    class="inline-block h-4 w-4 border-2 border-gray-800"
+                    style="background-color: #ffb4dd"
+                ></span>
+                Fiction 72%
+            </div>
+            <div class="flex items-center gap-2">
+                <span
+                    class="inline-block h-4 w-4 border-2 border-gray-800"
+                    style="background-color: #8bbfff"
+                ></span>
+                Nonfiction
+                28%
+            </div>
+        </div>
+    
+</div>
+
+                        
+                        
+                            <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+    <h2 class="mb-1 text-center text-2xl font-bold uppercase">Book Extremes</h2>
+    <p class="mb-4 text-center text-base text-gray-500 italic">
+        A 787-page difference between your longest and shortest reads
+    </p>
+    <div class="flex flex-col gap-6">
+        
+            <div class="flex items-start gap-4">
+                <div class="scroll-fade-left shrink-0" x-data="{ imgFailed: false, imgLoaded: false }">
+                    
+                        <img
+                            src="https://covers.openlibrary.org/b/id/15123748-M.jpg"
+                            alt="Cover of A Game of Thrones (A Song of Ice and Fire, #1)"
+                            class="absolute h-0 w-0 opacity-0"
+                            x-on:error="imgFailed = true"
+                            x-on:load="imgLoaded = true; if ($el.naturalWidth < 10) imgFailed = true"
+                        />
+                        <div
+                            x-show="!imgLoaded && !imgFailed"
+                            class="cover-crosshatch border-brand-text shadow-neo-sm h-40 w-[6.75rem] border-2"
+                        ></div>
+                        <div x-show="imgLoaded && !imgFailed" x-cloak class="border-brand-text shadow-neo-sm h-40 w-[6.75rem] overflow-hidden border-2">
+                            <img
+                                src="https://covers.openlibrary.org/b/id/15123748-M.jpg"
+                                alt="Cover of A Game of Thrones (A Song of Ice and Fire, #1)"
+                                class="h-full w-full object-cover"
+                            />
+                        </div>
+                        <div
+                            x-show="imgFailed"
+                            x-cloak
+                            class="bg-brand-orange border-brand-text shadow-neo-sm flex h-40 w-[6.75rem] items-center justify-center border-2 text-5xl font-bold"
+                        >
+                            G
+                        </div>
+                    
+                </div>
+                <div class="min-w-0 flex-1">
+                    <span
+                        class="bg-brand-orange border-brand-text mb-2 inline-block border-2 px-2 py-0.5 text-sm font-bold uppercase"
+                    >
+                        Longest
+                    </span>
+                    <p class="line-clamp-2 text-xl font-bold">A Game of Thrones (A Song of Ice and Fire, #1)</p>
+                    <p class="truncate text-lg text-gray-600">by George R.R. Martin</p>
+                    <p class="text-lg font-bold">835 pages</p>
+                </div>
+            </div>
+        
+
+        
+            <div class="flex items-start gap-4">
+                <div class="scroll-fade-left shrink-0" x-data="{ imgFailed: false, imgLoaded: false }">
+                    
+                        <img
+                            src="https://covers.openlibrary.org/b/id/10544254-M.jpg"
+                            alt="Cover of Moby Dick"
+                            class="absolute h-0 w-0 opacity-0"
+                            x-on:error="imgFailed = true"
+                            x-on:load="imgLoaded = true; if ($el.naturalWidth < 10) imgFailed = true"
+                        />
+                        <div
+                            x-show="!imgLoaded && !imgFailed"
+                            class="cover-crosshatch border-brand-text shadow-neo-sm h-40 w-[6.75rem] border-2"
+                        ></div>
+                        <div x-show="imgLoaded && !imgFailed" x-cloak class="border-brand-text shadow-neo-sm h-40 w-[6.75rem] overflow-hidden border-2">
+                            <img
+                                src="https://covers.openlibrary.org/b/id/10544254-M.jpg"
+                                alt="Cover of Moby Dick"
+                                class="h-full w-full object-cover"
+                            />
+                        </div>
+                        <div
+                            x-show="imgFailed"
+                            x-cloak
+                            class="bg-brand-green border-brand-text shadow-neo-sm flex h-40 w-[6.75rem] items-center justify-center border-2 text-5xl font-bold"
+                        >
+                            M
+                        </div>
+                    
+                </div>
+                <div class="min-w-0 flex-1">
+                    <span
+                        class="bg-brand-green border-brand-text mb-2 inline-block border-2 px-2 py-0.5 text-sm font-bold uppercase"
+                    >
+                        Shortest
+                    </span>
+                    <p class="line-clamp-2 text-xl font-bold">Moby Dick</p>
+                    <p class="truncate text-lg text-gray-600">by Herman Melville</p>
+                    <p class="text-lg font-bold">48 pages</p>
+                </div>
+            </div>
+        
+    </div>
+</div>
+
+                        
+                    </div>
+                
+                <div class="border-brand-text shadow-neo border-2 bg-white p-6">
+    <h2 class="mb-1 text-2xl font-bold uppercase">Most Controversial Ratings</h2>
+    
+        <p class="mb-4 text-base italic text-gray-500">
+            Across 19 books your average rating difference was 1.02, making you
+            <span class="border-brand-text bg-brand-orange border-2 px-1.5 py-0.5 text-sm font-bold not-italic uppercase">Very contrarian</span>
+        </p>
+    
+    <div class="space-y-4 text-lg">
+        
+            <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
+                <p class="font-bold">Stoner &mdash; John  Williams</p>
+                
+
+
+<div class="number-line-wrap mt-2 mb-1"
+     x-data="{
+         min: 0,
+         max: 5,
+         userVal: 1.0,
+         compVal: 4.35,
+         thirdVal: null,
+         unit: '★',
+         decimals: 1,
+         userCssColor: 'var(--color-brand-cyan)',
+         compCssColor: 'var(--color-brand-orange)',
+         thirdCssColor: 'var(--color-brand-green)',
+
+         hasAnimated: false,
+         animProgress: 0,
+
+         clamp(v) { return Math.max(this.min, Math.min(this.max, v)); },
+         pct(v)   { return ((this.clamp(v) - this.min) / (this.max - this.min)) * 100; },
+         fmt(v)   { return this.decimals > 0 ? Number(v).toFixed(this.decimals) : Math.round(v); },
+
+         get userPct()   { return this.pct(this.userVal); },
+         get compPct()   { return this.pct(this.compVal); },
+         get hasThird()  { return this.thirdVal !== null; },
+         get thirdPct()  { return this.hasThird ? this.pct(this.thirdVal) : 0; },
+
+         get animUserPct()  { return this.userPct  * (0.75 + 0.25 * this.animProgress); },
+         get animCompPct()  { return this.compPct  * (0.75 + 0.25 * this.animProgress); },
+         get animThirdPct() { return this.thirdPct * (0.75 + 0.25 * this.animProgress); },
+
+         get animBands() {
+             let items = [
+                 { pct: this.animUserPct, color: this.userCssColor },
+                 { pct: this.animCompPct, color: this.compCssColor },
+             ];
+             if (this.hasThird) {
+                 items.push({ pct: this.animThirdPct, color: this.thirdCssColor });
+             }
+             items.sort((a, b) => a.pct - b.pct);
+             let result = [];
+             for (let i = 0; i < items.length - 1; i++) {
+                 result.push({
+                     left: items[i].pct,
+                     width: items[i + 1].pct - items[i].pct,
+                     colorL: items[i].color,
+                     colorR: items[i + 1].color,
+                 });
+             }
+             return result;
+         },
+
+         bandStyle(band) {
+             return 'background:linear-gradient(to right,' + band.colorL + ',' + band.colorR + ');' +
+                    'opacity:0.5;' +
+                    '-webkit-mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);' +
+                    'mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);';
+         },
+
+         animate() {
+             const duration = 600;
+             let startTimestamp = null;
+             const step = (timestamp) => {
+                 if (!startTimestamp) startTimestamp = timestamp;
+                 const elapsed = timestamp - startTimestamp;
+                 const mainProgress = Math.min(elapsed / duration, 1);
+                 this.animProgress = 0.5 - Math.cos(mainProgress * Math.PI) / 2;
+
+                 if (mainProgress < 1) {
+                     window.requestAnimationFrame(step);
+                 } else {
+                     this.animProgress = 1;
+                 }
+             };
+             window.requestAnimationFrame(step);
+         },
+
+         init() {
+             const observer = new IntersectionObserver((entries) => {
+                 if (entries[0].isIntersecting && !this.hasAnimated) {
+                     this.hasAnimated = true;
+                     this.animate();
+                     observer.unobserve(this.$el);
+                 }
+             }, { threshold: 0.3 });
+             observer.observe(this.$el);
+         }
+     }"
+     x-init="init()">
+
+    <!-- ── TRACK ── -->
+    <div class="relative" style="height: 32px;">
+        <div class="border-brand-text absolute inset-x-0 bottom-0 h-3 border-2 bg-gray-100">
+            <!-- Gradient-hatched bands between each pair of adjacent markers -->
+            <template x-for="(band, idx) in animBands" :key="idx">
+                <div class="absolute top-0 h-full"
+                     :style="'left:' + band.left + '%; width:' + band.width + '%;' + bandStyle(band)"></div>
+            </template>
+        </div>
+
+        <!-- User tick stem + diamond -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animUserPct + '%'">
+            <div class="bg-brand-cyan border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-cyan h-4 w-4 rotate-45 border-2"></div>
+            </div>
+        </div>
+
+        <!-- Compare tick stem + square -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animCompPct + '%'">
+            <div class="bg-brand-orange border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-orange h-4 w-4 border-2"></div>
+            </div>
+        </div>
+
+        
+    </div>
+
+    <!-- ── ENDPOINT LABELS + LEGEND ── -->
+    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+        <span class="text-gray-500">0.0 ★</span>
+        <div class="flex flex-1 flex-wrap justify-center items-center gap-x-3 gap-y-0.5">
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-cyan border-brand-text inline-block h-2.5 w-2.5 rotate-45 border"></span>
+                <span x-text="fmt(userVal) + (unit ? ' ' + unit : '') + ' Your Rating'"></span>
+            </span>
+            
+            <span class="inline-flex items-center gap-1 whitespace-nowrap text-gray-500">
+                <span>&larr;</span>
+                <span class="bg-brand-purple text-brand-text border-brand-text border px-1 font-bold" x-text="'difference: ' + (userVal >= compVal ? '+' : '\u2212') + fmt(Math.abs(userVal - compVal))"></span>
+                <span>&rarr;</span>
+            </span>
+            
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-orange border-brand-text inline-block h-2.5 w-2.5 border"></span>
+                <span x-text="fmt(compVal) + (unit ? ' ' + unit : '') + ' Goodreads Average'"></span>
+            </span>
+            
+        </div>
+        <span class="text-gray-500">5.0 ★</span>
+    </div>
+</div>
+
+
+            </div>
+        
+            <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
+                <p class="font-bold">Moby Dick &mdash; Herman Melville</p>
+                
+
+
+<div class="number-line-wrap mt-2 mb-1"
+     x-data="{
+         min: 0,
+         max: 5,
+         userVal: 5.0,
+         compVal: 3.5,
+         thirdVal: null,
+         unit: '★',
+         decimals: 1,
+         userCssColor: 'var(--color-brand-cyan)',
+         compCssColor: 'var(--color-brand-orange)',
+         thirdCssColor: 'var(--color-brand-green)',
+
+         hasAnimated: false,
+         animProgress: 0,
+
+         clamp(v) { return Math.max(this.min, Math.min(this.max, v)); },
+         pct(v)   { return ((this.clamp(v) - this.min) / (this.max - this.min)) * 100; },
+         fmt(v)   { return this.decimals > 0 ? Number(v).toFixed(this.decimals) : Math.round(v); },
+
+         get userPct()   { return this.pct(this.userVal); },
+         get compPct()   { return this.pct(this.compVal); },
+         get hasThird()  { return this.thirdVal !== null; },
+         get thirdPct()  { return this.hasThird ? this.pct(this.thirdVal) : 0; },
+
+         get animUserPct()  { return this.userPct  * (0.75 + 0.25 * this.animProgress); },
+         get animCompPct()  { return this.compPct  * (0.75 + 0.25 * this.animProgress); },
+         get animThirdPct() { return this.thirdPct * (0.75 + 0.25 * this.animProgress); },
+
+         get animBands() {
+             let items = [
+                 { pct: this.animUserPct, color: this.userCssColor },
+                 { pct: this.animCompPct, color: this.compCssColor },
+             ];
+             if (this.hasThird) {
+                 items.push({ pct: this.animThirdPct, color: this.thirdCssColor });
+             }
+             items.sort((a, b) => a.pct - b.pct);
+             let result = [];
+             for (let i = 0; i < items.length - 1; i++) {
+                 result.push({
+                     left: items[i].pct,
+                     width: items[i + 1].pct - items[i].pct,
+                     colorL: items[i].color,
+                     colorR: items[i + 1].color,
+                 });
+             }
+             return result;
+         },
+
+         bandStyle(band) {
+             return 'background:linear-gradient(to right,' + band.colorL + ',' + band.colorR + ');' +
+                    'opacity:0.5;' +
+                    '-webkit-mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);' +
+                    'mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);';
+         },
+
+         animate() {
+             const duration = 600;
+             let startTimestamp = null;
+             const step = (timestamp) => {
+                 if (!startTimestamp) startTimestamp = timestamp;
+                 const elapsed = timestamp - startTimestamp;
+                 const mainProgress = Math.min(elapsed / duration, 1);
+                 this.animProgress = 0.5 - Math.cos(mainProgress * Math.PI) / 2;
+
+                 if (mainProgress < 1) {
+                     window.requestAnimationFrame(step);
+                 } else {
+                     this.animProgress = 1;
+                 }
+             };
+             window.requestAnimationFrame(step);
+         },
+
+         init() {
+             const observer = new IntersectionObserver((entries) => {
+                 if (entries[0].isIntersecting && !this.hasAnimated) {
+                     this.hasAnimated = true;
+                     this.animate();
+                     observer.unobserve(this.$el);
+                 }
+             }, { threshold: 0.3 });
+             observer.observe(this.$el);
+         }
+     }"
+     x-init="init()">
+
+    <!-- ── TRACK ── -->
+    <div class="relative" style="height: 32px;">
+        <div class="border-brand-text absolute inset-x-0 bottom-0 h-3 border-2 bg-gray-100">
+            <!-- Gradient-hatched bands between each pair of adjacent markers -->
+            <template x-for="(band, idx) in animBands" :key="idx">
+                <div class="absolute top-0 h-full"
+                     :style="'left:' + band.left + '%; width:' + band.width + '%;' + bandStyle(band)"></div>
+            </template>
+        </div>
+
+        <!-- User tick stem + diamond -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animUserPct + '%'">
+            <div class="bg-brand-cyan border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-cyan h-4 w-4 rotate-45 border-2"></div>
+            </div>
+        </div>
+
+        <!-- Compare tick stem + square -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animCompPct + '%'">
+            <div class="bg-brand-orange border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-orange h-4 w-4 border-2"></div>
+            </div>
+        </div>
+
+        
+    </div>
+
+    <!-- ── ENDPOINT LABELS + LEGEND ── -->
+    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+        <span class="text-gray-500">0.0 ★</span>
+        <div class="flex flex-1 flex-wrap justify-center items-center gap-x-3 gap-y-0.5">
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-cyan border-brand-text inline-block h-2.5 w-2.5 rotate-45 border"></span>
+                <span x-text="fmt(userVal) + (unit ? ' ' + unit : '') + ' Your Rating'"></span>
+            </span>
+            
+            <span class="inline-flex items-center gap-1 whitespace-nowrap text-gray-500">
+                <span>&larr;</span>
+                <span class="bg-brand-purple text-brand-text border-brand-text border px-1 font-bold" x-text="'difference: ' + (userVal >= compVal ? '+' : '\u2212') + fmt(Math.abs(userVal - compVal))"></span>
+                <span>&rarr;</span>
+            </span>
+            
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-orange border-brand-text inline-block h-2.5 w-2.5 border"></span>
+                <span x-text="fmt(compVal) + (unit ? ' ' + unit : '') + ' Goodreads Average'"></span>
+            </span>
+            
+        </div>
+        <span class="text-gray-500">5.0 ★</span>
+    </div>
+</div>
+
+
+            </div>
+        
+            <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
+                <p class="font-bold">Wolf Hall &mdash; Hilary Mantel</p>
+                
+
+
+<div class="number-line-wrap mt-2 mb-1"
+     x-data="{
+         min: 0,
+         max: 5,
+         userVal: 5.0,
+         compVal: 3.5,
+         thirdVal: null,
+         unit: '★',
+         decimals: 1,
+         userCssColor: 'var(--color-brand-cyan)',
+         compCssColor: 'var(--color-brand-orange)',
+         thirdCssColor: 'var(--color-brand-green)',
+
+         hasAnimated: false,
+         animProgress: 0,
+
+         clamp(v) { return Math.max(this.min, Math.min(this.max, v)); },
+         pct(v)   { return ((this.clamp(v) - this.min) / (this.max - this.min)) * 100; },
+         fmt(v)   { return this.decimals > 0 ? Number(v).toFixed(this.decimals) : Math.round(v); },
+
+         get userPct()   { return this.pct(this.userVal); },
+         get compPct()   { return this.pct(this.compVal); },
+         get hasThird()  { return this.thirdVal !== null; },
+         get thirdPct()  { return this.hasThird ? this.pct(this.thirdVal) : 0; },
+
+         get animUserPct()  { return this.userPct  * (0.75 + 0.25 * this.animProgress); },
+         get animCompPct()  { return this.compPct  * (0.75 + 0.25 * this.animProgress); },
+         get animThirdPct() { return this.thirdPct * (0.75 + 0.25 * this.animProgress); },
+
+         get animBands() {
+             let items = [
+                 { pct: this.animUserPct, color: this.userCssColor },
+                 { pct: this.animCompPct, color: this.compCssColor },
+             ];
+             if (this.hasThird) {
+                 items.push({ pct: this.animThirdPct, color: this.thirdCssColor });
+             }
+             items.sort((a, b) => a.pct - b.pct);
+             let result = [];
+             for (let i = 0; i < items.length - 1; i++) {
+                 result.push({
+                     left: items[i].pct,
+                     width: items[i + 1].pct - items[i].pct,
+                     colorL: items[i].color,
+                     colorR: items[i + 1].color,
+                 });
+             }
+             return result;
+         },
+
+         bandStyle(band) {
+             return 'background:linear-gradient(to right,' + band.colorL + ',' + band.colorR + ');' +
+                    'opacity:0.5;' +
+                    '-webkit-mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);' +
+                    'mask-image:repeating-linear-gradient(45deg,black 0px,black 3px,transparent 3px,transparent 8px);';
+         },
+
+         animate() {
+             const duration = 600;
+             let startTimestamp = null;
+             const step = (timestamp) => {
+                 if (!startTimestamp) startTimestamp = timestamp;
+                 const elapsed = timestamp - startTimestamp;
+                 const mainProgress = Math.min(elapsed / duration, 1);
+                 this.animProgress = 0.5 - Math.cos(mainProgress * Math.PI) / 2;
+
+                 if (mainProgress < 1) {
+                     window.requestAnimationFrame(step);
+                 } else {
+                     this.animProgress = 1;
+                 }
+             };
+             window.requestAnimationFrame(step);
+         },
+
+         init() {
+             const observer = new IntersectionObserver((entries) => {
+                 if (entries[0].isIntersecting && !this.hasAnimated) {
+                     this.hasAnimated = true;
+                     this.animate();
+                     observer.unobserve(this.$el);
+                 }
+             }, { threshold: 0.3 });
+             observer.observe(this.$el);
+         }
+     }"
+     x-init="init()">
+
+    <!-- ── TRACK ── -->
+    <div class="relative" style="height: 32px;">
+        <div class="border-brand-text absolute inset-x-0 bottom-0 h-3 border-2 bg-gray-100">
+            <!-- Gradient-hatched bands between each pair of adjacent markers -->
+            <template x-for="(band, idx) in animBands" :key="idx">
+                <div class="absolute top-0 h-full"
+                     :style="'left:' + band.left + '%; width:' + band.width + '%;' + bandStyle(band)"></div>
+            </template>
+        </div>
+
+        <!-- User tick stem + diamond -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animUserPct + '%'">
+            <div class="bg-brand-cyan border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-cyan h-4 w-4 rotate-45 border-2"></div>
+            </div>
+        </div>
+
+        <!-- Compare tick stem + square -->
+        <div class="absolute bottom-0 -translate-x-1/2" :style="'left:' + animCompPct + '%'">
+            <div class="bg-brand-orange border-brand-text absolute bottom-full left-1/2 -translate-x-1/2 border-x-2" style="width: 3px; height: 10px;"></div>
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-50%]">
+                <div class="border-brand-text bg-brand-orange h-4 w-4 border-2"></div>
+            </div>
+        </div>
+
+        
+    </div>
+
+    <!-- ── ENDPOINT LABELS + LEGEND ── -->
+    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+        <span class="text-gray-500">0.0 ★</span>
+        <div class="flex flex-1 flex-wrap justify-center items-center gap-x-3 gap-y-0.5">
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-cyan border-brand-text inline-block h-2.5 w-2.5 rotate-45 border"></span>
+                <span x-text="fmt(userVal) + (unit ? ' ' + unit : '') + ' Your Rating'"></span>
+            </span>
+            
+            <span class="inline-flex items-center gap-1 whitespace-nowrap text-gray-500">
+                <span>&larr;</span>
+                <span class="bg-brand-purple text-brand-text border-brand-text border px-1 font-bold" x-text="'difference: ' + (userVal >= compVal ? '+' : '\u2212') + fmt(Math.abs(userVal - compVal))"></span>
+                <span>&rarr;</span>
+            </span>
+            
+            <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
+                <span class="bg-brand-orange border-brand-text inline-block h-2.5 w-2.5 border"></span>
+                <span x-text="fmt(compVal) + (unit ? ' ' + unit : '') + ' Goodreads Average'"></span>
+            </span>
+            
+        </div>
+        <span class="text-gray-500">5.0 ★</span>
+    </div>
+</div>
+
+
+            </div>
+        
+    </div>
+</div>
+
+                
+    <div class="border-brand-text shadow-neo overflow-y-clip border-2 bg-white p-6">
+        <h2 class="mb-1 text-2xl font-bold uppercase">Currently Reading</h2>
+        <p class="mb-4 text-base text-gray-500 italic">
+            We found 3 books on your currently-reading shelf — here are the most recent
+        </p>
+        
+            <div
+                class="flex gap-6 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:overflow-x-visible md:pb-0"
+            >
+                
+                    <div class="scroll-fade-up flex w-32 shrink-0 flex-col items-center text-center md:w-auto md:shrink" style="transition-delay: 050ms" x-data="{ imgFailed: false, imgLoaded: false }">
+                        
+                            <img
+                                src="https://covers.openlibrary.org/b/id/10482258-M.jpg"
+                                alt="Cover of Good Omens"
+                                class="absolute h-0 w-0 opacity-0"
+                                x-on:error="imgFailed = true"
+                                x-on:load="imgLoaded = true; if ($el.naturalWidth < 10) imgFailed = true"
+                            />
+                            <div
+                                x-show="!imgLoaded && !imgFailed"
+                                class="cover-crosshatch border-brand-text shadow-neo-sm h-44 w-32 shrink-0 border-2 md:mx-auto md:h-64 md:w-[10rem]"
+                            ></div>
+                            <div
+                                x-show="imgLoaded && !imgFailed"
+                                x-cloak
+                                class="border-brand-text shadow-neo-sm h-44 w-32 shrink-0 overflow-hidden border-2 md:mx-auto md:h-64 md:w-[10rem]"
+                            >
+                                <img
+                                    src="https://covers.openlibrary.org/b/id/10482258-M.jpg"
+                                    alt="Cover of Good Omens"
+                                    class="h-full w-full object-cover"
+                                />
+                            </div>
+                        
+                        <div
+                            x-show="imgFailed" x-cloak
+                            class="bg-brand-pink border-brand-text shadow-neo-sm flex h-44 w-32 shrink-0 items-center justify-center border-2 text-4xl font-bold md:mx-auto md:h-64 md:w-[10rem]"
+                        >
+                            G
+                        </div>
+                        <div class="mt-auto pt-2">
+                            <p class="line-clamp-2 text-base leading-tight font-bold">Good Omens</p>
+                            <p class="text-sm leading-tight text-gray-600">Neil Gaiman</p>
+                        </div>
+                    </div>
+                
+                    <div class="scroll-fade-up flex w-32 shrink-0 flex-col items-center text-center md:w-auto md:shrink" style="transition-delay: 150ms" x-data="{ imgFailed: false, imgLoaded: false }">
+                        
+                            <img
+                                src="https://covers.openlibrary.org/b/id/8579790-M.jpg"
+                                alt="Cover of A Thousand Splendid Suns"
+                                class="absolute h-0 w-0 opacity-0"
+                                x-on:error="imgFailed = true"
+                                x-on:load="imgLoaded = true; if ($el.naturalWidth < 10) imgFailed = true"
+                            />
+                            <div
+                                x-show="!imgLoaded && !imgFailed"
+                                class="cover-crosshatch border-brand-text shadow-neo-sm h-44 w-32 shrink-0 border-2 md:mx-auto md:h-64 md:w-[10rem]"
+                            ></div>
+                            <div
+                                x-show="imgLoaded && !imgFailed"
+                                x-cloak
+                                class="border-brand-text shadow-neo-sm h-44 w-32 shrink-0 overflow-hidden border-2 md:mx-auto md:h-64 md:w-[10rem]"
+                            >
+                                <img
+                                    src="https://covers.openlibrary.org/b/id/8579790-M.jpg"
+                                    alt="Cover of A Thousand Splendid Suns"
+                                    class="h-full w-full object-cover"
+                                />
+                            </div>
+                        
+                        <div
+                            x-show="imgFailed" x-cloak
+                            class="bg-brand-cyan border-brand-text shadow-neo-sm flex h-44 w-32 shrink-0 items-center justify-center border-2 text-4xl font-bold md:mx-auto md:h-64 md:w-[10rem]"
+                        >
+                            T
+                        </div>
+                        <div class="mt-auto pt-2">
+                            <p class="line-clamp-2 text-base leading-tight font-bold">A Thousand Splendid Suns</p>
+                            <p class="text-sm leading-tight text-gray-600">Khaled Hosseini</p>
+                        </div>
+                    </div>
+                
+                    <div class="scroll-fade-up flex w-32 shrink-0 flex-col items-center text-center md:w-auto md:shrink" style="transition-delay: 250ms" x-data="{ imgFailed: false, imgLoaded: false }">
+                        
+                            <img
+                                src="https://covers.openlibrary.org/b/isbn/9780062498533-M.jpg"
+                                alt="Cover of The Hate U Give"
+                                class="absolute h-0 w-0 opacity-0"
+                                x-on:error="imgFailed = true"
+                                x-on:load="imgLoaded = true; if ($el.naturalWidth < 10) imgFailed = true"
+                            />
+                            <div
+                                x-show="!imgLoaded && !imgFailed"
+                                class="cover-crosshatch border-brand-text shadow-neo-sm h-44 w-32 shrink-0 border-2 md:mx-auto md:h-64 md:w-[10rem]"
+                            ></div>
+                            <div
+                                x-show="imgLoaded && !imgFailed"
+                                x-cloak
+                                class="border-brand-text shadow-neo-sm h-44 w-32 shrink-0 overflow-hidden border-2 md:mx-auto md:h-64 md:w-[10rem]"
+                            >
+                                <img
+                                    src="https://covers.openlibrary.org/b/isbn/9780062498533-M.jpg"
+                                    alt="Cover of The Hate U Give"
+                                    class="h-full w-full object-cover"
+                                />
+                            </div>
+                        
+                        <div
+                            x-show="imgFailed" x-cloak
+                            class="bg-brand-green border-brand-text shadow-neo-sm flex h-44 w-32 shrink-0 items-center justify-center border-2 text-4xl font-bold md:mx-auto md:h-64 md:w-[10rem]"
+                        >
+                            H
+                        </div>
+                        <div class="mt-auto pt-2">
+                            <p class="line-clamp-2 text-base leading-tight font-bold">The Hate U Give</p>
+                            <p class="text-sm leading-tight text-gray-600">Angie Thomas</p>
+                        </div>
+                    </div>
+                
+            </div>
+        
+    </div>
+
+
+
+                
+                    
+<div
+    x-data="{
+        recColors: ['#ffb4dd', '#40e7aa', '#ffa75e', '#8bbfff', '#FFE9CE', '#ff647c'],
+        init() {
+            const cards = this.$refs.recGrid.children;
+            Array.from(cards).forEach((card, i) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(8px)';
+                card.style.transition = 'opacity 0.4s ease-out, transform 0.4s ease-out';
+                card.style.transitionDelay = (i * 100) + 'ms';
+            });
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    Array.from(cards).forEach((card) => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    });
+                    observer.unobserve(this.$refs.recGrid);
+                }
+            }, { threshold: 0.1 });
+            observer.observe(this.$refs.recGrid);
+        }
+    }"
+    x-init="init()"
+    class="border-brand-text shadow-neo border-2 bg-white p-6"
+>
+
+    <h2 class="mb-1 text-2xl font-bold uppercase">Recommended for You</h2>
+    
+        <p class="mb-4 text-base italic text-gray-500">
+            We found 3 users that share at least a 30% overlap with your library
+        </p>
+    
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3" x-ref="recGrid">
+        
+            <div
+                class="border-brand-text shadow-neo-sm flex h-full flex-col border-2 p-4"
+                :style="{ 'background-color': recColors[0 % 6] }"
+            >
+                <div class="flex flex-grow flex-col justify-between">
+                    <div class="flex justify-between align-top">
+                        <div class="max-w-[70%]">
+                            <p class="text-xl font-bold" style="line-height: 1.1">The Fall</p>
+                            <p class="mt-2 text-lg" style="line-height: 1.0">by Albert Camus</p>
+                        </div>
+                        <div>
+                            <span class="text-brand-text w-8 font-bold">44% Match</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-1 border-t-2 border-dashed border-gray-700 pt-2 text-base text-gray-800">
+                        
+                            <div>
+                                <span>
+                                    Recommended by
+                                    <a
+                                        href="/u/t8a4686/"
+                                        target="_blank"
+                                        class="font-bold hover:underline"
+                                    >
+                                        t8a4686
+                                    </a>
+                                </span>
+                                <div class="mt-1">
+                                    <span
+                                        class="border-brand-text text-brand-text bg-gray-200 w-max border-2 px-1.5 py-0.5 text-xs font-bold uppercase"
+                                    >
+                                        Different preferences
+                                    </span>
+                                </div>
+                            </div>
+                        
+                        
+                            <p>
+                                • You share 5 books in common
+                            </p>
+                        
+                        
+                            
+                        
+                        
+                            <p>
+                                • loved by 3 similar readers
+                            </p>
+                        
+                        
+                        
+                    </div>
+                </div>
+            </div>
+        
+            <div
+                class="border-brand-text shadow-neo-sm flex h-full flex-col border-2 p-4"
+                :style="{ 'background-color': recColors[1 % 6] }"
+            >
+                <div class="flex flex-grow flex-col justify-between">
+                    <div class="flex justify-between align-top">
+                        <div class="max-w-[70%]">
+                            <p class="text-xl font-bold" style="line-height: 1.1">The Amazing Adventures of Kavalier &amp; Clay</p>
+                            <p class="mt-2 text-lg" style="line-height: 1.0">by Michael Chabon</p>
+                        </div>
+                        <div>
+                            <span class="text-brand-text w-8 font-bold">44% Match</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-1 border-t-2 border-dashed border-gray-700 pt-2 text-base text-gray-800">
+                        
+                            <div>
+                                <span>
+                                    Recommended by
+                                    <a
+                                        href="/u/t8a4686/"
+                                        target="_blank"
+                                        class="font-bold hover:underline"
+                                    >
+                                        t8a4686
+                                    </a>
+                                </span>
+                                <div class="mt-1">
+                                    <span
+                                        class="border-brand-text text-brand-text bg-gray-200 w-max border-2 px-1.5 py-0.5 text-xs font-bold uppercase"
+                                    >
+                                        Different preferences
+                                    </span>
+                                </div>
+                            </div>
+                        
+                        
+                            <p>
+                                • You share 5 books in common
+                            </p>
+                        
+                        
+                            
+                        
+                        
+                            <p>
+                                • loved by 3 similar readers
+                            </p>
+                        
+                        
+                        
+                    </div>
+                </div>
+            </div>
+        
+            <div
+                class="border-brand-text shadow-neo-sm flex h-full flex-col border-2 p-4"
+                :style="{ 'background-color': recColors[2 % 6] }"
+            >
+                <div class="flex flex-grow flex-col justify-between">
+                    <div class="flex justify-between align-top">
+                        <div class="max-w-[70%]">
+                            <p class="text-xl font-bold" style="line-height: 1.1">Wild: From Lost to Found on the Pacific Crest Trail</p>
+                            <p class="mt-2 text-lg" style="line-height: 1.0">by Cheryl Strayed</p>
+                        </div>
+                        <div>
+                            <span class="text-brand-text w-8 font-bold">44% Match</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-1 border-t-2 border-dashed border-gray-700 pt-2 text-base text-gray-800">
+                        
+                            <div>
+                                <span>
+                                    Recommended by
+                                    <a
+                                        href="/u/t8a4686/"
+                                        target="_blank"
+                                        class="font-bold hover:underline"
+                                    >
+                                        t8a4686
+                                    </a>
+                                </span>
+                                <div class="mt-1">
+                                    <span
+                                        class="border-brand-text text-brand-text bg-gray-200 w-max border-2 px-1.5 py-0.5 text-xs font-bold uppercase"
+                                    >
+                                        Different preferences
+                                    </span>
+                                </div>
+                            </div>
+                        
+                        
+                            <p>
+                                • You share 5 books in common
+                            </p>
+                        
+                        
+                            
+                        
+                        
+                            <p>
+                                • loved by 3 similar readers
+                            </p>
+                        
+                        
+                        
+                    </div>
+                </div>
+            </div>
+        
+            <div
+                class="border-brand-text shadow-neo-sm flex h-full flex-col border-2 p-4"
+                :style="{ 'background-color': recColors[3 % 6] }"
+            >
+                <div class="flex flex-grow flex-col justify-between">
+                    <div class="flex justify-between align-top">
+                        <div class="max-w-[70%]">
+                            <p class="text-xl font-bold" style="line-height: 1.1">The Brothers Karamazov</p>
+                            <p class="mt-2 text-lg" style="line-height: 1.0">by Fyodor Dostoevsky</p>
+                        </div>
+                        <div>
+                            <span class="text-brand-text w-8 font-bold">44% Match</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-1 border-t-2 border-dashed border-gray-700 pt-2 text-base text-gray-800">
+                        
+                            <div>
+                                <span>
+                                    Recommended by
+                                    <a
+                                        href="/u/t8a4686/"
+                                        target="_blank"
+                                        class="font-bold hover:underline"
+                                    >
+                                        t8a4686
+                                    </a>
+                                </span>
+                                <div class="mt-1">
+                                    <span
+                                        class="border-brand-text text-brand-text bg-gray-200 w-max border-2 px-1.5 py-0.5 text-xs font-bold uppercase"
+                                    >
+                                        Different preferences
+                                    </span>
+                                </div>
+                            </div>
+                        
+                        
+                            <p>
+                                • You share 5 books in common
+                            </p>
+                        
+                        
+                            
+                        
+                        
+                            <p>
+                                • loved by 3 similar readers
+                            </p>
+                        
+                        
+                        
+                    </div>
+                </div>
+            </div>
+        
+            <div
+                class="border-brand-text shadow-neo-sm flex h-full flex-col border-2 p-4"
+                :style="{ 'background-color': recColors[4 % 6] }"
+            >
+                <div class="flex flex-grow flex-col justify-between">
+                    <div class="flex justify-between align-top">
+                        <div class="max-w-[70%]">
+                            <p class="text-xl font-bold" style="line-height: 1.1">The Emperor of All Maladies: A Biography of Cancer</p>
+                            <p class="mt-2 text-lg" style="line-height: 1.0">by Siddhartha Mukherjee</p>
+                        </div>
+                        <div>
+                            <span class="text-brand-text w-8 font-bold">44% Match</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-1 border-t-2 border-dashed border-gray-700 pt-2 text-base text-gray-800">
+                        
+                            <div>
+                                <span>
+                                    Recommended by
+                                    <a
+                                        href="/u/t8a4686/"
+                                        target="_blank"
+                                        class="font-bold hover:underline"
+                                    >
+                                        t8a4686
+                                    </a>
+                                </span>
+                                <div class="mt-1">
+                                    <span
+                                        class="border-brand-text text-brand-text bg-gray-200 w-max border-2 px-1.5 py-0.5 text-xs font-bold uppercase"
+                                    >
+                                        Different preferences
+                                    </span>
+                                </div>
+                            </div>
+                        
+                        
+                            <p>
+                                • You share 5 books in common
+                            </p>
+                        
+                        
+                            
+                        
+                        
+                            <p>
+                                • loved by 3 similar readers
+                            </p>
+                        
+                        
+                        
+                    </div>
+                </div>
+            </div>
+        
+            <div
+                class="border-brand-text shadow-neo-sm flex h-full flex-col border-2 p-4"
+                :style="{ 'background-color': recColors[5 % 6] }"
+            >
+                <div class="flex flex-grow flex-col justify-between">
+                    <div class="flex justify-between align-top">
+                        <div class="max-w-[70%]">
+                            <p class="text-xl font-bold" style="line-height: 1.1">At Home: A Short History of Private Life</p>
+                            <p class="mt-2 text-lg" style="line-height: 1.0">by Bill Bryson</p>
+                        </div>
+                        <div>
+                            <span class="text-brand-text w-8 font-bold">41% Match</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-1 border-t-2 border-dashed border-gray-700 pt-2 text-base text-gray-800">
+                        
+                            <div>
+                                <span>
+                                    Recommended by
+                                    <a
+                                        href="/u/t8r24263/"
+                                        target="_blank"
+                                        class="font-bold hover:underline"
+                                    >
+                                        t8r24263
+                                    </a>
+                                </span>
+                                <div class="mt-1">
+                                    <span
+                                        class="border-brand-text text-brand-text bg-gray-200 w-max border-2 px-1.5 py-0.5 text-xs font-bold uppercase"
+                                    >
+                                        Different preferences
+                                    </span>
+                                </div>
+                            </div>
+                        
+                        
+                            <p>
+                                • You share 5 books in common
+                            </p>
+                        
+                        
+                            
+                        
+                        
+                            
+                        
+                        
+                        
+                    </div>
+                </div>
+            </div>
+        
+    </div>
+</div>
+
+                
+
+                
+                    <div class="grid grid-cols-1 items-center gap-6 md:grid-cols-3">
+                        <div
+                            class="border-brand-text shadow-neo flex h-full items-center border-2 bg-white p-4 md:col-span-2"
+                        >
+                            <div class="flex-grow">
+                                
+                                    <h3 class="text-xl font-bold uppercase">
+                                        <span class="flex flex-col md:flex-row md:items-center md:gap-2">
+                                            <span>
+                                                Your profile is
+                                                <span
+                                                    class="bg-brand-green border-brand-text border-2 px-2 py-1 font-bold"
+                                                    >Public</span
+                                                >
+                                            </span>
+                                            <a
+                                                href="/u/p3u4812/"
+                                                class="hover:bg-brand-yellow mt-2 ml-0 block underline sm:!mt-0 sm:ml-4 md:inline-block"
+                                                target="_blank"
+                                                >/u/p3u4812</a
+                                            >
+                                        </span>
+                                    </h3>
+                                
+                            </div>
+                            <form action="/dashboard/update-privacy/" method="post" class="ml-4">
+                                <input type="hidden" name="csrfmiddlewaretoken" value="fZEt2PmBRZQsGfSbvJo9puaeo0VuVIaMYgG9jknlvwcasxYGcm8mxo2qg3NBbeXt">
+                                
+                                    <input type="hidden" name="is_public" value="false" />
+                                    
+    
+        <button
+            type="submit"
+            class="bg-brand-pink cursor-pointer text-brand-text border-brand-text shadow-neo-sm hover:bg-brand-yellow hover:shadow-none border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out active:translate-x-0.5 active:translate-y-0.5 "
+            
+            >
+            Make Private
+        </button>
+    
+
+
+                                
+                            </form>
+                        </div>
+                        <div
+                            class="border-brand-text shadow-neo flex h-full items-center justify-center border-2 bg-white p-4"
+                        >
+                            
+                            
+    <a
+        href="/"
+        class="bg-brand-purple border-brand-text shadow-neo-sm hover:bg-opacity-90 hover:shadow-none block w-full border-2 px-4 py-2 text-center font-bold transition-all duration-150 ease-in-out active:translate-x-0.5 active:translate-y-0.5 cursor-pointer "
+        >
+        Update Bibliotype
+    </a>
+
+
+                        </div>
+                    </div>
+                
+                <script>
+    function updateVibeSeparators() {
+        const vibeContainer = document.getElementById("vibe-container");
+        if (!vibeContainer) return;
+
+        const items = vibeContainer.querySelectorAll(".vibe-item");
+        const separators = vibeContainer.querySelectorAll(".vibe-separator");
+
+        if (items.length < 2) return;
+
+        // 1. First, show all separators
+        separators.forEach((sep) => (sep.style.display = "inline"));
+
+        // 2. Loop through items to find line breaks
+        for (let i = 0; i < items.length - 1; i++) {
+            const currentItem = items[i];
+            const nextItem = items[i + 1];
+
+            // If the next item is on a new line, hide the separator after the current one
+            if (nextItem.offsetTop > currentItem.offsetTop) {
+                const separatorToHide = separators[i];
+                if (separatorToHide) {
+                    separatorToHide.style.display = "none";
+                }
+            }
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        updateVibeSeparators();
+
+        const dnaDataScript = document.getElementById("dna-data");
+        if (!dnaDataScript) return;
+
+        const dnaData = JSON.parse(dnaDataScript.textContent);
+
+        Chart.defaults.font.family = "VT323";
+        Chart.defaults.font.size = 16;
+        Chart.defaults.color = "#1f2937";
+
+        const chartColors = [
+            "#ffb4dd",
+            "#40e7aa",
+            "#ffa75e",
+            "#8bbfff",
+            "#FFE9CE",
+            "#ff647c",
+            "#ffe56c",
+            "#A1CDF1",
+            "#9af6d4",
+            "#fe9393",
+        ];
+
+        // --- Helper to parse data (Array of tuples vs Object) ---
+        function parseChartData(data) {
+            if (Array.isArray(data)) {
+                return {
+                    labels: data.map((item) => item[0]),
+                    values: data.map((item) => item[1]),
+                };
+            } else if (typeof data === "object" && data !== null) {
+                return {
+                    labels: Object.keys(data),
+                    values: Object.values(data),
+                };
+            }
+            return { labels: [], values: [] };
+        }
+
+        // --- Helper: create chart on scroll into view ---
+        function createChartOnScroll(canvasId, createFn) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const wrapper = canvas.closest(".chart-await");
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    observer.unobserve(canvas);
+                    if (wrapper) {
+                        wrapper.classList.remove("chart-await");
+                        wrapper.classList.add("chart-visible");
+                    }
+                    createFn(canvas.getContext("2d"));
+                }
+            }, { threshold: 0.3 });
+            observer.observe(canvas);
+        }
+
+        // --- Top Genres Chart ---
+        if (dnaData.top_genres) {
+            const { labels: genreLabels, values: genreValues } = parseChartData(dnaData.top_genres);
+            createChartOnScroll("topGenresChart", (ctx) => {
+                new Chart(ctx, {
+                    type: "doughnut",
+                    data: {
+                        labels: genreLabels,
+                        datasets: [
+                            {
+                                label: "Genres",
+                                data: genreValues,
+                                backgroundColor: chartColors,
+                                borderColor: "#1f2937",
+                                borderWidth: 4,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            animateRotate: true,
+                            animateScale: true,
+                            duration: 1400,
+                            easing: "easeOutQuart",
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        let label = context.label || "";
+                                        if (label) label += ": ";
+                                        if (context.parsed !== null) label += context.parsed;
+                                        return label;
+                                    },
+                                },
+                            },
+                        },
+                    },
+                });
+            });
+        }
+
+        // --- Top Authors Chart ---
+        if (dnaData.top_authors) {
+            const { labels: authorLabels, values: authorValues } = parseChartData(dnaData.top_authors);
+            createChartOnScroll("topAuthorsChart", (ctx) => {
+                new Chart(ctx, {
+                    type: "doughnut",
+                    data: {
+                        labels: authorLabels,
+                        datasets: [
+                            {
+                                label: "Authors",
+                                data: authorValues,
+                                backgroundColor: chartColors,
+                                borderColor: "#1f2937",
+                                borderWidth: 4,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            animateRotate: true,
+                            animateScale: true,
+                            duration: 1400,
+                            easing: "easeOutQuart",
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        let label = context.label || "";
+                                        if (label) label += ": ";
+                                        if (context.parsed !== null) label += context.parsed;
+                                        return label;
+                                    },
+                                },
+                            },
+                        },
+                    },
+                });
+            });
+        }
+
+        // --- Helper: create diagonal stripe pattern ---
+        function createStripePattern(ctx, fillColor, strokeColor) {
+            const size = 24;
+            const c = document.createElement("canvas");
+            c.width = size;
+            c.height = size;
+            const s = c.getContext("2d");
+            s.fillStyle = fillColor;
+            s.fillRect(0, 0, size, size);
+            s.strokeStyle = strokeColor;
+            s.lineWidth = 10;
+            s.beginPath();
+            s.moveTo(0, size);
+            s.lineTo(size, 0);
+            s.moveTo(-size / 2, size / 2);
+            s.lineTo(size / 2, -size / 2);
+            s.moveTo(size / 2, size * 1.5);
+            s.lineTo(size * 1.5, size / 2);
+            s.stroke();
+            return ctx.createPattern(c, "repeat");
+        }
+
+        // --- Fiction vs Nonfiction Chart ---
+        if (dnaData.fiction_nonfiction_split) {
+            createChartOnScroll("fictionNonfictionChart", (ctx) => {
+                const fictionPattern = createStripePattern(ctx, "#ffb4dd", "#ffcce8");
+                const nonfictionPattern = createStripePattern(ctx, "#8bbfff", "#b0d4ff");
+
+                const split = dnaData.fiction_nonfiction_split;
+                new Chart(ctx, {
+                    type: "pie",
+                    data: {
+                        labels: ["Fiction", "Nonfiction"],
+                        datasets: [
+                            {
+                                data: [split.fiction_count, split.nonfiction_count],
+                                backgroundColor: [fictionPattern, nonfictionPattern],
+                                borderColor: "#1f2937",
+                                borderWidth: 5,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            animateRotate: true,
+                            animateScale: true,
+                            duration: 1400,
+                            easing: "easeOutQuart",
+                        },
+                        animations: { colors: false },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        const total = split.fiction_count + split.nonfiction_count;
+                                        const pct = Math.round((context.parsed / total) * 100);
+                                        return context.label + ": " + pct + "%";
+                                    },
+                                },
+                            },
+                        },
+                    },
+                });
+            });
+        }
+    });
+
+    window.addEventListener("resize", updateVibeSeparators);
+
+    // --- Scroll-triggered fade-in animations ---
+    document.addEventListener("DOMContentLoaded", function () {
+        const scrollEls = document.querySelectorAll(".scroll-fade-left, .scroll-fade-up");
+        if (!scrollEls.length) return;
+        const obs = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add("is-visible");
+                    obs.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.2 });
+        scrollEls.forEach((el) => obs.observe(el));
+    });
+</script>
+
+                
+                <style>
+                    .fade-in-section {
+                        opacity: 0;
+                        transform: translateY(6px);
+                        transition:
+                            opacity 0.45s ease-out,
+                            transform 0.45s ease-out;
+                    }
+                    .fade-in-section.is-visible {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                </style>
+                <script>
+                    document.addEventListener("DOMContentLoaded", function () {
+                        const container = document.querySelector('[x-data="shareModalData()"]');
+                        if (!container) return;
+                        const sections = container.querySelectorAll(":scope > *");
+                        const observer = new IntersectionObserver(
+                            (entries) => {
+                                entries.forEach((entry) => {
+                                    if (entry.isIntersecting) {
+                                        entry.target.classList.add("is-visible");
+                                        entry.target.querySelectorAll(".scroll-fade-left, .scroll-fade-up").forEach((el) => el.classList.add("is-visible"));
+                                        observer.unobserve(entry.target);
+                                    }
+                                });
+                            },
+                            { threshold: 0.05 },
+                        );
+                        sections.forEach((s) => {
+                            if (s.tagName === "SCRIPT" || s.tagName === "STYLE") return;
+                            const rect = s.getBoundingClientRect();
+                            if (rect.top < window.innerHeight) return;
+                            s.classList.add("fade-in-section");
+                            observer.observe(s);
+                        });
+                    });
+                </script>
+            </div>
+        
+    </div>
+
+        </main>
+        <footer class="container mx-auto flex justify-center gap-6 p-4 text-lg font-normal">
+            <a href="/about/" class="hover:bg-brand-yellow cursor-pointer uppercase underline">About</a>
+            <a href="/privacy/" class="hover:bg-brand-yellow cursor-pointer uppercase underline"
+                >Privacy</a
+            >
+            <a href="/terms/" class="hover:bg-brand-yellow cursor-pointer uppercase underline">Terms</a>
+        </footer>
+    </body>
+</html>
