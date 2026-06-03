@@ -1,7 +1,9 @@
 import logging
-import requests
-from datetime import datetime, timedelta
+from datetime import timedelta
 from urllib.parse import quote
+
+import requests
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,7 @@ def check_author_mainstream_status(author_name: str, session: requests.Session) 
             author_info = ol_data["docs"][0]
             findings["work_count"] = author_info.get("work_count", 0)
 
-        today = datetime.utcnow()
+        today = timezone.now()
         ninety_days_ago = today - timedelta(days=90)
         start_date = ninety_days_ago.strftime("%Y%m%d")
         end_date = today.strftime("%Y%m%d")

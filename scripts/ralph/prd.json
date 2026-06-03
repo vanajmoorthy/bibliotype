@@ -642,7 +642,7 @@
         "Author-service test still passes.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 43
     },

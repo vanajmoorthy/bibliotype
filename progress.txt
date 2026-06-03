@@ -1362,3 +1362,26 @@
     to compute three outputs.
 - All 61 tests in `core.tests.test_integration core.tests.test_enrichment_stats` pass.
 ---
+
+## 2026-06-03 12:35 — US-036
+- Replaced `datetime.utcnow()` with `django.utils.timezone.now()` in
+  `core/services/author_service.py`. Removed `datetime` import
+  (only `timedelta` was still needed). The two `.strftime("%Y%m%d")` calls
+  work unchanged on aware datetimes, so the Wikipedia pageviews URL is
+  byte-identical to before.
+- Files changed:
+  - core/services/author_service.py
+  - scripts/ralph/prd.json (US-036 passes=true)
+- Learnings for future iterations:
+  - `datetime.utcnow()` is deprecated in Python 3.12+ (returns a naive
+    datetime). `timezone.now()` returns an aware UTC datetime when
+    `USE_TZ=True` (the Django default). `.strftime` formatters that only
+    use date components (e.g. `%Y%m%d`) are tz-agnostic and need no
+    adjustment.
+  - Remaining `datetime.now()` usages in
+    `core/management/commands/{generate_test_data,generate_csvs,generate_synthetic_csvs}.py`
+    are for synthetic CSV generation (just `today - timedelta`) and are
+    out of scope for US-036.
+  - All 78 tests across `test_integration`, `test_tasks_integration`,
+    `test_views_e2e` pass after the change.
+---
