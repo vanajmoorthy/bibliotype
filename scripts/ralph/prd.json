@@ -555,7 +555,7 @@
         "Drop the `include_explanations` parameter (always `True` at every call site); always run `_add_explanations`.",
         "**Test command:** `manage.py test` (full suite)."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 37
     },

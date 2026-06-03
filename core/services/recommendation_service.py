@@ -24,7 +24,7 @@ MIN_SIMILARITY = 0.15
 QUALITY_THRESHOLD = 3.5
 
 
-def get_recommendations_for_user(user, limit=10, include_explanations=True):
+def get_recommendations_for_user(user, limit=10):
     """
     Get personalized recommendations for a registered user.
 
@@ -48,9 +48,7 @@ def get_recommendations_for_user(user, limit=10, include_explanations=True):
     # Apply diversity and filtering
     final_recommendations = _apply_diversity_filter(ranked, user_context, limit)
 
-    # Add explanations if requested
-    if include_explanations:
-        final_recommendations = _add_explanations(final_recommendations, user_context)
+    final_recommendations = _add_explanations(final_recommendations, user_context)
 
     result = final_recommendations[:limit]
 
@@ -59,7 +57,7 @@ def get_recommendations_for_user(user, limit=10, include_explanations=True):
     return result
 
 
-def _get_recommendations_for_anonymous_uncached(session_key, limit=10, include_explanations=True):
+def _get_recommendations_for_anonymous_uncached(session_key, limit=10):
     """
     Get recommendations for an anonymous user. Does not cache the result.
     Callers that want caching should use `get_recommendations_for_anonymous`.
@@ -89,9 +87,7 @@ def _get_recommendations_for_anonymous_uncached(session_key, limit=10, include_e
     # Apply diversity
     final_recommendations = _apply_diversity_filter(ranked, anon_context, limit)
 
-    # Add explanations
-    if include_explanations:
-        final_recommendations = _add_explanations(final_recommendations, anon_context)
+    final_recommendations = _add_explanations(final_recommendations, anon_context)
 
     return final_recommendations[:limit]
 
@@ -238,7 +234,7 @@ def _build_anonymous_context(anon_session):
     # Get series info from read books
     if read_book_ids:
         read_books = list(Book.objects.filter(id__in=read_book_ids).select_related("author"))
-        series_counter = _extract_series_info(read_books, is_queryset=False)
+        series_counter = _extract_series_info(read_books)
         oversaturated_series = {series for series, count in series_counter.items() if count >= 3}
     else:
         read_books = []
@@ -329,26 +325,16 @@ def _build_anonymous_context(anon_session):
     return context
 
 
-def _extract_series_info(books_data, is_queryset=True):
+def _extract_series_info(books):
     """
-    Extract series information from book titles.
+    Extract series information from a list of Book objects.
     Books with similar title prefixes are likely part of a series.
     """
     series_counter = Counter()
-
-    if is_queryset:
-        # UserBook queryset
-        for ub in books_data:
-            series_key = _get_series_key(ub.book.title)
-            if series_key:
-                series_counter[series_key] += 1
-    else:
-        # List of Book objects
-        for book in books_data:
-            series_key = _get_series_key(book.title)
-            if series_key:
-                series_counter[series_key] += 1
-
+    for book in books:
+        series_key = _get_series_key(book.title)
+        if series_key:
+            series_counter[series_key] += 1
     return series_counter
 
 

@@ -1222,3 +1222,28 @@
     which is the attribute the inline import re-resolves at call time.
 - All 388 tests pass.
 ---
+
+## 2026-06-03 12:05 — US-031b
+- Dropped unused parameters from `core/services/recommendation_service.py`:
+  `include_explanations` from `get_recommendations_for_user` and
+  `_get_recommendations_for_anonymous_uncached` (always True at every call
+  site — `_add_explanations` now runs unconditionally), and `is_queryset`
+  from `_extract_series_info` (the only caller passed `False`; the function
+  now accepts a single list of Book objects). `diversity_factor` was
+  already removed during US-031a, so no further change needed there.
+- Files changed:
+  - core/services/recommendation_service.py
+  - scripts/ralph/prd.json (US-031b passes=true)
+- Learnings for future iterations:
+  - When dropping a kwarg with a default, do a repo-wide grep for the param
+    name including in tests. For US-031b, no test passed these kwargs, so
+    the change was a pure signature simplification with no call-site edits.
+  - `_extract_series_info` had two branches keyed on `is_queryset`: the
+    queryset branch handled `ub.book.title` (UserBook), the list branch
+    handled `book.title` (Book). Only the list branch was reachable, so
+    collapsing the dispatch removed the dead UserBook branch too — no
+    inline equivalents in `_build_user_context` need touching because that
+    function never called `_extract_series_info`; it iterates `UserBook`
+    objects directly with its own series-key logic.
+- All 388 tests pass.
+---
