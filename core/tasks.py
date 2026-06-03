@@ -79,7 +79,7 @@ def check_author_mainstream_status_task(author_id: int, user_id: int = None, upl
         raise
 
 
-@shared_task(bind=True, max_retries=3)
+@shared_task(bind=True, max_retries=3, rate_limit="30/m")
 def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str = None):
     """Enrich a single book with data from Open Library and Google Books APIs.
 
@@ -559,7 +559,13 @@ def generate_recommendations_task(self, user_id: int):
     Generate and store recommendations for a user after their DNA is created/updated.
     This runs asynchronously so it doesn't slow down DNA generation.
     """
+    from .cache_utils import safe_cache_delete
     from .services.recommendation_service import get_recommendations_for_user
+
+    # Track whether the task is terminally complete. Cleared on retry so
+    # the sentinel set in display_dna_view stays in place across the retry
+    # countdown and continues to block duplicate dispatches.
+    clear_sentinel_on_exit = True
 
     try:
         user = User.objects.get(pk=user_id)
@@ -625,8 +631,6 @@ def generate_recommendations_task(self, user_id: int):
         profile.save(update_fields=["recommendations_data", "recommendations_meta", "recommendations_generated_at"])
 
         # Also clear the cache so fresh data is used
-        from .cache_utils import safe_cache_delete
-
         safe_cache_delete(f"user_recommendations_{user_id}")
 
         logger.info(f"Successfully generated and stored {len(processed_recs)} recommendations for user {user_id}")
@@ -637,5 +641,12 @@ def generate_recommendations_task(self, user_id: int):
         return None
     except Exception as e:
         logger.error(f"Error generating recommendations for user {user_id}: {e}", exc_info=True)
-        # Retry with exponential backoff
+        # Task is being re-queued; the sentinel must outlive this attempt so
+        # dashboard polls don't dispatch a duplicate while the retry is pending.
+        clear_sentinel_on_exit = False
         raise self.retry(countdown=60 * (2**self.request.retries), exc=e)
+    finally:
+        # Clear the dispatch sentinel set in display_dna_view so the next
+        # dashboard poll can spawn a fresh task if needed.
+        if clear_sentinel_on_exit:
+            safe_cache_delete(f"recs_dispatching_{user_id}")

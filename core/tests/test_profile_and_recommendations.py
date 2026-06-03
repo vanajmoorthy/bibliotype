@@ -218,6 +218,61 @@ class RecommendationsTestCase(TestCase):
         # The template should render the recommendations section
         self.assertIn("recommendations", response.context)
 
+    def test_concurrent_dashboard_polls_dispatch_recommendations_task_once(self):
+        """US-024: cache.add sentinel collapses 5 concurrent dashboard renders into 1 task dispatch."""
+        from django.core.cache import cache
+
+        # Pre-clear cache state and force the "no stored recs" branch.
+        cache.clear()
+        self.user1.userprofile.dna_data = {
+            "top_genres": [("fantasy", 10)],
+            "top_authors": [(self.author1.normalized_name, 5)],
+        }
+        self.user1.userprofile.recommendations_data = None
+        self.user1.userprofile.save()
+
+        self.client.login(username="testuser1", password="test123")
+
+        # Patch .delay on the imported symbol used inside display_dna_view.
+        # The task is imported lazily inside the view, so we patch the
+        # canonical reference in core.tasks.
+        with patch("core.tasks.generate_recommendations_task.delay") as mock_delay:
+            for _ in range(5):
+                response = self.client.get(reverse("core:display_dna"))
+                self.assertEqual(response.status_code, 200)
+
+            self.assertEqual(
+                mock_delay.call_count,
+                1,
+                f"Expected exactly 1 task dispatch across 5 polls; got {mock_delay.call_count}",
+            )
+            mock_delay.assert_called_once_with(self.user1.id)
+
+        # Sentinel should still be held (task never ran, so finally didn't fire).
+        self.assertEqual(cache.get(f"recs_dispatching_{self.user1.id}"), 1)
+
+    def test_recs_dispatch_sentinel_cleared_on_task_completion(self):
+        """US-024: generate_recommendations_task clears its dispatch sentinel on success."""
+        from django.core.cache import cache
+
+        from core.tasks import generate_recommendations_task
+
+        cache.clear()
+        self.user1.userprofile.dna_data = {
+            "top_genres": [("fantasy", 10)],
+            "top_authors": [(self.author1.normalized_name, 5)],
+        }
+        self.user1.userprofile.save()
+
+        # Simulate the dashboard's prior dispatch having seeded the sentinel.
+        cache.set(f"recs_dispatching_{self.user1.id}", 1, timeout=300)
+        self.assertEqual(cache.get(f"recs_dispatching_{self.user1.id}"), 1)
+
+        # Run the task synchronously (CELERY_TASK_ALWAYS_EAGER is on).
+        generate_recommendations_task.delay(self.user1.id)
+
+        self.assertIsNone(cache.get(f"recs_dispatching_{self.user1.id}"))
+
     def test_anonymous_user_gets_recommendations(self):
         """Test that anonymous users can have sessions created (skips recommendation generation)"""
         # This test verifies AnonymousUserSession can be created with all required fields
@@ -316,3 +371,83 @@ class RecommendationsTestCase(TestCase):
         self.assertEqual(ratings, test_ratings)
         self.assertEqual(ratings.get(1), 5)
         self.assertEqual(ratings.get(2), 4)
+
+
+@override_settings(
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_STORE_EAGER_RESULT=True,
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "us-024c-snowflake",
+        }
+    },
+)
+class RecommendationVisibilityCacheInvalidationTestCase(TestCase):
+    """US-024c: toggling visibility must invalidate recommendation caches."""
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username="vis_toggle_user",
+            email="vis@test.com",
+            password="testpass123",
+        )
+        self.user.userprofile.is_public = True
+        self.user.userprofile.dna_data = {"reader_type": "Visibility Toggler"}
+        self.user.userprofile.save()
+        self.client.login(username="vis_toggle_user", password="testpass123")
+
+    def _seed_caches(self):
+        from core.cache_utils import safe_cache_set
+
+        safe_cache_set(f"user_recommendations_{self.user.id}", ["rec_a", "rec_b"], 900)
+        safe_cache_set(f"similar_users_{self.user.id}", [{"user_id": 99}], 1800)
+        safe_cache_set("public_users_for_recs_sample", [{"user_id": self.user.id}], 1800)
+
+    def test_visible_to_invisible_clears_all_three_caches(self):
+        from core.cache_utils import safe_cache_get
+
+        self.user.userprofile.visible_in_recommendations = True
+        self.user.userprofile.save()
+        self._seed_caches()
+
+        response = self.client.post(
+            reverse("core:update_recommendation_visibility"),
+            {"visible_in_recommendations": "false"},
+        )
+        self.assertEqual(response.status_code, 302)
+
+        self.user.userprofile.refresh_from_db()
+        self.assertFalse(self.user.userprofile.visible_in_recommendations)
+
+        self.assertIsNone(safe_cache_get(f"user_recommendations_{self.user.id}"))
+        self.assertIsNone(safe_cache_get(f"similar_users_{self.user.id}"))
+        self.assertIsNone(safe_cache_get("public_users_for_recs_sample"))
+
+    def test_invisible_to_visible_preserves_candidate_pool(self):
+        from core.cache_utils import safe_cache_get
+
+        self.user.userprofile.visible_in_recommendations = False
+        self.user.userprofile.save()
+        self._seed_caches()
+
+        response = self.client.post(
+            reverse("core:update_recommendation_visibility"),
+            {"visible_in_recommendations": "true"},
+        )
+        self.assertEqual(response.status_code, 302)
+
+        self.user.userprofile.refresh_from_db()
+        self.assertTrue(self.user.userprofile.visible_in_recommendations)
+
+        # Per-user caches still get cleared so the new visibility state is
+        # reflected on the next read.
+        self.assertIsNone(safe_cache_get(f"user_recommendations_{self.user.id}"))
+        self.assertIsNone(safe_cache_get(f"similar_users_{self.user.id}"))
+        # But the shared candidate sample is NOT flushed on the
+        # invisible -> visible direction.
+        self.assertEqual(
+            safe_cache_get("public_users_for_recs_sample"),
+            [{"user_id": self.user.id}],
+        )

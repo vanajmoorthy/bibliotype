@@ -46,11 +46,19 @@ snake_case.)
   `claim_anonymous_dna_task` (US-003); TTL 3600s.
 - `dna_result_<task_id>` — pre-existing; cached DNA payload. TTL 3600s.
 - `session_key_<task_id>` — pre-existing.
-- `recs_<user_id>` — pre-existing; cached recommendations payload.
+- `user_recommendations_<user_id>` — cached recommendations payload (canonical
+  key; written by `core/services/recommendation_service.py:40` and
+  `core/tasks.py:634`, also cleared on DNA regeneration in
+  `core/services/dna_analyser.py:300`). TTL 15min.
+- `similar_users_<user_id>` — cached similarity result for a user
+  (`core/services/user_similarity_service.py:330`). TTL 30min.
 - `recs_dispatching_<user_id>` — sentinel preventing duplicate recommendation
   task dispatches from polling dashboard renders (US-024). TTL 300s.
 - `public_users_for_recs_sample` — pre-existing; 30-min cache of candidate
-  pool for anonymous recommendations.
+  pool for anonymous + similarity recommendations
+  (`core/services/recommendation_service.py:513`). Cleared in
+  `update_recommendation_visibility` when a user toggles
+  `visible_in_recommendations` from True to False (US-024c).
 
 ## Service-layer rules
 

@@ -33,3 +33,19 @@ def safe_cache_delete(key):
     except Exception as e:
         logger.warning(f"Cache delete failed for key '{key}': {e}. Continuing without cache.")
         track_redis_cache_error(operation="delete", key=key, error_type=type(e).__name__, error_message=str(e))
+
+
+def safe_cache_add(key, value, timeout=None):
+    """Atomically set a cache key only if it doesn't already exist.
+
+    Returns True if the key was set (caller "won" the race), False if it
+    already existed (caller should skip the guarded work). On Redis failure
+    we fail open and return True — duplicate work is preferable to silently
+    dropping work when the cache is unavailable.
+    """
+    try:
+        return cache.add(key, value, timeout)
+    except Exception as e:
+        logger.warning(f"Cache add failed for key '{key}': {e}. Continuing without cache.")
+        track_redis_cache_error(operation="add", key=key, error_type=type(e).__name__, error_message=str(e))
+        return True

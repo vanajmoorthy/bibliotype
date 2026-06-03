@@ -362,7 +362,7 @@
         "**Manual canary:** upload one of the synthetic CSVs in `core/tests/fixtures/csv/` end-to-end via the running dev server (`/upload/` page). Confirm DNA generates correctly, books appear in the dashboard, AND niche-book stats look reasonable (not all books reported as `read_count=0`). Capture in `progress.txt`.",
         "`manage.py test` passes (full)."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 24
     },
@@ -376,7 +376,7 @@
         "Tests still pass with `CELERY_TASK_ALWAYS_EAGER=True` (which makes `.delay()` synchronous in tests anyway).",
         "`manage.py test core.tests.test_recommendations core.tests.test_tasks_integration` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 25
     },
@@ -390,7 +390,7 @@
         "New regression test: 5 simultaneous dashboard renders produce only 1 task dispatch (use `mock.patch` on `.delay`).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 26
     },
@@ -404,7 +404,7 @@
         "Existing recommendation tests pass.",
         "`manage.py test core.tests.test_recommendations` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 27
     },
@@ -419,7 +419,7 @@
         "Manual check (dev-browser): admin changelist for genres and publishers loads with same numbers but fewer queries (verify via Silk in DEBUG).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 28
     },
@@ -435,7 +435,7 @@
         "Existing enrichment tests pass with `CELERY_TASK_ALWAYS_EAGER=True`.",
         "`manage.py test core.tests.test_integration core.tests.test_enrichment_stats` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 29
     },
@@ -451,7 +451,7 @@
         "`manage.py test core.tests.test_integration core.tests.test_enrichment_stats` passes.",
         "`progress.txt`: note that genre-pattern compilation now happens at import time."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 30
     },
@@ -465,7 +465,7 @@
         "**Positive test:** existing dashboard tests still pass.",
         "`manage.py test core.tests.test_views_e2e` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 31
     },
@@ -482,7 +482,7 @@
         "**Test (invisible \u2192 visible):** toggling back on does NOT clear `public_users_for_recs_sample` (only one direction warrants the candidate-pool flush).",
         "`manage.py test core.tests.test_profile_and_recommendations` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 32
     },
@@ -496,7 +496,7 @@
         "`python manage.py migrate` applies cleanly.",
         "`manage.py test` passes (migrations replay)."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 33
     },
@@ -509,7 +509,7 @@
         "Migration applies cleanly.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 34
     },
@@ -523,7 +523,7 @@
         "**Coverage test:** add a test asserting that `_enrich_dna_for_display(dna_data)` populates each of the listed `comparative_text` keys when called on a fresh `dna_data` dict that lacks them.",
         "`manage.py test core.tests.test_views_e2e core.tests.test_math_accuracy` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 35
     },

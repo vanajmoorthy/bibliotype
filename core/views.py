@@ -43,7 +43,7 @@ from .analytics.events import (
     track_user_logged_in,
     track_user_signed_up,
 )
-from .cache_utils import safe_cache_get, safe_cache_set
+from .cache_utils import safe_cache_add, safe_cache_delete, safe_cache_get, safe_cache_set
 from .dna_constants import CANONICAL_GENRE_MAP, FICTION_GENRES, GLOBAL_AVERAGES, NONFICTION_GENRES
 from .forms import CustomUserCreationForm, UpdateDisplayNameForm
 from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
@@ -574,12 +574,20 @@ def display_dna_view(request):
                     recommendations = stored_recs
                     logger.info(f"Loaded {len(recommendations)} stored recommendations for user {request.user.id}")
                 else:
-                    # No stored recommendations yet - they're being generated asynchronously
-                    # Trigger generation if not already in progress (safety net)
-                    from .tasks import generate_recommendations_task
+                    # No stored recommendations yet - they're being generated asynchronously.
+                    # Sentinel-guard via cache.add so concurrent dashboard polls don't
+                    # spawn duplicate tasks. The sentinel is deleted when the task
+                    # finishes (in generate_recommendations_task's finally block).
+                    if safe_cache_add(f"recs_dispatching_{request.user.id}", 1, timeout=300):
+                        from .tasks import generate_recommendations_task
 
-                    generate_recommendations_task.delay(request.user.id)
-                    logger.info(f"No stored recommendations for user {request.user.id}, triggered generation")
+                        generate_recommendations_task.delay(request.user.id)
+                        logger.info(f"No stored recommendations for user {request.user.id}, triggered generation")
+                    else:
+                        logger.info(
+                            f"Skipped duplicate recommendations dispatch for user {request.user.id} "
+                            f"(sentinel held)"
+                        )
                     recommendations = []
 
                 # Track recommendations displayed (only if we have some)
@@ -629,16 +637,21 @@ def display_dna_view(request):
                         top_books_data = request.session.get("top_book_ids", [])
                         book_ratings = request.session.get("book_ratings", {})
 
-                        # Create a minimal AnonymousUserSession from dna_data
-                        anon_session = AnonymousUserSession.objects.create(
+                        # Recreate (or refresh) the AnonymousUserSession from dna_data.
+                        # Use update_or_create so a concurrent dashboard request that
+                        # already created the row doesn't blow up the second caller
+                        # with a unique-constraint IntegrityError.
+                        anon_session, _ = AnonymousUserSession.objects.update_or_create(
                             session_key=request.session.session_key,
-                            dna_data=dna_data,
-                            books_data=books_data,
-                            top_books_data=top_books_data,
-                            genre_distribution=genre_dist,
-                            author_distribution=author_dist,
-                            book_ratings=book_ratings,  # Store ratings if available
-                            expires_at=timezone.now() + timedelta(days=7),
+                            defaults={
+                                "dna_data": dna_data,
+                                "books_data": books_data,
+                                "top_books_data": top_books_data,
+                                "genre_distribution": genre_dist,
+                                "author_distribution": author_dist,
+                                "book_ratings": book_ratings,
+                                "expires_at": timezone.now() + timedelta(days=7),
+                            },
                         )
 
                         # Now try to get recommendations
@@ -1152,8 +1165,23 @@ def update_recommendation_visibility(request):
     """Toggle visibility in recommendations"""
     is_visible = request.POST.get("visible_in_recommendations") == "true"
     profile = request.user.userprofile
+    was_visible = profile.visible_in_recommendations
     profile.visible_in_recommendations = is_visible
     profile.save()
+
+    # Invalidate caches keyed on this user's recommendation/similarity output so
+    # the toggle takes effect immediately (US-024c).
+    safe_cache_delete(f"user_recommendations_{request.user.id}")
+    safe_cache_delete(f"similar_users_{request.user.id}")
+
+    # When opting OUT, also flush the candidate-pool cache so the user is
+    # dropped from other readers' similarity searches on the next refresh.
+    if was_visible and not is_visible:
+        safe_cache_delete("public_users_for_recs_sample")
+        logger.info(
+            "user opted out of recs; cleared candidate sample cache",
+            extra={"user_id": request.user.id},
+        )
 
     # Track settings update
     track_settings_updated(request.user.id, setting_type="recommendation_visibility")

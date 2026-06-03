@@ -1,5 +1,6 @@
 import logging
 import math
+import random
 from collections import Counter
 
 from django.db.models import Q
@@ -483,7 +484,9 @@ class RecommendationEngine:
         cache_key = "anon_profiles_sample"
         anonymized_profiles = safe_cache_get(cache_key)
         if anonymized_profiles is None:
-            anonymized_profiles = list(AnonymizedReadingProfile.objects.order_by("?")[:100])
+            ids = list(AnonymizedReadingProfile.objects.values_list("id", flat=True))
+            sampled = random.sample(ids, min(len(ids), 100))
+            anonymized_profiles = list(AnonymizedReadingProfile.objects.filter(id__in=sampled))
             safe_cache_set(cache_key, anonymized_profiles, 3600)
 
         user_ctx = _build_user_context_for_similarity(user)
@@ -539,7 +542,9 @@ class RecommendationEngine:
         cache_key = "anon_profiles_sample"
         anonymized_profiles = safe_cache_get(cache_key)
         if anonymized_profiles is None:
-            anonymized_profiles = list(AnonymizedReadingProfile.objects.order_by("?")[:100])
+            ids = list(AnonymizedReadingProfile.objects.values_list("id", flat=True))
+            sampled = random.sample(ids, min(len(ids), 100))
+            anonymized_profiles = list(AnonymizedReadingProfile.objects.filter(id__in=sampled))
             safe_cache_set(cache_key, anonymized_profiles, 3600)
         matching_profiles = []
         for anon_profile in anonymized_profiles:

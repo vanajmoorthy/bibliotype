@@ -414,6 +414,71 @@ class ViewE2E_Tests(TransactionTestCase):
         user.userprofile.refresh_from_db()
         self.assertIsNone(user.userprofile.pending_dna_task_id)
 
+    def test_anonymous_session_recreation_is_idempotent(self):
+        """
+        US-024b: when ``display_dna_view`` reaches the AnonymousUserSession
+        recreation branch repeatedly for the same session_key (e.g. a race
+        where two dashboard requests fire before either commits), it MUST
+        not raise IntegrityError on the unique session_key constraint. The
+        view uses update_or_create, so the second call refreshes the row
+        in place instead of trying to insert a duplicate.
+        """
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from core.models import AnonymousUserSession
+
+        # Anonymous client with dna_data and a real session_key.
+        session = self.client.session
+        session["dna_data"] = {
+            "reader_type": "Recreate Reader",
+            "top_genres": [["Fiction", 3]],
+            "top_authors": [["Some Author", 2]],
+        }
+        session.save()
+        session_key = session.session_key
+        self.assertIsNotNone(session_key)
+
+        # Pre-create a row so the second call would collide on session_key
+        # under the old ``create(...)`` path. The first call's update_or_create
+        # path should then update this row in place.
+        AnonymousUserSession.objects.create(
+            session_key=session_key,
+            dna_data={"reader_type": "Stale Reader"},
+            books_data=[],
+            top_books_data=[],
+            genre_distribution={},
+            author_distribution={},
+            book_ratings={},
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+        # Force the recreate branch on every call by making the ``.get()``
+        # lookup miss, then mock out the recommendation engine so we isolate
+        # the unique-constraint behavior under test.
+        with patch.object(
+            AnonymousUserSession.objects,
+            "get",
+            side_effect=AnonymousUserSession.DoesNotExist,
+        ), patch(
+            "core.services.recommendation_service.get_recommendations_for_anonymous",
+            return_value=[],
+        ):
+            with self.assertNoLogs("core.views", level="ERROR"):
+                response_one = self.client.get(reverse("core:display_dna"))
+                response_two = self.client.get(reverse("core:display_dna"))
+
+        self.assertEqual(response_one.status_code, 200)
+        self.assertEqual(response_two.status_code, 200)
+
+        # The unique-constraint contract: there is exactly one row for
+        # this session_key, and it carries the refreshed dna_data — not the
+        # pre-seeded "Stale Reader" payload.
+        rows = AnonymousUserSession.objects.filter(session_key=session_key)
+        self.assertEqual(rows.count(), 1)
+        self.assertEqual(rows.first().dna_data["reader_type"], "Recreate Reader")
+
 
 @override_settings(
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",

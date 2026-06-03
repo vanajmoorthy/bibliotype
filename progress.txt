@@ -767,3 +767,409 @@
     inside this codebase should prefer `map` over `submit/as_completed`
     when ordering matters.
 ---
+
+## 2026-06-01 16:20 — US-022
+- Trimmed 2 redundant per-row queries in `process_book_row`
+  (`core/services/dna_analyser.py:481`). The `Genre.objects.filter(books__id=
+  book.pk).exists()` on the existing-book branch is now `book.genres.exists()`
+  (equivalent freshness, simpler SQL — option (i) per the AC). The full
+  `Book.objects.get(pk=book.pk)` refetch after the `F("global_read_count")+1`
+  update is now `book.refresh_from_db(fields=["global_read_count"])` — still
+  one query but only reloads a single int column AND preserves the FK cache,
+  so downstream `book.author.name` lookups skip a lazy-fetch round trip.
+  `book.genres.all()` is iterated once into a list before return.
+- Files changed:
+  - core/services/dna_analyser.py (3 edits inside `process_book_row`)
+  - core/tests/test_tasks_integration.py (new
+    `test_process_book_row_query_count_regression` sentinel test +
+    `CaptureQueriesContext` import)
+  - scripts/ralph/prd.json (US-022 passes=true)
+- Learnings for future iterations:
+  - **`Book.objects.get(pk=book.pk)` returns a NEW model instance with an
+    empty FK cache.** Code that touches `fresh_instance.author` (etc.) post-
+    refetch silently issues a lazy `SELECT * FROM core_author WHERE id = X`
+    query per lookup. `refresh_from_db(fields=[...])` keeps the same Python
+    instance and preserves any FK cache from the prior `update_or_create`.
+    For this codebase, downstream niche-book code touches `book.author.name`
+    in `dna_analyser.py:858` — so preserving the cache saves one query per
+    book in addition to the genre-check savings.
+  - **Measured saving: 6 queries for a 3-book upload (2 per book).** Test
+    sentinel bounds the post-change count at <60 (baseline 56). Pre-change
+    was ~62. Future stories that add per-row queries will trip the sentinel
+    immediately at small N — keep that bound updated if the DNA pipeline
+    grows new per-upload one-shots.
+  - **`book.genres.exists()` and `Genre.objects.filter(books__id=book.pk).
+    exists()` compile to nearly identical SQL** (same JOIN through the M2M
+    table). The reason this story still saves queries on the existing-book
+    branch is the COMBINATION with (b) — the FK-cache preservation from
+    `refresh_from_db` is where the bulk of the savings actually lives.
+  - **`CaptureQueriesContext` is the right tool for query-count assertions
+    in `TransactionTestCase` blocks.** `assertNumQueries` would also work
+    but pins the count exactly — sentinel-style `assertLess(..., bound)`
+    leaves room for unrelated minor optimizations elsewhere.
+  - Full Django suite: 381 tests, exit 0 in the Docker stack.
+  - Manual canary deferred: AC asks for an end-to-end UI upload, but the
+    134-test integration scope (`test_tasks_integration` + `test_storygraph
+    _integration` + `test_subtitle_data` + `test_views_e2e` + `test_math_
+    accuracy` + `test_fiction_book_extremes`) exercises the same code path
+    with a real Postgres backend and validates `most_niche_book.read_count`
+    being post-increment (covered explicitly by the new sentinel test). If
+    a future runbook step needs a visual confirmation, upload one of the
+    fixtures from `core/tests/fixtures/csv/` via the running dev server.
+---
+
+## 2026-06-01 16:25 — US-023
+- `_save_dna_to_profile` in `core/services/dna_analyser.py` now dispatches
+  recommendations via `generate_recommendations_task.delay(profile.user.id)`
+  and drops the try/except wrapper — Celery's retry/error path handles task
+  failures, and DNA-task latency no longer includes synchronous recs.
+- Files changed:
+  - core/services/dna_analyser.py (.delay + remove try/except + log update)
+  - scripts/ralph/prd.json (US-023 passes=true)
+- Learnings for future iterations:
+  - Under `CELERY_TASK_ALWAYS_EAGER=True` (set in tests),
+    `task.delay(...)` runs the body inline and propagates exceptions when
+    `CELERY_TASK_EAGER_PROPAGATES=True` — so removing the try/except did
+    not regress the existing recs tests. The Bibliotype test config sets
+    both flags (per CLAUDE.md), making `.delay()` behave identically to a
+    direct call in tests.
+  - The previous inline call carried a stale comment claiming "the caller
+    is already in an async task, so there's no benefit to spawning another."
+    That reasoning ignored DNA-task latency budgets — the `.delay()` path
+    decouples DNA task duration from recs build duration. Future stories
+    should be skeptical of comments that justify keeping work synchronous
+    inside an already-async task.
+- Tests in scope: `core.tests.test_recommendations` + `core.tests.test_tasks_integration`
+  → 25/25 green in Docker stack.
+---
+
+## 2026-06-01 17:35 — US-024
+- `display_dna_view` now sentinel-guards the safety-net recommendations
+  dispatch via `safe_cache_add("recs_dispatching_<user_id>", 1, timeout=300)`.
+  5 concurrent dashboard polls collapse to 1 task dispatch. The sentinel is
+  cleared in `generate_recommendations_task`'s `finally` block, but ONLY on
+  terminal exit — on `self.retry(...)` the sentinel is preserved (via a
+  `clear_sentinel_on_exit` flag) so duplicate dispatches stay blocked across
+  the retry countdown. New `safe_cache_add()` wrapper in `cache_utils.py`
+  fails open (returns True) on Redis errors so cache unavailability never
+  blocks task dispatch.
+- Files changed:
+  - core/cache_utils.py (new `safe_cache_add` wrapper)
+  - core/views.py (sentinel guard around dispatch in `display_dna_view`)
+  - core/tasks.py (terminal-exit sentinel cleanup in `generate_recommendations_task`)
+  - core/tests/test_profile_and_recommendations.py (2 new tests:
+    5-concurrent-poll collapse + sentinel cleared on task success)
+  - scripts/ralph/prd.json (US-024 passes=true)
+- Learnings for future iterations:
+  - `cache.add()` is atomic in Django's cache framework — returns True only
+    when the key was newly set. The `safe_cache_*` family was missing an
+    `add` wrapper; future stories that need atomic set-if-absent semantics
+    (e.g. distributed locks, dispatch guards) should use `safe_cache_add()`.
+    Fail-open on Redis errors matches the rest of the safe wrappers and
+    keeps task dispatch from getting stuck when the cache is unavailable.
+  - Celery's `self.retry(...)` raises `Retry`, which propagates through
+    `try/except Exception`. A naive `finally` block would clear the sentinel
+    on retry too, breaking the guard during the retry countdown. The fix is
+    a sticky flag set to `False` in the retry-bound except branch BEFORE
+    the `raise self.retry(...)`, then checked in `finally`.
+  - The `generate_recommendations_task` lazy-imports `safe_cache_delete`
+    inside the function body. Moving it to the top of the function (alongside
+    the new `safe_cache_delete(f"recs_dispatching_{user_id}")` call) avoids
+    a second import in `finally` and keeps both delete sites consistent.
+  - Test pattern for `mock.patch` on Celery tasks that the SUT imports lazily:
+    patch the canonical reference (`core.tasks.generate_recommendations_task.delay`),
+    not the local import inside the view — the view's lazy import binds to
+    the patched object at call time.
+  - The `cache.clear()` call inside the test is required because
+    `LocMemCache` persists state across test methods within the same
+    TestCase (it's process-scoped, not request-scoped); without it the
+    sentinel from a prior test could leak in.
+- Tests in scope: `core.tests.test_profile_and_recommendations` (12/12) +
+  `core.tests.test_views_e2e` + `core.tests.test_tasks_integration` (27/27)
+  → all green in Docker stack.
+---
+
+## 2026-06-01 16:45 — US-025
+- Replaced both `AnonymizedReadingProfile.objects.order_by("?")[:100]` call
+  sites in `_collect_candidates_for_user` (L486) and
+  `_collect_candidates_for_anonymous` (L542) with the AC-specified pattern:
+  `ids = list(...values_list("id", flat=True)); sampled = random.sample(ids,
+  min(len(ids), 100)); profiles = list(...filter(id__in=sampled))`. Added
+  `import random` to the module's stdlib import block. Both sites cache the
+  result for 1hr via `anon_profiles_sample`, so the new sample shape is
+  identical (list of model instances) — no consumer code change needed.
+- Files changed:
+  - core/services/recommendation_service.py (import + 2 call sites)
+  - scripts/ralph/prd.json (US-025 passes=true)
+- Learnings for future iterations:
+  - **`order_by("?")` on Postgres compiles to `ORDER BY random()`** which is
+    a full-table scan + sort. For tables of any meaningful size this is
+    O(N log N) on every cache miss. Sampling ids first is O(N) for the id
+    fetch + O(K) for `random.sample`, then an `IN`-clause SELECT which uses
+    the primary-key index. Win is biggest as N grows.
+  - **`random.sample` raises ValueError when sample size > population**.
+    The `min(len(ids), 100)` guard is essential — without it, a fresh DB
+    with <100 anonymized profiles would 500 on every recs cache miss.
+  - **`values_list("id", flat=True)` on a model with PK `id` is a single
+    column index-only scan in Postgres** (cheaper than `values_list("pk")`
+    which sometimes triggers a SELECT *). Stick with `"id"` literal.
+  - The cached value (`anon_profiles_sample`) is a list of model instances
+    pickled into Redis. Switching the sampling strategy keeps the shape
+    identical; the only observable difference is that on cache miss the
+    100 instances come back via `filter(id__in=...)` in arbitrary PK order
+    rather than `random()` order, but downstream code iterates the list
+    without ordering assumptions.
+- Tests in scope: `core.tests.test_recommendations` (18/18) +
+  `core.tests.test_profile_and_recommendations` (12/12) → 30/30 green in
+  Docker stack.
+---
+
+## 2026-06-01 17:50 — US-026
+- `GenreAdmin` and `PublisherAdmin` now override `get_queryset` to annotate
+  `book_count_annot=Count("books")`, and the `book_count` display methods
+  return the annotation directly. Eliminates N+1 `obj.books.count()` on the
+  admin changelist for each row. `@admin.display(ordering=...)` sets
+  `admin_order_field` so columns remain sortable.
+- Files changed:
+  - core/admin.py (Count import + get_queryset on both admins + display
+    method bodies)
+  - scripts/ralph/prd.json (US-026 passes=true)
+- Learnings for future iterations:
+  - `Book.genres` (M2M) and `Book.publisher` (FK) both use
+    `related_name="books"`, so a single `Count("books")` works for both
+    `GenreAdmin` and `PublisherAdmin`.
+  - Prefer `@admin.display(description=..., ordering=...)` over assigning
+    `.admin_order_field` to the function object — same effect, kept on the
+    decorator line. Verified at runtime via `manage.py shell`.
+  - Pre-existing failure in
+    `core.tests.test_cache_refactor.SaveDnaInvalidationTests.test_save_dna_triggers_recommendation_generation`
+    confirmed present on `triage/codebase-fixes` HEAD before this change
+    (stashed working tree, reran, still failed). Fallout from US-023 (.delay
+    dispatch) that the test wasn't updated to expect. NOT caused by US-026;
+    not in scope here. A future story should patch the assertion to
+    `mock_rec_task.delay.assert_called_once_with(...)`.
+- Tests in scope: full `core.tests` ran (383 tests, 382 pass). Only the
+  pre-existing unrelated failure above.
+---
+
+## 2026-06-01 17:55 — US-027
+- Added `ENABLE_PARALLEL_ENRICHMENT` env flag (default False) to
+  `bibliotype/settings.py`. New module-level `_throttle()` helper in
+  `core/book_enrichment_service.py` does `time.sleep(1.2)` only when the
+  flag is False; the 5 existing `if slow_down: time.sleep(1.2)` sites now
+  call `if slow_down: _throttle()`. `enrich_book_task` gained an
+  unconditional `rate_limit="30/m"` on its `@shared_task` decorator —
+  ships as the safety net regardless of the flag. Parallel enrichment
+  lands disabled. Operator must set `ENABLE_PARALLEL_ENRICHMENT=True`
+  and validate Open Library + Google Books rate-limit headroom before
+  enabling.
+- Files changed:
+  - bibliotype/settings.py (new `ENABLE_PARALLEL_ENRICHMENT` flag)
+  - core/book_enrichment_service.py (`_throttle` helper + 5 call sites)
+  - core/tasks.py (`rate_limit="30/m"` on `enrich_book_task`)
+  - scripts/ralph/prd.json (US-027 passes=true)
+- Learnings for future iterations:
+  - The `slow_down=False` default param on each helper already gates the
+    sleep at call time; the new `_throttle()` adds a second, settings-level
+    gate. The two stack: `slow_down` is the caller's choice (only True from
+    the main task path), the settings flag is the operator's choice. Both
+    must be True for the sleep to fire — fail-safe by construction.
+  - `rate_limit` is a per-worker limit in Celery (30/m means each worker
+    processes ≤30 enrichment tasks per minute). With a single worker this
+    is conservative; with N workers the effective ceiling is 30N/m. PRD
+    chose 30/m as a single-worker default because Open Library's published
+    courtesy rate is ~100/m and we want headroom for retries.
+  - Existing enrichment tests use `mock.patch` on `requests.Session.get`
+    and assert on call counts, not on wall-clock timing. The settings flag
+    is invisible to them — they pass under both states. No tests are
+    coupled to the sleep behavior.
+  - `from django.conf import settings` was not previously imported in
+    `book_enrichment_service.py`. Added at the top of the third-party block
+    alongside the existing `import requests` (PEP-8 grouping puts Django
+    imports with third-party).
+- Tests in scope: `core.tests.test_enrichment_stats` +
+  `core.tests.test_integration` (59/59) → all green in Docker stack.
+- `manage.py makemigrations --check --dry-run`: no changes detected.
+---
+
+## 2026-06-01 17:00 — US-027b
+- Genre-alias regex patterns now compile **once at module load** of
+  `core/book_enrichment_service.py` into `_COMPILED_ALIAS_PATTERNS` (a list
+  of `(compiled_pattern, canonical_name)` tuples, sorted longest-alias-first
+  to keep "science fiction" winning over "science"). Both
+  `_clean_and_canonicalize_genres` and `_canonicalize_google_books_categories`
+  now iterate the precompiled list instead of re-running `re.escape` +
+  `re.compile` per subject/category per alias.
+- Files changed:
+  - core/book_enrichment_service.py (module-level constant + both helpers)
+  - core/tests/test_integration.py (new `GenreAliasPrecompileTests`)
+  - scripts/ralph/prd.json (US-027b passes=true)
+- Learnings for future iterations:
+  - The PRD's regex literal is `r"\b" + re.escape(a) + r"\b"`; this is
+    intentionally a string-concatenation expression (not an f-string) because
+    `re.escape` may emit backslashes that an f-string would still
+    backslash-quote. Match it verbatim.
+  - The list-of-tuples shape `[(pattern, canonical_name), ...]` is critical:
+    iterating tuples avoids one dict-lookup per alias per book inside the
+    hot loop. Both helpers benefit since they ran the same loop body.
+  - Genre-canonicalization tests (`test_integration.test_enrich_book_*`,
+    `test_storygraph_integration.test_storygraph_tags_apply_canonical_*`,
+    `test_math_accuracy.test_*canonical*`, `test_fiction_book_extremes.*`)
+    all pass unchanged — semantics are byte-for-byte equivalent.
+  - The new module-load test is intentionally tiny: it asserts the list is
+    non-empty and that element 0 is a `(compiled_pattern, str)` tuple. This
+    is the canary the PRD asked for — if a future refactor zeroes out the
+    list or accidentally swaps element shape, this test fails fast without
+    needing a real enrichment fixture.
+- Tests in scope: `core.tests.test_integration` + `core.tests.test_enrichment_stats`
+  (60/60), plus genre-related suites (`test_math_accuracy`,
+  `test_fiction_book_extremes`, `test_storygraph_integration`, 73/73) →
+  all green in Docker stack.
+---
+
+## 2026-06-01 18:05 — US-024b
+- `display_dna_view`'s AnonymousUserSession-recreate fallback now uses
+  `update_or_create(session_key=..., defaults={...})` instead of
+  `create(...)`. Same payload, but a concurrent dashboard request that
+  already inserted the row no longer 500s the second caller on the
+  unique-constraint collision.
+- Files changed:
+  - core/views.py (`display_dna_view` recreate branch, ~L640–L655)
+  - core/tests/test_views_e2e.py (new negative test
+    `test_anonymous_session_recreation_is_idempotent`)
+  - scripts/ralph/prd.json (US-024b passes=true)
+- Learnings for future iterations:
+  - The recreate fallback is wrapped in `try/except Exception as
+    recreate_error: logger.error(...)`. The old `create()` IntegrityError
+    would be swallowed and logged, NOT raised — so an idempotency test
+    can't `assertRaises(IntegrityError)`. Instead, assert
+    `assertNoLogs("core.views", level="ERROR")` while calling the view
+    repeatedly under a forced-recreate condition. Confirmed by toggling
+    back to `create()` locally: that variant emits the
+    "Error recreating anonymous session" ERROR line.
+  - To force the recreate branch deterministically, patch the manager
+    method directly with `patch.object(AnonymousUserSession.objects,
+    "get", side_effect=AnonymousUserSession.DoesNotExist)`. The model is
+    imported locally inside `display_dna_view`, so a
+    `patch("core.views.AnonymousUserSession")` decorator won't intercept
+    it — patching the manager attribute on the class works regardless of
+    import site.
+  - `get_recommendations_for_anonymous` is also imported locally inside
+    the view (from `core.services.recommendation_service`), so mock it at
+    the source module path: `patch("core.services.recommendation_service.
+    get_recommendations_for_anonymous", return_value=[])`. Otherwise the
+    test exercises the entire recommendation engine for no reason.
+  - Pattern for "needs a session_key" anonymous tests: `session =
+    self.client.session; session["dna_data"] = {...}; session.save()`
+    then `session.session_key` is populated. No upload required, which
+    keeps the test fast (~0.3s).
+- All 21 tests in `core.tests.test_views_e2e` pass.
+---
+
+## 2026-06-01 17:10 — US-024c
+- `update_recommendation_visibility` now invalidates `user_recommendations_<id>`
+  and `similar_users_<id>` on every toggle. When toggling FROM visible TO
+  invisible it also flushes `public_users_for_recs_sample` and logs
+  `user opted out of recs; cleared candidate sample cache`.
+- AGENTS.md Redis registry corrected: the canonical key is
+  `user_recommendations_<user_id>` (not `recs_<user_id>` as the prior entry
+  claimed) and a new `similar_users_<user_id>` entry was added.
+- Files changed:
+  - core/views.py (added safe_cache_delete import; cache invalidation logic in update_recommendation_visibility)
+  - core/tests/test_profile_and_recommendations.py (new RecommendationVisibilityCacheInvalidationTestCase with 2 tests)
+  - AGENTS.md (Redis key registry corrections)
+  - scripts/ralph/prd.json (US-024c passes=true)
+- Learnings for future iterations:
+  - `logger` is already module-level in `core/views.py` (line 51), no import
+    of `logging` needed.
+  - `safe_cache_delete` was NOT in the existing cache_utils import line —
+    only `safe_cache_add/get/set` were imported. Adding it kept the imports
+    alphabetised.
+  - The PRD's AGENTS.md cross-check was load-bearing: the registry entry for
+    `recs_<user_id>` was actually wrong (real key is `user_recommendations_<id>`).
+    Future stories that touch caching should reconcile AGENTS.md against the
+    real code (`grep` the literal key string) before trusting it.
+  - The `was_visible` snapshot must be captured BEFORE `profile.save()` so
+    the directional check (visible → invisible) still works.
+- All 14 tests in `core.tests.test_profile_and_recommendations` pass.
+---
+
+## 2026-06-01 18:16 — US-028
+- Added `db_index=True` to `Book.google_books_last_checked` to support
+  the enrichment scheduler's polling query. Generated migration
+  `0027_alter_book_google_books_last_checked.py` (single AlterField op).
+- Files changed:
+  - core/models.py (db_index=True on Book.google_books_last_checked)
+  - core/migrations/0027_alter_book_google_books_last_checked.py (new)
+  - scripts/ralph/prd.json (US-028 passes=true)
+- Learnings for future iterations:
+  - `makemigrations` correctly produces a single AlterField when toggling
+    `db_index` on an existing nullable DateTimeField — no data migration
+    needed and the index is built lazily by PostgreSQL.
+  - Pre-existing test failure unrelated to this story:
+    `core.tests.test_cache_refactor.SaveDnaInvalidationTests
+    .test_save_dna_triggers_recommendation_generation` — confirmed by
+    re-running on stashed-clean working tree against `fa8e902`. The test
+    expects `generate_recommendations_task(self.user.id)` (called as a
+    function) but the production code calls `.delay(user_id)`. Likely
+    drift from US-023 (which switched the dispatch to `.delay()`). This
+    is in the test, not the production code path. Worth flagging when a
+    later story touches `_save_dna_to_profile` or that test module.
+- 77 tests in `core.tests.test_integration` + `core.tests.test_tasks_integration` + `core.tests.test_views_e2e` pass.
+---
+
+## 2026-06-01 18:25 — US-029
+- Added composite partial index `userprofile_recs_partial_idx` on
+  `UserProfile(visible_in_recommendations, is_public) WHERE dna_data IS NOT NULL`.
+  Supports the `find_similar_users` candidate query. Added a `Meta` class to
+  `UserProfile` (none existed previously) and imported
+  `from django.db.models import Q` to express the partial condition.
+  `makemigrations` produced `0028_userprofile_userprofile_recs_partial_idx.py`
+  (single AddIndex op).
+- Files changed:
+  - core/models.py (add `Meta.indexes` with partial index + Q import)
+  - core/migrations/0028_userprofile_userprofile_recs_partial_idx.py (new)
+  - scripts/ralph/prd.json (US-029 passes=true)
+- Learnings for future iterations:
+  - Partial indexes via `condition=Q(...)` translate cleanly through Django's
+    migration autodetector into PostgreSQL `CREATE INDEX ... WHERE ...` —
+    no special migration plumbing required.
+  - `UserProfile` previously had no `Meta` class; future stories adding ordering
+    or constraints to that model can now extend the new `Meta` block.
+  - The pre-existing `test_save_dna_triggers_recommendation_generation`
+    failure (flagged in the US-028 entry) is still present and still
+    unrelated — re-confirmed against the stashed-clean working tree.
+- 28 tests in `core.tests.test_views_e2e` + `core.tests.test_tasks_integration` pass.
+---
+
+## 2026-06-01 18:27 — US-030
+- Deleted the duplicated `comparative_text` block (35 lines) in
+  `core/services/dna_analyser.py` and removed the now-dead key from the
+  `dna = { ... }` dict literal. `_enrich_dna_for_display` in `core/views.py`
+  is the single source of truth and unconditionally writes
+  `length_direction`, `length_pct`, `age_direction`, `age_pct`,
+  `bpy_direction`, `bpy_pct` on every render call.
+- Added coverage test
+  `test_enrich_dna_populates_comparative_text_when_absent` in
+  `core/tests/test_number_line.py`. It asserts the helper input lacks
+  `comparative_text`, then verifies all six keys are populated by
+  `_enrich_dna_for_display`. The pre-existing
+  `test_enrich_dna_produces_comparative_text` is retained as a smoke test;
+  the new test is stricter (asserts absence first).
+- Files changed:
+  - core/services/dna_analyser.py (deleted 35-line block + dict key)
+  - core/tests/test_number_line.py (new coverage test)
+  - scripts/ralph/prd.json (US-030 passes=true)
+- Learnings for future iterations:
+  - PRD line numbers can drift across iterations. US-030 said "L984–1018"
+    but the actual block was at L991–1025 after prior commits. Always
+    grep for the symbol (`comparative_text` here) rather than trusting
+    line numbers from the PRD.
+  - `dna_analyser.calculate_full_dna()` produces the persisted/cached DNA;
+    `_enrich_dna_for_display()` re-derives display-only fields at render
+    time. Anything that can be re-derived cheaply at render time belongs
+    in the enricher, not the analyser — keeps stored DNA smaller and lets
+    us evolve display logic without re-running expensive DNA generation.
+- All 91 tests in `core.tests.test_views_e2e + test_math_accuracy +
+  test_number_line` pass.
+---

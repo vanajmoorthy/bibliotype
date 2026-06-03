@@ -299,17 +299,10 @@ def _save_dna_to_profile(profile, dna_data):
         safe_cache_delete(f"similar_users_{profile.user.id}")
         safe_cache_delete(f"user_recommendations_{profile.user.id}")
 
-        # Generate recommendations inline — the caller is already in an async task,
-        # so there's no benefit to spawning another. This ensures recommendations
-        # are ready when the dashboard loads.
         from ..tasks import generate_recommendations_task
 
-        try:
-            generate_recommendations_task(profile.user.id)
-            logger.info(f"Generated recommendations inline for user {profile.user.username}")
-        except Exception as e:
-            logger.error(f"Inline recommendation generation failed for {profile.user.username}: {e}", exc_info=True)
-            # Non-fatal — dashboard will show pending state and the view will retry
+        generate_recommendations_task.delay(profile.user.id)
+        logger.info(f"Dispatched recommendations task for user {profile.user.username}")
 
     except Exception as e:
         logger.error(f"Error saving profile for user {profile.user.username}: {e}")
@@ -565,15 +558,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                             create_defaults={"title": title_from_csv, **book_defaults},
                         )
 
-                # Check if the book already has genres by querying the database directly
-                # This ensures we get the actual current state, not cached relationship data
-                # If created=True, we know it's new and needs enrichment, so skip the DB check
+                # Check if the book already has genres. `book.genres.exists()` runs
+                # a single COUNT(*) on the through table and is not cached on the
+                # instance — equivalent freshness to the previous reverse-side query
+                # but one fewer JOIN and reuses the FK manager.
                 if created:
                     has_genres = False
                 else:
-                    # Use a direct database query that bypasses any instance caching
-                    # Query from the Genre side of the relationship to ensure fresh data
-                    has_genres = Genre.objects.filter(books__id=book.pk).exists()
+                    has_genres = book.genres.exists()
 
                 # StoryGraph tags → canonical genres (applied before enrichment dispatch)
                 if csv_source == "storygraph" and not has_genres:
@@ -603,9 +595,16 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
                 Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
 
-                fresh_book_instance = Book.objects.get(pk=book.pk)
+                # Pull only the post-increment value back into the Python object.
+                # Niche-book stats (`book.global_read_count` reads downstream around
+                # the most-niche-book and NICHE_THRESHOLD aggregations) depend on
+                # this being current. `refresh_from_db(fields=[...])` avoids
+                # reloading large columns like cover_url / JSON blobs that didn't
+                # change.
+                book.refresh_from_db(fields=["global_read_count"])
 
-                return fresh_book_instance, [g.name for g in fresh_book_instance.genres.all()], original_row
+                genre_names = [g.name for g in book.genres.all()]
+                return book, genre_names, original_row
 
             # 8 workers is safe under Postgres: row-level locking + a thread-local
             # connection per worker means concurrent get_or_create on Author/Book/Genre/
@@ -989,41 +988,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             if total_user_books > 0:
                 mainstream_score = round((mainstream_books_count / total_user_books) * 100)
 
-        # Build comparative_text dict for template rendering
-        comparative_text = {}
-        if percentiles:
-            # Book length: higher percentile = longer books
-            len_pct = percentiles.get("avg_book_length", 50)
-            user_len = user_base_stats["avg_book_length"]
-            comm_len = community_averages.get("avg_book_length")
-            if comm_len and user_len >= comm_len:
-                comparative_text["length_direction"] = "longer"
-                comparative_text["length_pct"] = round(len_pct, 1)
-            else:
-                comparative_text["length_direction"] = "shorter"
-                comparative_text["length_pct"] = round(100 - len_pct, 1)
-
-            # Book age: higher percentile = older books (inverted in percentile engine)
-            year_pct = percentiles.get("avg_publish_year", 50)
-            user_year = user_base_stats["avg_publish_year"]
-            comm_year = community_averages.get("avg_publish_year")
-            if comm_year and user_year <= comm_year:
-                comparative_text["age_direction"] = "older"
-                comparative_text["age_pct"] = round(year_pct, 1)
-            else:
-                comparative_text["age_direction"] = "newer"
-                comparative_text["age_pct"] = round(100 - year_pct, 1)
-
-            # Books per year
-            bpy_pct = percentiles.get("avg_books_per_year", 50)
-            user_bpy = user_base_stats.get("avg_books_per_year", 0)
-            comm_bpy = community_averages.get("avg_books_per_year")
-            if comm_bpy and user_bpy >= comm_bpy:
-                comparative_text["bpy_direction"] = "more"
-                comparative_text["bpy_pct"] = round(bpy_pct, 1)
-            else:
-                comparative_text["bpy_direction"] = "fewer"
-                comparative_text["bpy_pct"] = round(100 - bpy_pct, 1)
+        # comparative_text is computed at render time by _enrich_dna_for_display
+        # in core/views.py (single source of truth — values would be overwritten
+        # anyway, so don't bother computing them here).
 
         # StoryGraph mood and pace distributions (empty for Goodreads)
         mood_distribution = []
@@ -1044,7 +1011,6 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             "bibliotype_percentiles": percentiles,
             "global_averages": GLOBAL_AVERAGES,
             "community_averages": community_averages,
-            "comparative_text": comparative_text,
             "most_niche_book": most_niche_book,
             "reader_type": reader_type,
             "reader_type_explanation": explanation,
