@@ -1752,3 +1752,31 @@
   core.tasks.research_publisher_mainstream_task,
   core.tasks.run_management_command_task.
 - manage.py check clean; test_tasks_unit + test_tasks_integration (26 tests) OK.
+
+## 2026-07-04 17:20 — US-057
+- Extracted core/tasks/dna.py: generate_reading_dna_task,
+  claim_anonymous_dna_task, _create_userbooks_from_anonymous_session moved
+  verbatim (the _hash_key/_clear_pending helpers are function-local and moved
+  with the claim task). Both @shared_task decorators pin their original wire
+  names (name="core.tasks.generate_reading_dna_task" /
+  "core.tasks.claim_anonymous_dna_task") so queued messages + any external
+  callers survive the split; annotated with "# name pinned" comments.
+- __init__ deletes the moved code and re-exports from .dna (views/__init__
+  style, # noqa: F401): claim_anonymous_dna_task, generate_reading_dna_task,
+  _create_userbooks_from_anonymous_session (test_integration imports it from
+  core.tasks) and _save_dna_to_profile (core/views/auth.py imports it from
+  ..tasks) — public surface preserved. AsyncResult + analytics-event imports
+  and the services.dna import moved to dna.py; header trimmed accordingly.
+- Patch-target audit: patch("core.tasks.AsyncResult") intercepts a lookup
+  inside claim_anonymous_dna_task, which now resolves from core.tasks.dna →
+  re-pointed all 4 decorators in test_tasks_integration.py to
+  core.tasks.dna.AsyncResult. Whole-object patches of
+  core.tasks.generate_recommendations_task / check_author_mainstream_status_task
+  still work: every production call site does a lazy `from ..tasks import X`
+  (views/dashboard, services/dna, persistence) that binds from the package at
+  call time. `.delay` patches mutate the shared task object — location-proof.
+  assertLogs("core.tasks") still captures the claim task's warnings via child
+  logger (core.tasks.dna) propagation.
+- Autodiscovery probe after the move: identical 8-task core.* list as the
+  pre-split baseline.
+- manage.py check clean; test_tasks_integration + test_views_e2e (28 tests) OK.
