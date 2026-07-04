@@ -1628,3 +1628,38 @@ NONFICTION_GENRES = {
 _all_canonical = set(GENRE_ALIASES.keys())
 _classified = FICTION_GENRES | NONFICTION_GENRES
 assert _classified == _all_canonical, f"Unclassified genres: {_all_canonical - _classified}"
+
+# Maps common StoryGraph user tags to canonical genres.
+# Applied before enrichment dispatch so tagged books can skip API genre lookups.
+STORYGRAPH_TAG_TO_GENRE = {
+    "sci-fi": "science fiction",
+    "scifi": "science fiction",
+    "science fiction": "science fiction",
+    "fantasy": "fantasy",
+    "dystopian": "dystopian",
+    "dystopia": "dystopian",
+    "classic": "classics",
+    "classics": "classics",
+    "non-fiction": "non-fiction",
+    "nonfiction": "non-fiction",
+    "horror": "horror",
+    "romance": "romance",
+    "thriller": "thriller",
+    "mystery": "thriller",
+    "biography": "biography",
+    "memoir": "biography",
+    "history": "history",
+    "philosophy": "philosophy",
+    "psychology": "psychology",
+    "historical fiction": "historical fiction",
+    "young adult": "young adult",
+    "ya": "young adult",
+    "short stories": "short stories",
+    "travel": "travel",
+    "science": "science",
+    "nature": "nature",
+    "art": "art & music",
+    "music": "art & music",
+    "self-help": "self-help",
+    "self help": "self-help",
+}

@@ -63,7 +63,7 @@ class SubtitleFieldsIntegrationTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     def test_all_subtitle_fields_present_for_authenticated_user(
         self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task
     ):
@@ -128,7 +128,7 @@ class SubtitleFieldsIntegrationTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     def test_subtitle_fields_saved_to_user_profile(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """Subtitle fields are persisted inside UserProfile.dna_data."""
         mock_vibe.return_value = ["profile vibe"]
@@ -152,7 +152,7 @@ class SubtitleFieldsIntegrationTests(TransactionTestCase):
 
     @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     def test_subtitle_fields_present_for_anonymous_user(self, mock_vibe, mock_enrich, mock_author_check):
         """Anonymous DNA generation also includes subtitle fields."""
         mock_vibe.return_value = ["anon vibe"]
@@ -176,7 +176,7 @@ class SubtitleFieldsIntegrationTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     def test_niche_books_count_reflects_global_read_count(
         self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task
     ):
@@ -290,7 +290,7 @@ class SubtitleEdgeCaseTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     def test_no_reviews(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """Books with no reviews yield zero review counts."""
         mock_vibe.return_value = ["no review vibe"]
@@ -310,7 +310,7 @@ class SubtitleEdgeCaseTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     def test_no_user_ratings(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """Books with My Rating = 0 produce zero controversial_books_count."""
         mock_vibe.return_value = ["no rating vibe"]
@@ -331,7 +331,7 @@ class SubtitleEdgeCaseTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     def test_single_book(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """A single rated book produces valid subtitle data."""
         mock_vibe.return_value = ["solo vibe"]
@@ -355,7 +355,7 @@ class SubtitleEdgeCaseTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     def test_short_review_not_counted(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """A review <= 15 chars is not counted as a review."""
         mock_vibe.return_value = ["short review vibe"]
@@ -372,7 +372,7 @@ class SubtitleEdgeCaseTests(TransactionTestCase):
 
     @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     def test_empty_library_raises_error(self, mock_vibe, mock_enrich, mock_author_check):
         """A CSV with no 'read' books raises ValueError."""
         mock_vibe.return_value = ["nope"]
@@ -387,7 +387,7 @@ class SubtitleEdgeCaseTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     def test_review_without_rating_not_counted(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """A review on a book with My Rating = 0 is not counted (per the analyser filter)."""
         mock_vibe.return_value = ["vibe"]

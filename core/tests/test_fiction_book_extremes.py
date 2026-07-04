@@ -25,10 +25,10 @@ class FictionNonfictionConstantsTests(TestCase):
 
 
 class FictionNonfictionClassificationTests(TestCase):
-    """Test the fiction-first classification logic used in dna_analyser."""
+    """Test the fiction-first classification logic used in core.services.dna."""
 
     def _classify(self, genre_names):
-        """Reproduce the classification logic from dna_analyser."""
+        """Reproduce the classification logic from core.services.dna."""
         canonical = {CANONICAL_GENRE_MAP.get(g, g) for g in genre_names}
         if canonical & FICTION_GENRES:
             return "fiction"

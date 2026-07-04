@@ -11,7 +11,7 @@ from django.utils import timezone
 from .management_command_registry import ALLOWED_COMMANDS
 from .models import Author, Book
 from .services.author_service import check_author_mainstream_status
-from .services.dna_analyser import _save_dna_to_profile, calculate_full_dna
+from .services.dna import _save_dna_to_profile, calculate_full_dna
 from .analytics.events import (
     track_dna_generation_started,
     track_dna_generation_completed,

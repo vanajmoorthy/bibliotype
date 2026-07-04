@@ -80,7 +80,7 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         csv_file = SimpleUploadedFile("storygraph.csv", csv_content, content_type="text/csv")
         return self.client.post(reverse("core:upload"), {"csv_file": csv_file})
 
-    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_storygraph_csv_creates_dna_with_csv_source(self, mock_enrich, mock_vibe):
         """Uploading a StoryGraph CSV produces DNA with csv_source='storygraph'."""
@@ -95,7 +95,7 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         self.assertEqual(dna["csv_source"], "storygraph")
         self.assertEqual(dna["user_stats"]["total_books_read"], 2)
 
-    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_storygraph_tags_apply_canonical_genres_pre_enrichment(self, mock_enrich, mock_vibe):
         """Tags like 'sci-fi' produce canonical genres on Books before enrichment runs."""
@@ -114,7 +114,7 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         self.assertIn("fantasy", set(fantasy.genres.values_list("name", flat=True)))
         self.assertIn("dystopian", set(dystopian.genres.values_list("name", flat=True)))
 
-    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_storygraph_mood_distribution_in_dna(self, mock_enrich, mock_vibe):
         """Mood column populates dna['mood_distribution'] with correct counts."""
@@ -131,7 +131,7 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         self.assertEqual(moods["adventurous"], 1)
         self.assertEqual(moods["lighthearted"], 1)
 
-    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_storygraph_pace_distribution_in_dna(self, mock_enrich, mock_vibe):
         """Pace column populates dna['pace_distribution'] with correct counts."""
@@ -148,7 +148,7 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         self.assertEqual(pace["fast"], 1)
         self.assertEqual(pace["medium"], 1)
 
-    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_storygraph_read_count_drives_comfort_rereader(self, mock_enrich, mock_vibe):
         """Read Count > 1 contributes 3 points per reread to Comfort Rereader."""
@@ -325,7 +325,7 @@ class UploadNonceTests(TransactionTestCase):
         connections.close_all()
         super().tearDown()
 
-    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_upload_sets_nonce_in_cache(self, mock_enrich, mock_vibe):
         """Upload writes upload_nonce_{user_id} to cache."""
@@ -344,7 +344,7 @@ class UploadNonceTests(TransactionTestCase):
         # nonce must be a uuid4 string
         self.assertEqual(len(nonce), 36)  # uuid4 hex is 36 chars including dashes
 
-    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_reupload_replaces_nonce(self, mock_enrich, mock_vibe):
         """Re-uploading replaces the cached nonce so old enrichment tasks exit early."""
@@ -410,7 +410,7 @@ class ConcurrentUploadRevokeTests(TransactionTestCase):
         return self.client.post(reverse("core:upload"), {"csv_file": csv_file})
 
     @patch("core.views.upload.AsyncResult")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_upload_revokes_prior_pending_task(self, mock_enrich, mock_vibe, mock_async_result):
         """If a prior DNA task is still pending, the new upload revokes it."""
@@ -427,7 +427,7 @@ class ConcurrentUploadRevokeTests(TransactionTestCase):
         prior_result.revoke.assert_called_once_with(terminate=True, signal="SIGTERM")
 
     @patch("core.views.upload.AsyncResult")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_upload_does_not_revoke_completed_task(self, mock_enrich, mock_vibe, mock_async_result):
         """If the prior task has already finished, no revoke is attempted."""
@@ -443,7 +443,7 @@ class ConcurrentUploadRevokeTests(TransactionTestCase):
         prior_result.revoke.assert_not_called()
 
     @patch("core.views.upload.AsyncResult")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_upload_succeeds_when_revoke_raises(self, mock_enrich, mock_vibe, mock_async_result):
         """A failure to revoke the prior task must not block the new upload."""
@@ -463,7 +463,7 @@ class ConcurrentUploadRevokeTests(TransactionTestCase):
         self.assertIsNotNone(self.user.userprofile.pending_dna_task_id)
         self.assertNotEqual(self.user.userprofile.pending_dna_task_id, prior_id)
 
-    @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_reupload_clears_stale_userbooks(self, mock_enrich, mock_vibe):
         """Books from a prior upload that aren't in the new CSV are removed (handhles

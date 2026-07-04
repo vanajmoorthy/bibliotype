@@ -1652,3 +1652,84 @@
   `logger` binding moved out with their consumers.
 - `assertLogs("core.views", ...)` assertions still pass because submodule
   loggers (core.views.upload etc.) propagate to the core.views parent logger.
+
+## 2026-07-04 16:50 — US-050
+- git mv core/services/dna_analyser.py -> core/services/dna/__init__.py
+  (pure move commit), then fixed the package's relative imports one level
+  deeper (..dna_constants/..models/..percentile_engine/..cache_utils/..tasks
+  -> ...; ..services.top_books_service -> ..top_books_service), including
+  all lazy in-function imports.
+- Added deprecated shim core/services/dna_analyser.py (star-import +
+  explicit underscore-name re-exports; remove after 2026-08-03).
+- Extracted core/services/dna/utils.py: _isbn_to_isbn13, _build_cover_url
+  (= cover_url_from_isbn alias), _cover_initial, _sanitize_review_text +
+  _HTML_TAG_RE / _ARTICLE_PREFIXES. __init__ re-imports them.
+- Re-pointed all 39 patch("core.services.dna_analyser.generate_vibe_with_llm")
+  targets to core.services.dna.generate_vibe_with_llm (name is looked up in
+  the dna package, so patching the shim would no longer intercept it).
+- manage.py check clean; test_sanitize_review + test_currently_reading +
+  test_math_accuracy (72 tests) OK; re-pointed patcher modules
+  (views_e2e, tasks_integration, storygraph_integration, subtitle_data,
+  82 tests) OK.
+
+## 2026-07-04 16:57 — US-051
+- Extracted core/services/dna/csv_parser.py: _detect_and_normalize_csv +
+  STORYGRAPH_TO_GOODREADS (verbatim; imports _isbn_to_isbn13 from .utils).
+- Moved STORYGRAPH_TAG_TO_GENRE into core/dna_constants.py (genre-mapping
+  home per US intent); dna/__init__ imports it from ...dna_constants where
+  process_book_row uses it, and still exposes it for the shim's star-import.
+  No management command references it (grepped core/management).
+- __init__ re-exports _detect_and_normalize_csv / STORYGRAPH_TO_GOODREADS
+  from .csv_parser; dropped now-unused `math` import.
+- manage.py check clean; test_storygraph_integration + test_tasks_unit +
+  test_math_accuracy (79 tests) OK.
+
+## 2026-07-04 17:00 — US-052
+- Interpretation: process_book_row is a CLOSURE inside calculate_full_dna —
+  it captures isbn_book_map (per-upload ISBN prefetch), upload_user_id,
+  upload_nonce, and csv_source from the enclosing scope, and the
+  ThreadPoolExecutor orchestration lives inline in the same
+  `with requests.Session()` block. There are no standalone book-sync
+  helpers to move (the only candidates, _isbn_to_isbn13 etc., already went
+  to dna/utils.py in US-050). Hoisting the closure to a top-level
+  book_sync.py would require threading 4+ captured variables through a new
+  signature — a behavior-risk restructure explicitly out of scope for this
+  mechanical split — so no core/services/dna/book_sync.py was created.
+- manage.py check clean; test_tasks_integration (7 tests) OK.
+
+## 2026-07-04 17:04 — US-053
+- Moved assign_reader_type verbatim into core/services/dna/reader_type.py.
+  Promoted its magic diversity numbers to module constants:
+  DIVERSITY_THRESHOLD = 10, DIVERSITY_BONUS = 15 (previously function-local).
+- dna/__init__ re-exports assign_reader_type from .reader_type; no patchers
+  target it (only direct imports via the shim, unchanged until US-055).
+- manage.py check clean; test_math_accuracy + test_tasks_unit (59 tests) OK.
+
+## 2026-07-04 17:09 — US-054
+- Moved _save_dna_to_profile + save_anonymous_session_data verbatim into
+  core/services/dna/persistence.py. Kept the lazy in-function imports
+  (...cache_utils, ...tasks.generate_recommendations_task — annotated the
+  circular-import reason; datetime/timezone/AnonymousUserSession) exactly
+  as before; the lazy tasks import exists in only one place, nothing to
+  consolidate.
+- __init__ re-exports both from .persistence; header import of
+  MIN_REVIEW_LENGTH_FOR_SENTIMENT / compute_book_score moved with the code
+  (calculate_and_store_top_books stays — used by calculate_full_dna).
+- core/tasks.py continues importing _save_dna_to_profile via the shim
+  (same function object) until US-055; no patchers target these names.
+- manage.py check clean; test_views_e2e + test_tasks_integration +
+  test_profile_and_recommendations (43 tests) OK.
+
+## 2026-07-04 17:16 — US-055
+- Deleted the core/services/dna_analyser.py shim. Updated every remaining
+  importer to core.services.dna: core/tasks.py plus test direct imports in
+  test_cache_refactor, test_currently_reading, test_math_accuracy,
+  test_profile_and_recommendations, test_sanitize_review, test_tasks_unit,
+  test_views_e2e. All patch targets already pointed at
+  core.services.dna.generate_vibe_with_llm since US-050. Also refreshed
+  stale "dna_analyser" comment references in test files; zero grep hits
+  for dna_analyser remain.
+- dna/__init__.py now carries a package docstring + submodule re-export
+  imports (views/__init__ pattern) + calculate_full_dna, which stays here
+  as the orchestrator per the story. Dropped the long-unused `time` import.
+- manage.py check clean; FULL suite: Ran 398 tests — OK.
