@@ -17,7 +17,7 @@ from core.dna_constants import (
     NONFICTION_GENRES,
     READER_TYPE_DESCRIPTIONS,
 )
-from core.services.dna_analyser import (
+from core.services.dna import (
     STORYGRAPH_TAG_TO_GENRE,
     _detect_and_normalize_csv,
     _isbn_to_isbn13,
@@ -492,7 +492,7 @@ class IsbnNormalizationTests(TestCase):
         from django.contrib.auth.models import User
 
         from core.models import Book
-        from core.services.dna_analyser import calculate_full_dna
+        from core.services.dna import calculate_full_dna
 
         user = User.objects.create_user(username="isbn_dedup_user", password="x")
 

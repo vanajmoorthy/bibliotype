@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from core.services.dna_analyser import _sanitize_review_text
+from core.services.dna import _sanitize_review_text
 
 
 class SanitizeReviewTextTests(TestCase):

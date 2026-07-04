@@ -932,7 +932,7 @@
         "No file `core/services/dna_analyser.py` remains. (Or, if the shim is needed for one more deploy, document in `progress.txt` with a removal date.)",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 64
     },

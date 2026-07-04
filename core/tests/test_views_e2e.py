@@ -297,7 +297,7 @@ class ViewE2E_Tests(TransactionTestCase):
             "vibe_data_hash": "newhash",
         }
 
-        from core.services.dna_analyser import _save_dna_to_profile
+        from core.services.dna import _save_dna_to_profile
 
         _save_dna_to_profile(user.userprofile, new_dna_data)
 
@@ -337,7 +337,7 @@ class ViewE2E_Tests(TransactionTestCase):
             "vibe_data_hash": "testhash",
         }
 
-        from core.services.dna_analyser import _save_dna_to_profile
+        from core.services.dna import _save_dna_to_profile
 
         _save_dna_to_profile(user.userprofile, dna_data)
 

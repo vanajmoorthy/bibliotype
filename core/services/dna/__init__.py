@@ -1,7 +1,12 @@
+"""DNA package: submodule helpers re-exported here for stable `core.services.dna.*` import paths.
+
+`calculate_full_dna` (the orchestrator) lives in this module; CSV normalization, reader-type
+scoring, persistence, and small utilities live in the sibling submodules.
+"""
+
 import hashlib
 import logging
 import random
-import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO

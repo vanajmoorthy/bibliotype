@@ -261,7 +261,7 @@ class TaskIntegrationTests(TransactionTestCase):
         )
 
         # Niche-book stats must remain correct — global_read_count is read
-        # from the python instance in `dna_analyser` after the F-update, so
+        # from the python instance in `core.services.dna` after the F-update, so
         # `refresh_from_db` is load-bearing for this assertion.
         user.userprofile.refresh_from_db()
         self.assertIsNotNone(user.userprofile.dna_data)

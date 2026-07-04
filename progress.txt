@@ -1719,3 +1719,17 @@
   (same function object) until US-055; no patchers target these names.
 - manage.py check clean; test_views_e2e + test_tasks_integration +
   test_profile_and_recommendations (43 tests) OK.
+
+## 2026-07-04 17:16 — US-055
+- Deleted the core/services/dna_analyser.py shim. Updated every remaining
+  importer to core.services.dna: core/tasks.py plus test direct imports in
+  test_cache_refactor, test_currently_reading, test_math_accuracy,
+  test_profile_and_recommendations, test_sanitize_review, test_tasks_unit,
+  test_views_e2e. All patch targets already pointed at
+  core.services.dna.generate_vibe_with_llm since US-050. Also refreshed
+  stale "dna_analyser" comment references in test files; zero grep hits
+  for dna_analyser remain.
+- dna/__init__.py now carries a package docstring + submodule re-export
+  imports (views/__init__ pattern) + calculate_full_dna, which stays here
+  as the orchestrator per the story. Dropped the long-unused `time` import.
+- manage.py check clean; FULL suite: Ran 398 tests — OK.

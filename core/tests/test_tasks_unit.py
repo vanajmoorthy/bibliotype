@@ -5,7 +5,7 @@ import pandas as pd
 from django.test import TestCase
 
 from core.models import Book, UserProfile
-from core.services.dna_analyser import (
+from core.services.dna import (
     STORYGRAPH_TAG_TO_GENRE,
     _detect_and_normalize_csv,
     _save_dna_to_profile,
@@ -277,7 +277,7 @@ class MoodPaceDistributionTests(TestCase):
         df = pd.read_csv(StringIO(csv_text))
         result_df, _ = _detect_and_normalize_csv(df)
 
-        # Simulate the mood distribution logic from dna_analyser.py
+        # Simulate the mood distribution logic from core.services.dna
         all_moods = []
         for moods_str in result_df["Moods"].dropna():
             all_moods.extend([m.strip().lower() for m in str(moods_str).split(",") if m.strip()])

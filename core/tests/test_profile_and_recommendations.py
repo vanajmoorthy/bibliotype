@@ -278,7 +278,7 @@ class RecommendationsTestCase(TestCase):
         so a dashboard poll that just dispatched can't be double-dispatched."""
         from django.core.cache import cache
 
-        from core.services.dna_analyser import _save_dna_to_profile
+        from core.services.dna import _save_dna_to_profile
 
         cache.clear()
         dna = {

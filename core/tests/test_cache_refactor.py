@@ -225,7 +225,7 @@ class SaveDnaInvalidationTests(TestCase):
         cache.set(f"similar_users_{self.user.id}", [("fake", "data")], 1800)
         self.assertIsNotNone(cache.get(f"similar_users_{self.user.id}"))
 
-        from core.services.dna_analyser import _save_dna_to_profile
+        from core.services.dna import _save_dna_to_profile
 
         dna = {"reader_type": "Test", "user_stats": {}, "reading_vibe": [], "vibe_data_hash": "h"}
         _save_dna_to_profile(self.user.userprofile, dna)
@@ -241,7 +241,7 @@ class SaveDnaInvalidationTests(TestCase):
         cache.set(f"user_recommendations_{self.user.id}", [{"fake": "rec"}], 900)
         self.assertIsNotNone(cache.get(f"user_recommendations_{self.user.id}"))
 
-        from core.services.dna_analyser import _save_dna_to_profile
+        from core.services.dna import _save_dna_to_profile
 
         dna = {"reader_type": "Test", "user_stats": {}, "reading_vibe": [], "vibe_data_hash": "h"}
         _save_dna_to_profile(self.user.userprofile, dna)
@@ -251,7 +251,7 @@ class SaveDnaInvalidationTests(TestCase):
 
     @patch("core.tasks.generate_recommendations_task")
     def test_save_dna_triggers_recommendation_generation(self, mock_rec_task):
-        from core.services.dna_analyser import _save_dna_to_profile
+        from core.services.dna import _save_dna_to_profile
 
         dna = {"reader_type": "Test", "user_stats": {}, "reading_vibe": [], "vibe_data_hash": "h"}
         _save_dna_to_profile(self.user.userprofile, dna)

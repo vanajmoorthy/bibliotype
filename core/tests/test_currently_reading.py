@@ -5,7 +5,7 @@ from django.core.cache import cache
 from django.test import TestCase, TransactionTestCase, override_settings
 
 from core.models import Author, Book, Genre
-from core.services.dna_analyser import _build_cover_url
+from core.services.dna import _build_cover_url
 
 
 class BuildCoverUrlTests(TestCase):
