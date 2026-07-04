@@ -20,6 +20,7 @@ Hard 2px borders, heavy offset shadows, bright saturated colors, VT323 retro mon
 **Shadows:**
 - `shadow-neo`: `4px 4px 0px 0px var(--color-brand-text)` (standard)
 - `shadow-neo-sm`: `2px 2px 0px 0px var(--color-brand-text)` (small)
+- `shadow-neo-lg`: `6px 6px 0px 0px var(--color-brand-text)` (hover lift)
 
 **Font:** `--font-sans: "VT323", ui-sans-serif, system-ui, sans-serif`
 
@@ -33,11 +34,14 @@ Hard 2px borders, heavy offset shadows, bright saturated colors, VT323 retro mon
 **Button (all buttons follow this):**
 ```html
 <button class="bg-brand-green shadow-neo border-brand-text border-2 px-4 py-3 font-bold
-    transition-all duration-150 ease-in-out hover:shadow-none
-    active:translate-x-1 active:translate-y-1 cursor-pointer">
+    transition-all duration-150 ease-in-out
+    hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-neo-lg
+    active:translate-x-1 active:translate-y-1 active:shadow-none cursor-pointer">
 ```
-- Hover removes shadow (pressed effect)
-- Active translates 0.5-1px (tactile feedback)
+- The shadow's outer edge is the button's fixed "contact point with the page" — it must never move
+- Hover lifts the button face (−2px translate, shadow grows `neo` → `neo-lg`)
+- Active presses it flat: translate by exactly the shadow offset while the shadow shrinks to none
+- Offsets must match the shadow size: `shadow-neo` (4px) pairs with `active:translate-*-1` and `hover:shadow-neo-lg`; `shadow-neo-sm` (2px) pairs with `active:translate-*-0.5` and `hover:shadow-neo`
 
 **Button partials** in `templates/core/partials/buttons/`: `primary_button`, `secondary_button` (multi-color/size), `nav_button`, `small_button`, `small_link_button`, `link_button`, `close_button`, `icon_button`. Include with context vars like `text`, `color`, `size`, `hover_color`.
 
