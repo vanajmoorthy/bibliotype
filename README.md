@@ -28,15 +28,16 @@ ongoing
 todo  
 - add see password button, forgot password link too close to input
 - fix button hover animation 
-- adjust reader type calculations, different colour for diff types? pixel square background for banner? animated?
+- adjust reader type calculations,
+    -  different colour for diff types? pixel square background for banner? animated? 🙅 (not done)
 - (double check but probably fine) check that when a user generates dna, the book covers get set and load. right now they only appear after refreshing.
 - (need to link methodology pages or something) update the sources for comparative analytics
-- improve ai generated vibe. add llm metrics with posthog
+- improve ai generated vibe. add llm metrics with posthog 🙅 (not done)
 - save llm vibe against the dna dictionary, cache this for a month and only refetch if dictionary has changed
     - user a uploads a csv, vibe generated
     - user b uploads the same csv, we want to reuse this same vibe instead of hitting gemini again
     - so need to keep a mapping of dictionary hashes to llm vibes and reuse llm vibe when same dictionary is presented again
-    - this would prevent several llm vibes being generated during testing
+    - this would prevent several llm vibes being generated during testing 🙅 (not done)
 
 
 - allow user to delete profile - settings panel maybe? put make private there too, and opt out of recs, display name can also be there, email update as well? and change password functionality might as well
@@ -44,9 +45,9 @@ todo
     - allow users to opt out of recommendations
 - how similar are you/similarity percentage for 2 or more people
   - add page for this
-  - allow similarity comparison with multiple users (only public)
+  - allow similarity comparison with multiple users (only public) 🙅 (not done)
 - ~sign up form validate password and all on blur (done)~
-- long author names and genre names cutting of count when hovering on chart
+- long author names and genre names cutting of count when hovering on chart 🙅 (not done)
 
 ##  Getting Started (Docker & Poetry)
 
