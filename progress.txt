@@ -1577,3 +1577,16 @@
   test_storygraph_integration. Comment path references in dna_constants.py
   and settings.py updated too.
 - `manage.py check` clean; 91/91 tests across the three affected modules.
+
+## 2026-07-04 16:25 — US-044b
+- Extracted _compute_enrichment_stats / _recalculate_enrichment_stats /
+  _compute_enrichment_progress / _enrich_dna_for_display / _expand_book_dict
+  plus ENRICHMENT_STATS_CACHE_TTL and BADGE_COLOR_MAP into core/views/_helpers.py
+  (verbatim move; lazy `from ..models import ...` imports unchanged — `..` still
+  resolves to `core` from the new submodule).
+- __init__.py re-imports all seven names at the bottom, so existing
+  `from core.views import _enrich_dna_for_display` test imports and
+  tasks.py's `from .views import BADGE_COLOR_MAP` keep working.
+- No `patch("core.views.<helper>")` targets exist in the suite yet, so no test
+  edits were needed for this story. Also flipped US-044's `passes` (the package
+  conversion landed earlier but its flag was never set).
