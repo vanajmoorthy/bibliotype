@@ -409,7 +409,7 @@ class ConcurrentUploadRevokeTests(TransactionTestCase):
         csv_file = SimpleUploadedFile("g.csv", csv_content, content_type="text/csv")
         return self.client.post(reverse("core:upload"), {"csv_file": csv_file})
 
-    @patch("core.views.AsyncResult")
+    @patch("core.views.upload.AsyncResult")
     @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_upload_revokes_prior_pending_task(self, mock_enrich, mock_vibe, mock_async_result):
@@ -426,7 +426,7 @@ class ConcurrentUploadRevokeTests(TransactionTestCase):
         mock_async_result.assert_any_call(prior_id)
         prior_result.revoke.assert_called_once_with(terminate=True, signal="SIGTERM")
 
-    @patch("core.views.AsyncResult")
+    @patch("core.views.upload.AsyncResult")
     @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_upload_does_not_revoke_completed_task(self, mock_enrich, mock_vibe, mock_async_result):
@@ -442,7 +442,7 @@ class ConcurrentUploadRevokeTests(TransactionTestCase):
 
         prior_result.revoke.assert_not_called()
 
-    @patch("core.views.AsyncResult")
+    @patch("core.views.upload.AsyncResult")
     @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_upload_succeeds_when_revoke_raises(self, mock_enrich, mock_vibe, mock_async_result):

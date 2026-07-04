@@ -811,7 +811,7 @@
         "`python manage.py check` passes; URL count check matches.",
         "`manage.py test core.tests.test_views_e2e core.tests.test_tasks_integration` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 55
     },

@@ -1607,3 +1607,15 @@
   resolve via the __init__ re-export — no edits needed there.
 - 44 tests green (test_views_e2e + test_password_reset + test_login_ratelimit);
   no patch targets referenced the moved names.
+
+## 2026-07-04 16:50 — US-047
+- Moved upload_view (kept @require_POST), task_status_view, get_task_result_view,
+  check_dna_status_view, enrichment_status_view, check_recommendations_status_view
+  into core/views/upload.py, plus MAX_UPLOAD_SIZE_BYTES/ROWS/COLUMNS (re-exported
+  from __init__ because test_views_e2e does `from core.views import MAX_UPLOAD_ROWS`).
+- enrichment_status_view now imports _compute_enrichment_progress from ._helpers.
+- Patch-target updates (looked-up-in module rule): `core.views.AsyncResult` →
+  `core.views.upload.AsyncResult` (test_views_e2e:407 + 3 sites in
+  test_storygraph_integration), `core.views.generate_reading_dna_task` →
+  `core.views.upload.generate_reading_dna_task` (5 sites in test_views_e2e).
+- 28 tests (views_e2e + tasks_integration) + 20 (storygraph) green.

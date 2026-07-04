@@ -404,7 +404,7 @@ class ViewE2E_Tests(TransactionTestCase):
         mock_result.state = "FAILURE"
         mock_result.info = Exception("Something went wrong")
 
-        with patch("core.views.AsyncResult", return_value=mock_result):
+        with patch("core.views.upload.AsyncResult", return_value=mock_result):
             response = self.client.get(reverse("core:api_check_dna_status"))
 
         data = response.json()
@@ -617,7 +617,7 @@ class UploadValidationTests(TransactionTestCase):
     def _make_csv(name, content_bytes):
         return SimpleUploadedFile(name, content_bytes, content_type="text/csv")
 
-    @patch("core.views.generate_reading_dna_task")
+    @patch("core.views.upload.generate_reading_dna_task")
     def test_oversize_row_count_is_truncated_not_rejected(self, mock_task):
         """50_001-row CSV is accepted; csv_content passed to the task has at
         most MAX_UPLOAD_ROWS data rows (header + 50000 = 50001 lines)."""
@@ -643,7 +643,7 @@ class UploadValidationTests(TransactionTestCase):
         sent_data_rows = sent_csv.strip().split("\n")[1:]  # drop header
         self.assertLessEqual(len(sent_data_rows), MAX_UPLOAD_ROWS)
 
-    @patch("core.views.generate_reading_dna_task")
+    @patch("core.views.upload.generate_reading_dna_task")
     def test_too_many_columns_is_rejected(self, mock_task):
         """101-column CSV is rejected outright; no task is dispatched."""
         from core.views import MAX_UPLOAD_COLUMNS
@@ -659,7 +659,7 @@ class UploadValidationTests(TransactionTestCase):
         self.assertContains(response, "too many columns")
         mock_task.delay.assert_not_called()
 
-    @patch("core.views.generate_reading_dna_task")
+    @patch("core.views.upload.generate_reading_dna_task")
     def test_missing_schema_columns_is_rejected(self, mock_task):
         """A CSV without Title + Author/Authors is rejected with the schema error."""
         bad = b"FooBar,Baz\n1,2\n3,4\n"
@@ -671,7 +671,7 @@ class UploadValidationTests(TransactionTestCase):
         self.assertContains(response, "does not look like a Goodreads or StoryGraph export")
         mock_task.delay.assert_not_called()
 
-    @patch("core.views.generate_reading_dna_task")
+    @patch("core.views.upload.generate_reading_dna_task")
     def test_valid_goodreads_csv_still_uploads(self, mock_task):
         """Positive control: a Goodreads-shaped CSV passes validation and the
         task is dispatched with the original csv_content."""
@@ -688,7 +688,7 @@ class UploadValidationTests(TransactionTestCase):
         self.assertEqual(response.status_code, 302)
         mock_task.delay.assert_called_once()
 
-    @patch("core.views.generate_reading_dna_task")
+    @patch("core.views.upload.generate_reading_dna_task")
     def test_valid_storygraph_csv_still_uploads(self, mock_task):
         """Positive control: a StoryGraph-shaped CSV (Authors, plural) passes
         validation. Schema check accepts either Goodreads or StoryGraph
