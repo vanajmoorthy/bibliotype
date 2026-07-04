@@ -302,7 +302,7 @@ def _save_dna_to_profile(profile, dna_data):
         logger.info(f"Dispatched recommendations task for user {profile.user.username}")
 
     except Exception as e:
-        logger.error(f"Error saving profile for user {profile.user.username}: {e}")
+        logger.error(f"Error saving profile for user {profile.user.username}: {e}", exc_info=True)
         raise
 
 

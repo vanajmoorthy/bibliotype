@@ -1540,3 +1540,16 @@
   semantics, not ranking weights — left in place deliberately.
 - Tests: test_views_e2e + test_tasks_integration + test_profile_and_
   recommendations + test_cache_refactor — 75/75 pass.
+
+## 2026-07-04 16:15 — US-042
+- `core/tasks.py`: all five `logger.error` calls inside `except <Model>.DoesNotExist`
+  handlers downgraded to `logger.warning` (author-status, enrich-book, claim-task,
+  run-task, recommendations). `logger.error` inside `except Exception` untouched.
+- `exc_info=True` added: dna_analyser `_save_dna_to_profile` except block, and
+  `anonymize_expired_sessions` loop in anonymization_service.
+- `llm_service.py` already had `exc_info=True` on both its except blocks (the
+  PRD's third site was fixed at some point earlier) — no change needed.
+- Noted for later: `anonymization_service.py:54` logs `session.session_key`
+  raw. Keys there are already expired, but the project pattern is to log
+  sha256-truncated hashes — candidate for the infra/hygiene PR.
+- Tests: test_tasks_integration 8/8 OK; module imports verified via shell.

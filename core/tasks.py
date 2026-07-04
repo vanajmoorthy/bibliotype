@@ -63,7 +63,7 @@ def check_author_mainstream_status_task(author_id: int, user_id: int = None, upl
                 author.save()
 
     except Author.DoesNotExist:
-        logger.error(f"Author Status Task Error: Author with ID {author_id} not found")
+        logger.warning(f"Author Status Task Error: Author with ID {author_id} not found")
     except Exception as e:
         logger.error(
             f"Critical error in check_author_mainstream_status_task for author_id {author_id}: {e}", exc_info=True
@@ -95,7 +95,7 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
     try:
         book = Book.objects.get(pk=book_id)
     except Book.DoesNotExist:
-        logger.error(f"Enrich task: Book with ID {book_id} not found")
+        logger.warning(f"Enrich task: Book with ID {book_id} not found")
         return
 
     # Re-check after the DB fetch. Tasks can sit in the queue for a while; the
@@ -162,7 +162,7 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str)
     try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
-        logger.error(f"User with id {user_id} not found. Cannot claim task")
+        logger.warning(f"User with id {user_id} not found. Cannot claim task")
         return
 
     def _hash_key(k):
@@ -323,7 +323,7 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
         if user_id is not None:
             user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
-        logger.error(f"Could not run task. User with id {user_id} not found")
+        logger.warning(f"Could not run task. User with id {user_id} not found")
         # Track failure
         track_dna_generation_failed(
             task_id=task_id,
@@ -622,7 +622,7 @@ def generate_recommendations_task(self, user_id: int):
         return len(processed_recs)
 
     except User.DoesNotExist:
-        logger.error(f"User with id {user_id} not found for recommendations generation")
+        logger.warning(f"User with id {user_id} not found for recommendations generation")
         return None
     except Exception as e:
         logger.error(f"Error generating recommendations for user {user_id}: {e}", exc_info=True)

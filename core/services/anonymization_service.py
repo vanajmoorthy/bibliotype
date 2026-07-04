@@ -51,7 +51,7 @@ def batch_anonymize_expired_sessions():
             if anonymize_session(session):
                 anonymized_count += 1
         except Exception as e:
-            logger.error(f"Error anonymizing session {session.session_key}: {e}")
+            logger.error(f"Error anonymizing session {session.session_key}: {e}", exc_info=True)
 
     # Clean up old anonymized sessions (keep for 30 days after anonymization)
     cleanup_date = timezone.now() - timezone.timedelta(days=30)

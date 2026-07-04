@@ -724,7 +724,7 @@
         "Add `exc_info=True` to the three sites listed above. Verify with `grep -B1 -A1 \"exc_info\" core/services/dna_analyser.py core/services/anonymization_service.py core/services/llm_service.py`.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 49
     },
