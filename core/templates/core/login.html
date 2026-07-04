@@ -22,34 +22,47 @@ and book recommendations.{% endblock %}
                             {% endfor %}
                         </div>
                     {% endif %}
-                    {% for field in form %}
-                        <div>
-                            <label for="{{ field.id_for_label }}" class="mb-1 block text-xl font-bold uppercase">
-                                {% if field.name == 'username' %}
-                                    Email
-                                {% else %}
-                                    {{ field.label }}
-                                {% endif %}
-                            </label>
+                    <div>
+                        <label for="{{ form.username.id_for_label }}" class="mb-1 block text-xl font-bold uppercase">
+                            Email
+                        </label>
+                        <input
+                            type="text"
+                            name="{{ form.username.name }}"
+                            id="{{ form.username.id_for_label }}"
+                            class="border-brand-text focus:ring-brand-purple w-full border-2 bg-white p-3 text-lg focus:ring-2 focus:outline-none"
+                            placeholder="Email..."
+                        />
+                        {% for error in form.username.errors %}
+                            <p class="mt-2 text-lg font-bold text-red-600 uppercase">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    <div x-data="{ showPassword: false }">
+                        <label for="{{ form.password.id_for_label }}" class="mb-1 block text-xl font-bold uppercase">
+                            {{ form.password.label }}
+                        </label>
+                        <div class="relative">
                             <input
-                                type="{{ field.field.widget.input_type }}"
-                                name="{{ field.name }}"
-                                id="{{ field.id_for_label }}"
-                                class="border-brand-text focus:ring-brand-purple w-full border-2 bg-white p-3 text-lg focus:ring-2 focus:outline-none"
-                                placeholder="{{ field.label }}..."
+                                type="password"
+                                :type="showPassword ? 'text' : 'password'"
+                                name="{{ form.password.name }}"
+                                id="{{ form.password.id_for_label }}"
+                                class="border-brand-text focus:ring-brand-purple w-full border-2 bg-white p-3 pr-14 text-lg focus:ring-2 focus:outline-none"
+                                placeholder="{{ form.password.label }}..."
                             />
-                            {% for error in field.errors %}
-                                <p class="mt-2 text-lg font-bold text-red-600 uppercase">{{ error }}</p>
-                            {% endfor %}
+                            {% include 'core/partials/password_toggle.html' with toggle_var="showPassword" %}
                         </div>
-                    {% endfor %}
-                    <div class="mt-1 text-right">
-                        <a
-                            href="{% url 'password_reset' %}"
-                            class="hover:bg-brand-yellow text-base font-bold uppercase underline"
-                        >
-                            Forgot Password?
-                        </a>
+                        {% for error in form.password.errors %}
+                            <p class="mt-2 text-lg font-bold text-red-600 uppercase">{{ error }}</p>
+                        {% endfor %}
+                        <div class="mt-3 text-right">
+                            <a
+                                href="{% url 'password_reset' %}"
+                                class="hover:bg-brand-yellow text-base font-bold uppercase underline"
+                            >
+                                Forgot Password?
+                            </a>
+                        </div>
                     </div>
                     {% include 'core/partials/buttons/primary_button.html' with text="Log In" %}
                 </form>
