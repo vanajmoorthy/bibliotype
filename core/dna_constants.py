@@ -1532,7 +1532,7 @@ GLOBAL_AVERAGES = {
 
 # Priority ordering for genre selection in book enrichment: most specific first,
 # generic/classics last. Genres absent from this list sort to the end.
-# Used by core/book_enrichment_service.py to pick the top-N genres for a book
+# Used by core/services/book_enrichment_service.py to pick the top-N genres for a book
 # after merging Open Library and Google Books canonical genre sets.
 GENRE_PRIORITY = [
     # Fiction genres (most specific to generic)

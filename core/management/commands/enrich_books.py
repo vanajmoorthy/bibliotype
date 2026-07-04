@@ -4,7 +4,7 @@ import requests
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 
-from core.book_enrichment_service import enrich_book_from_apis
+from core.services.book_enrichment_service import enrich_book_from_apis
 from core.models import Book
 from core.tasks import enrich_book_task
 

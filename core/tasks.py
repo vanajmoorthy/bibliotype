@@ -108,7 +108,7 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
     logger.info(f"Enriching book '{book.title}' (id={book_id}) via background task")
 
     try:
-        from .book_enrichment_service import enrich_book_from_apis
+        from .services.book_enrichment_service import enrich_book_from_apis
 
         with requests.Session() as session:
             session.headers.update({"User-Agent": "BibliotypeApp/1.0"})

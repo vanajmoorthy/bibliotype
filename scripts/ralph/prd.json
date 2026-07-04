@@ -738,7 +738,7 @@
         "`manage.py test` passes.",
         "`progress.txt`: now all services live under `core/services/`."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 50
     },

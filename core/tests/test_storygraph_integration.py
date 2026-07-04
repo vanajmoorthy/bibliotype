@@ -81,7 +81,7 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         return self.client.post(reverse("core:upload"), {"csv_file": csv_file})
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_storygraph_csv_creates_dna_with_csv_source(self, mock_enrich, mock_vibe):
         """Uploading a StoryGraph CSV produces DNA with csv_source='storygraph'."""
         self._upload([
@@ -96,7 +96,7 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         self.assertEqual(dna["user_stats"]["total_books_read"], 2)
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_storygraph_tags_apply_canonical_genres_pre_enrichment(self, mock_enrich, mock_vibe):
         """Tags like 'sci-fi' produce canonical genres on Books before enrichment runs."""
         self._upload([
@@ -115,7 +115,7 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         self.assertIn("dystopian", set(dystopian.genres.values_list("name", flat=True)))
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_storygraph_mood_distribution_in_dna(self, mock_enrich, mock_vibe):
         """Mood column populates dna['mood_distribution'] with correct counts."""
         self._upload([
@@ -132,7 +132,7 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         self.assertEqual(moods["lighthearted"], 1)
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_storygraph_pace_distribution_in_dna(self, mock_enrich, mock_vibe):
         """Pace column populates dna['pace_distribution'] with correct counts."""
         self._upload([
@@ -149,7 +149,7 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         self.assertEqual(pace["medium"], 1)
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_storygraph_read_count_drives_comfort_rereader(self, mock_enrich, mock_vibe):
         """Read Count > 1 contributes 3 points per reread to Comfort Rereader."""
         self._upload([
@@ -326,7 +326,7 @@ class UploadNonceTests(TransactionTestCase):
         super().tearDown()
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_upload_sets_nonce_in_cache(self, mock_enrich, mock_vibe):
         """Upload writes upload_nonce_{user_id} to cache."""
         from core.cache_utils import safe_cache_get
@@ -345,7 +345,7 @@ class UploadNonceTests(TransactionTestCase):
         self.assertEqual(len(nonce), 36)  # uuid4 hex is 36 chars including dashes
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_reupload_replaces_nonce(self, mock_enrich, mock_vibe):
         """Re-uploading replaces the cached nonce so old enrichment tasks exit early."""
         from core.cache_utils import safe_cache_get
@@ -411,7 +411,7 @@ class ConcurrentUploadRevokeTests(TransactionTestCase):
 
     @patch("core.views.AsyncResult")
     @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_upload_revokes_prior_pending_task(self, mock_enrich, mock_vibe, mock_async_result):
         """If a prior DNA task is still pending, the new upload revokes it."""
         prior_id = "prior-task-id-123"
@@ -428,7 +428,7 @@ class ConcurrentUploadRevokeTests(TransactionTestCase):
 
     @patch("core.views.AsyncResult")
     @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_upload_does_not_revoke_completed_task(self, mock_enrich, mock_vibe, mock_async_result):
         """If the prior task has already finished, no revoke is attempted."""
         prior_id = "prior-task-id-456"
@@ -444,7 +444,7 @@ class ConcurrentUploadRevokeTests(TransactionTestCase):
 
     @patch("core.views.AsyncResult")
     @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_upload_succeeds_when_revoke_raises(self, mock_enrich, mock_vibe, mock_async_result):
         """A failure to revoke the prior task must not block the new upload."""
         prior_id = "prior-task-id-789"
@@ -464,7 +464,7 @@ class ConcurrentUploadRevokeTests(TransactionTestCase):
         self.assertNotEqual(self.user.userprofile.pending_dna_task_id, prior_id)
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_reupload_clears_stale_userbooks(self, mock_enrich, mock_vibe):
         """Books from a prior upload that aren't in the new CSV are removed (handhles
         orphans from a revoked task — calculate_full_dna deletes UserBooks not in the
