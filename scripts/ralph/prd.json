@@ -782,7 +782,7 @@
         "`python manage.py check` passes; `python -c 'from bibliotype.urls import urlpatterns; print(len(urlpatterns))'` matches the pre-change count.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 53
     },

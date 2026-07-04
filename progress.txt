@@ -1590,3 +1590,10 @@
 - No `patch("core.views.<helper>")` targets exist in the suite yet, so no test
   edits were needed for this story. Also flipped US-044's `passes` (the package
   conversion landed earlier but its flag was never set).
+
+## 2026-07-04 16:30 — US-045
+- Moved robots_txt_view + sitemap_xml_view verbatim into core/views/seo.py;
+  __init__.py re-exports them so core/urls.py's `views.robots_txt_view` /
+  `views.sitemap_xml_view` references keep resolving.
+- No test module covers these views directly (grep for robots/sitemap in
+  core/tests/ is empty), so verification = manage.py check + URL counts.
