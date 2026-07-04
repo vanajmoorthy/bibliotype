@@ -38,7 +38,11 @@ from ..percentile_engine import (
     calculate_percentiles_from_aggregates,
     update_analytics_from_stats,
 )
-from ..services.top_books_service import calculate_and_store_top_books
+from ..services.top_books_service import (
+    MIN_REVIEW_LENGTH_FOR_SENTIMENT,
+    calculate_and_store_top_books,
+    compute_book_score,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -321,23 +325,22 @@ def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_d
     for idx, row_dict in enumerate(read_df.to_dict("records")):
         if idx < len(user_book_objects) and user_book_objects[idx]:
             book = user_book_objects[idx]
-            score = 0
 
+            rating_int = None
             rating = row_dict.get("My Rating")
             if pd.notna(rating) and rating > 0:
                 try:
                     rating_int = int(rating)
                     book_ratings[book.id] = rating_int  # Store rating for correlation
-                    score += rating_int * 20
                 except (ValueError, TypeError):
-                    pass
+                    rating_int = None
 
+            sentiment = None
             review = str(row_dict.get("My Review", "")).strip()
-            if review and len(review) > 15:
+            if review and len(review) > MIN_REVIEW_LENGTH_FOR_SENTIMENT:
                 sentiment = analyzer.polarity_scores(review)["compound"]
-                score += sentiment * 30
 
-            book_scores.append((book.id, score))
+            book_scores.append((book.id, compute_book_score(rating_int, sentiment)))
 
     book_scores.sort(key=lambda x: x[1], reverse=True)
     top_books_data = [book_id for book_id, score in book_scores[:5]]

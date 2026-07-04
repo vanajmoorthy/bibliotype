@@ -698,7 +698,7 @@
         "**Test:** add a unit test that calls the helper (or the inlined formula) with the same fixture inputs and asserts identical output across auth and anon paths.",
         "`manage.py test core.tests.test_fiction_book_extremes` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 47
     },

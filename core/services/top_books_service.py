@@ -1,6 +1,37 @@
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from ..models import UserBook
 
+# Reviews shorter than this carry too little signal for sentiment scoring
+MIN_REVIEW_LENGTH_FOR_SENTIMENT = 15
+
+
+def compute_book_score(rating, sentiment):
+    """Canonical top-book score, shared by the authenticated and anonymous paths.
+
+    rating: int 1-5 (or None/0 when unrated)
+    sentiment: VADER compound score for the review, or None when there is no usable review
+    """
+    score = 0
+
+    # Rating weight (heavily weighted if present)
+    if rating:
+        if rating == 5:
+            score += 100
+        elif rating == 4:
+            score += 80
+        else:
+            score += rating * 15
+
+    # Review sentiment weight
+    if sentiment is not None:
+        score += sentiment * 30
+
+    # Small boost for books without ratings or reviews (to include them if nothing else)
+    if not rating and sentiment is None:
+        score += 10
+
+    return score
+
 
 def calculate_and_store_top_books(user, limit=5):
     """Calculate and store user's top books based on rating and review sentiment"""
@@ -11,27 +42,11 @@ def calculate_and_store_top_books(user, limit=5):
     analyzer = SentimentIntensityAnalyzer()
 
     for user_book in user_books:
-        score = 0
-
-        # Rating weight (heavily weighted if present)
-        if user_book.user_rating:
-            if user_book.user_rating == 5:
-                score += 100
-            elif user_book.user_rating == 4:
-                score += 80
-            else:
-                score += user_book.user_rating * 15
-
-        # Review sentiment weight
-        if user_book.user_review and len(user_book.user_review) > 15:
+        sentiment = None
+        if user_book.user_review and len(user_book.user_review) > MIN_REVIEW_LENGTH_FOR_SENTIMENT:
             sentiment = analyzer.polarity_scores(user_book.user_review)["compound"]
-            score += sentiment * 30
 
-        # Small boost for books without ratings (to include them if nothing else)
-        if not user_book.user_rating and not user_book.user_review:
-            score += 10
-
-        book_scores.append((user_book, score))
+        book_scores.append((user_book, compute_book_score(user_book.user_rating, sentiment)))
 
     # Sort by score
     book_scores.sort(key=lambda x: x[1], reverse=True)

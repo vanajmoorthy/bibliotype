@@ -8,6 +8,7 @@ from core.dna_constants import (
     GENRE_ALIASES,
     NONFICTION_GENRES,
 )
+from core.services.top_books_service import compute_book_score
 
 
 class FictionNonfictionConstantsTests(TestCase):
@@ -114,3 +115,36 @@ class BookExtremesTests(TestCase):
         # "alpha" < "bravo" alphabetically, so Alpha wins the tiebreak for both
         self.assertEqual(longest.title, "Alpha")
         self.assertEqual(shortest.title, "Bravo")
+
+
+class ComputeBookScoreTests(TestCase):
+    """US-040: canonical top-book scoring shared by auth and anonymous paths."""
+
+    def test_five_star_rating(self):
+        self.assertEqual(compute_book_score(5, None), 100)
+
+    def test_four_star_rating(self):
+        self.assertEqual(compute_book_score(4, None), 80)
+
+    def test_lower_ratings_scale_by_fifteen(self):
+        self.assertEqual(compute_book_score(3, None), 45)
+        self.assertEqual(compute_book_score(2, None), 30)
+        self.assertEqual(compute_book_score(1, None), 15)
+
+    def test_sentiment_weight(self):
+        self.assertEqual(compute_book_score(5, 0.5), 100 + 0.5 * 30)
+        self.assertEqual(compute_book_score(None, -1.0), -30)
+
+    def test_no_rating_no_review_boost(self):
+        self.assertEqual(compute_book_score(None, None), 10)
+        self.assertEqual(compute_book_score(0, None), 10)
+
+    def test_auth_and_anon_paths_agree_for_same_inputs(self):
+        """The same (rating, sentiment) fixtures must rank identically on both paths."""
+        fixtures = [(5, 0.9), (4, None), (3, -0.2), (None, 0.7), (None, None), (1, None)]
+        scores = [compute_book_score(rating, sentiment) for rating, sentiment in fixtures]
+        expected = [127.0, 80, 39.0, 21.0, 10, 15]
+        self.assertEqual(scores, expected)
+        # Ranking derived from the shared formula is what both paths store
+        ranked = sorted(range(len(fixtures)), key=lambda i: scores[i], reverse=True)
+        self.assertEqual(ranked, [0, 1, 2, 3, 5, 4])

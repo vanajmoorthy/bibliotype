@@ -1503,3 +1503,20 @@
     suite on a `git stash`ed clean tree — same failures present.
 ---
 
+
+## 2026-07-04 15:45 — US-040
+- Extracted `compute_book_score(rating, sentiment)` as a module-level helper in
+  `core/services/top_books_service.py`; both `calculate_and_store_top_books`
+  (auth) and `save_anonymous_session_data` (anon, dna_analyser.py) now share it.
+- Behavior change (documented per AC): anonymous top-books previously scored
+  `rating * 20` flat with no no-signal boost. They now use the canonical
+  100/80/x15 rating weights + the +10 no-rating-no-review boost, so anon
+  top-book rankings may differ after re-analysis.
+- Micro-change on the auth path: a book with a short (<=15 char) review and no
+  rating previously got no +10 boost; it now does, because the helper treats
+  "no usable sentiment" as "no review". Deliberate — a 10-char review carries
+  no more signal than none.
+- New `MIN_REVIEW_LENGTH_FOR_SENTIMENT = 15` constant replaces the magic 15 at
+  both call sites.
+- Tests: new `ComputeBookScoreTests` in test_fiction_book_extremes.py incl.
+  auth/anon parity fixture test. 19/19 pass.
