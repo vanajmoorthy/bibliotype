@@ -3,6 +3,8 @@ from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
+from .ratelimit_test_helpers import frozen_ratelimit_window
+
 
 @override_settings(
     CACHES={
@@ -33,11 +35,12 @@ class LoginRateLimitTests(TestCase):
         login_url = reverse("core:login")
         bad_payload = {"username": "ratelimit@example.com", "password": "wrongpassword"}
 
-        for _ in range(5):
-            response = self.client.post(login_url, bad_payload)
-            self.assertEqual(response.status_code, 200)
+        with frozen_ratelimit_window():
+            for _ in range(5):
+                response = self.client.post(login_url, bad_payload)
+                self.assertEqual(response.status_code, 200)
 
-        response = self.client.post(login_url, bad_payload)
+            response = self.client.post(login_url, bad_payload)
         self.assertEqual(response.status_code, 429)
         self.assertContains(response, "Too many attempts", status_code=429)
 
@@ -45,11 +48,12 @@ class LoginRateLimitTests(TestCase):
         login_url = reverse("core:login")
         bad_payload = {"username": "ratelimit@example.com", "password": "wrongpassword"}
 
-        for _ in range(4):
-            response = self.client.post(login_url, bad_payload)
-            self.assertEqual(response.status_code, 200)
+        with frozen_ratelimit_window():
+            for _ in range(4):
+                response = self.client.post(login_url, bad_payload)
+                self.assertEqual(response.status_code, 200)
 
-        good_payload = {"username": "ratelimit@example.com", "password": self.password}
-        response = self.client.post(login_url, good_payload)
+            good_payload = {"username": "ratelimit@example.com", "password": self.password}
+            response = self.client.post(login_url, good_payload)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(int(self.client.session["_auth_user_id"]), self.user.id)
