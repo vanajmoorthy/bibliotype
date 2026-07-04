@@ -51,26 +51,6 @@ from ..tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_rea
 logger = logging.getLogger(__name__)
 
 
-def home_view(request):
-    """Displays the main upload page."""
-    return render(request, "core/home.html")
-
-
-def about_view(request):
-    """Displays the about page."""
-    return render(request, "core/about.html")
-
-
-def privacy_view(request):
-    """Displays the privacy policy page."""
-    return render(request, "core/privacy.html")
-
-
-def terms_view(request):
-    """Displays the terms of service page."""
-    return render(request, "core/terms.html")
-
-
 @login_required
 @require_POST
 def update_privacy_view(request):
@@ -217,3 +197,4 @@ from .upload import (  # noqa: F401 — re-exported for stable import paths
     upload_view,
 )
 from .dashboard import display_dna_view, public_profile_view  # noqa: F401 — re-exported for stable import paths
+from .pages import about_view, home_view, privacy_view, terms_view  # noqa: F401 — re-exported for stable import paths

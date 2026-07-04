@@ -1631,3 +1631,8 @@
 - No suite patches `core.views._enrich_dna_for_display` etc. — tests import the
   helper directly, so the ._helpers indirection is safe. 36 tests green
   (views_e2e + profile_and_recommendations).
+
+## 2026-07-04 17:02 — US-048b
+- Moved home_view / about_view / privacy_view / terms_view into
+  core/views/pages.py (only `render` needed). Re-exported from __init__.
+- Trivial move; verified via manage.py check + URL-count probe.
