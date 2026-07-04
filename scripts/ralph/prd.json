@@ -906,7 +906,7 @@
         "**Delete moved code from `core/services/dna/__init__.py`**; add re-export.",
         "`manage.py test core.tests.test_math_accuracy` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 62
     },
