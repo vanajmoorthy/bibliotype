@@ -1520,3 +1520,23 @@
   both call sites.
 - Tests: new `ComputeBookScoreTests` in test_fiction_book_extremes.py incl.
   auth/anon parity fixture test. 19/19 pass.
+
+## 2026-07-04 16:05 — US-041
+- `core/views.py`: added `MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024` (module
+  scope) replacing the inline 10MB literal in `upload_view`.
+- `DNA_CACHE_TTL = 3600` lives in `core/cache_utils.py` (not views.py as the
+  PRD suggested) because the DNA-flow cache literals turned out to span two
+  files: `dna_result_`/`session_key_` in tasks.py and `upload_nonce_`/
+  `task_owner_` in views.py. All four sites now use the shared constant.
+- `core/tasks.py`: promoted the function-local batch constants — they were in
+  `research_publisher_mainstream_task` (not `anonymize_expired_sessions_task`
+  as the PRD guessed). Renamed at module scope for clarity:
+  `PUBLISHER_CHECK_BATCH_LIMIT = 20`, `PUBLISHER_CHECK_AGE_THRESHOLD_DAYS = 90`.
+- `recommendation_service.py`: added `RECOMMENDATION_WEIGHTS` dict
+  (ANON_PROFILE_SIMILARITY 0.8, POPULARITY 0.1, QUALITY 0.15,
+  GENRE_ALIGNMENT 0.3, RECENCY 0.1, CURRENTLY_READING 0.5,
+  RECOMMENDER_CONFIDENCE 0.1); all five scoring literals replaced. The other
+  0.x literals in `_calculate_*` helpers are those functions' return-value
+  semantics, not ranking weights — left in place deliberately.
+- Tests: test_views_e2e + test_tasks_integration + test_profile_and_
+  recommendations + test_cache_refactor — 75/75 pass.

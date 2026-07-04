@@ -711,7 +711,7 @@
         "All inline literals replaced with the named constants.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 48
     },

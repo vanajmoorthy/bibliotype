@@ -23,6 +23,17 @@ logger = logging.getLogger(__name__)
 MIN_SIMILARITY = 0.15
 QUALITY_THRESHOLD = 3.5
 
+# Scoring weights for candidate ranking (see _score_and_rank_candidates)
+RECOMMENDATION_WEIGHTS = {
+    "ANON_PROFILE_SIMILARITY": 0.8,  # discount on anonymized-profile similarity vs real similar users
+    "POPULARITY": 0.1,  # log-scaled boost per additional recommender
+    "QUALITY": 0.15,  # per rating-point above QUALITY_THRESHOLD
+    "GENRE_ALIGNMENT": 0.3,  # match against user's preferred genres
+    "RECENCY": 0.1,  # newer-book preference
+    "CURRENTLY_READING": 0.5,  # alignment with books the user is currently reading
+    "RECOMMENDER_CONFIDENCE": 0.1,  # log-scaled confidence boost per recommender
+}
+
 
 def get_recommendations_for_user(user, limit=10):
     """
@@ -471,7 +482,9 @@ def _collect_candidates_from_anonymized_profiles(matching_profiles, read_book_id
                 candidates[book_id]["max_similarity"], similarity_data["similarity_score"]
             )
             candidates[book_id]["recommender_count"] += 1
-            candidates[book_id]["total_weight"] += similarity_data["similarity_score"] * 0.8
+            candidates[book_id]["total_weight"] += (
+                similarity_data["similarity_score"] * RECOMMENDATION_WEIGHTS["ANON_PROFILE_SIMILARITY"]
+            )
 
 
 def _collect_candidates_for_user(user, user_context, limit=10):
@@ -579,12 +592,12 @@ def _score_and_rank_candidates(candidates, context):
 
         # Popularity factor: More recommenders = more confidence (but diminishing)
         recommender_count = candidate_data["recommender_count"]
-        popularity_boost = math.log(recommender_count + 1) * 0.1
+        popularity_boost = math.log(recommender_count + 1) * RECOMMENDATION_WEIGHTS["POPULARITY"]
 
         # Quality factor: Book's average rating
         quality_score = 0
         if book.average_rating and book.average_rating >= QUALITY_THRESHOLD:
-            quality_score = (book.average_rating - QUALITY_THRESHOLD) * 0.15
+            quality_score = (book.average_rating - QUALITY_THRESHOLD) * RECOMMENDATION_WEIGHTS["QUALITY"]
 
         # Genre alignment: How well does this book match user's preferences?
         genre_alignment = _calculate_genre_alignment(book, context)
@@ -600,15 +613,17 @@ def _score_and_rank_candidates(candidates, context):
             base_score * 1.0
             + popularity_boost
             + quality_score
-            + genre_alignment * 0.3
-            + recency_factor * 0.1
-            + currently_reading_boost * 0.5
+            + genre_alignment * RECOMMENDATION_WEIGHTS["GENRE_ALIGNMENT"]
+            + recency_factor * RECOMMENDATION_WEIGHTS["RECENCY"]
+            + currently_reading_boost * RECOMMENDATION_WEIGHTS["CURRENTLY_READING"]
         )
 
         base_confidence = candidate_data["max_similarity"]
 
         # Diminishing boost per additional recommender
-        recommender_boost = math.log(candidate_data["recommender_count"] + 1) * 0.1
+        recommender_boost = (
+            math.log(candidate_data["recommender_count"] + 1) * RECOMMENDATION_WEIGHTS["RECOMMENDER_CONFIDENCE"]
+        )
 
         # Combine and cap at 100%
         confidence = min(base_confidence + recommender_boost, 1.0)

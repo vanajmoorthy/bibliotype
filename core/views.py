@@ -43,12 +43,14 @@ from .analytics.events import (
     track_user_logged_in,
     track_user_signed_up,
 )
-from .cache_utils import safe_cache_add, safe_cache_delete, safe_cache_get, safe_cache_set
+from .cache_utils import DNA_CACHE_TTL, safe_cache_add, safe_cache_delete, safe_cache_get, safe_cache_set
 from .dna_constants import CANONICAL_GENRE_MAP, FICTION_GENRES, GLOBAL_AVERAGES, NONFICTION_GENRES
 from .forms import CustomUserCreationForm, UpdateDisplayNameForm
 from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
 
 logger = logging.getLogger(__name__)
+
+MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024  # 10MB CSV upload limit
 
 # Upload validation caps (US-018). 50k rows comfortably covers the largest
 # Goodreads exports observed in the wild; 100 cols is well above any real
@@ -730,7 +732,7 @@ def upload_view(request):
         return redirect("core:home")
 
     try:
-        if csv_file.size > 10 * 1024 * 1024:  # 10MB limit
+        if csv_file.size > MAX_UPLOAD_SIZE_BYTES:
             messages.error(request, "File is too large. Please upload an export smaller than 10MB.")
             return redirect("core:home")
 
@@ -808,7 +810,7 @@ def upload_view(request):
             import uuid
 
             upload_nonce = str(uuid.uuid4())
-            safe_cache_set(f"upload_nonce_{request.user.id}", upload_nonce, timeout=3600)
+            safe_cache_set(f"upload_nonce_{request.user.id}", upload_nonce, timeout=DNA_CACHE_TTL)
 
             result = generate_reading_dna_task.delay(csv_content, request.user.id)
 
@@ -841,7 +843,7 @@ def upload_view(request):
             task_id = result.id
 
             request.session["anonymous_task_id"] = task_id
-            safe_cache_set(f"task_owner_{task_id}", session_key, 3600)
+            safe_cache_set(f"task_owner_{task_id}", session_key, DNA_CACHE_TTL)
             request.session.save()
 
             return redirect("core:task_status", task_id=task_id)

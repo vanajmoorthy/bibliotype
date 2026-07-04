@@ -22,6 +22,10 @@ from .analytics.events import (
 
 logger = logging.getLogger(__name__)
 
+# Publisher mainstream re-check: batch size per weekly run and staleness window
+PUBLISHER_CHECK_BATCH_LIMIT = 20
+PUBLISHER_CHECK_AGE_THRESHOLD_DAYS = 90
+
 
 @shared_task
 def check_author_mainstream_status_task(author_id: int, user_id: int = None, upload_nonce: str = None):
@@ -358,12 +362,12 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
             )
 
             if self.request.id:
-                from .cache_utils import safe_cache_set
+                from .cache_utils import DNA_CACHE_TTL, safe_cache_set
 
-                safe_cache_set(f"dna_result_{self.request.id}", result_data, timeout=3600)
+                safe_cache_set(f"dna_result_{self.request.id}", result_data, timeout=DNA_CACHE_TTL)
                 # Also cache the session_key so we can find AnonymousUserSession when claiming
                 if session_key:
-                    safe_cache_set(f"session_key_{self.request.id}", session_key, timeout=3600)
+                    safe_cache_set(f"session_key_{self.request.id}", session_key, timeout=DNA_CACHE_TTL)
                 logger.info(f"DNA result for task {self.request.id} saved to cache")
 
             # Track completion
@@ -410,15 +414,12 @@ def research_publisher_mainstream_task():
     from .models import Publisher, Author
     from .services.publisher_service import research_publisher_identity
 
-    BATCH_LIMIT = 20
-    AGE_THRESHOLD_DAYS = 90
-
-    cutoff = timezone.now() - timezone.timedelta(days=AGE_THRESHOLD_DAYS)
+    cutoff = timezone.now() - timezone.timedelta(days=PUBLISHER_CHECK_AGE_THRESHOLD_DAYS)
     publishers_to_check = list(
         Publisher.objects.filter(
             Q(mainstream_last_checked__isnull=True) | Q(mainstream_last_checked__lt=cutoff),
             parent__isnull=True,
-        )[:BATCH_LIMIT]
+        )[:PUBLISHER_CHECK_BATCH_LIMIT]
     )
 
     if not publishers_to_check:
