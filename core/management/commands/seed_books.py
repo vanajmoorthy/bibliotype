@@ -5,7 +5,7 @@ import requests
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from core.models import Author, Book, Publisher
-from core.book_enrichment_service import get_book_details_for_seeder
+from core.services.book_enrichment_service import get_book_details_for_seeder
 
 # Using the same comprehensive list from before
 COMPREHENSIVE_BOOK_LIST = [

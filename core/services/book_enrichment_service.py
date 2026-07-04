@@ -8,10 +8,10 @@ from django.conf import settings
 from django.db import IntegrityError
 from django.utils import timezone
 
-from .analytics.events import track_external_api_call
-from .dna_constants import CANONICAL_GENRE_MAP, EXCLUDED_GENRES, GENRE_PRIORITY
-from .models import Author, Book, Genre, Publisher
-from .services._book_urls import cover_url_from_isbn, cover_url_from_olid
+from ..analytics.events import track_external_api_call
+from ..dna_constants import CANONICAL_GENRE_MAP, EXCLUDED_GENRES, GENRE_PRIORITY
+from ..models import Author, Book, Genre, Publisher
+from ._book_urls import cover_url_from_isbn, cover_url_from_olid
 
 logger = logging.getLogger(__name__)
 

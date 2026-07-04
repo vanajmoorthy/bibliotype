@@ -1566,3 +1566,14 @@
   into 2; test_currently_reading backward-compat test rewritten.
 - Templates are safe with the fields absent (missing keys are falsy/blank in
   Django templates); prod profiles were regenerated so the shape is historical.
+
+## 2026-07-04 17:20 — US-043
+- `git mv core/book_enrichment_service.py core/services/` in its own commit;
+  all reference updates in a second commit (Phase 8 move/edit separation).
+- Updated: the module's own relative imports (`.` → `..` for analytics/
+  dna_constants/models; `.services._book_urls` → `._book_urls`), the lazy
+  import in tasks.py, 3 management commands, and every `@patch("core.
+  book_enrichment_service...")` across test_views_e2e / test_integration /
+  test_storygraph_integration. Comment path references in dna_constants.py
+  and settings.py updated too.
+- `manage.py check` clean; 91/91 tests across the three affected modules.

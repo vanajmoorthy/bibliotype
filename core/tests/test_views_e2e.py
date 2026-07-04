@@ -44,7 +44,7 @@ class ViewE2E_Tests(TransactionTestCase):
         super().tearDown()
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_anonymous_upload_to_signup_and_claim_flow(self, mock_enrich_book, mock_generate_vibe):
         """
         Critical path test:
@@ -110,7 +110,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertIn("an e2e vibe", new_user.userprofile.reading_vibe)
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_anonymous_upload_binds_task_owner_to_session(self, mock_enrich_book, mock_generate_vibe):
         """
         US-001: After an anonymous upload, the task_id must be bound to the
@@ -132,7 +132,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertEqual(cache.get(f"task_owner_{task_id}"), session.session_key)
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_task_result_owner_can_fetch_own_task(self, mock_enrich_book, mock_generate_vibe):
         """
         US-002 positive: the session that uploaded a CSV is able to poll its
@@ -150,7 +150,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertEqual(response.json()["status"], "SUCCESS")
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_task_result_rejects_foreign_session(self, mock_enrich_book, mock_generate_vibe):
         """
         US-002 negative: a second client that did not upload the file must
@@ -185,7 +185,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertNotIn("book_ids", attacker.session)
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_signup_rejects_cross_session_task_id_claim(self, mock_enrich_book, mock_generate_vibe):
         """
         US-003 negative: session A uploads and gets a task_id. Session B (a
@@ -216,7 +216,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertFalse(User.objects.filter(username="attacker").exists())
 
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_signup_positive_claim_after_session_rotation(self, mock_enrich_book, mock_generate_vibe):
         """
         US-003 positive: same Client uploads then signs up. login() rotates
@@ -257,7 +257,7 @@ class ViewE2E_Tests(TransactionTestCase):
 
     @patch("core.tasks.generate_recommendations_task")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     @patch("core.tasks.check_author_mainstream_status_task")
     def test_authenticated_user_dna_regeneration_flow(
         self, mock_author_check, mock_enrich_book, mock_generate_vibe, mock_recommendations_task
@@ -310,7 +310,7 @@ class ViewE2E_Tests(TransactionTestCase):
 
     @patch("core.tasks.generate_recommendations_task")
     @patch("core.services.dna_analyser.generate_vibe_with_llm")
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_pending_dna_task_id_cleared_on_save(self, mock_enrich_book, mock_generate_vibe, mock_recommendations_task):
         """
         Test that pending_dna_task_id is properly cleared when DNA is saved to profile.

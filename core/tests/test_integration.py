@@ -41,8 +41,8 @@ class BookEnrichmentIntegrationTests(TestCase):
             google_books_last_checked=None,
         )
 
-    @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
-    @patch("core.book_enrichment_service._fetch_from_open_library")
+    @patch("core.services.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
+    @patch("core.services.book_enrichment_service._fetch_from_open_library")
     def test_enrich_book_task_updates_book_with_api_data(self, mock_ol, mock_gb):
         """Full enrichment pipeline: task → service → DB updates.
         When OL returns genres, GB is skipped (optimization) so google_books_last_checked
@@ -87,7 +87,7 @@ class BookEnrichmentIntegrationTests(TestCase):
         self.assertIsNone(result.result)
 
     @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_enrich_book_task_skipped_when_superseded_by_newer_upload(self, mock_enrich):
         """Enrichment task exits early if a newer upload nonce is in the cache."""
         from core.cache_utils import safe_cache_set
@@ -102,7 +102,7 @@ class BookEnrichmentIntegrationTests(TestCase):
         mock_enrich.assert_not_called()
 
     @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_enrich_book_task_runs_when_nonce_matches(self, mock_enrich):
         """Enrichment task runs normally when upload nonce is current."""
         from core.cache_utils import safe_cache_set
@@ -115,7 +115,7 @@ class BookEnrichmentIntegrationTests(TestCase):
         mock_enrich.assert_called_once()
 
     @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_enrich_book_task_skipped_at_second_check_if_nonce_changed_during_db_fetch(self, mock_enrich):
         """Re-check defends against the window between task start and API call.
 
@@ -144,7 +144,7 @@ class BookEnrichmentIntegrationTests(TestCase):
 
         mock_enrich.assert_not_called()
 
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_enrich_book_task_retries_on_api_failure(self, mock_enrich):
         """Task should retry on API failures."""
         from core.tasks import enrich_book_task
@@ -158,7 +158,7 @@ class BookEnrichmentIntegrationTests(TestCase):
         # The enrichment function was called at least once
         self.assertGreaterEqual(mock_enrich.call_count, 1)
 
-    @patch("core.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_enrich_book_task_marks_attempted_after_max_retries(self, mock_enrich):
         """When task exhausts max retries, book is marked as attempted so polling doesn't get stuck."""
         from celery.exceptions import MaxRetriesExceededError
@@ -182,11 +182,11 @@ class BookEnrichmentIntegrationTests(TestCase):
         # Book must be marked as attempted to prevent stuck-at-X% polling
         self.assertIsNotNone(self.book.google_books_last_checked)
 
-    @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
-    @patch("core.book_enrichment_service._fetch_from_open_library")
+    @patch("core.services.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
+    @patch("core.services.book_enrichment_service._fetch_from_open_library")
     def test_enrich_book_genre_canonicalization(self, mock_ol, mock_gb):
         """Canonical genres from OL become Genre objects on the Book."""
-        from core.book_enrichment_service import enrich_book_from_apis
+        from core.services.book_enrichment_service import enrich_book_from_apis
 
         mock_ol.return_value = (
             {
@@ -215,7 +215,7 @@ class BookEnrichmentIntegrationTests(TestCase):
         """US-035b: outputs must not drift when GB canonicalization is rewritten
         to delegate to `_clean_and_canonicalize_genres`. Snapshot captured from
         the pre-refactor implementation."""
-        from core.book_enrichment_service import _canonicalize_google_books_categories
+        from core.services.book_enrichment_service import _canonicalize_google_books_categories
 
         self.assertEqual(
             _canonicalize_google_books_categories(["Fiction/Romance", "Self-Help"]),
@@ -224,11 +224,11 @@ class BookEnrichmentIntegrationTests(TestCase):
         self.assertEqual(_canonicalize_google_books_categories(["Juvenile Fiction"]), set())
         self.assertEqual(_canonicalize_google_books_categories(["Computers/Programming Languages"]), set())
 
-    @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
-    @patch("core.book_enrichment_service._fetch_from_open_library")
+    @patch("core.services.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
+    @patch("core.services.book_enrichment_service._fetch_from_open_library")
     def test_google_books_genres_used_when_ol_has_no_genres(self, mock_ol, mock_gb):
         """When OL returns no genres, GB is called and its categories are used."""
-        from core.book_enrichment_service import enrich_book_from_apis
+        from core.services.book_enrichment_service import enrich_book_from_apis
 
         mock_ol.return_value = (
             {
@@ -254,11 +254,11 @@ class BookEnrichmentIntegrationTests(TestCase):
         self.assertIn("science fiction", genre_names)
         mock_gb.assert_called_once()
 
-    @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
-    @patch("core.book_enrichment_service._fetch_from_open_library")
+    @patch("core.services.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
+    @patch("core.services.book_enrichment_service._fetch_from_open_library")
     def test_gb_skipped_when_ol_found_genres(self, mock_ol, mock_gb):
         """When OL returns genres, GB is skipped entirely (optimization)."""
-        from core.book_enrichment_service import enrich_book_from_apis
+        from core.services.book_enrichment_service import enrich_book_from_apis
 
         mock_ol.return_value = (
             {
@@ -282,7 +282,7 @@ class BookEnrichmentIntegrationTests(TestCase):
 
     def test_ol_isbn_direct_lookup_skips_search(self):
         """When book has isbn13, _fetch_from_open_library uses /isbn/ endpoint, not search."""
-        from core.book_enrichment_service import _fetch_from_open_library
+        from core.services.book_enrichment_service import _fetch_from_open_library
 
         self.book.isbn13 = "9780451524935"
         self.book.save()
@@ -305,7 +305,7 @@ class BookEnrichmentIntegrationTests(TestCase):
 
         session.get.side_effect = [isbn_response, work_response]
 
-        with patch("core.book_enrichment_service.track_external_api_call"):
+        with patch("core.services.book_enrichment_service.track_external_api_call"):
             details, api_calls = _fetch_from_open_library(self.book, session)
 
         self.assertEqual(api_calls, 2)  # ISBN + work, no search
@@ -321,7 +321,7 @@ class BookEnrichmentIntegrationTests(TestCase):
 
     def test_ol_isbn_lookup_falls_through_to_search_on_404(self):
         """When ISBN endpoint returns 404, falls through to title+author search."""
-        from core.book_enrichment_service import _fetch_from_open_library
+        from core.services.book_enrichment_service import _fetch_from_open_library
 
         self.book.isbn13 = "9780000000000"
         self.book.save()
@@ -349,7 +349,7 @@ class BookEnrichmentIntegrationTests(TestCase):
 
         session.get.side_effect = [isbn_response, search_response, work_response, edition_response]
 
-        with patch("core.book_enrichment_service.track_external_api_call"):
+        with patch("core.services.book_enrichment_service.track_external_api_call"):
             details, api_calls = _fetch_from_open_library(self.book, session)
 
         # 4 calls: ISBN (failed) + search + work + edition
@@ -357,11 +357,11 @@ class BookEnrichmentIntegrationTests(TestCase):
         self.assertIn("fantasy", details["genres"])
         self.assertEqual(details["page_count"], 200)
 
-    @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
-    @patch("core.book_enrichment_service._fetch_from_open_library")
+    @patch("core.services.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
+    @patch("core.services.book_enrichment_service._fetch_from_open_library")
     def test_enrich_book_sets_cover_url_from_cover_id(self, mock_ol, mock_gb):
         """OL search with cover_i → cover_url uses cover ID URL."""
-        from core.book_enrichment_service import enrich_book_from_apis
+        from core.services.book_enrichment_service import enrich_book_from_apis
 
         mock_ol.return_value = (
             {
@@ -382,11 +382,11 @@ class BookEnrichmentIntegrationTests(TestCase):
         self.book.refresh_from_db()
         self.assertEqual(self.book.cover_url, "https://covers.openlibrary.org/b/id/12345-M.jpg")
 
-    @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
-    @patch("core.book_enrichment_service._fetch_from_open_library")
+    @patch("core.services.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
+    @patch("core.services.book_enrichment_service._fetch_from_open_library")
     def test_enrich_book_sets_cover_url_from_isbn_when_no_cover_id(self, mock_ol, mock_gb):
         """OL search without cover_i, book has ISBN → cover_url uses ISBN URL."""
-        from core.book_enrichment_service import enrich_book_from_apis
+        from core.services.book_enrichment_service import enrich_book_from_apis
 
         self.book.isbn13 = "9780593099322"
         self.book.save()
@@ -410,11 +410,11 @@ class BookEnrichmentIntegrationTests(TestCase):
         self.book.refresh_from_db()
         self.assertEqual(self.book.cover_url, "https://covers.openlibrary.org/b/isbn/9780593099322-M.jpg")
 
-    @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
-    @patch("core.book_enrichment_service._fetch_from_open_library")
+    @patch("core.services.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
+    @patch("core.services.book_enrichment_service._fetch_from_open_library")
     def test_enrich_book_sets_cover_url_from_google_books_thumbnail(self, mock_ol, mock_gb):
         """OL without cover_i, no ISBN, GB with thumbnail → cover_url is HTTPS thumbnail."""
-        from core.book_enrichment_service import enrich_book_from_apis
+        from core.services.book_enrichment_service import enrich_book_from_apis
 
         mock_ol.return_value = (
             {
@@ -441,11 +441,11 @@ class BookEnrichmentIntegrationTests(TestCase):
             "https://books.google.com/books/content?id=abc&printsec=frontcover&img=1",
         )
 
-    @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
-    @patch("core.book_enrichment_service._fetch_from_open_library")
+    @patch("core.services.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
+    @patch("core.services.book_enrichment_service._fetch_from_open_library")
     def test_enrich_book_preserves_existing_cover_url(self, mock_ol, mock_gb):
         """Re-enrichment should not overwrite an existing cover_url."""
-        from core.book_enrichment_service import enrich_book_from_apis
+        from core.services.book_enrichment_service import enrich_book_from_apis
 
         self.book.cover_url = "https://covers.openlibrary.org/b/id/999-M.jpg"
         self.book.save()
@@ -1126,7 +1126,7 @@ class GenreAliasPrecompileTests(TestCase):
     """US-027b: alias regexes are compiled once at import, not per book per alias."""
 
     def test_compiled_alias_patterns_built_at_module_load(self):
-        from core.book_enrichment_service import _COMPILED_ALIAS_PATTERNS
+        from core.services.book_enrichment_service import _COMPILED_ALIAS_PATTERNS
 
         self.assertGreater(len(_COMPILED_ALIAS_PATTERNS), 0)
         pattern, canonical_name = _COMPILED_ALIAS_PATTERNS[0]
