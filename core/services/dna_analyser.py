@@ -291,15 +291,23 @@ def _save_dna_to_profile(profile, dna_data):
         )
 
         # Invalidate stale caches for this user
-        from ..cache_utils import safe_cache_delete
+        from ..cache_utils import safe_cache_add, safe_cache_delete
 
         safe_cache_delete(f"similar_users_{profile.user.id}")
         safe_cache_delete(f"user_recommendations_{profile.user.id}")
 
-        from ..tasks import generate_recommendations_task
+        # Sentinel-guard the dispatch (same guard as display_dna_view) so a
+        # dashboard poll landing in the window before the task picks up can't
+        # double-dispatch. The task's finally block clears the sentinel.
+        if safe_cache_add(f"recs_dispatching_{profile.user.id}", 1, timeout=300):
+            from ..tasks import generate_recommendations_task
 
-        generate_recommendations_task.delay(profile.user.id)
-        logger.info(f"Dispatched recommendations task for user {profile.user.username}")
+            generate_recommendations_task.delay(profile.user.id)
+            logger.info(f"Dispatched recommendations task for user {profile.user.username}")
+        else:
+            logger.info(
+                f"Skipped duplicate recommendations dispatch for user {profile.user.username} (sentinel held)"
+            )
 
     except Exception as e:
         logger.error(f"Error saving profile for user {profile.user.username}: {e}", exc_info=True)

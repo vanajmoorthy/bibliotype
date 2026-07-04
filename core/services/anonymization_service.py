@@ -1,8 +1,14 @@
+import hashlib
 import logging
 from django.utils import timezone
 from ..models import AnonymizedReadingProfile, AnonymousUserSession
 
 logger = logging.getLogger(__name__)
+
+
+def _key_hash(session_key):
+    """Session keys are bearer credentials — log a truncated hash, never the raw key."""
+    return hashlib.sha256(session_key.encode()).hexdigest()[:12] if session_key else "none"
 
 
 def anonymize_session(anonymous_session):
@@ -14,7 +20,10 @@ def anonymize_session(anonymous_session):
     # Only anonymize if meets quality thresholds
     total_books = user_stats.get("total_books_read", 0)
     if total_books < 10:
-        logger.info(f"Skipping anonymization of session {anonymous_session.session_key}: too few books ({total_books})")
+        logger.info(
+            f"Skipping anonymization of session {_key_hash(anonymous_session.session_key)}: "
+            f"too few books ({total_books})"
+        )
         return None
 
     AnonymizedReadingProfile.objects.create(
@@ -36,7 +45,7 @@ def anonymize_session(anonymous_session):
     anonymous_session.anonymized = True
     anonymous_session.save()
 
-    logger.info(f"Anonymized session {anonymous_session.session_key}")
+    logger.info(f"Anonymized session {_key_hash(anonymous_session.session_key)}")
     return True
 
 
@@ -51,7 +60,7 @@ def batch_anonymize_expired_sessions():
             if anonymize_session(session):
                 anonymized_count += 1
         except Exception as e:
-            logger.error(f"Error anonymizing session {session.session_key}: {e}", exc_info=True)
+            logger.error(f"Error anonymizing session {_key_hash(session.session_key)}: {e}", exc_info=True)
 
     # Clean up old anonymized sessions (keep for 30 days after anonymization)
     cleanup_date = timezone.now() - timezone.timedelta(days=30)

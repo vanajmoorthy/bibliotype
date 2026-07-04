@@ -273,6 +273,33 @@ class RecommendationsTestCase(TestCase):
 
         self.assertIsNone(cache.get(f"recs_dispatching_{self.user1.id}"))
 
+    def test_save_dna_to_profile_dispatch_is_sentinel_guarded(self):
+        """US-024 follow-up: _save_dna_to_profile respects the dispatch sentinel,
+        so a dashboard poll that just dispatched can't be double-dispatched."""
+        from django.core.cache import cache
+
+        from core.services.dna_analyser import _save_dna_to_profile
+
+        cache.clear()
+        dna = {
+            "reader_type": "Fantasy Fanatic",
+            "user_stats": {"total_books_read": 10},
+            "top_genres": [("fantasy", 10)],
+        }
+
+        # Sentinel already held (e.g. a concurrent dashboard poll dispatched) → skip.
+        cache.set(f"recs_dispatching_{self.user1.id}", 1, timeout=300)
+        with patch("core.tasks.generate_recommendations_task.delay") as mock_delay:
+            _save_dna_to_profile(self.user1.userprofile, dna)
+            mock_delay.assert_not_called()
+
+        # Sentinel free → dispatches exactly once and seeds the sentinel.
+        cache.delete(f"recs_dispatching_{self.user1.id}")
+        with patch("core.tasks.generate_recommendations_task.delay") as mock_delay:
+            _save_dna_to_profile(self.user1.userprofile, dna)
+            mock_delay.assert_called_once_with(self.user1.id)
+        self.assertEqual(cache.get(f"recs_dispatching_{self.user1.id}"), 1)
+
     def test_anonymous_user_gets_recommendations(self):
         """Test that anonymous users can have sessions created (skips recommendation generation)"""
         # This test verifies AnonymousUserSession can be created with all required fields
