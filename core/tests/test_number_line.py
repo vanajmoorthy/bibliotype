@@ -225,55 +225,33 @@ class EnrichDnaTests(TestCase):
         result = _enrich_dna_for_display(dna)
         self.assertLessEqual(result["number_line_ranges"]["year"]["min"], 1950)
 
-    def test_enrich_dna_backfills_avg_books_per_year(self):
-        """Old DNA without avg_books_per_year is backfilled using dated books / num_years."""
+    def test_enrich_dna_does_not_backfill_legacy_stats(self):
+        """US-033 removed the legacy backfill: DNA missing avg_books_per_year /
+        num_reading_years / books_with_dates passes through without those fields
+        being synthesized. Prod data was regenerated via `regenerate_dna`, so
+        this shape no longer occurs in stored profiles."""
         dna = _make_dna_data()
         del dna["user_stats"]["avg_books_per_year"]
         del dna["user_stats"]["num_reading_years"]
-        result = _enrich_dna_for_display(dna)
-        us = result["user_stats"]
-        self.assertIn("avg_books_per_year", us)
-        self.assertIn("num_reading_years", us)
-        # 5 years of data, sum of counts = 15+18+20+14+13 = 80 → 80/5 = 16.0
-        self.assertEqual(us["num_reading_years"], 5)
-        self.assertEqual(us["avg_books_per_year"], 16.0)
-
-    def test_backfill_uses_dated_books_not_total_books(self):
-        """Backfill should use sum of stats_by_year counts, not total_books_read."""
-        dna = _make_dna_data()
-        del dna["user_stats"]["avg_books_per_year"]
-        del dna["user_stats"]["num_reading_years"]
-        # Set total_books_read higher than sum of stats_by_year counts (100 vs 60)
-        dna["user_stats"]["total_books_read"] = 100
-        dna["stats_by_year"] = [
-            {"year": 2022, "count": 25, "avg_rating": 3.9},
-            {"year": 2023, "count": 20, "avg_rating": 4.0},
-            {"year": 2024, "count": 15, "avg_rating": 3.6},
-        ]
-        result = _enrich_dna_for_display(dna)
-        us = result["user_stats"]
-        # Should be 60/3 = 20.0, NOT 100/3 = 33.3
-        self.assertEqual(us["num_reading_years"], 3)
-        self.assertAlmostEqual(us["avg_books_per_year"], 20.0, places=1)
-
-    def test_backfill_adds_books_with_dates(self):
-        """Old DNA without books_with_dates is backfilled from stats_by_year."""
-        dna = _make_dna_data()
-        # Remove books_with_dates if present
         dna["user_stats"].pop("books_with_dates", None)
         result = _enrich_dna_for_display(dna)
         us = result["user_stats"]
-        self.assertIn("books_with_dates", us)
-        # Sum of stats_by_year counts: 15+18+20+14+13 = 80
-        self.assertEqual(us["books_with_dates"], 80)
+        self.assertNotIn("avg_books_per_year", us)
+        self.assertNotIn("num_reading_years", us)
+        self.assertNotIn("books_with_dates", us)
 
-    def test_backfill_books_with_dates_empty_stats_by_year(self):
-        """When stats_by_year is empty, books_with_dates backfills to 0."""
+    def test_enrich_dna_survives_legacy_stats_shape(self):
+        """Enrichment must not crash on old DNA and still produces the fresh
+        community/comparative payloads for the fields it can compute."""
         dna = _make_dna_data()
+        del dna["user_stats"]["avg_books_per_year"]
+        del dna["user_stats"]["num_reading_years"]
         dna["user_stats"].pop("books_with_dates", None)
         dna["stats_by_year"] = []
         result = _enrich_dna_for_display(dna)
-        self.assertEqual(result["user_stats"]["books_with_dates"], 0)
+        self.assertIn("community_averages", result)
+        self.assertIn("comparative_text", result)
+        self.assertIn("number_line_ranges", result)
 
     def test_enrich_dna_recalculates_fresh_percentiles(self):
         """Stored stale percentiles should be replaced with fresh calculations."""

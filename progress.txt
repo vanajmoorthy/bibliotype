@@ -1553,3 +1553,16 @@
   raw. Keys there are already expired, but the project pattern is to log
   sha256-truncated hashes — candidate for the infra/hygiene PR.
 - Tests: test_tasks_integration 8/8 OK; module imports verified via shell.
+
+## 2026-07-04 16:30 — US-033 follow-up: stale backfill tests
+- The full suite had 2 failures + 3 errors, ALL assertion-level KeyErrors in
+  tests still asserting the legacy backfill that US-033 deleted (the previous
+  session's "pre-existing failures" note traced back to its own US-033 commit,
+  plus one more in test_currently_reading it didn't list).
+- Rewrote them to assert the new invariant: `_enrich_dna_for_display` does NOT
+  synthesize legacy fields (avg_books_per_year / num_reading_years /
+  books_with_dates / currently_reading_* / cover_url defaults) and does not
+  crash on old-shaped DNA. 4 backfill tests in test_number_line consolidated
+  into 2; test_currently_reading backward-compat test rewritten.
+- Templates are safe with the fields absent (missing keys are falsy/blank in
+  Django templates); prod profiles were regenerated so the shape is historical.

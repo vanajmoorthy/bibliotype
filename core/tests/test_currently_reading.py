@@ -182,8 +182,11 @@ class EnrichDnaBackwardCompatTests(TestCase):
     """Tests for backward compatibility in _enrich_dna_for_display()."""
 
     @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})
-    def test_old_dna_gets_currently_reading_defaults(self):
-        """Old DNA data missing currently-reading fields should get sensible defaults."""
+    def test_old_dna_without_currently_reading_fields_is_not_backfilled(self):
+        """US-033 removed the legacy backfill: old DNA missing currently-reading
+        fields passes through untouched (templates treat missing keys as falsy).
+        Prod data was regenerated via `regenerate_dna`, so this shape no longer
+        occurs in stored profiles."""
         from core.views import _enrich_dna_for_display
 
         old_dna = {
@@ -200,12 +203,15 @@ class EnrichDnaBackwardCompatTests(TestCase):
             "most_niche_book": {"title": "Test Book", "author": "Test Author", "read_count": 1},
         }
 
-        _enrich_dna_for_display(old_dna)
+        result = _enrich_dna_for_display(old_dna)
 
-        self.assertEqual(old_dna["currently_reading_books"], [])
-        self.assertEqual(old_dna["currently_reading_count"], 0)
-        self.assertEqual(old_dna["custom_shelf_count"], 0)
-        self.assertIsNone(old_dna["most_niche_book"]["cover_url"])
+        # No crash, enrichment still happens...
+        self.assertIn("community_averages", result)
+        # ...but legacy fields are no longer synthesized.
+        self.assertNotIn("currently_reading_books", result)
+        self.assertNotIn("currently_reading_count", result)
+        self.assertNotIn("custom_shelf_count", result)
+        self.assertNotIn("cover_url", result["most_niche_book"])
 
 
 class RecommendationCurrentlyReadingBoostTests(TestCase):
