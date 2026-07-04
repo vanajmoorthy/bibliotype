@@ -1780,3 +1780,27 @@
 - Autodiscovery probe after the move: identical 8-task core.* list as the
   pre-split baseline.
 - manage.py check clean; test_tasks_integration + test_views_e2e (28 tests) OK.
+
+## 2026-07-04 17:28 — US-058
+- Extracted core/tasks/enrichment.py: enrich_book_task,
+  check_author_mainstream_status_task, research_publisher_mainstream_task
+  moved verbatim together with the PUBLISHER_CHECK_BATCH_LIMIT /
+  PUBLISHER_CHECK_AGE_THRESHOLD_DAYS constants (used only by the publisher
+  task; re-exported anyway for surface stability). All three decorators pin
+  their original wire names (name="core.tasks.<task>") — critical for
+  research_publisher_mainstream_task, which the settings.py beat schedule
+  references as 'core.tasks.research_publisher_mainstream_task'.
+- __init__ header slimmed (requests/Q/time/Author/Book/
+  check_author_mainstream_status now live in enrichment.py) + .enrichment
+  re-export block.
+- Patch-target re-points in test_integration.py:
+  patch("core.tasks.check_author_mainstream_status") ×3 →
+  core.tasks.enrichment.check_author_mainstream_status (module-level lookup
+  inside the task body now resolves from the submodule);
+  patch("core.tasks.Book.objects.get") ×1 →
+  core.tasks.enrichment.Book.objects.get (Book is no longer a core.tasks
+  package attr). All `.delay` patches untouched — they mutate the shared
+  task object.
+- Autodiscovery probe: identical 8-task core.* baseline list.
+- manage.py check clean; test_integration + test_enrichment_stats +
+  test_storygraph_integration (81 tests) OK.

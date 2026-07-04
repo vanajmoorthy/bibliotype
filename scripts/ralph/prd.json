@@ -972,7 +972,7 @@
         "**Celery autodiscovery check** (same command as US-057); confirm all three appear in `app.tasks`.",
         "`manage.py test core.tests.test_integration core.tests.test_enrichment_stats` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 67
     },
