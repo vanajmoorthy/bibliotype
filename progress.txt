@@ -1645,3 +1645,10 @@
   @ratelimit(key="user") inner function, all decorators preserved.
 - __init__.py is now header + re-export imports only. 17 tests green
   (profile_and_recommendations + update_username_ratelimit).
+
+## 2026-07-04 17:10 — US-049 (header slim)
+- __init__.py is now docstring + re-export imports only (isort-ordered by
+  submodule). All original header imports, module constants, and the
+  `logger` binding moved out with their consumers.
+- `assertLogs("core.views", ...)` assertions still pass because submodule
+  loggers (core.views.upload etc.) propagate to the core.views parent logger.
