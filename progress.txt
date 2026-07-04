@@ -1683,3 +1683,16 @@
   from .csv_parser; dropped now-unused `math` import.
 - manage.py check clean; test_storygraph_integration + test_tasks_unit +
   test_math_accuracy (79 tests) OK.
+
+## 2026-07-04 17:00 — US-052
+- Interpretation: process_book_row is a CLOSURE inside calculate_full_dna —
+  it captures isbn_book_map (per-upload ISBN prefetch), upload_user_id,
+  upload_nonce, and csv_source from the enclosing scope, and the
+  ThreadPoolExecutor orchestration lives inline in the same
+  `with requests.Session()` block. There are no standalone book-sync
+  helpers to move (the only candidates, _isbn_to_isbn13 etc., already went
+  to dna/utils.py in US-050). Hoisting the closure to a top-level
+  book_sync.py would require threading 4+ captured variables through a new
+  signature — a behavior-risk restructure explicitly out of scope for this
+  mechanical split — so no core/services/dna/book_sync.py was created.
+- manage.py check clean; test_tasks_integration (7 tests) OK.

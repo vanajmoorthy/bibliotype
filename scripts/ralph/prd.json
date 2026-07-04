@@ -893,8 +893,8 @@
         "**Delete moved code from `core/services/dna/__init__.py`**; add re-export.",
         "`manage.py test core.tests.test_tasks_integration` passes."
       ],
-      "passes": false,
-      "notes": "",
+      "passes": true,
+      "notes": "process_book_row is a closure inside calculate_full_dna (captures isbn_book_map, upload_user_id, upload_nonce, csv_source); no standalone book-sync helpers exist, so no code was moved (restructuring the closure would be a behavior-risk change). Documented no-op.",
       "priority": 61
     },
     {
