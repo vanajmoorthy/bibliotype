@@ -28,9 +28,9 @@ from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 from django_ratelimit.exceptions import Ratelimited
 
-from .ratelimit_utils import client_ip_key, get_real_client_ip
+from ..ratelimit_utils import client_ip_key, get_real_client_ip
 
-from .analytics.events import (
+from ..analytics.events import (
     track_anonymous_dna_claimed,
     track_anonymous_dna_displayed,
     track_dna_displayed,
@@ -43,10 +43,10 @@ from .analytics.events import (
     track_user_logged_in,
     track_user_signed_up,
 )
-from .cache_utils import DNA_CACHE_TTL, safe_cache_add, safe_cache_delete, safe_cache_get, safe_cache_set
-from .dna_constants import CANONICAL_GENRE_MAP, FICTION_GENRES, GLOBAL_AVERAGES, NONFICTION_GENRES
-from .forms import CustomUserCreationForm, UpdateDisplayNameForm
-from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
+from ..cache_utils import DNA_CACHE_TTL, safe_cache_add, safe_cache_delete, safe_cache_get, safe_cache_set
+from ..dna_constants import CANONICAL_GENRE_MAP, FICTION_GENRES, GLOBAL_AVERAGES, NONFICTION_GENRES
+from ..forms import CustomUserCreationForm, UpdateDisplayNameForm
+from ..tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ def sitemap_xml_view(request):
     """Generate and serve sitemap.xml."""
     from django.utils import timezone
 
-    from .models import UserProfile
+    from ..models import UserProfile
 
     base_url = f"{request.scheme}://{request.get_host()}"
     today = timezone.now().strftime("%Y-%m-%d")
@@ -195,7 +195,7 @@ def _compute_enrichment_stats(user):
     same window) doesn't re-hit Postgres on every tick for users with
     thousands of books.
     """
-    from .models import Book
+    from ..models import Book
 
     cache_key = f"enrichment_stats_{user.id}"
     cached = safe_cache_get(cache_key)
@@ -278,7 +278,7 @@ def _compute_enrichment_progress(user, profile, dna_data):
         - {"pending": True, "percent": ..., ...} otherwise (mutates dna_data
           with fresh stats).
     """
-    from .models import Book
+    from ..models import Book
 
     counts = Book.objects.filter(readers__user=user).aggregate(
         total=Count("id", distinct=True),
@@ -299,7 +299,7 @@ def _compute_enrichment_progress(user, profile, dna_data):
         # could both race past the unfinalized check and both write. Lock the
         # profile row, re-check inside the transaction, then save once.
         if not dna_data.get("enrichment_finalized"):
-            from .models import UserProfile
+            from ..models import UserProfile
 
             with transaction.atomic():
                 locked = UserProfile.objects.select_for_update().get(pk=profile.pk)
@@ -347,7 +347,7 @@ def _enrich_dna_for_display(dna_data):
     if not dna_data:
         return dna_data
 
-    from .percentile_engine import calculate_community_means, calculate_percentiles_from_aggregates
+    from ..percentile_engine import calculate_community_means, calculate_percentiles_from_aggregates
 
     # Always use current global averages constant
     dna_data["global_averages"] = GLOBAL_AVERAGES
@@ -544,7 +544,7 @@ def display_dna_view(request):
                     # spawn duplicate tasks. The sentinel is deleted when the task
                     # finishes (in generate_recommendations_task's finally block).
                     if safe_cache_add(f"recs_dispatching_{request.user.id}", 1, timeout=300):
-                        from .tasks import generate_recommendations_task
+                        from ..tasks import generate_recommendations_task
 
                         generate_recommendations_task.delay(request.user.id)
                         logger.info(f"No stored recommendations for user {request.user.id}, triggered generation")
@@ -572,8 +572,8 @@ def display_dna_view(request):
 
                 from django.utils import timezone
 
-                from .models import AnonymousUserSession, Author
-                from .services.recommendation_service import get_recommendations_for_anonymous
+                from ..models import AnonymousUserSession, Author
+                from ..services.recommendation_service import get_recommendations_for_anonymous
 
                 try:
                     anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
@@ -818,7 +818,7 @@ def upload_view(request):
             # Use .update() instead of fetching + saving the related object — the
             # eager task path runs the DNA save inline, and a cached stale
             # UserProfile instance here would clobber the DNA the task just wrote.
-            from .models import UserProfile
+            from ..models import UserProfile
 
             UserProfile.objects.filter(user=request.user).update(pending_dna_task_id=result.id)
 
@@ -862,7 +862,7 @@ def signup_view(request):
         task_id_to_claim = request.POST.get("task_id_to_claim")
 
         # Verify Turnstile CAPTCHA
-        from .turnstile import verify_turnstile_token
+        from ..turnstile import verify_turnstile_token
 
         turnstile_token = request.POST.get("cf-turnstile-response", "")
         if not verify_turnstile_token(turnstile_token, remote_ip=get_real_client_ip(request)):
@@ -1318,7 +1318,7 @@ def task_status_view(request, task_id):
 
 
 def get_task_result_view(request, task_id):
-    from .models import AnonymousUserSession
+    from ..models import AnonymousUserSession
 
     # US-002 (hardened post-review): refuse task_ids that aren't bound to the
     # caller's session. Both cache-miss AND mismatch fail closed — the previous
@@ -1428,7 +1428,7 @@ class CustomPasswordResetView(PasswordResetView):
     success_url = reverse_lazy("password_reset_done")
 
     def form_valid(self, form):
-        from .turnstile import verify_turnstile_token
+        from ..turnstile import verify_turnstile_token
 
         turnstile_token = self.request.POST.get("cf-turnstile-response", "")
         if not verify_turnstile_token(turnstile_token, remote_ip=get_real_client_ip(self.request)):
