@@ -8,11 +8,11 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.utils import timezone
 
-from .management_command_registry import ALLOWED_COMMANDS
-from .models import Author, Book
-from .services.author_service import check_author_mainstream_status
-from .services.dna import _save_dna_to_profile, calculate_full_dna
-from .analytics.events import (
+from ..management_command_registry import ALLOWED_COMMANDS
+from ..models import Author, Book
+from ..services.author_service import check_author_mainstream_status
+from ..services.dna import _save_dna_to_profile, calculate_full_dna
+from ..analytics.events import (
     track_dna_generation_started,
     track_dna_generation_completed,
     track_anonymous_dna_generated,
@@ -34,7 +34,7 @@ def check_author_mainstream_status_task(author_id: int, user_id: int = None, upl
     # from a prior CSV upload drain the worker and starve the new DNA task
     # (the "stuck at 50%" symptom on re-upload).
     if user_id and upload_nonce:
-        from .cache_utils import safe_cache_get
+        from ..cache_utils import safe_cache_get
 
         current_nonce = safe_cache_get(f"upload_nonce_{user_id}")
         if current_nonce and current_nonce != upload_nonce:
@@ -79,7 +79,7 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
     for this user. If a newer upload has started, this task exits early to avoid
     wasting API calls on stale enrichment work.
     """
-    from .cache_utils import safe_cache_get
+    from ..cache_utils import safe_cache_get
 
     def _is_superseded():
         if not (user_id and upload_nonce):
@@ -108,7 +108,7 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
     logger.info(f"Enriching book '{book.title}' (id={book_id}) via background task")
 
     try:
-        from .services.book_enrichment_service import enrich_book_from_apis
+        from ..services.book_enrichment_service import enrich_book_from_apis
 
         with requests.Session() as session:
             session.headers.update({"User-Agent": "BibliotypeApp/1.0"})
@@ -184,7 +184,7 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str)
         _clear_pending_and_return()
         return
 
-    from .cache_utils import safe_cache_get
+    from ..cache_utils import safe_cache_get
 
     owner_session_key = safe_cache_get(f"task_owner_{task_id}")
     if owner_session_key is None:
@@ -245,8 +245,8 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str)
 
 def _create_userbooks_from_anonymous_session(user, session_key):
     """Create UserBook records from AnonymousUserSession when claiming anonymous DNA"""
-    from .models import AnonymousUserSession, UserBook, Book
-    from .services.top_books_service import calculate_and_store_top_books
+    from ..models import AnonymousUserSession, UserBook, Book
+    from ..services.top_books_service import calculate_and_store_top_books
 
     try:
         anon_session = AnonymousUserSession.objects.get(session_key=session_key)
@@ -362,7 +362,7 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
             )
 
             if self.request.id:
-                from .cache_utils import DNA_CACHE_TTL, safe_cache_set
+                from ..cache_utils import DNA_CACHE_TTL, safe_cache_set
 
                 safe_cache_set(f"dna_result_{self.request.id}", result_data, timeout=DNA_CACHE_TTL)
                 # Also cache the session_key so we can find AnonymousUserSession when claiming
@@ -411,8 +411,8 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
 @shared_task
 def research_publisher_mainstream_task():
     """Periodic task to check unchecked publishers for mainstream status via AI research."""
-    from .models import Publisher, Author
-    from .services.publisher_service import research_publisher_identity
+    from ..models import Publisher, Author
+    from ..services.publisher_service import research_publisher_identity
 
     cutoff = timezone.now() - timezone.timedelta(days=PUBLISHER_CHECK_AGE_THRESHOLD_DAYS)
     publishers_to_check = list(
@@ -471,7 +471,7 @@ def run_management_command_task(command_name: str, args: list = None, kwargs: di
 
     import io
     from django.core.management import call_command
-    from .cache_utils import safe_cache_set
+    from ..cache_utils import safe_cache_set
 
     args = args or []
     kwargs = kwargs or {}
@@ -515,7 +515,7 @@ def run_management_command_task(command_name: str, args: list = None, kwargs: di
 @shared_task
 def anonymize_expired_sessions_task():
     """Periodic task to convert expired anonymous sessions to anonymized profiles"""
-    from .services.anonymization_service import batch_anonymize_expired_sessions
+    from ..services.anonymization_service import batch_anonymize_expired_sessions
 
     count = batch_anonymize_expired_sessions()
     logger.info(f"Anonymized {count} expired sessions")
@@ -528,8 +528,8 @@ def generate_recommendations_task(self, user_id: int):
     Generate and store recommendations for a user after their DNA is created/updated.
     This runs asynchronously so it doesn't slow down DNA generation.
     """
-    from .cache_utils import safe_cache_delete
-    from .services.recommendation_service import get_recommendations_for_user
+    from ..cache_utils import safe_cache_delete
+    from ..services.recommendation_service import get_recommendations_for_user
 
     # Track whether the task is terminally complete. Cleared on retry so
     # the sentinel set in display_dna_view stays in place across the retry
@@ -550,7 +550,7 @@ def generate_recommendations_task(self, user_id: int):
         recommendations = get_recommendations_for_user(user, limit=6)
 
         # Imported here to avoid a circular import with core.views.
-        from .views import BADGE_COLOR_MAP
+        from ..views import BADGE_COLOR_MAP
 
         processed_recs = []
         for rec in recommendations:

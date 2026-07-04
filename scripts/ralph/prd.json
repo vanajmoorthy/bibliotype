@@ -944,7 +944,7 @@
         "Celery autodiscovery still finds tasks (run `celery -A bibliotype inspect registered` or rely on the existing test that imports tasks).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 65
     },

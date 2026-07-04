@@ -1733,3 +1733,22 @@
   imports (views/__init__ pattern) + calculate_full_dna, which stays here
   as the orchestrator per the story. Dropped the long-unused `time` import.
 - manage.py check clean; FULL suite: Ran 398 tests — OK.
+
+## 2026-07-04 17:12 — US-056
+- Converted core/tasks.py → core/tasks/ package: pure `git mv core/tasks.py
+  core/tasks/__init__.py` in its own commit, then a follow-up fixing all 19
+  relative imports for the new nesting (from .models → from ..models, ditto
+  ..services.*, ..analytics.events, ..cache_utils, ..views,
+  ..management_command_registry — including every lazy in-function import).
+- Wire names unaffected: __name__ for core/tasks/__init__.py is "core.tasks",
+  so @shared_task still derives core.tasks.<func> for all 8 tasks.
+- Celery autodiscovery baseline captured BEFORE the move and re-run after:
+  identical 8-task list —
+  core.tasks.anonymize_expired_sessions_task,
+  core.tasks.check_author_mainstream_status_task,
+  core.tasks.claim_anonymous_dna_task, core.tasks.enrich_book_task,
+  core.tasks.generate_reading_dna_task,
+  core.tasks.generate_recommendations_task,
+  core.tasks.research_publisher_mainstream_task,
+  core.tasks.run_management_command_task.
+- manage.py check clean; test_tasks_unit + test_tasks_integration (26 tests) OK.
