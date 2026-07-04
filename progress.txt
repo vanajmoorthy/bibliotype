@@ -1619,3 +1619,15 @@
   test_storygraph_integration), `core.views.generate_reading_dna_task` →
   `core.views.upload.generate_reading_dna_task` (5 sites in test_views_e2e).
 - 28 tests (views_e2e + tasks_integration) + 20 (storygraph) green.
+
+## 2026-07-04 16:58 — US-048a
+- Moved display_dna_view + public_profile_view verbatim into
+  core/views/dashboard.py; helpers imported via
+  `from ._helpers import BADGE_COLOR_MAP, _compute_enrichment_progress,
+  _enrich_dna_for_display, _expand_book_dict`.
+- Lazy imports inside the anonymous-recs branch (AnonymousUserSession, Author,
+  get_recommendations_for_anonymous, generate_recommendations_task) stay
+  function-local and unchanged.
+- No suite patches `core.views._enrich_dna_for_display` etc. — tests import the
+  helper directly, so the ._helpers indirection is safe. 36 tests green
+  (views_e2e + profile_and_recommendations).
