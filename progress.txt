@@ -1804,3 +1804,32 @@
 - Autodiscovery probe: identical 8-task core.* baseline list.
 - manage.py check clean; test_integration + test_enrichment_stats +
   test_storygraph_integration (81 tests) OK.
+
+## 2026-07-04 17:35 — US-059
+- Extracted core/tasks/recommendations.py (generate_recommendations_task) and
+  core/tasks/maintenance.py (anonymize_expired_sessions_task,
+  run_management_command_task + the ALLOWED_COMMANDS import). All three
+  decorators pin their original core.tasks.<name> wire names — critical for
+  anonymize_expired_sessions_task, which the settings.py beat schedule
+  references as 'core.tasks.anonymize_expired_sessions_task'. Lazy
+  in-function imports (..cache_utils, ..services.*, ..views.BADGE_COLOR_MAP
+  circular-import guard) kept verbatim.
+- core/tasks/__init__.py is now a thin aggregator: package docstring +
+  explicit per-submodule re-export imports with # noqa: F401 (matched
+  core/views/__init__.py style — explicit names, no star imports despite the
+  PRD wording, since the codebase pattern is explicit).
+- Patch-target audit: whole-object patches of
+  core.tasks.generate_recommendations_task (13) and
+  core.tasks.run_management_command_task (4) keep working — every production
+  caller lazy-imports from the package at call time (views/dashboard,
+  services/dna/persistence, core/admin, mgmt commands); nothing inside the
+  tasks package calls either. `.delay` patches mutate the shared task object.
+  No re-points needed this story.
+- Autodiscovery probe: final list identical to the pre-split baseline —
+  core.tasks.{anonymize_expired_sessions_task,
+  check_author_mainstream_status_task, claim_anonymous_dna_task,
+  enrich_book_task, generate_reading_dna_task,
+  generate_recommendations_task, research_publisher_mainstream_task,
+  run_management_command_task}. Beat-schedule task strings in settings.py
+  verified present in the registry; bibliotype/celery.py needed no changes.
+- manage.py check clean; FULL suite: Ran 398 tests — OK.

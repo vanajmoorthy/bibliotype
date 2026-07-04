@@ -986,7 +986,7 @@
         "**Celery autodiscovery check** (same command as US-057); confirm all 6+ tasks appear.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 68
     },
