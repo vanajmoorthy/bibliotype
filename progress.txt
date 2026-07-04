@@ -1733,3 +1733,103 @@
   imports (views/__init__ pattern) + calculate_full_dna, which stays here
   as the orchestrator per the story. Dropped the long-unused `time` import.
 - manage.py check clean; FULL suite: Ran 398 tests — OK.
+
+## 2026-07-04 17:12 — US-056
+- Converted core/tasks.py → core/tasks/ package: pure `git mv core/tasks.py
+  core/tasks/__init__.py` in its own commit, then a follow-up fixing all 19
+  relative imports for the new nesting (from .models → from ..models, ditto
+  ..services.*, ..analytics.events, ..cache_utils, ..views,
+  ..management_command_registry — including every lazy in-function import).
+- Wire names unaffected: __name__ for core/tasks/__init__.py is "core.tasks",
+  so @shared_task still derives core.tasks.<func> for all 8 tasks.
+- Celery autodiscovery baseline captured BEFORE the move and re-run after:
+  identical 8-task list —
+  core.tasks.anonymize_expired_sessions_task,
+  core.tasks.check_author_mainstream_status_task,
+  core.tasks.claim_anonymous_dna_task, core.tasks.enrich_book_task,
+  core.tasks.generate_reading_dna_task,
+  core.tasks.generate_recommendations_task,
+  core.tasks.research_publisher_mainstream_task,
+  core.tasks.run_management_command_task.
+- manage.py check clean; test_tasks_unit + test_tasks_integration (26 tests) OK.
+
+## 2026-07-04 17:20 — US-057
+- Extracted core/tasks/dna.py: generate_reading_dna_task,
+  claim_anonymous_dna_task, _create_userbooks_from_anonymous_session moved
+  verbatim (the _hash_key/_clear_pending helpers are function-local and moved
+  with the claim task). Both @shared_task decorators pin their original wire
+  names (name="core.tasks.generate_reading_dna_task" /
+  "core.tasks.claim_anonymous_dna_task") so queued messages + any external
+  callers survive the split; annotated with "# name pinned" comments.
+- __init__ deletes the moved code and re-exports from .dna (views/__init__
+  style, # noqa: F401): claim_anonymous_dna_task, generate_reading_dna_task,
+  _create_userbooks_from_anonymous_session (test_integration imports it from
+  core.tasks) and _save_dna_to_profile (core/views/auth.py imports it from
+  ..tasks) — public surface preserved. AsyncResult + analytics-event imports
+  and the services.dna import moved to dna.py; header trimmed accordingly.
+- Patch-target audit: patch("core.tasks.AsyncResult") intercepts a lookup
+  inside claim_anonymous_dna_task, which now resolves from core.tasks.dna →
+  re-pointed all 4 decorators in test_tasks_integration.py to
+  core.tasks.dna.AsyncResult. Whole-object patches of
+  core.tasks.generate_recommendations_task / check_author_mainstream_status_task
+  still work: every production call site does a lazy `from ..tasks import X`
+  (views/dashboard, services/dna, persistence) that binds from the package at
+  call time. `.delay` patches mutate the shared task object — location-proof.
+  assertLogs("core.tasks") still captures the claim task's warnings via child
+  logger (core.tasks.dna) propagation.
+- Autodiscovery probe after the move: identical 8-task core.* list as the
+  pre-split baseline.
+- manage.py check clean; test_tasks_integration + test_views_e2e (28 tests) OK.
+
+## 2026-07-04 17:28 — US-058
+- Extracted core/tasks/enrichment.py: enrich_book_task,
+  check_author_mainstream_status_task, research_publisher_mainstream_task
+  moved verbatim together with the PUBLISHER_CHECK_BATCH_LIMIT /
+  PUBLISHER_CHECK_AGE_THRESHOLD_DAYS constants (used only by the publisher
+  task; re-exported anyway for surface stability). All three decorators pin
+  their original wire names (name="core.tasks.<task>") — critical for
+  research_publisher_mainstream_task, which the settings.py beat schedule
+  references as 'core.tasks.research_publisher_mainstream_task'.
+- __init__ header slimmed (requests/Q/time/Author/Book/
+  check_author_mainstream_status now live in enrichment.py) + .enrichment
+  re-export block.
+- Patch-target re-points in test_integration.py:
+  patch("core.tasks.check_author_mainstream_status") ×3 →
+  core.tasks.enrichment.check_author_mainstream_status (module-level lookup
+  inside the task body now resolves from the submodule);
+  patch("core.tasks.Book.objects.get") ×1 →
+  core.tasks.enrichment.Book.objects.get (Book is no longer a core.tasks
+  package attr). All `.delay` patches untouched — they mutate the shared
+  task object.
+- Autodiscovery probe: identical 8-task core.* baseline list.
+- manage.py check clean; test_integration + test_enrichment_stats +
+  test_storygraph_integration (81 tests) OK.
+
+## 2026-07-04 17:35 — US-059
+- Extracted core/tasks/recommendations.py (generate_recommendations_task) and
+  core/tasks/maintenance.py (anonymize_expired_sessions_task,
+  run_management_command_task + the ALLOWED_COMMANDS import). All three
+  decorators pin their original core.tasks.<name> wire names — critical for
+  anonymize_expired_sessions_task, which the settings.py beat schedule
+  references as 'core.tasks.anonymize_expired_sessions_task'. Lazy
+  in-function imports (..cache_utils, ..services.*, ..views.BADGE_COLOR_MAP
+  circular-import guard) kept verbatim.
+- core/tasks/__init__.py is now a thin aggregator: package docstring +
+  explicit per-submodule re-export imports with # noqa: F401 (matched
+  core/views/__init__.py style — explicit names, no star imports despite the
+  PRD wording, since the codebase pattern is explicit).
+- Patch-target audit: whole-object patches of
+  core.tasks.generate_recommendations_task (13) and
+  core.tasks.run_management_command_task (4) keep working — every production
+  caller lazy-imports from the package at call time (views/dashboard,
+  services/dna/persistence, core/admin, mgmt commands); nothing inside the
+  tasks package calls either. `.delay` patches mutate the shared task object.
+  No re-points needed this story.
+- Autodiscovery probe: final list identical to the pre-split baseline —
+  core.tasks.{anonymize_expired_sessions_task,
+  check_author_mainstream_status_task, claim_anonymous_dna_task,
+  enrich_book_task, generate_reading_dna_task,
+  generate_recommendations_task, research_publisher_mainstream_task,
+  run_management_command_task}. Beat-schedule task strings in settings.py
+  verified present in the registry; bibliotype/celery.py needed no changes.
+- manage.py check clean; FULL suite: Ran 398 tests — OK.

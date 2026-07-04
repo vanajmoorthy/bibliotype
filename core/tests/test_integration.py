@@ -139,7 +139,7 @@ class BookEnrichmentIntegrationTests(TestCase):
             safe_cache_set("upload_nonce_42", "new-upload-id", timeout=3600)
             return result
 
-        with patch("core.tasks.Book.objects.get", side_effect=get_with_nonce_change):
+        with patch("core.tasks.enrichment.Book.objects.get", side_effect=get_with_nonce_change):
             enrich_book_task.delay(book_id, user_id=42, upload_nonce="old-upload-id")
 
         mock_enrich.assert_not_called()
@@ -485,7 +485,7 @@ class CheckAuthorMainstreamStatusTaskTests(TestCase):
     def setUp(self):
         self.author = Author.objects.create(name="Test Author")
 
-    @patch("core.tasks.check_author_mainstream_status")
+    @patch("core.tasks.enrichment.check_author_mainstream_status")
     def test_skipped_when_superseded_by_newer_upload(self, mock_check):
         """Author check exits early if a newer upload nonce is in the cache."""
         from core.cache_utils import safe_cache_set
@@ -499,7 +499,7 @@ class CheckAuthorMainstreamStatusTaskTests(TestCase):
 
         mock_check.assert_not_called()
 
-    @patch("core.tasks.check_author_mainstream_status")
+    @patch("core.tasks.enrichment.check_author_mainstream_status")
     def test_runs_when_nonce_matches(self, mock_check):
         """Author check runs normally when upload nonce is current."""
         from core.cache_utils import safe_cache_set
@@ -514,7 +514,7 @@ class CheckAuthorMainstreamStatusTaskTests(TestCase):
 
         mock_check.assert_called_once()
 
-    @patch("core.tasks.check_author_mainstream_status")
+    @patch("core.tasks.enrichment.check_author_mainstream_status")
     def test_runs_when_no_nonce_provided(self, mock_check):
         """Backwards-compat: tasks dispatched without nonce kwargs still run."""
         from core.tasks import check_author_mainstream_status_task

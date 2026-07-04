@@ -944,7 +944,7 @@
         "Celery autodiscovery still finds tasks (run `celery -A bibliotype inspect registered` or rely on the existing test that imports tasks).",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 65
     },
@@ -958,7 +958,7 @@
         "**Celery autodiscovery check:** in a dev container, run `celery -A bibliotype inspect registered` (or, if a worker isn't running, `python -c \"from bibliotype.celery import app; print([t for t in app.tasks if t.startswith('core.')])\"`) and confirm both `core.tasks.generate_dna_task` and `core.tasks.claim_anonymous_dna_task` appear. Capture the output line in `progress.txt`.",
         "`manage.py test core.tests.test_tasks_integration` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 66
     },
@@ -972,7 +972,7 @@
         "**Celery autodiscovery check** (same command as US-057); confirm all three appear in `app.tasks`.",
         "`manage.py test core.tests.test_integration core.tests.test_enrichment_stats` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 67
     },
@@ -986,7 +986,7 @@
         "**Celery autodiscovery check** (same command as US-057); confirm all 6+ tasks appear.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 68
     },

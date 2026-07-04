@@ -75,7 +75,7 @@ class TaskIntegrationTests(TransactionTestCase):
         self.assertEqual(cached_data["reader_type"], "Novella Navigator")
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.AsyncResult")
+    @patch("core.tasks.dna.AsyncResult")
     def test_claim_anonymous_dna_task(self, mock_async_result, mock_rec_task):
         """
         Tests the claiming task's ability to fetch a result from the Celery backend
@@ -103,7 +103,7 @@ class TaskIntegrationTests(TransactionTestCase):
         mock_async_result.assert_called_with(task_id)
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.AsyncResult")
+    @patch("core.tasks.dna.AsyncResult")
     def test_claim_anonymous_dna_task_fails_closed_on_cache_miss(self, mock_async_result, mock_rec_task):
         """
         Post-review hardening: when `task_owner_<task_id>` is absent from cache
@@ -134,7 +134,7 @@ class TaskIntegrationTests(TransactionTestCase):
         mock_async_result.assert_not_called()
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.AsyncResult")
+    @patch("core.tasks.dna.AsyncResult")
     def test_claim_anonymous_dna_task_fails_closed_on_missing_session_key(
         self, mock_async_result, mock_rec_task
     ):
@@ -163,7 +163,7 @@ class TaskIntegrationTests(TransactionTestCase):
         mock_async_result.assert_not_called()
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.AsyncResult")
+    @patch("core.tasks.dna.AsyncResult")
     def test_claim_anonymous_dna_task_rejects_session_key_mismatch(self, mock_async_result, mock_rec_task):
         """
         US-003 security: when the caller-supplied session_key does NOT match
