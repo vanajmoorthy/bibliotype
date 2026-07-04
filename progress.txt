@@ -1652,3 +1652,22 @@
   `logger` binding moved out with their consumers.
 - `assertLogs("core.views", ...)` assertions still pass because submodule
   loggers (core.views.upload etc.) propagate to the core.views parent logger.
+
+## 2026-07-04 16:50 — US-050
+- git mv core/services/dna_analyser.py -> core/services/dna/__init__.py
+  (pure move commit), then fixed the package's relative imports one level
+  deeper (..dna_constants/..models/..percentile_engine/..cache_utils/..tasks
+  -> ...; ..services.top_books_service -> ..top_books_service), including
+  all lazy in-function imports.
+- Added deprecated shim core/services/dna_analyser.py (star-import +
+  explicit underscore-name re-exports; remove after 2026-08-03).
+- Extracted core/services/dna/utils.py: _isbn_to_isbn13, _build_cover_url
+  (= cover_url_from_isbn alias), _cover_initial, _sanitize_review_text +
+  _HTML_TAG_RE / _ARTICLE_PREFIXES. __init__ re-imports them.
+- Re-pointed all 39 patch("core.services.dna_analyser.generate_vibe_with_llm")
+  targets to core.services.dna.generate_vibe_with_llm (name is looked up in
+  the dna package, so patching the shim would no longer intercept it).
+- manage.py check clean; test_sanitize_review + test_currently_reading +
+  test_math_accuracy (72 tests) OK; re-pointed patcher modules
+  (views_e2e, tasks_integration, storygraph_integration, subtitle_data,
+  82 tests) OK.

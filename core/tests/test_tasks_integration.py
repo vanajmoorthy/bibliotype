@@ -33,7 +33,7 @@ class TaskIntegrationTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     def test_generate_dna_for_authenticated_user(self, mock_generate_vibe, mock_enrich_delay, mock_author_check, mock_rec_task):
         """
         Tests the full DNA generation task for a logged-in user.
@@ -56,7 +56,7 @@ class TaskIntegrationTests(TransactionTestCase):
 
     @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     def test_generate_dna_for_anonymous_user(self, mock_generate_vibe, mock_enrich_delay, mock_author_check):
         """
         Tests that anonymous generation saves its result to the cache.
@@ -198,7 +198,7 @@ class TaskIntegrationTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.delay")
     @patch("core.tasks.enrich_book_task.delay")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     def test_process_book_row_query_count_regression(
         self, mock_generate_vibe, mock_enrich_delay, mock_author_check, mock_rec_task
     ):

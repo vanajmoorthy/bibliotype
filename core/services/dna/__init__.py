@@ -2,7 +2,6 @@ import hashlib
 import logging
 import math
 import random
-import re
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -15,15 +14,9 @@ from django.db import IntegrityError
 from django.db.models import F
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-from core.services._book_urls import cover_url_from_isbn
 from core.services.llm_service import generate_vibe_with_llm
 
-# Backwards-compatible re-export: tests and earlier call sites import
-# `_build_cover_url` from this module. The implementation now lives in
-# `core/services/_book_urls.py` as `cover_url_from_isbn`.
-_build_cover_url = cover_url_from_isbn
-
-from ..dna_constants import (
+from ...dna_constants import (
     CANONICAL_GENRE_MAP,
     FICTION_GENRES,
     GLOBAL_AVERAGES,
@@ -32,68 +25,25 @@ from ..dna_constants import (
     READER_TYPE_DESCRIPTIONS,
     compute_contrariness,
 )
-from ..models import Author, Book, Genre
-from ..percentile_engine import (
+from ...models import Author, Book, Genre
+from ...percentile_engine import (
     calculate_community_means,
     calculate_percentiles_from_aggregates,
     update_analytics_from_stats,
 )
-from ..services.top_books_service import (
+from ..top_books_service import (
     MIN_REVIEW_LENGTH_FOR_SENTIMENT,
     calculate_and_store_top_books,
     compute_book_score,
 )
+from .utils import (  # noqa: F401 — re-exported for stable import paths
+    _build_cover_url,
+    _cover_initial,
+    _isbn_to_isbn13,
+    _sanitize_review_text,
+)
 
 logger = logging.getLogger(__name__)
-
-_HTML_TAG_RE = re.compile(r"<[^>]+>")
-
-
-def _sanitize_review_text(text):
-    """Strip HTML tags from review text, preserving <br> variants as newlines."""
-    if not text or not isinstance(text, str):
-        return text
-    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
-    text = _HTML_TAG_RE.sub("", text)
-    return text.strip()
-
-
-_ARTICLE_PREFIXES = ("the ", "a ", "an ")
-
-
-def _cover_initial(title):
-    """Return the first letter for a book cover fallback, skipping leading articles."""
-    lower = title.lower()
-    for prefix in _ARTICLE_PREFIXES:
-        if lower.startswith(prefix):
-            rest = title[len(prefix):].strip()
-            if rest:
-                return rest[0].upper()
-    return title[0].upper() if title else "?"
-
-
-def _isbn_to_isbn13(raw):
-    """Normalize an ISBN-10 or ISBN-13 to its 13-digit form.
-
-    Without this, Goodreads ISBN-10 and StoryGraph ISBN-13 for the same physical
-    book don't match in our DB, so cross-platform dedup fails.
-
-    Returns None for invalid input. Accepts the ISBN-10 X check digit (X = 10),
-    Goodreads-style ="..." wrapping, and inputs containing whitespace or other
-    junk characters. Idempotent for valid ISBN-13 inputs.
-    """
-    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
-        return None
-    s = str(raw).strip().strip('="').upper()
-    cleaned = re.sub(r"[^0-9X]", "", s)
-    if len(cleaned) == 13 and cleaned.isdigit():
-        return cleaned
-    if len(cleaned) == 10 and cleaned[:9].isdigit() and (cleaned[9].isdigit() or cleaned[9] == "X"):
-        prefix = "978" + cleaned[:9]
-        total = sum(int(c) * (1 if i % 2 == 0 else 3) for i, c in enumerate(prefix))
-        check = (10 - (total % 10)) % 10
-        return prefix + str(check)
-    return None
 
 
 # Goodreads column names serve as the internal canonical schema.
@@ -291,7 +241,7 @@ def _save_dna_to_profile(profile, dna_data):
         )
 
         # Invalidate stale caches for this user
-        from ..cache_utils import safe_cache_add, safe_cache_delete
+        from ...cache_utils import safe_cache_add, safe_cache_delete
 
         safe_cache_delete(f"similar_users_{profile.user.id}")
         safe_cache_delete(f"user_recommendations_{profile.user.id}")
@@ -300,7 +250,7 @@ def _save_dna_to_profile(profile, dna_data):
         # dashboard poll landing in the window before the task picks up can't
         # double-dispatch. The task's finally block clears the sentinel.
         if safe_cache_add(f"recs_dispatching_{profile.user.id}", 1, timeout=300):
-            from ..tasks import generate_recommendations_task
+            from ...tasks import generate_recommendations_task
 
             generate_recommendations_task.delay(profile.user.id)
             logger.info(f"Dispatched recommendations task for user {profile.user.username}")
@@ -320,7 +270,7 @@ def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_d
 
     from django.utils import timezone
 
-    from ..models import AnonymousUserSession
+    from ...models import AnonymousUserSession
 
     # Extract books and ratings
     books_data = [book.id for book in user_book_objects if book]
@@ -470,7 +420,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         upload_user_id = None
         if user:
             upload_user_id = user.id
-            from ..cache_utils import safe_cache_get
+            from ...cache_utils import safe_cache_get
 
             upload_nonce = safe_cache_get(f"upload_nonce_{user.id}")
         with requests.Session() as session:
@@ -488,7 +438,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 )
 
                 if created:
-                    from ..tasks import check_author_mainstream_status_task
+                    from ...tasks import check_author_mainstream_status_task
 
                     logger.info(f"New author found: '{author.name}'. Dispatching background check.")
                     check_author_mainstream_status_task.delay(
@@ -588,7 +538,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 already_attempted = not created and book.google_books_last_checked is not None
                 needs_page_data = not book.page_count or not book.publish_year
                 if not already_attempted and (created or not has_genres or needs_page_data):
-                    from ..tasks import enrich_book_task
+                    from ...tasks import enrich_book_task
 
                     logger.debug(
                         f"Dispatching enrichment for '{book.title}' (created={created}, has_genres={has_genres}, needs_page_data={needs_page_data})"
@@ -656,7 +606,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     normalized_name=normalized_author_name, defaults={"name": cr_author_name}
                 )
                 if created:
-                    from ..tasks import check_author_mainstream_status_task
+                    from ...tasks import check_author_mainstream_status_task
 
                     check_author_mainstream_status_task.delay(
                         author.id, user_id=upload_user_id, upload_nonce=upload_nonce
@@ -689,7 +639,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         # Store UserBook entries for registered users
         if user and results:
-            from ..models import UserBook
+            from ...models import UserBook
 
             # Collect current book IDs from this upload
             current_book_ids = {book.id for book, genres, original_row in results if book}

@@ -8,8 +8,8 @@
       "title": "Create `AGENTS.md` and `progress.txt` scaffolding",
       "description": "As Ralph, I want the inter-iteration memory files in place so each fresh context can pick up project conventions and prior learnings.\n\n**Files:** `AGENTS.md` (new, repo root), `progress.txt` (new, repo root).",
       "acceptanceCriteria": [
-        "`AGENTS.md` created with the following sections (each a short paragraph or bullet list): — \"Project conventions\" — mirrors CLAUDE.md baselines: f-strings only, function-based views, `safe_cache_*` wrappers, email-based auth. — \"Settings invariants\" — placeholder; populated by US-004 (`DEBUG=False` default), US-027 (`ENABLE_PARALLEL_ENRICHMENT`), US-002 (`ENFORCE_TASK_OWNERSHIP`), US-037 (`GEMINI_MODEL`). — \"Redis key registry\" — placeholder; populated by US-001 (`task_owner_<id>`). — \"Service-layer rules\" — placeholder; populated when boundaries are established. — \"How to update this file vs progress.txt\" — see below.",
-        "**AGENTS.md vs progress.txt convention** (write this section into AGENTS.md verbatim): > `AGENTS.md` is for durable, project-wide invariants — settings keys, Redis key formats, code conventions, layering rules. It is mutated in place; old entries are corrected, not appended. New stories that establish a new invariant MUST update the relevant section here. > > `progress.txt` is an append-only chronological learning log. Each line: `YYYY-MM-DD: <one-sentence learning>`. Use it for: surprising findings during a story, prerequisites that must be satisfied for a future story (e.g. \"regenerate_dna run on $DATE — US-033 unblocked\"), follow-up items, and things that are time-bounded (e.g. \"30-day shim, remove after $DATE\"). Never edit existing progress.txt lines — only append.",
+        "`AGENTS.md` created with the following sections (each a short paragraph or bullet list): \u2014 \"Project conventions\" \u2014 mirrors CLAUDE.md baselines: f-strings only, function-based views, `safe_cache_*` wrappers, email-based auth. \u2014 \"Settings invariants\" \u2014 placeholder; populated by US-004 (`DEBUG=False` default), US-027 (`ENABLE_PARALLEL_ENRICHMENT`), US-002 (`ENFORCE_TASK_OWNERSHIP`), US-037 (`GEMINI_MODEL`). \u2014 \"Redis key registry\" \u2014 placeholder; populated by US-001 (`task_owner_<id>`). \u2014 \"Service-layer rules\" \u2014 placeholder; populated when boundaries are established. \u2014 \"How to update this file vs progress.txt\" \u2014 see below.",
+        "**AGENTS.md vs progress.txt convention** (write this section into AGENTS.md verbatim): > `AGENTS.md` is for durable, project-wide invariants \u2014 settings keys, Redis key formats, code conventions, layering rules. It is mutated in place; old entries are corrected, not appended. New stories that establish a new invariant MUST update the relevant section here. > > `progress.txt` is an append-only chronological learning log. Each line: `YYYY-MM-DD: <one-sentence learning>`. Use it for: surprising findings during a story, prerequisites that must be satisfied for a future story (e.g. \"regenerate_dna run on $DATE \u2014 US-033 unblocked\"), follow-up items, and things that are time-bounded (e.g. \"30-day shim, remove after $DATE\"). Never edit existing progress.txt lines \u2014 only append.",
         "`progress.txt` created with header `# Bibliotype triage progress log` and one initial line: `2026-05-05: PRD generated from multi-agent triage report`.",
         "No code change. Just files in place.",
         "`manage.py test` still passes (sanity)."
@@ -21,11 +21,11 @@
     {
       "id": "US-001",
       "title": "Bind anonymous task_id to originating session at upload time",
-      "description": "As a Bibliotype operator, I want anonymous DNA tasks bound to the visitor's session so that a leaked or guessed task_id cannot be used to view someone else's reading data.\n\n**Files:** - `core/views.py` (`upload_view` ~L733; relevant cache writes around L749–810)\n- `AGENTS.md` (Redis key registry)",
+      "description": "As a Bibliotype operator, I want anonymous DNA tasks bound to the visitor's session so that a leaked or guessed task_id cannot be used to view someone else's reading data.\n\n**Files:** - `core/views.py` (`upload_view` ~L733; relevant cache writes around L749\u2013810)\n- `AGENTS.md` (Redis key registry)",
       "acceptanceCriteria": [
         "**Scope:** apply ONLY in the anonymous branch of `upload_view` (the `else` of `if request.user.is_authenticated`). The authenticated branch already binds the task to `request.user.id` and doesn't need a session-keyed owner entry.",
         "In `upload_view`'s anonymous branch, after dispatching the DNA Celery task, ensure `request.session.session_key` exists (call `request.session.save()` if `session_key is None`). Store `request.session[\"anonymous_task_id\"] = task_id` and `safe_cache_set(f\"task_owner_{task_id}\", request.session.session_key, 3600)`.",
-        "**Redis key registry:** add a \"Redis key registry\" section to `AGENTS.md` documenting: — `task_owner_<task_id>` — owner session_key for an anon DNA task; written at upload, read by `get_task_result_view` and `claim_anonymous_dna_task`; TTL 3600s. — `dna_result_<task_id>` — pre-existing; cached DNA payload. — `session_key_<task_id>` — pre-existing. — **Convention going forward:** all keys use the format `<purpose>_<scope_id>` with snake_case purpose. Cross-reference this section from US-024 (which adds `recs_dispatching_<user_id>`).",
+        "**Redis key registry:** add a \"Redis key registry\" section to `AGENTS.md` documenting: \u2014 `task_owner_<task_id>` \u2014 owner session_key for an anon DNA task; written at upload, read by `get_task_result_view` and `claim_anonymous_dna_task`; TTL 3600s. \u2014 `dna_result_<task_id>` \u2014 pre-existing; cached DNA payload. \u2014 `session_key_<task_id>` \u2014 pre-existing. \u2014 **Convention going forward:** all keys use the format `<purpose>_<scope_id>` with snake_case purpose. Cross-reference this section from US-024 (which adds `recs_dispatching_<user_id>`).",
         "**Positive test:** after a successful upload via the Django test client, both `request.session[\"anonymous_task_id\"]` and `cache.get(f\"task_owner_{task_id}\")` are populated and equal to the expected values.",
         "**No regression test:** an existing upload-flow integration test still passes unchanged (no behavior change for happy-path).",
         "`manage.py test core.tests.test_views_e2e` passes."
@@ -37,14 +37,14 @@
     {
       "id": "US-002",
       "title": "Reject `task_id` in `get_task_result_view` if not bound to caller's session",
-      "description": "As a Bibliotype user, I want the task-result endpoint to refuse task_ids I don't own so that no one can pull my DNA into their session.\n\n**Files:** - `core/views.py` (`get_task_result_view` L1192–1253)",
+      "description": "As a Bibliotype user, I want the task-result endpoint to refuse task_ids I don't own so that no one can pull my DNA into their session.\n\n**Files:** - `core/views.py` (`get_task_result_view` L1192\u20131253)",
       "acceptanceCriteria": [
         "At the top of `get_task_result_view`, look up `owner = cache.get(f\"task_owner_{task_id}\")`.",
         "**Strict ownership check (NO fallback):** if `owner is None OR owner != request.session.session_key`, return `JsonResponse({\"status\": \"FORBIDDEN\"}, status=403)`.",
-        "**Legacy compat (constrained):** the strict check is gated by a new flag `ENFORCE_TASK_OWNERSHIP = os.environ.get(\"ENFORCE_TASK_OWNERSHIP\", \"False\") == \"True\"` — default OFF in this story, flipped ON in a follow-up after verifying production task IDs predating US-001 have drained (≥1 hour after US-001 deploy). Document in `progress.txt`.",
-        "When `ENFORCE_TASK_OWNERSHIP=False`, log a `logger.warning(\"task_owner check skipped, key=%s\", task_id)` per request so operators can quantify how many in-flight legacy task lookups occur. Once that count hits 0 in metrics for ≥1 hour, the operator flips the flag.",
-        "**Positive test:** session A uploads, then fetches own task → 200.",
-        "**Negative test:** session A uploads, session B fetches A's task → with `ENFORCE_TASK_OWNERSHIP=True` (use `@override_settings` in the test), receives 403. With the default off, receives 200 + warning log captured by `assertLogs`.",
+        "**Legacy compat (constrained):** the strict check is gated by a new flag `ENFORCE_TASK_OWNERSHIP = os.environ.get(\"ENFORCE_TASK_OWNERSHIP\", \"False\") == \"True\"` \u2014 default OFF in this story, flipped ON in a follow-up after verifying production task IDs predating US-001 have drained (\u22651 hour after US-001 deploy). Document in `progress.txt`.",
+        "When `ENFORCE_TASK_OWNERSHIP=False`, log a `logger.warning(\"task_owner check skipped, key=%s\", task_id)` per request so operators can quantify how many in-flight legacy task lookups occur. Once that count hits 0 in metrics for \u22651 hour, the operator flips the flag.",
+        "**Positive test:** session A uploads, then fetches own task \u2192 200.",
+        "**Negative test:** session A uploads, session B fetches A's task \u2192 with `ENFORCE_TASK_OWNERSHIP=True` (use `@override_settings` in the test), receives 403. With the default off, receives 200 + warning log captured by `assertLogs`.",
         "**AGENTS.md:** add to \"Settings invariants\": \"`ENFORCE_TASK_OWNERSHIP` is the kill-switch on the Phase-1 hijack fix. Production must set it to `True` no later than 1 hour after US-001's deploy.\"",
         "`manage.py test core.tests.test_views_e2e` passes."
       ],
@@ -55,14 +55,14 @@
     {
       "id": "US-003",
       "title": "Bind `task_id_to_claim` on signup to caller's pre-login session_key",
-      "description": "As a Bibliotype user, I want signup-time DNA claims bound to my session so that nobody can sign up with a stolen task_id and inherit a stranger's library.\n\n**Files:** - `core/views.py` (`signup_view` ~L818–890)\n- `core/tasks.py` (`claim_anonymous_dna_task` ~L119–178)",
+      "description": "As a Bibliotype user, I want signup-time DNA claims bound to my session so that nobody can sign up with a stolen task_id and inherit a stranger's library.\n\n**Files:** - `core/views.py` (`signup_view` ~L818\u2013890)\n- `core/tasks.py` (`claim_anonymous_dna_task` ~L119\u2013178)",
       "acceptanceCriteria": [
         "**Session-rotation handling (critical):** Django rotates `request.session.session_key` on `login()`. This story must capture the session_key BEFORE `login()` is called and use that captured value for verification, not the post-login key.",
         "In `signup_view`, before any `login(...)` call: validate `task_id_to_claim` equals `request.session.get(\"anonymous_task_id\")`. Reject mismatches with a form validation error rendered on the signup page.",
         "Capture `pre_login_session_key = request.session.session_key`. Pass it explicitly into `claim_anonymous_dna_task.delay(user.id, task_id_to_claim, pre_login_session_key)`.",
         "`claim_anonymous_dna_task` gains a `session_key` argument; the task verifies `cache.get(f\"task_owner_{task_id}\") == session_key` before claiming. On mismatch, log `logger.warning(\"claim rejected: session_key mismatch\", extra={...})` and return early (no exception, no UserBook creation, no DNA write).",
         "**Regression test 1 (negative):** session A uploads, session B signs up with A's task_id, signup form rejects with the specific validation error message.",
-        "**Regression test 2 (positive):** session A uploads, then signs up — DNA claim succeeds and books are created. Test must use `Client()` with the same session across the upload + signup requests, and explicitly verify `pre_login_session_key` ≠ `request.session.session_key` after login (i.e., simulates the rotation that happens in production).",
+        "**Regression test 2 (positive):** session A uploads, then signs up \u2014 DNA claim succeeds and books are created. Test must use `Client()` with the same session across the upload + signup requests, and explicitly verify `pre_login_session_key` \u2260 `request.session.session_key` after login (i.e., simulates the rotation that happens in production).",
         "**Regression test 3 (security):** task fed a mismatched session_key via direct invocation logs the warning and creates no UserBooks. Use `assertLogs`.",
         "`manage.py test core.tests.test_views_e2e core.tests.test_tasks_integration` passes."
       ],
@@ -79,7 +79,7 @@
         "Add: `if os.environ.get(\"DJANGO_ENV\") == \"production\" and DEBUG: raise ImproperlyConfigured(\"DEBUG must be False in production\")`.",
         "Document this in `AGENTS.md` under a new \"Settings invariants\" section.",
         "Run `python manage.py check --deploy` and confirm no new warnings introduced (existing warnings are fine).",
-        "Update any test that relied on `DEBUG=True` defaulting (likely none — tests use `@override_settings`).",
+        "Update any test that relied on `DEBUG=True` defaulting (likely none \u2014 tests use `@override_settings`).",
         "`manage.py test` passes."
       ],
       "passes": true,
@@ -89,9 +89,9 @@
     {
       "id": "US-005",
       "title": "Move management-command whitelist into `run_management_command_task`",
-      "description": "As an operator, I want the management-command Celery task to refuse non-whitelisted commands even if a malicious caller publishes a message directly to the broker. **`core/admin.py` already derives `ALLOWED_COMMANDS = {cmd[\"name\"] for cmd in ADMIN_COMMANDS}` at module scope (near L276).** Use that as the single source of truth — don't redefine.\n\n**Files:** - `core/tasks.py` (`run_management_command_task` — locate by `grep -n \"def run_management_command_task\"`)\n- `core/admin.py` (existing `ALLOWED_COMMANDS` near L276)",
+      "description": "As an operator, I want the management-command Celery task to refuse non-whitelisted commands even if a malicious caller publishes a message directly to the broker. **`core/admin.py` already derives `ALLOWED_COMMANDS = {cmd[\"name\"] for cmd in ADMIN_COMMANDS}` at module scope (near L276).** Use that as the single source of truth \u2014 don't redefine.\n\n**Files:** - `core/tasks.py` (`run_management_command_task` \u2014 locate by `grep -n \"def run_management_command_task\"`)\n- `core/admin.py` (existing `ALLOWED_COMMANDS` near L276)",
       "acceptanceCriteria": [
-        "In `core/tasks.py`, import the whitelist from admin: `from .admin import ALLOWED_COMMANDS` (or move `ADMIN_COMMANDS` and `ALLOWED_COMMANDS` to a new `core/management_command_registry.py` if you'd rather avoid the tasks → admin import direction — pick whichever is cleaner). Do NOT redefine the whitelist as a second `frozenset` literal in tasks.py.",
+        "In `core/tasks.py`, import the whitelist from admin: `from .admin import ALLOWED_COMMANDS` (or move `ADMIN_COMMANDS` and `ALLOWED_COMMANDS` to a new `core/management_command_registry.py` if you'd rather avoid the tasks \u2192 admin import direction \u2014 pick whichever is cleaner). Do NOT redefine the whitelist as a second `frozenset` literal in tasks.py.",
         "First line of `run_management_command_task` body: `if command_name not in ALLOWED_COMMANDS: raise ValueError(f\"command not allowed: {command_name}\")`.",
         "**Negative test:** unit test verifies the task raises `ValueError` on a non-whitelisted name; verify `call_command` was not invoked using `mock.patch`.",
         "**Positive test:** unit test verifies a whitelisted command (use a no-op like `check`) executes successfully.",
@@ -119,9 +119,9 @@
       "title": "Verify `.prof` files are not tracked",
       "description": "As a maintainer, I want to confirm that no Silk profile dumps are tracked in git. (Earlier triage noted ~110 of them; PR #103 already gitignored `*.prof` and untracked them. This story is now mostly a verification step.)\n\n**Files:** `.gitignore`, repo root (verify state only).",
       "acceptanceCriteria": [
-        "Run `git ls-files '*.prof'` — output must be empty. If non-empty, `xargs git rm` the listed files and explain in `progress.txt` why they were still tracked.",
+        "Run `git ls-files '*.prof'` \u2014 output must be empty. If non-empty, `xargs git rm` the listed files and explain in `progress.txt` why they were still tracked.",
         "Confirm `.gitignore` already covers `*.prof`. Add it if missing (unlikely).",
-        "If everything is already clean, this story commits no changes — mark `passes: true` in `prd.json` and append a one-line `progress.txt` entry confirming the verification.",
+        "If everything is already clean, this story commits no changes \u2014 mark `passes: true` in `prd.json` and append a one-line `progress.txt` entry confirming the verification.",
         "`manage.py test` passes (sanity)."
       ],
       "passes": true,
@@ -131,14 +131,14 @@
     {
       "id": "US-008a",
       "title": "Move synthetic CSV fixtures into `core/tests/fixtures/csv/` (atomic)",
-      "description": "As a maintainer, I want synthetic test CSVs in a proper Django-conventional fixtures location. **The previous review revealed test files don't actually reference `csv/...` paths at runtime (they use `SimpleUploadedFile` inline), so the only path updates needed are in management commands — meaning this is a single-commit operation.** Do the file moves and update any management-command path references in the same commit.\n\n**Files:** `core/tests/__init__.py` (new — defines `TEST_FIXTURES_DIR`), `csv/` source files (synthetic + test_reader CSVs + subdirs), new `core/tests/fixtures/csv/` destination, plus any management command that hardcodes `csv/...` (find with `grep -rn '\"csv/' core/management/`).",
+      "description": "As a maintainer, I want synthetic test CSVs in a proper Django-conventional fixtures location. **The previous review revealed test files don't actually reference `csv/...` paths at runtime (they use `SimpleUploadedFile` inline), so the only path updates needed are in management commands \u2014 meaning this is a single-commit operation.** Do the file moves and update any management-command path references in the same commit.\n\n**Files:** `core/tests/__init__.py` (new \u2014 defines `TEST_FIXTURES_DIR`), `csv/` source files (synthetic + test_reader CSVs + subdirs), new `core/tests/fixtures/csv/` destination, plus any management command that hardcodes `csv/...` (find with `grep -rn '\"csv/' core/management/`).",
       "acceptanceCriteria": [
         "Create or augment `core/tests/__init__.py` with: `from pathlib import Path; TEST_FIXTURES_DIR = Path(__file__).parent / \"fixtures\" / \"csv\"`.",
         "`mkdir -p core/tests/fixtures/csv/` and move the 16 synthetic + 5 test_reader CSV files there.",
         "Move the three subdirectories (`test/`, `test_storygraph/`, `test-csvs/`) into `core/tests/fixtures/csv/` preserving structure.",
-        "Update any management command that hardcodes `csv/...` paths to point at `core/tests/fixtures/csv/...` instead. **First verify the affected command isn't slated for deletion** by US-012/US-013 — if it is, do nothing (deletion handles it).",
+        "Update any management command that hardcodes `csv/...` paths to point at `core/tests/fixtures/csv/...` instead. **First verify the affected command isn't slated for deletion** by US-012/US-013 \u2014 if it is, do nothing (deletion handles it).",
         "`progress.txt`: note where test fixtures now live and the `TEST_FIXTURES_DIR` constant name.",
-        "`manage.py test` passes — must remain green for the whole story (no intermediate broken state)."
+        "`manage.py test` passes \u2014 must remain green for the whole story (no intermediate broken state)."
       ],
       "passes": true,
       "notes": "",
@@ -177,7 +177,7 @@
     {
       "id": "US-010",
       "title": "Delete `catch_all_404_view` and unwire it",
-      "description": "As a maintainer, I want unused view code removed.\n\n**Files:** `core/views.py` L1276–1279, plus any urls.py reference (verified zero).",
+      "description": "As a maintainer, I want unused view code removed.\n\n**Files:** `core/views.py` L1276\u20131279, plus any urls.py reference (verified zero).",
       "acceptanceCriteria": [
         "`git grep catch_all_404` returns zero results outside of removal commit.",
         "`manage.py test` passes (the e2e 404 test should still hit `handler404`)."
@@ -230,13 +230,13 @@
     {
       "id": "US-014",
       "title": "Remove genuinely-unused imports (only the two that are safe)",
-      "description": "As a maintainer, I want dead-import lines removed. **Critical scope clarification:** the AST scan also flagged `safe_cache_delete` in `recommendation_service.py:8` — but that import is **deliberately re-exported** (`# noqa: F401 - re-exported`) and `core/tests/test_cache_refactor.py:99, 104, 109` imports it. **Do NOT touch the noqa-marked import line.** That re-export is removed only by US-060 (Phase 8), which also updates the consuming tests in the same commit.\n\n**Files:** - `core/services/user_similarity_service.py` L3 — `Avg` (from `django.db.models import Avg`)\n- `core/services/anonymization_service.py` L3 — `Author` (from `..models import ..., Author`)",
+      "description": "As a maintainer, I want dead-import lines removed. **Critical scope clarification:** the AST scan also flagged `safe_cache_delete` in `recommendation_service.py:8` \u2014 but that import is **deliberately re-exported** (`# noqa: F401 - re-exported`) and `core/tests/test_cache_refactor.py:99, 104, 109` imports it. **Do NOT touch the noqa-marked import line.** That re-export is removed only by US-060 (Phase 8), which also updates the consuming tests in the same commit.\n\n**Files:** - `core/services/user_similarity_service.py` L3 \u2014 `Avg` (from `django.db.models import Avg`)\n- `core/services/anonymization_service.py` L3 \u2014 `Author` (from `..models import ..., Author`)",
       "acceptanceCriteria": [
         "Remove `Avg` from the `from django.db.models import Avg` line in `user_similarity_service.py`. If it's the only symbol on that line, delete the whole import line.",
         "Remove `Author` from the `from ..models import AnonymizedReadingProfile, AnonymousUserSession, Author` line in `anonymization_service.py`. Keep the other two symbols.",
-        "**Explicitly do NOT modify** `core/services/recommendation_service.py:8` — verify before commit that line is unchanged.",
+        "**Explicitly do NOT modify** `core/services/recommendation_service.py:8` \u2014 verify before commit that line is unchanged.",
         "`isort --profile black --line-length 120 core/services/user_similarity_service.py core/services/anonymization_service.py` produces no diff after your edit.",
-        "`manage.py test core.tests.test_cache_refactor` passes (sanity — the re-export still works).",
+        "`manage.py test core.tests.test_cache_refactor` passes (sanity \u2014 the re-export still works).",
         "`manage.py test` passes (full)."
       ],
       "passes": true,
@@ -246,7 +246,7 @@
     {
       "id": "US-015",
       "title": "Add production security headers",
-      "description": "As an operator, I want HSTS, Referrer-Policy, and content-type-nosniff enforced in production so that S1's task_id leak via Referer is blocked and SSL stripping is mitigated.\n\n**Files:** `bibliotype/settings.py` (production block ~L163–171)",
+      "description": "As an operator, I want HSTS, Referrer-Policy, and content-type-nosniff enforced in production so that S1's task_id leak via Referer is blocked and SSL stripping is mitigated.\n\n**Files:** `bibliotype/settings.py` (production block ~L163\u2013171)",
       "acceptanceCriteria": [
         "Inside `if not DEBUG:` block add: `SECURE_HSTS_SECONDS = 31536000`, `SECURE_HSTS_INCLUDE_SUBDOMAINS = True`, `SECURE_HSTS_PRELOAD = True`, `SECURE_CONTENT_TYPE_NOSNIFF = True`, `SECURE_REFERRER_POLICY = \"same-origin\"`.",
         "`python manage.py check --deploy` reports zero warnings for the items above (other warnings are OK to log but not regress).",
@@ -259,7 +259,7 @@
     {
       "id": "US-016",
       "title": "Add `django-ratelimit` and apply to login view",
-      "description": "As an operator, I want failed-login rate limiting so credential stuffing is impractical.\n\n**Files:** `pyproject.toml`, `bibliotype/settings.py`, `core/views.py` (`login_view` L891–928).",
+      "description": "As an operator, I want failed-login rate limiting so credential stuffing is impractical.\n\n**Files:** `pyproject.toml`, `bibliotype/settings.py`, `core/views.py` (`login_view` L891\u2013928).",
       "acceptanceCriteria": [
         "Add `django-ratelimit` to dependencies via `poetry add django-ratelimit` (commit `pyproject.toml` AND `poetry.lock`).",
         "Apply `@ratelimit(key=\"ip\", rate=\"5/m\", method=\"POST\", block=True)` to `login_view`.",
@@ -275,13 +275,13 @@
     {
       "id": "US-017",
       "title": "Generic error message on signup duplicate-email",
-      "description": "As a user, I don't want signup forms revealing which emails are registered. **Decision:** ALSO send a password-reset email to legitimate users who forgot they have an account (better UX than only showing a vague page).\n\n**Files:** `core/forms.py` `clean_email` L28–31, `core/views.py` `signup_view`.",
+      "description": "As a user, I don't want signup forms revealing which emails are registered. **Decision:** ALSO send a password-reset email to legitimate users who forgot they have an account (better UX than only showing a vague page).\n\n**Files:** `core/forms.py` `clean_email` L28\u201331, `core/views.py` `signup_view`.",
       "acceptanceCriteria": [
         "Remove the duplicate-email error from `clean_email`. Allow the form to validate.",
-        "In `signup_view`, after form validation but before `User.objects.create_user`, check if a user with `email__iexact` already exists. If yes: — Trigger Django's password-reset email flow for that user (use `PasswordResetForm` programmatically or call the same code path used by `CustomPasswordResetView`). — Render a \"Check your inbox\" page with the same message regardless of whether the email exists. — Do NOT create a new user.",
+        "In `signup_view`, after form validation but before `User.objects.create_user`, check if a user with `email__iexact` already exists. If yes: \u2014 Trigger Django's password-reset email flow for that user (use `PasswordResetForm` programmatically or call the same code path used by `CustomPasswordResetView`). \u2014 Render a \"Check your inbox\" page with the same message regardless of whether the email exists. \u2014 Do NOT create a new user.",
         "**Negative test (new email):** signup completes normally, user is created.",
         "**Negative test (duplicate email):** signup short-circuits to inbox page; `User.objects.count()` did NOT increment; `mail.outbox` contains a reset email.",
-        "**Positive test (legitimate flow unchanged):** same as the first negative test — confirms a fresh signup still works.",
+        "**Positive test (legitimate flow unchanged):** same as the first negative test \u2014 confirms a fresh signup still works.",
         "`manage.py test` passes."
       ],
       "passes": true,
@@ -291,10 +291,10 @@
     {
       "id": "US-018",
       "title": "CSV upload row + column + schema validation",
-      "description": "As an operator, I want upload validation that prevents pathological CSVs from exhausting memory AND ensures the file actually looks like a Goodreads/StoryGraph export before pandas does deep work on it.\n\n**Files:** `core/views.py` `upload_view` L729–810.",
+      "description": "As an operator, I want upload validation that prevents pathological CSVs from exhausting memory AND ensures the file actually looks like a Goodreads/StoryGraph export before pandas does deep work on it.\n\n**Files:** `core/views.py` `upload_view` L729\u2013810.",
       "acceptanceCriteria": [
         "Read CSV head with `pandas.read_csv(StringIO(csv_content), nrows=50000)`. Reject if `len(df.columns) > 100` with a user error.",
-        "**Schema validation:** verify the CSV contains at least one of these signature column sets before passing to `_detect_and_normalize_csv`: — Goodreads: `{\"Title\", \"Author\"}` (case-sensitive). — StoryGraph: `{\"Title\", \"Authors\"}` (note plural). — If neither set is fully present, reject with user error: \"CSV does not look like a Goodreads or StoryGraph export. Expected columns: Title and Author/Authors.\"",
+        "**Schema validation:** verify the CSV contains at least one of these signature column sets before passing to `_detect_and_normalize_csv`: \u2014 Goodreads: `{\"Title\", \"Author\"}` (case-sensitive). \u2014 StoryGraph: `{\"Title\", \"Authors\"}` (note plural). \u2014 If neither set is fully present, reject with user error: \"CSV does not look like a Goodreads or StoryGraph export. Expected columns: Title and Author/Authors.\"",
         "Add `MAX_UPLOAD_ROWS = 50000` and `MAX_UPLOAD_COLUMNS = 100` module constants in `core/views.py`.",
         "**Negative tests:** (a) 50_001-row CSV is truncated, (b) 101-column CSV is rejected, (c) CSV missing required columns is rejected with the schema error.",
         "**Positive test:** an existing valid Goodreads or StoryGraph fixture still uploads.",
@@ -310,9 +310,9 @@
       "description": "As an operator, I want operator-built HTML out of message strings so that `request.get_host()` can never poison the displayed copy.\n\n**Files:** `core/views.py` `update_privacy_view` L955; `core/templates/core/partials/messages_with_link.html` (new).",
       "acceptanceCriteria": [
         "Create `core/templates/core/partials/messages_with_link.html` that renders the privacy-toggle success message with `{% url 'core:public_profile' username=username %}` and `{{ public_url }}` content (auto-escaped).",
-        "`update_privacy_view` calls `render_to_string(\"core/partials/messages_with_link.html\", {\"public_url\": public_url, \"username\": username})` and passes the result to `messages.success(...)`. Do NOT use the alternative \"store metadata on the message\" approach — pick this one.",
+        "`update_privacy_view` calls `render_to_string(\"core/partials/messages_with_link.html\", {\"public_url\": public_url, \"username\": username})` and passes the result to `messages.success(...)`. Do NOT use the alternative \"store metadata on the message\" approach \u2014 pick this one.",
         "No raw f-string HTML remains in `update_privacy_view`.",
-        "**Manual browser check:** `dev-browser` skill — toggle privacy on, confirm message renders identically (link present, message visible, link target equal to public profile URL).",
+        "**Manual browser check:** `dev-browser` skill \u2014 toggle privacy on, confirm message renders identically (link present, message visible, link target equal to public profile URL).",
         "`manage.py test` passes."
       ],
       "passes": true,
@@ -322,7 +322,7 @@
     {
       "id": "US-020",
       "title": "Add rate limit to `update_username_api`",
-      "description": "As an operator, I want display-name lookup unable to enumerate the userbase.\n\n**Files:** `core/views.py` `update_username_api` L984–1006.",
+      "description": "As an operator, I want display-name lookup unable to enumerate the userbase.\n\n**Files:** `core/views.py` `update_username_api` L984\u20131006.",
       "acceptanceCriteria": [
         "Apply `@ratelimit(key=\"user\", rate=\"10/m\", method=\"POST\", block=True)`.",
         "On 429, return `JsonResponse({\"error\": \"Too many attempts, try again later.\"}, status=429)`.",
@@ -342,7 +342,7 @@
         "Change `max_workers=1` to `max_workers=8`.",
         "Update the comment explaining \"this is safe under Postgres\".",
         "Run the existing storygraph + integration test suite (which exercises a multi-row upload) and confirm no regression.",
-        "**Concurrency-safety check:** run `manage.py test core.tests.test_storygraph_integration core.tests.test_tasks_integration` 5 times consecutively (loop). Tests must pass deterministically every run. If any run fails order-dependently, the worker count is exposing a real bug — investigate before completing the story. Capture run output in `progress.txt`.",
+        "**Concurrency-safety check:** run `manage.py test core.tests.test_storygraph_integration core.tests.test_tasks_integration` 5 times consecutively (loop). Tests must pass deterministically every run. If any run fails order-dependently, the worker count is exposing a real bug \u2014 investigate before completing the story. Capture run output in `progress.txt`.",
         "`manage.py test core.tests.test_storygraph_integration core.tests.test_tasks_integration` passes."
       ],
       "passes": true,
@@ -352,10 +352,10 @@
     {
       "id": "US-022",
       "title": "Remove redundant per-row Book/Genre queries in `process_book_row`",
-      "description": "As an operator, I want the redundant queries inside the per-book loop eliminated — but **carefully**, because the existing refetch of `Book.objects.get(pk=book.pk)` after `Book.objects.filter(pk=book.pk).update(global_read_count=F('global_read_count') + 1)` exists specifically to pull the post-increment value into the Python object. Downstream code reads `global_read_count` from the returned book (e.g., niche-book stats around `dna_analyser.py:851, 855, 859`).\n\n**Files:** `core/services/dna_analyser.py` — locate `process_book_row` by `grep -n \"def process_book_row\"` (currently around L481); the three redundant queries are: (a) the `Genre.objects.filter(books__id=book.pk).exists()` check just after `update_or_create`, (b) `Book.objects.get(pk=book.pk)` after the `global_read_count` F-update, (c) the subsequent re-traversal of `fresh_book_instance.genres.all()`.",
+      "description": "As an operator, I want the redundant queries inside the per-book loop eliminated \u2014 but **carefully**, because the existing refetch of `Book.objects.get(pk=book.pk)` after `Book.objects.filter(pk=book.pk).update(global_read_count=F('global_read_count') + 1)` exists specifically to pull the post-increment value into the Python object. Downstream code reads `global_read_count` from the returned book (e.g., niche-book stats around `dna_analyser.py:851, 855, 859`).\n\n**Files:** `core/services/dna_analyser.py` \u2014 locate `process_book_row` by `grep -n \"def process_book_row\"` (currently around L481); the three redundant queries are: (a) the `Genre.objects.filter(books__id=book.pk).exists()` check just after `update_or_create`, (b) `Book.objects.get(pk=book.pk)` after the `global_read_count` F-update, (c) the subsequent re-traversal of `fresh_book_instance.genres.all()`.",
       "acceptanceCriteria": [
-        "**Genre check (a):** the existing `else` branch (when `created=False`) calls `Genre.objects.filter(books__id=book.pk).exists()` to decide whether enrichment is needed. The original triage note conflated this with the `created` flag, but the code already uses `created`. The redundant query is the `.exists()` itself. **Decision needed (encode in commit message):** either (i) trust `book.genres.exists()` instead (one query, hits the in-memory FK cache if Django populated it; otherwise one fresh query — still no worse), or (ii) accept that existing-with-no-genres books will all dispatch enrichment unconditionally and drop the check entirely. Pick (i) — safer.",
-        "**Book refetch (b):** replace `fresh_book_instance = Book.objects.get(pk=book.pk)` with `book.refresh_from_db(fields=[\"global_read_count\"])` and return `book` directly. This is one query instead of one query, BUT avoids reloading all fields (`cover_url`, JSONField, etc.) — material on a 500-char URLField. **Crucial:** do NOT just drop the refetch — `global_read_count` would be stale and break niche-book stats downstream.",
+        "**Genre check (a):** the existing `else` branch (when `created=False`) calls `Genre.objects.filter(books__id=book.pk).exists()` to decide whether enrichment is needed. The original triage note conflated this with the `created` flag, but the code already uses `created`. The redundant query is the `.exists()` itself. **Decision needed (encode in commit message):** either (i) trust `book.genres.exists()` instead (one query, hits the in-memory FK cache if Django populated it; otherwise one fresh query \u2014 still no worse), or (ii) accept that existing-with-no-genres books will all dispatch enrichment unconditionally and drop the check entirely. Pick (i) \u2014 safer.",
+        "**Book refetch (b):** replace `fresh_book_instance = Book.objects.get(pk=book.pk)` with `book.refresh_from_db(fields=[\"global_read_count\"])` and return `book` directly. This is one query instead of one query, BUT avoids reloading all fields (`cover_url`, JSONField, etc.) \u2014 material on a 500-char URLField. **Crucial:** do NOT just drop the refetch \u2014 `global_read_count` would be stale and break niche-book stats downstream.",
         "**Genres re-traversal (c):** after change (b), `book.genres.all()` is still required, but using `book.genres.all()` once and converting to a list (`genre_names = [g.name for g in book.genres.all()]`) avoids accidental re-iteration. Verify only one iteration remains.",
         "Existing integration tests pass (`test_tasks_integration`, `test_storygraph_integration`, `test_subtitle_data`, `test_views_e2e` upload-flow tests). Niche-book stats tests in particular (`test_math_accuracy`, `test_fiction_book_extremes`) must stay green.",
         "**Query-count regression test:** add a test in `core/tests/test_tasks_integration.py` using `CaptureQueriesContext` around an upload of a small fixture; assert query count dropped by at least `2 * NUM_BOOKS` (one per book for dropped `.exists()`, one per book for trimming the refetch). Store the pre-change baseline in the test docstring.",
@@ -369,7 +369,7 @@
     {
       "id": "US-023",
       "title": "`_save_dna_to_profile` dispatches recommendations via `.delay()`",
-      "description": "As an operator, I don't want DNA-task latency to include the synchronous recommendations build.\n\n**Files:** `core/services/dna_analyser.py` L305–312.",
+      "description": "As an operator, I don't want DNA-task latency to include the synchronous recommendations build.\n\n**Files:** `core/services/dna_analyser.py` L305\u2013312.",
       "acceptanceCriteria": [
         "Replace the inline `generate_recommendations_task(profile.user.id)` with `.delay(profile.user.id)`.",
         "Drop the surrounding try/except now that retries can fire normally.",
@@ -426,11 +426,11 @@
     {
       "id": "US-027",
       "title": "Replace per-task `time.sleep(1.2)` in book enrichment with Celery `rate_limit` (feature-flagged)",
-      "description": "As an operator, I don't want enrichment workers held hostage by `time.sleep` — but I also don't want to surge external API rate limits the moment the change ships.\n\n**Files:** `bibliotype/settings.py` (new flag), `core/book_enrichment_service.py` (5 sleep calls L171, L209, L234, L261, L299), `core/tasks.py` `enrich_book_task` L69.",
+      "description": "As an operator, I don't want enrichment workers held hostage by `time.sleep` \u2014 but I also don't want to surge external API rate limits the moment the change ships.\n\n**Files:** `bibliotype/settings.py` (new flag), `core/book_enrichment_service.py` (5 sleep calls L171, L209, L234, L261, L299), `core/tasks.py` `enrich_book_task` L69.",
       "acceptanceCriteria": [
         "Add `ENABLE_PARALLEL_ENRICHMENT = os.environ.get(\"ENABLE_PARALLEL_ENRICHMENT\", \"False\") == \"True\"` to `bibliotype/settings.py`. Document in `AGENTS.md` under \"Settings invariants\": \"default `False`; flip to `True` only after confirming Open Library + Google Books rate-limit headroom.\"",
         "Wrap each `time.sleep(...)` in `if not settings.ENABLE_PARALLEL_ENRICHMENT: time.sleep(1.2)`. (Cleaner: extract a `_throttle()` helper that does the conditional check, call it at the 5 sites.) Locate the 5 sites by `grep -n \"time.sleep\" core/book_enrichment_service.py`.",
-        "**Add `rate_limit=\"30/m\"` to `enrich_book_task`'s `@shared_task` decorator** in `core/tasks.py`. The current decorator is `@shared_task(bind=True, max_retries=3)` (verified — no rate_limit present). This is the safety net regardless of the flag, so it ships unconditionally. Locate by `grep -n \"def enrich_book_task\" core/tasks.py`.",
+        "**Add `rate_limit=\"30/m\"` to `enrich_book_task`'s `@shared_task` decorator** in `core/tasks.py`. The current decorator is `@shared_task(bind=True, max_retries=3)` (verified \u2014 no rate_limit present). This is the safety net regardless of the flag, so it ships unconditionally. Locate by `grep -n \"def enrich_book_task\" core/tasks.py`.",
         "`progress.txt`: \"Parallel enrichment lands disabled. Operator must set `ENABLE_PARALLEL_ENRICHMENT=True` and validate API headroom before enabling.\"",
         "Existing enrichment tests pass with `CELERY_TASK_ALWAYS_EAGER=True`.",
         "`manage.py test core.tests.test_integration core.tests.test_enrichment_stats` passes."
@@ -442,7 +442,7 @@
     {
       "id": "US-027b",
       "title": "Precompile genre canonicalization regex patterns at module load",
-      "description": "As an operator, I want the genre canonicalization regex patterns compiled once at import, not once per book per alias.\n\n**Files:** `core/book_enrichment_service.py` `_clean_and_canonicalize_genres` ~L25–68 and `_canonicalize_google_books_categories` ~L71–113.",
+      "description": "As an operator, I want the genre canonicalization regex patterns compiled once at import, not once per book per alias.\n\n**Files:** `core/book_enrichment_service.py` `_clean_and_canonicalize_genres` ~L25\u201368 and `_canonicalize_google_books_categories` ~L71\u2013113.",
       "acceptanceCriteria": [
         "At module load, build `_COMPILED_ALIAS_PATTERNS = [(re.compile(r\"\\b\" + re.escape(a) + r\"\\b\"), CANONICAL_GENRE_MAP[a]) for a in sorted(CANONICAL_GENRE_MAP.keys(), key=len, reverse=True)]`.",
         "Both helpers iterate `_COMPILED_ALIAS_PATTERNS` instead of recomputing.",
@@ -458,10 +458,10 @@
     {
       "id": "US-024b",
       "title": "Switch `AnonymousUserSession` recreation in `display_dna_view` to `update_or_create`",
-      "description": "As a maintainer, I want session recreation idempotent so a unique-constraint race can't 500 a user.\n\n**Files:** `core/views.py` `display_dna_view` ~L593–620 (currently calls `AnonymousUserSession.objects.create(session_key=request.session.session_key, ...)`).",
+      "description": "As a maintainer, I want session recreation idempotent so a unique-constraint race can't 500 a user.\n\n**Files:** `core/views.py` `display_dna_view` ~L593\u2013620 (currently calls `AnonymousUserSession.objects.create(session_key=request.session.session_key, ...)`).",
       "acceptanceCriteria": [
         "Replace `AnonymousUserSession.objects.create(...)` with `AnonymousUserSession.objects.update_or_create(session_key=..., defaults={...})`.",
-        "**Negative test:** call `display_dna_view` twice in succession with the same session — second call does not raise `IntegrityError`; only one `AnonymousUserSession` row exists.",
+        "**Negative test:** call `display_dna_view` twice in succession with the same session \u2014 second call does not raise `IntegrityError`; only one `AnonymousUserSession` row exists.",
         "**Positive test:** existing dashboard tests still pass.",
         "`manage.py test core.tests.test_views_e2e` passes."
       ],
@@ -474,12 +474,12 @@
       "title": "Invalidate recommendations cache on `update_recommendation_visibility`",
       "description": "As a privacy-conscious user, I want my cached recommendations and similarity-candidate entries cleared when I toggle visibility off.\n\n**Files:** `core/views.py` `update_recommendation_visibility` (locate by `grep -n \"def update_recommendation_visibility\"`).",
       "acceptanceCriteria": [
-        "After saving the new visibility flag, call `safe_cache_delete(f\"user_recommendations_{user.id}\")`. (Note: the actual cache key is `user_recommendations_<id>`, NOT `recs_<id>`. Verified at `core/tasks.py:543` and `core/services/recommendation_service.py:39` — also referenced from `core/services/dna_analyser.py:300`.)",
+        "After saving the new visibility flag, call `safe_cache_delete(f\"user_recommendations_{user.id}\")`. (Note: the actual cache key is `user_recommendations_<id>`, NOT `recs_<id>`. Verified at `core/tasks.py:543` and `core/services/recommendation_service.py:39` \u2014 also referenced from `core/services/dna_analyser.py:300`.)",
         "Also call `safe_cache_delete(f\"similar_users_{user.id}\")` (verified key at `core/services/user_similarity_service.py:331`).",
         "If the user toggled FROM visible TO invisible, also clear the candidate-set cache `safe_cache_delete(\"public_users_for_recs_sample\")` (verified at `core/services/recommendation_service.py:510`) and log `logger.info(\"user opted out of recs; cleared candidate sample cache\", extra={\"user_id\": user.id})`.",
         "**Update `AGENTS.md` Redis key registry** to confirm `user_recommendations_<user_id>`, `similar_users_<user_id>`, and `public_users_for_recs_sample` are the canonical names.",
-        "**Test (visible → invisible):** toggle visibility off, then assert `safe_cache_get(\"user_recommendations_<id>\")` and `safe_cache_get(\"similar_users_<id>\")` return `None`, and `safe_cache_get(\"public_users_for_recs_sample\")` returns `None`.",
-        "**Test (invisible → visible):** toggling back on does NOT clear `public_users_for_recs_sample` (only one direction warrants the candidate-pool flush).",
+        "**Test (visible \u2192 invisible):** toggle visibility off, then assert `safe_cache_get(\"user_recommendations_<id>\")` and `safe_cache_get(\"similar_users_<id>\")` return `None`, and `safe_cache_get(\"public_users_for_recs_sample\")` returns `None`.",
+        "**Test (invisible \u2192 visible):** toggling back on does NOT clear `public_users_for_recs_sample` (only one direction warrants the candidate-pool flush).",
         "`manage.py test core.tests.test_profile_and_recommendations` passes."
       ],
       "passes": true,
@@ -516,10 +516,10 @@
     {
       "id": "US-030",
       "title": "Delete duplicated `comparative_text` block in `dna_analyser.py`",
-      "description": "As a maintainer, I want one source of truth for comparative-text computation. `_enrich_dna_for_display` recomputes and overwrites the values on every render.\n\n**Files:** `core/services/dna_analyser.py` L984–1018, `core/views.py` `_enrich_dna_for_display` L415–449 (read for verification).",
+      "description": "As a maintainer, I want one source of truth for comparative-text computation. `_enrich_dna_for_display` recomputes and overwrites the values on every render.\n\n**Files:** `core/services/dna_analyser.py` L984\u20131018, `core/views.py` `_enrich_dna_for_display` L415\u2013449 (read for verification).",
       "acceptanceCriteria": [
         "**Pre-flight verification:** open `core/views.py` `_enrich_dna_for_display` and confirm it unconditionally writes `comparative_text` keys (`length_direction`, `age_direction`, `bpy_direction` and their `_pct` companions) on every call. List the keys in the commit message.",
-        "Delete the entire 35-line block in `dna_analyser.py` L984–1018.",
+        "Delete the entire 35-line block in `dna_analyser.py` L984\u20131018.",
         "**Coverage test:** add a test asserting that `_enrich_dna_for_display(dna_data)` populates each of the listed `comparative_text` keys when called on a fresh `dna_data` dict that lacks them.",
         "`manage.py test core.tests.test_views_e2e core.tests.test_math_accuracy` passes."
       ],
@@ -530,16 +530,16 @@
     {
       "id": "US-031a",
       "title": "Convert `RecommendationEngine` methods to module-level functions",
-      "description": "As a maintainer, I want recommendation logic as module functions so the class wrapper can be retired. Keep parameters intact for now — behavior must be byte-identical.\n\n**Files:** `core/services/recommendation_service.py`, plus tests that instantiate the class (`core/tests/test_recommendations.py`, `core/tests/test_cache_refactor.py`, `core/tests/test_profile_and_recommendations.py`, `core/tests/test_currently_reading.py` — verify with `git grep RecommendationEngine`).",
+      "description": "As a maintainer, I want recommendation logic as module functions so the class wrapper can be retired. Keep parameters intact for now \u2014 behavior must be byte-identical.\n\n**Files:** `core/services/recommendation_service.py`, plus tests that instantiate the class (`core/tests/test_recommendations.py`, `core/tests/test_cache_refactor.py`, `core/tests/test_profile_and_recommendations.py`, `core/tests/test_currently_reading.py` \u2014 verify with `git grep RecommendationEngine`).",
       "acceptanceCriteria": [
         "**Pre-flight:** run `git grep RecommendationEngine` and capture every file/line. There are 30+ matches including `test_currently_reading.py` (10 occurrences). Every one must be updated.",
         "Remove `class RecommendationEngine:` line; dedent body. Each `def method(self, ...)` becomes `def method(...)`.",
-        "Replace `self.method(...)` internal calls with bare `method(...)` calls. Replace `self.min_similarity` and `self.quality_threshold` with module-level constants `MIN_SIMILARITY = 0.15`, `QUALITY_THRESHOLD = 3.5`. Drop `self.diversity_factor` entirely (it is set but never read — US-031b deletes the parameter from the signature too).",
+        "Replace `self.method(...)` internal calls with bare `method(...)` calls. Replace `self.min_similarity` and `self.quality_threshold` with module-level constants `MIN_SIMILARITY = 0.15`, `QUALITY_THRESHOLD = 3.5`. Drop `self.diversity_factor` entirely (it is set but never read \u2014 US-031b deletes the parameter from the signature too).",
         "Update `get_recommendations_for_user` / `get_recommendations_for_anonymous` to call functions directly (no `RecommendationEngine()` instantiation).",
-        "**`@patch` decorator targets must be rewritten.** `test_cache_refactor.py:273` uses `@patch(\"core.services.recommendation_service.RecommendationEngine.get_recommendations_for_user\")` — that path no longer exists after the class is gone. Replace with `@patch(\"core.services.recommendation_service.get_recommendations_for_user\")` (drop the `.RecommendationEngine` segment). Apply the same transform to every `@patch` / `patch()` call referencing a method on the class. `grep -rn '\"core.services.recommendation_service.RecommendationEngine' core/tests/` lists them all.",
-        "**Test command:** `manage.py test` (full suite, not scoped) — class deletion ripples wider than any single test module.",
+        "**`@patch` decorator targets must be rewritten.** `test_cache_refactor.py:273` uses `@patch(\"core.services.recommendation_service.RecommendationEngine.get_recommendations_for_user\")` \u2014 that path no longer exists after the class is gone. Replace with `@patch(\"core.services.recommendation_service.get_recommendations_for_user\")` (drop the `.RecommendationEngine` segment). Apply the same transform to every `@patch` / `patch()` call referencing a method on the class. `grep -rn '\"core.services.recommendation_service.RecommendationEngine' core/tests/` lists them all.",
+        "**Test command:** `manage.py test` (full suite, not scoped) \u2014 class deletion ripples wider than any single test module.",
         "**Final verification:** `git grep RecommendationEngine` returns ZERO matches (this includes strings inside `@patch` decorators).",
-        "**Risk note:** highest-risk story in the PRD. If full test suite goes red, do NOT loosen tests — investigate semantic divergence in the converted functions."
+        "**Risk note:** highest-risk story in the PRD. If full test suite goes red, do NOT loosen tests \u2014 investigate semantic divergence in the converted functions."
       ],
       "passes": true,
       "notes": "",
@@ -562,14 +562,14 @@
     {
       "id": "US-032",
       "title": "Bake `rec[\"book\"]` dict into `processed_recs` at storage time (dual-shape compat)",
-      "description": "As a maintainer, I want recommendations stored in the shape templates need. Existing in-DB `recommendations_data` will not have the baked dict, so views must accept BOTH shapes during the rollout.\n\n**Files:** `core/tasks.py` L469–481 (storage), `core/views.py` `display_dna_view` L535–552, `public_profile_view` L1126–1144.",
+      "description": "As a maintainer, I want recommendations stored in the shape templates need. Existing in-DB `recommendations_data` will not have the baked dict, so views must accept BOTH shapes during the rollout.\n\n**Files:** `core/tasks.py` L469\u2013481 (storage), `core/views.py` `display_dna_view` L535\u2013552, `public_profile_view` L1126\u20131144.",
       "acceptanceCriteria": [
         "Inside `generate_recommendations_task`, build the full `rec[\"book\"] = {...}` dict before saving to `UserProfile.recommendations_data`.",
-        "In both views, replace the 18-line for-loop with: `if \"book\" not in rec: rec[\"book\"] = _expand_book_dict(rec, badge_color_map)` — fallback expansion for legacy stored shapes. Extract `_expand_book_dict` as a small helper in the view module (or `core/views.py` if Phase 8 hasn't split yet).",
+        "In both views, replace the 18-line for-loop with: `if \"book\" not in rec: rec[\"book\"] = _expand_book_dict(rec, badge_color_map)` \u2014 fallback expansion for legacy stored shapes. Extract `_expand_book_dict` as a small helper in the view module (or `core/views.py` if Phase 8 hasn't split yet).",
         "**Test 1 (new shape):** mock a recommendation that already has `rec[\"book\"]`; view renders without re-expansion.",
         "**Test 2 (legacy shape):** mock a recommendation without `rec[\"book\"]`; fallback runs and renders identically.",
         "**`dev-browser` check:** dashboard and `/u/<username>` render identical recommendations against test data containing both shapes.",
-        "**Follow-up note in `progress.txt`:** \"US-032 ships dual-shape compat. After ≥30 days OR after a forced `regenerate_recommendations` run, the legacy fallback (`if 'book' not in rec`) can be removed in a follow-up story.\"",
+        "**Follow-up note in `progress.txt`:** \"US-032 ships dual-shape compat. After \u226530 days OR after a forced `regenerate_recommendations` run, the legacy fallback (`if 'book' not in rec`) can be removed in a follow-up story.\"",
         "`manage.py test` passes."
       ],
       "passes": true,
@@ -579,13 +579,13 @@
     {
       "id": "US-033",
       "title": "Delete legacy DNA-data backfill block in `_enrich_dna_for_display`",
-      "description": "As a maintainer, I want one source of truth for handling old DNA-data shapes. Keep the unconditional community-averages refresh logic (hot-path freshness, NOT a backfill); only delete the legacy backfills.\n\n**Files:** `core/views.py` `_enrich_dna_for_display` — locate by `grep -n \"def _enrich_dna_for_display\"`.",
+      "description": "As a maintainer, I want one source of truth for handling old DNA-data shapes. Keep the unconditional community-averages refresh logic (hot-path freshness, NOT a backfill); only delete the legacy backfills.\n\n**Files:** `core/views.py` `_enrich_dna_for_display` \u2014 locate by `grep -n \"def _enrich_dna_for_display\"`.",
       "acceptanceCriteria": [
         "**BLOCKING PRE-FLIGHT:** before changing any code, `progress.txt` must already contain a line matching the regex `^\\d{4}-\\d{2}-\\d{2}: regenerate_dna run in production` followed by an operator name. If absent, exit the story without modifying code and emit a comment in the commit message: `BLOCKED: regenerate_dna prerequisite (Q4) unresolved.` Do NOT mark this story complete until the prerequisite line exists.",
-        "**Scope of deletion (critical — narrowed from earlier PRD draft):** delete ONLY the legacy backfill block. That block is identified by these characteristics: — Backfills `avg_books_per_year`, `num_reading_years`, `books_with_dates` (if missing from `dna_data`). — Backfills `currently_reading_books` and `currently_reading_count`. — Backfills `custom_shelf_count`. — Backfills `cover_url` on `most_niche_book` / `longest_book` / `shortest_book`. — Backfills `page_difference`. — Visually identifiable as a sequence of `if \"<key>\" not in dna_data:` (or equivalent absence checks) writing into `dna_data`.",
-        "**Do NOT delete** the unconditional refresh of `global_averages` / `community_averages` from cache that lives earlier in the same function (around the first ~30 lines of `_enrich_dna_for_display`). Those are NOT backfills — they're hot-path freshness logic that must run on every render.",
+        "**Scope of deletion (critical \u2014 narrowed from earlier PRD draft):** delete ONLY the legacy backfill block. That block is identified by these characteristics: \u2014 Backfills `avg_books_per_year`, `num_reading_years`, `books_with_dates` (if missing from `dna_data`). \u2014 Backfills `currently_reading_books` and `currently_reading_count`. \u2014 Backfills `custom_shelf_count`. \u2014 Backfills `cover_url` on `most_niche_book` / `longest_book` / `shortest_book`. \u2014 Backfills `page_difference`. \u2014 Visually identifiable as a sequence of `if \"<key>\" not in dna_data:` (or equivalent absence checks) writing into `dna_data`.",
+        "**Do NOT delete** the unconditional refresh of `global_averages` / `community_averages` from cache that lives earlier in the same function (around the first ~30 lines of `_enrich_dna_for_display`). Those are NOT backfills \u2014 they're hot-path freshness logic that must run on every render.",
         "**Verification before commit:** open the modified file and confirm that `_enrich_dna_for_display` still computes `comparative_text` keys (per US-030's coverage test), still refreshes community averages, and still returns the enriched dict. Only the absence-checking backfill block is gone.",
-        "Keep the re-upload nudge (`messages.info(...)` around dashboard render) — it's the fallback for any user who never triggers a regeneration.",
+        "Keep the re-upload nudge (`messages.info(...)` around dashboard render) \u2014 it's the fallback for any user who never triggers a regeneration.",
         "`manage.py test core.tests.test_views_e2e core.tests.test_math_accuracy` passes."
       ],
       "passes": true,
@@ -594,20 +594,20 @@
     },
     {
       "id": "US-034",
-      "title": "REMOVED — defensive guards are tested behavior, not dead code",
-      "description": "The third-pass review confirmed both guards have explicit tests:\n- `core/tests/test_currently_reading.py:22–25` asserts `_build_cover_url(\"123\")` returns `None` — depends on the `len(cleaned) < 10` guard.\n- `core/tests/test_sanitize_review.py:50` asserts `_sanitize_review_text(123) == 123` — depends on the `isinstance(text, str)` guard.\n\nRemoving the guards would break both tests, and the simplification value (~4 lines saved) doesn't justify either (a) deleting the tests, or (b) the input-contract risk. **This story is intentionally removed from the run.** Mark `passes: true` at scaffolding time so Ralph skips it; no code changes.\n\n**Files:** (none)",
+      "title": "REMOVED \u2014 defensive guards are tested behavior, not dead code",
+      "description": "The third-pass review confirmed both guards have explicit tests:\n- `core/tests/test_currently_reading.py:22\u201325` asserts `_build_cover_url(\"123\")` returns `None` \u2014 depends on the `len(cleaned) < 10` guard.\n- `core/tests/test_sanitize_review.py:50` asserts `_sanitize_review_text(123) == 123` \u2014 depends on the `isinstance(text, str)` guard.\n\nRemoving the guards would break both tests, and the simplification value (~4 lines saved) doesn't justify either (a) deleting the tests, or (b) the input-contract risk. **This story is intentionally removed from the run.** Mark `passes: true` at scaffolding time so Ralph skips it; no code changes.\n\n**Files:** (none)",
       "acceptanceCriteria": [
-        "No code changes. Mark `passes: true` in `prd.json` with a `notes` field explaining the removal: `\"Removed during third-pass PRD review — guards have explicit tests in test_currently_reading and test_sanitize_review; simplification not worth the test-update churn.\"`",
+        "No code changes. Mark `passes: true` in `prd.json` with a `notes` field explaining the removal: `\"Removed during third-pass PRD review \u2014 guards have explicit tests in test_currently_reading and test_sanitize_review; simplification not worth the test-update churn.\"`",
         "manage.py test passes (full suite)"
       ],
       "passes": true,
-      "notes": "Removed during third-pass PRD review — guards have explicit tests; simplification not worth test-update churn.",
+      "notes": "Removed during third-pass PRD review \u2014 guards have explicit tests; simplification not worth test-update churn.",
       "priority": 40
     },
     {
       "id": "US-035",
       "title": "Collapse duplicated cache-hit / result-hit branches in `claim_anonymous_dna_task`",
-      "description": "As a maintainer, I want one save-block for the two code paths that produce `dna_data`.\n\n**Files:** `core/tasks.py` L131–178.",
+      "description": "As a maintainer, I want one save-block for the two code paths that produce `dna_data`.\n\n**Files:** `core/tasks.py` L131\u2013178.",
       "acceptanceCriteria": [
         "Resolve `dna_data` from cache or AsyncResult into a single variable.",
         "Run save-DNA / create-userbooks / clear-pending-task / save-profile / track-event once.",
@@ -621,10 +621,10 @@
     {
       "id": "US-035b",
       "title": "Dedupe `_canonicalize_google_books_categories` with `_clean_and_canonicalize_genres`",
-      "description": "As a maintainer, I want a single canonicalization implementation. The two functions differ only in that Google Books inputs need a `/`-split first.\n\n**Files:** `core/book_enrichment_service.py` L25–68 (`_clean_and_canonicalize_genres`) and L71–113 (`_canonicalize_google_books_categories`).",
+      "description": "As a maintainer, I want a single canonicalization implementation. The two functions differ only in that Google Books inputs need a `/`-split first.\n\n**Files:** `core/book_enrichment_service.py` L25\u201368 (`_clean_and_canonicalize_genres`) and L71\u2013113 (`_canonicalize_google_books_categories`).",
       "acceptanceCriteria": [
         "Rewrite `_canonicalize_google_books_categories(categories)` as: `flat = [part for cat in categories for part in cat.split(\"/\")]; return _clean_and_canonicalize_genres(flat)`.",
-        "The cap difference (5 vs up to 6) becomes a `[:N]` slice at the call site (do NOT add a parameter to `_clean_and_canonicalize_genres` — keep its signature stable).",
+        "The cap difference (5 vs up to 6) becomes a `[:N]` slice at the call site (do NOT add a parameter to `_clean_and_canonicalize_genres` \u2014 keep its signature stable).",
         "**Snapshot test:** before the refactor, run the existing function against three fixture inputs (`[\"Fiction/Romance\", \"Self-Help\"]`, `[\"Juvenile Fiction\"]`, `[\"Computers/Programming Languages\"]`) and capture the outputs. After refactor, assert outputs match exactly. Add the snapshot test to `core/tests/test_integration.py`.",
         "`manage.py test core.tests.test_integration core.tests.test_enrichment_stats` passes.",
         "**Risk note:** order of priority application may differ subtly because Google Books had its own ordering. The snapshot test catches drift."
@@ -649,7 +649,7 @@
     {
       "id": "US-037",
       "title": "Reconcile Gemini model versions across services",
-      "description": "As a maintainer, I want a single source of truth for the Gemini model id.\n\n**Files:** `bibliotype/settings.py` (new constant), `core/services/llm_service.py` L107, `core/services/publisher_service.py` L84, `core/tasks.py` L29–34.",
+      "description": "As a maintainer, I want a single source of truth for the Gemini model id.\n\n**Files:** `bibliotype/settings.py` (new constant), `core/services/llm_service.py` L107, `core/services/publisher_service.py` L84, `core/tasks.py` L29\u201334.",
       "acceptanceCriteria": [
         "Add `GEMINI_MODEL = os.environ.get(\"GEMINI_MODEL\", \"gemini-2.5-flash\")` to settings.",
         "All three call sites import from settings.",
@@ -677,7 +677,7 @@
     {
       "id": "US-039",
       "title": "Hoist `genre_priority` list into `dna_constants.py`",
-      "description": "As a maintainer, I want one canonical priority list.\n\n**Files:** `core/book_enrichment_service.py` L387–415, L480–504; `core/dna_constants.py`.",
+      "description": "As a maintainer, I want one canonical priority list.\n\n**Files:** `core/book_enrichment_service.py` L387\u2013415, L480\u2013504; `core/dna_constants.py`.",
       "acceptanceCriteria": [
         "Move list to `dna_constants.GENRE_PRIORITY`.",
         "Both call sites import and use it; cap difference handled with a `[:N]` slice at call site.",
@@ -690,7 +690,7 @@
     {
       "id": "US-040",
       "title": "Reconcile top-book scoring formulas (auth vs anonymous)",
-      "description": "As a maintainer / user, I want top-books ranked the same way regardless of auth state. **Canonical formula:** `top_books_service.py:14-32` (rating-weight 100/80/×15 + sentiment×30) — chosen because it has direct test coverage and is the more recently maintained path. `dna_analyser.save_anonymous_session_data` is the divergent code.\n\n**Files:** `core/services/top_books_service.py` (read for reference), `core/services/dna_analyser.py` `save_anonymous_session_data` L338–352.",
+      "description": "As a maintainer / user, I want top-books ranked the same way regardless of auth state. **Canonical formula:** `top_books_service.py:14-32` (rating-weight 100/80/\u00d715 + sentiment\u00d730) \u2014 chosen because it has direct test coverage and is the more recently maintained path. `dna_analyser.save_anonymous_session_data` is the divergent code.\n\n**Files:** `core/services/top_books_service.py` (read for reference), `core/services/dna_analyser.py` `save_anonymous_session_data` L338\u2013352.",
       "acceptanceCriteria": [
         "Replace the anonymous scoring block in `save_anonymous_session_data` with the canonical formula. Either extract a shared helper (`compute_book_score(rating, sentiment) -> int`) in `top_books_service.py` and call it from both places, or copy the formula inline with a `# Canonical: see top_books_service.compute_book_score` comment.",
         "If extracted: the helper is module-level, takes scalar inputs, has its own unit test in `test_fiction_book_extremes.py`.",
@@ -707,7 +707,7 @@
       "title": "Promote magic numbers to named constants",
       "description": "As a maintainer, I want recurring magic numbers labelled.\n\n**Files:** `core/views.py`, `core/tasks.py`, `core/services/recommendation_service.py`.",
       "acceptanceCriteria": [
-        "Add or promote to module-level constants: — `core/views.py`: ADD `MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024`, `DNA_CACHE_TTL = 3600` (these are inline literals — replace them). — `core/tasks.py`: PROMOTE existing function-local `BATCH_LIMIT = 20` and `AGE_THRESHOLD_DAYS = 90` (currently inside `anonymize_expired_sessions_task` around L361) to module scope. Don't add duplicates if they already exist at module level. — `core/services/recommendation_service.py`: ADD `RECOMMENDATION_WEIGHTS = {...}` capturing 0.1, 0.15, 0.3, 0.5, 0.8 with descriptive keys (look at the surrounding code to pick meaningful names like `QUALITY`, `RECENCY`, `GENRE_OVERLAP`, etc.).",
+        "Add or promote to module-level constants: \u2014 `core/views.py`: ADD `MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024`, `DNA_CACHE_TTL = 3600` (these are inline literals \u2014 replace them). \u2014 `core/tasks.py`: PROMOTE existing function-local `BATCH_LIMIT = 20` and `AGE_THRESHOLD_DAYS = 90` (currently inside `anonymize_expired_sessions_task` around L361) to module scope. Don't add duplicates if they already exist at module level. \u2014 `core/services/recommendation_service.py`: ADD `RECOMMENDATION_WEIGHTS = {...}` capturing 0.1, 0.15, 0.3, 0.5, 0.8 with descriptive keys (look at the surrounding code to pick meaningful names like `QUALITY`, `RECENCY`, `GENRE_OVERLAP`, etc.).",
         "All inline literals replaced with the named constants.",
         "`manage.py test` passes."
       ],
@@ -745,7 +745,7 @@
     {
       "id": "US-044",
       "title": "Create `core/views/` package skeleton with `__init__.py` re-exports",
-      "description": "As a maintainer, I want the views package introduced before splitting content into it.\n\n**Files:** `core/views.py` → `core/views/__init__.py` (single-file package), `core/urls.py` (no change required if re-exports include all symbols).",
+      "description": "As a maintainer, I want the views package introduced before splitting content into it.\n\n**Files:** `core/views.py` \u2192 `core/views/__init__.py` (single-file package), `core/urls.py` (no change required if re-exports include all symbols).",
       "acceptanceCriteria": [
         "`git mv core/views.py core/views/__init__.py`.",
         "Verify `core/urls.py` imports still resolve (`from . import views`).",
@@ -760,13 +760,13 @@
     {
       "id": "US-044b",
       "title": "Extract `_compute_enrichment_*` helpers and `_enrich_dna_for_display` into `core/views/_helpers.py`",
-      "description": "As a maintainer, I want the four private helpers — used by multiple views that will land in different modules — extracted into a shared helper module BEFORE moving any view symbols.\n\n**Files:** `core/views/__init__.py` (still contains everything post-US-044), `core/views/_helpers.py` (new).",
+      "description": "As a maintainer, I want the four private helpers \u2014 used by multiple views that will land in different modules \u2014 extracted into a shared helper module BEFORE moving any view symbols.\n\n**Files:** `core/views/__init__.py` (still contains everything post-US-044), `core/views/_helpers.py` (new).",
       "acceptanceCriteria": [
-        "Create `core/views/_helpers.py`. Move `_compute_enrichment_stats`, `_recalculate_enrichment_stats`, `_compute_enrichment_progress`, `_enrich_dna_for_display` into it (keep the leading underscore — internal API).",
+        "Create `core/views/_helpers.py`. Move `_compute_enrichment_stats`, `_recalculate_enrichment_stats`, `_compute_enrichment_progress`, `_enrich_dna_for_display` into it (keep the leading underscore \u2014 internal API).",
         "In `core/views/__init__.py`, replace the helper bodies with `from ._helpers import _compute_enrichment_stats, _recalculate_enrichment_stats, _compute_enrichment_progress, _enrich_dna_for_display`.",
         "`python manage.py check` passes.",
         "`manage.py test` passes.",
-        "**Risk note:** these helpers DB-write inside a GET handler. Don't change any of that behavior in this story — only the file location."
+        "**Risk note:** these helpers DB-write inside a GET handler. Don't change any of that behavior in this story \u2014 only the file location."
       ],
       "passes": true,
       "notes": "",
@@ -846,7 +846,7 @@
     {
       "id": "US-049",
       "title": "Move profile-update views into `core/views/profile.py`",
-      "description": "As a maintainer, isolate profile-mutation views. By the time this story runs, `update_recommendation_visibility` already includes the cache-invalidation logic added in US-024c (Phase 4) — moving the function brings that logic with it, no extra work needed.\n\n**Files:** `core/views/profile.py` (new): `update_privacy_view`, `update_display_name_view`, `update_username_api`, `update_recommendation_visibility`.",
+      "description": "As a maintainer, isolate profile-mutation views. By the time this story runs, `update_recommendation_visibility` already includes the cache-invalidation logic added in US-024c (Phase 4) \u2014 moving the function brings that logic with it, no extra work needed.\n\n**Files:** `core/views/profile.py` (new): `update_privacy_view`, `update_display_name_view`, `update_username_api`, `update_recommendation_visibility`.",
       "acceptanceCriteria": [
         "All four views moved.",
         "**Delete moved bodies from `core/views/__init__.py`** and add re-export from `.profile`.",
@@ -859,14 +859,14 @@
     },
     {
       "id": "US-050",
-      "title": "Convert `core/services/dna_analyser.py` to `core/services/dna/` package — step 1 (skeleton + utility helpers)",
-      "description": "As a maintainer, start the dna analyser split with a backwards-compat package skeleton.\n\n**Files:** `core/services/dna_analyser.py` → `core/services/dna/__init__.py` (re-exports `calculate_full_dna` and any existing public symbols), new `core/services/dna/utils.py` containing `_isbn_to_isbn13`, `_build_cover_url`, `_cover_initial`, `_sanitize_review_text`.",
+      "title": "Convert `core/services/dna_analyser.py` to `core/services/dna/` package \u2014 step 1 (skeleton + utility helpers)",
+      "description": "As a maintainer, start the dna analyser split with a backwards-compat package skeleton.\n\n**Files:** `core/services/dna_analyser.py` \u2192 `core/services/dna/__init__.py` (re-exports `calculate_full_dna` and any existing public symbols), new `core/services/dna/utils.py` containing `_isbn_to_isbn13`, `_build_cover_url`, `_cover_initial`, `_sanitize_review_text`.",
       "acceptanceCriteria": [
         "`__init__.py` re-exports preserve every public symbol that callers reference.",
         "All existing imports (`from core.services.dna_analyser import calculate_full_dna`) still work via the package's `__init__.py`. Add a deprecation comment with a 30-day shim plan.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 59
     },
@@ -938,8 +938,8 @@
     },
     {
       "id": "US-056",
-      "title": "Convert `core/tasks.py` into `core/tasks/` package — step 1 (skeleton)",
-      "description": "As a maintainer, introduce the tasks package without breaking Celery autodiscovery.\n\n**Files:** `core/tasks.py` → `core/tasks/__init__.py` (re-exports every existing task).",
+      "title": "Convert `core/tasks.py` into `core/tasks/` package \u2014 step 1 (skeleton)",
+      "description": "As a maintainer, introduce the tasks package without breaking Celery autodiscovery.\n\n**Files:** `core/tasks.py` \u2192 `core/tasks/__init__.py` (re-exports every existing task).",
       "acceptanceCriteria": [
         "Celery autodiscovery still finds tasks (run `celery -A bibliotype inspect registered` or rely on the existing test that imports tasks).",
         "`manage.py test` passes."
@@ -982,7 +982,7 @@
       "description": "As a maintainer, finish the tasks split.\n\n**Files:** - `core/tasks/recommendations.py` (new): `generate_recommendations_task`.\n- `core/tasks/maintenance.py` (new): `anonymize_user_task`, `run_management_command_task`.",
       "acceptanceCriteria": [
         "Tasks moved.",
-        "**`core/tasks/__init__.py` is now a thin import-aggregator only** — its sole content is `from .dna import *; from .enrichment import *; from .recommendations import *; from .maintenance import *` (with explicit `__all__` lists in each submodule).",
+        "**`core/tasks/__init__.py` is now a thin import-aggregator only** \u2014 its sole content is `from .dna import *; from .enrichment import *; from .recommendations import *; from .maintenance import *` (with explicit `__all__` lists in each submodule).",
         "**Celery autodiscovery check** (same command as US-057); confirm all 6+ tasks appear.",
         "`manage.py test` passes."
       ],

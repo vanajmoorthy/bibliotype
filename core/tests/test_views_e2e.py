@@ -43,7 +43,7 @@ class ViewE2E_Tests(TransactionTestCase):
         connections.close_all()
         super().tearDown()
 
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_anonymous_upload_to_signup_and_claim_flow(self, mock_enrich_book, mock_generate_vibe):
         """
@@ -109,7 +109,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertIsNotNone(new_user.userprofile.dna_data)
         self.assertIn("an e2e vibe", new_user.userprofile.reading_vibe)
 
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_anonymous_upload_binds_task_owner_to_session(self, mock_enrich_book, mock_generate_vibe):
         """
@@ -131,7 +131,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertIsNotNone(session.session_key)
         self.assertEqual(cache.get(f"task_owner_{task_id}"), session.session_key)
 
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_task_result_owner_can_fetch_own_task(self, mock_enrich_book, mock_generate_vibe):
         """
@@ -149,7 +149,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "SUCCESS")
 
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_task_result_rejects_foreign_session(self, mock_enrich_book, mock_generate_vibe):
         """
@@ -184,7 +184,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertNotIn("dna_data", attacker.session)
         self.assertNotIn("book_ids", attacker.session)
 
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_signup_rejects_cross_session_task_id_claim(self, mock_enrich_book, mock_generate_vibe):
         """
@@ -215,7 +215,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertContains(response, "We couldn't verify that this Bibliotype belongs to your current session.")
         self.assertFalse(User.objects.filter(username="attacker").exists())
 
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_signup_positive_claim_after_session_rotation(self, mock_enrich_book, mock_generate_vibe):
         """
@@ -256,7 +256,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertIsNotNone(user.userprofile.dna_data)
 
     @patch("core.tasks.generate_recommendations_task")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     @patch("core.tasks.check_author_mainstream_status_task")
     def test_authenticated_user_dna_regeneration_flow(
@@ -309,7 +309,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertEqual(user.userprofile.total_books_read, 10)
 
     @patch("core.tasks.generate_recommendations_task")
-    @patch("core.services.dna_analyser.generate_vibe_with_llm")
+    @patch("core.services.dna.generate_vibe_with_llm")
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_pending_dna_task_id_cleared_on_save(self, mock_enrich_book, mock_generate_vibe, mock_recommendations_task):
         """
