@@ -999,7 +999,7 @@
         "Tests updated to patch `core.cache_utils.safe_cache_get` etc.",
         "`manage.py test core.tests.test_cache_refactor` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 69
     }

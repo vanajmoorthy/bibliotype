@@ -6,7 +6,7 @@ from collections import Counter
 from django.db.models import Q
 from django.utils import timezone
 
-from ..cache_utils import safe_cache_delete, safe_cache_get, safe_cache_set  # noqa: F401 - re-exported
+from ..cache_utils import safe_cache_delete, safe_cache_get, safe_cache_set
 from ..models import AnonymizedReadingProfile, AnonymousUserSession, Author, Book, Genre, User, UserBook
 from .user_similarity_service import (
     _build_user_context_for_similarity,

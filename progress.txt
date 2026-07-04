@@ -1733,3 +1733,10 @@
   imports (views/__init__ pattern) + calculate_full_dna, which stays here
   as the orchestrator per the story. Dropped the long-unused `time` import.
 - manage.py check clean; FULL suite: Ran 398 tests — OK.
+
+## 2026-07-04 18:30 — US-060
+- Dropped the `# noqa: F401 - re-exported` contract on the safe_cache_* import
+  in recommendation_service (the module still uses the functions internally,
+  so the plain import stays). Deleted `ReExportBackwardCompatTests` — the
+  re-export is no longer a supported surface. No other importer existed.
+- With this, all 69 PRD stories pass. Phase 8 complete.

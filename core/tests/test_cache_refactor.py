@@ -92,28 +92,6 @@ class SafeCacheUtilsTests(TestCase):
 @override_settings(
     CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "cache-refactor-tests"}}
 )
-class ReExportBackwardCompatTests(TestCase):
-    """Verify backward-compat re-exports from recommendation_service still work."""
-
-    def test_safe_cache_get_importable_from_recommendation_service(self):
-        from core.services.recommendation_service import safe_cache_get as imported_fn
-
-        self.assertIs(imported_fn, safe_cache_get)
-
-    def test_safe_cache_set_importable_from_recommendation_service(self):
-        from core.services.recommendation_service import safe_cache_set as imported_fn
-
-        self.assertIs(imported_fn, safe_cache_set)
-
-    def test_safe_cache_delete_importable_from_recommendation_service(self):
-        from core.services.recommendation_service import safe_cache_delete as imported_fn
-
-        self.assertIs(imported_fn, safe_cache_delete)
-
-
-@override_settings(
-    CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "cache-refactor-tests"}}
-)
 class UserRecommendationsCacheKeyTests(TestCase):
     """Fix 5: user_recommendations key no longer includes limit param."""
 
