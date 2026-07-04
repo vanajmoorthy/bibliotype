@@ -102,6 +102,15 @@ CSV Upload → Celery Task (async) → DNA Analysis → Book/Author DB Sync
 - f-strings exclusively — no `.format()` or `%` formatting
 - All Redis operations go through `safe_cache_get/set/delete()` in `core/cache_utils.py` for graceful degradation
 
+## Plans & Handoffs
+
+All planning documents belong under `docs/`, not in session-local directories:
+
+- Implementation plans → `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md` (e.g. `2026-03-02-feat-genre-accuracy-and-fiction-nonfiction-split-plan.md`). Note: `docs/plans/` and `docs/brainstorms/` are **gitignored** — plans are local working docs, kept out of the repo history on purpose. Don't force-add them.
+- Session handoffs → `docs/handoffs/YYYY-MM-DD-<slug>.md` — these ARE committed.
+
+If you draft a plan elsewhere (e.g. plan mode), copy it into `docs/plans/` so it's readable in one place. Warning: plan docs inside disposable worktrees are lost when the worktree is deleted — copy them to the main checkout's `docs/plans/`.
+
 ## Deep-Dive Rules (`.claude/rules/`)
 
 These load automatically when you work on matching files:

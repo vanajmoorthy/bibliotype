@@ -15,7 +15,13 @@ from django.db import IntegrityError
 from django.db.models import F
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
+from core.services._book_urls import cover_url_from_isbn
 from core.services.llm_service import generate_vibe_with_llm
+
+# Backwards-compatible re-export: tests and earlier call sites import
+# `_build_cover_url` from this module. The implementation now lives in
+# `core/services/_book_urls.py` as `cover_url_from_isbn`.
+_build_cover_url = cover_url_from_isbn
 
 from ..dna_constants import (
     CANONICAL_GENRE_MAP,
@@ -32,7 +38,11 @@ from ..percentile_engine import (
     calculate_percentiles_from_aggregates,
     update_analytics_from_stats,
 )
-from ..services.top_books_service import calculate_and_store_top_books
+from ..services.top_books_service import (
+    MIN_REVIEW_LENGTH_FOR_SENTIMENT,
+    calculate_and_store_top_books,
+    compute_book_score,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -62,9 +72,6 @@ def _cover_initial(title):
     return title[0].upper() if title else "?"
 
 
-OPEN_LIBRARY_COVER_URL = "https://covers.openlibrary.org/b/isbn/{isbn}-M.jpg"
-
-
 def _isbn_to_isbn13(raw):
     """Normalize an ISBN-10 or ISBN-13 to its 13-digit form.
 
@@ -87,16 +94,6 @@ def _isbn_to_isbn13(raw):
         check = (10 - (total % 10)) % 10
         return prefix + str(check)
     return None
-
-
-def _build_cover_url(isbn13: str | None) -> str | None:
-    """Construct an Open Library Covers API URL from an ISBN13. No HTTP request needed."""
-    if not isbn13:
-        return None
-    cleaned = str(isbn13).strip().strip('="')
-    if not cleaned or len(cleaned) < 10:
-        return None
-    return OPEN_LIBRARY_COVER_URL.format(isbn=cleaned[:13])
 
 
 # Goodreads column names serve as the internal canonical schema.
@@ -305,7 +302,7 @@ def _save_dna_to_profile(profile, dna_data):
         logger.info(f"Dispatched recommendations task for user {profile.user.username}")
 
     except Exception as e:
-        logger.error(f"Error saving profile for user {profile.user.username}: {e}")
+        logger.error(f"Error saving profile for user {profile.user.username}: {e}", exc_info=True)
         raise
 
 
@@ -328,23 +325,22 @@ def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_d
     for idx, row_dict in enumerate(read_df.to_dict("records")):
         if idx < len(user_book_objects) and user_book_objects[idx]:
             book = user_book_objects[idx]
-            score = 0
 
+            rating_int = None
             rating = row_dict.get("My Rating")
             if pd.notna(rating) and rating > 0:
                 try:
                     rating_int = int(rating)
                     book_ratings[book.id] = rating_int  # Store rating for correlation
-                    score += rating_int * 20
                 except (ValueError, TypeError):
-                    pass
+                    rating_int = None
 
+            sentiment = None
             review = str(row_dict.get("My Review", "")).strip()
-            if review and len(review) > 15:
+            if review and len(review) > MIN_REVIEW_LENGTH_FOR_SENTIMENT:
                 sentiment = analyzer.polarity_scores(review)["compound"]
-                score += sentiment * 30
 
-            book_scores.append((book.id, score))
+            book_scores.append((book.id, compute_book_score(rating_int, sentiment)))
 
     book_scores.sort(key=lambda x: x[1], reverse=True)
     top_books_data = [book_id for book_id, score in book_scores[:5]]

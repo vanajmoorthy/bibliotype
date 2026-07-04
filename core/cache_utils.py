@@ -6,6 +6,9 @@ from .analytics.events import track_redis_cache_error
 
 logger = logging.getLogger(__name__)
 
+# TTL for the DNA task-flow caches (dna_result_/session_key_/upload_nonce_/task_owner_ keys)
+DNA_CACHE_TTL = 3600
+
 
 def safe_cache_get(key, default=None):
     """Safely get a value from cache, handling Redis connection errors gracefully."""

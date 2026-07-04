@@ -48,6 +48,13 @@ ENABLE_SILK = _env_bool("ENABLE_SILK", False)
 # "Settings invariants".
 ENABLE_PARALLEL_ENRICHMENT = _env_bool("ENABLE_PARALLEL_ENRICHMENT", False)
 
+# US-037: single source of truth for the Gemini API key and model id.
+# Consumers must import these from settings via `core/services/_gemini.py`,
+# never read `os.environ` directly. Override `GEMINI_MODEL` to swap model
+# versions across the whole app (vibe generation + publisher research).
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+
 allowed_hosts_str = os.environ.get("ALLOWED_HOSTS", "")
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(",") if host.strip()]
 

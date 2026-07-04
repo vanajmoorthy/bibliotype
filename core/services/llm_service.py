@@ -1,19 +1,11 @@
 import json
 import logging
-import os
 
 import google.generativeai as genai
-from dotenv import load_dotenv
 
-load_dotenv()
+from . import _gemini
+
 logger = logging.getLogger(__name__)
-
-api_key = os.getenv("GEMINI_API_KEY")
-
-if api_key:
-    genai.configure(api_key=api_key)
-else:
-    logger.warning("GEMINI_API_KEY environment variable not found. Vibe generation will be disabled.")
 
 
 def create_vibe_prompt(dna: dict) -> str:
@@ -97,14 +89,14 @@ def generate_vibe_with_llm(dna: dict) -> list:
     """
     Uses the Gemini API to generate a creative "vibe" for the user's DNA.
     """
-    if not api_key:
+    model = _gemini.client()
+    if model is None:
         logger.warning("Vibe generation skipped because API key is not configured")
         return ["vibe generation disabled", "please configure api key"]
 
     prompt = create_vibe_prompt(dna)
 
     try:
-        model = genai.GenerativeModel("gemini-2.0-flash-lite")
         generation_config = genai.GenerationConfig(response_mime_type="application/json")
         response = model.generate_content(prompt, generation_config=generation_config)
 

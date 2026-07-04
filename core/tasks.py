@@ -1,15 +1,12 @@
 import logging
-import os
 import time
 
-import google.generativeai as genai
 import requests
 from celery import shared_task
 from celery.result import AsyncResult
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.utils import timezone
-from dotenv import load_dotenv
 
 from .management_command_registry import ALLOWED_COMMANDS
 from .models import Author, Book
@@ -23,16 +20,11 @@ from .analytics.events import (
     track_anonymous_dna_claimed,
 )
 
-load_dotenv()
-
 logger = logging.getLogger(__name__)
 
-api_key = os.getenv("GEMINI_API_KEY")
-
-if api_key:
-    genai.configure(api_key=api_key)
-else:
-    logger.warning("GEMINI_API_KEY environment variable not found. Vibe generation will be disabled.")
+# Publisher mainstream re-check: batch size per weekly run and staleness window
+PUBLISHER_CHECK_BATCH_LIMIT = 20
+PUBLISHER_CHECK_AGE_THRESHOLD_DAYS = 90
 
 
 @shared_task
@@ -71,7 +63,7 @@ def check_author_mainstream_status_task(author_id: int, user_id: int = None, upl
                 author.save()
 
     except Author.DoesNotExist:
-        logger.error(f"Author Status Task Error: Author with ID {author_id} not found")
+        logger.warning(f"Author Status Task Error: Author with ID {author_id} not found")
     except Exception as e:
         logger.error(
             f"Critical error in check_author_mainstream_status_task for author_id {author_id}: {e}", exc_info=True
@@ -103,7 +95,7 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
     try:
         book = Book.objects.get(pk=book_id)
     except Book.DoesNotExist:
-        logger.error(f"Enrich task: Book with ID {book_id} not found")
+        logger.warning(f"Enrich task: Book with ID {book_id} not found")
         return
 
     # Re-check after the DB fetch. Tasks can sit in the queue for a while; the
@@ -170,7 +162,7 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str)
     try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
-        logger.error(f"User with id {user_id} not found. Cannot claim task")
+        logger.warning(f"User with id {user_id} not found. Cannot claim task")
         return
 
     def _hash_key(k):
@@ -218,57 +210,37 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str)
         _clear_pending_and_return()
         return
 
-    cached_dna = safe_cache_get(f"dna_result_{task_id}")
     cached_session_key = safe_cache_get(f"session_key_{task_id}")
+    dna_data = safe_cache_get(f"dna_result_{task_id}")
 
-    if cached_dna:
+    if dna_data:
         logger.info(f"Found cached DNA for task {task_id}. Saving to user {user_id}")
-        _save_dna_to_profile(user.userprofile, cached_dna)
-
-        # Try to create UserBooks from AnonymousUserSession if it exists
-        if cached_session_key:
-            _create_userbooks_from_anonymous_session(user, cached_session_key)
-
-        user.userprofile.pending_dna_task_id = None
-        user.userprofile.save()
-        logger.info(f"Successfully claimed and saved DNA for user {user_id} from task {task_id}")
-
-        # Track anonymous DNA claimed
-        track_anonymous_dna_claimed(
-            user_id=user_id,
-            task_id=task_id,
-            session_key=cached_session_key,
-        )
-        return
-
-    result = AsyncResult(task_id)
-
-    if result.ready():
-        if result.successful():
-            dna_data = result.get()
-            _save_dna_to_profile(user.userprofile, dna_data)
-
-            # Try to create UserBooks from AnonymousUserSession if session_key was cached
-            if cached_session_key:
-                _create_userbooks_from_anonymous_session(user, cached_session_key)
-
-            user.userprofile.pending_dna_task_id = None
-            user.userprofile.save()
-            logger.info(f"Successfully claimed and saved DNA for user {user_id} from task {task_id}")
-
-            # Track anonymous DNA claimed
-            track_anonymous_dna_claimed(
-                user_id=user_id,
-                task_id=task_id,
-                session_key=cached_session_key,
-            )
-        else:
+    else:
+        result = AsyncResult(task_id)
+        if not result.ready():
+            logger.info(f"Task {task_id} not ready yet. Retrying claim for user {user_id} in 10s")
+            raise self.retry(countdown=10, exc=Exception(f"Task {task_id} not ready"))
+        if not result.successful():
             logger.error(f"Task {task_id} failed. Cannot claim DNA for user {user_id}")
             user.userprofile.pending_dna_task_id = None
             user.userprofile.save()
-    else:
-        logger.info(f"Task {task_id} not ready yet. Retrying claim for user {user_id} in 10s")
-        raise self.retry(countdown=10, exc=Exception(f"Task {task_id} not ready"))
+            return
+        dna_data = result.get()
+
+    _save_dna_to_profile(user.userprofile, dna_data)
+
+    if cached_session_key:
+        _create_userbooks_from_anonymous_session(user, cached_session_key)
+
+    user.userprofile.pending_dna_task_id = None
+    user.userprofile.save()
+    logger.info(f"Successfully claimed and saved DNA for user {user_id} from task {task_id}")
+
+    track_anonymous_dna_claimed(
+        user_id=user_id,
+        task_id=task_id,
+        session_key=cached_session_key,
+    )
 
 
 def _create_userbooks_from_anonymous_session(user, session_key):
@@ -351,7 +323,7 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
         if user_id is not None:
             user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
-        logger.error(f"Could not run task. User with id {user_id} not found")
+        logger.warning(f"Could not run task. User with id {user_id} not found")
         # Track failure
         track_dna_generation_failed(
             task_id=task_id,
@@ -390,12 +362,12 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
             )
 
             if self.request.id:
-                from .cache_utils import safe_cache_set
+                from .cache_utils import DNA_CACHE_TTL, safe_cache_set
 
-                safe_cache_set(f"dna_result_{self.request.id}", result_data, timeout=3600)
+                safe_cache_set(f"dna_result_{self.request.id}", result_data, timeout=DNA_CACHE_TTL)
                 # Also cache the session_key so we can find AnonymousUserSession when claiming
                 if session_key:
-                    safe_cache_set(f"session_key_{self.request.id}", session_key, timeout=3600)
+                    safe_cache_set(f"session_key_{self.request.id}", session_key, timeout=DNA_CACHE_TTL)
                 logger.info(f"DNA result for task {self.request.id} saved to cache")
 
             # Track completion
@@ -442,15 +414,12 @@ def research_publisher_mainstream_task():
     from .models import Publisher, Author
     from .services.publisher_service import research_publisher_identity
 
-    BATCH_LIMIT = 20
-    AGE_THRESHOLD_DAYS = 90
-
-    cutoff = timezone.now() - timezone.timedelta(days=AGE_THRESHOLD_DAYS)
+    cutoff = timezone.now() - timezone.timedelta(days=PUBLISHER_CHECK_AGE_THRESHOLD_DAYS)
     publishers_to_check = list(
         Publisher.objects.filter(
             Q(mainstream_last_checked__isnull=True) | Q(mainstream_last_checked__lt=cutoff),
             parent__isnull=True,
-        )[:BATCH_LIMIT]
+        )[:PUBLISHER_CHECK_BATCH_LIMIT]
     )
 
     if not publishers_to_check:
@@ -580,13 +549,17 @@ def generate_recommendations_task(self, user_id: int):
 
         recommendations = get_recommendations_for_user(user, limit=6)
 
+        # Imported here to avoid a circular import with core.views.
+        from .views import BADGE_COLOR_MAP
+
         processed_recs = []
         for rec in recommendations:
+            book = rec["book"]
             processed_rec = {
-                "book_id": rec["book"].id,
-                "book_title": rec["book"].title,
-                "book_author": rec["book"].author.name,
-                "book_average_rating": rec["book"].average_rating,
+                "book_id": book.id,
+                "book_title": book.title,
+                "book_author": book.author.name,
+                "book_average_rating": book.average_rating,
                 "confidence": rec.get("confidence", 0),
                 "confidence_pct": int(rec.get("confidence", 0) * 100),
                 "score": rec.get("score", 0),
@@ -594,6 +567,14 @@ def generate_recommendations_task(self, user_id: int):
                 "genre_alignment": rec.get("genre_alignment", 0),
                 "sources": rec.get("sources", []),
                 "explanation_components": rec.get("explanation_components", {}),
+                # US-032: bake the nested book dict templates expect, so
+                # views no longer need to reconstruct it on every render.
+                "book": {
+                    "id": book.id,
+                    "title": book.title,
+                    "author": {"name": book.author.name},
+                    "average_rating": book.average_rating,
+                },
             }
 
             primary_source_user = None
@@ -605,6 +586,10 @@ def generate_recommendations_task(self, user_id: int):
                         primary_source_user = source
 
             if primary_source_user:
+                # US-032: bake badge_class alongside the source so the view
+                # can skip the legacy expansion when "book" is already set.
+                match_quality = primary_source_user.get("match_quality", "")
+                primary_source_user["badge_class"] = BADGE_COLOR_MAP.get(match_quality, "bg-brand-purple")
                 processed_rec["primary_source_user"] = primary_source_user
 
             processed_recs.append(processed_rec)
@@ -637,7 +622,7 @@ def generate_recommendations_task(self, user_id: int):
         return len(processed_recs)
 
     except User.DoesNotExist:
-        logger.error(f"User with id {user_id} not found for recommendations generation")
+        logger.warning(f"User with id {user_id} not found for recommendations generation")
         return None
     except Exception as e:
         logger.error(f"Error generating recommendations for user {user_id}: {e}", exc_info=True)

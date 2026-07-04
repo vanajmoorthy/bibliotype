@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand
 
 from core.book_enrichment_service import _clean_title_for_api
 from core.models import Book
+from core.services._book_urls import cover_url_from_isbn, cover_url_from_olid
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +64,7 @@ class Command(BaseCommand):
             for book in isbn_qs.iterator():
                 if limit and updated >= limit:
                     break
-                book.cover_url = f"https://covers.openlibrary.org/b/isbn/{book.isbn13}-M.jpg"
+                book.cover_url = cover_url_from_isbn(book.isbn13)
                 batch.append(book)
                 updated += 1
 
@@ -145,8 +146,7 @@ class Command(BaseCommand):
 
         docs = data.get("docs", [])
         if docs and docs[0].get("cover_i"):
-            cover_id = docs[0]["cover_i"]
-            return f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg"
+            return cover_url_from_olid(docs[0]["cover_i"])
 
         return None
 

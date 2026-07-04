@@ -182,8 +182,11 @@ class EnrichDnaBackwardCompatTests(TestCase):
     """Tests for backward compatibility in _enrich_dna_for_display()."""
 
     @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})
-    def test_old_dna_gets_currently_reading_defaults(self):
-        """Old DNA data missing currently-reading fields should get sensible defaults."""
+    def test_old_dna_without_currently_reading_fields_is_not_backfilled(self):
+        """US-033 removed the legacy backfill: old DNA missing currently-reading
+        fields passes through untouched (templates treat missing keys as falsy).
+        Prod data was regenerated via `regenerate_dna`, so this shape no longer
+        occurs in stored profiles."""
         from core.views import _enrich_dna_for_display
 
         old_dna = {
@@ -200,12 +203,15 @@ class EnrichDnaBackwardCompatTests(TestCase):
             "most_niche_book": {"title": "Test Book", "author": "Test Author", "read_count": 1},
         }
 
-        _enrich_dna_for_display(old_dna)
+        result = _enrich_dna_for_display(old_dna)
 
-        self.assertEqual(old_dna["currently_reading_books"], [])
-        self.assertEqual(old_dna["currently_reading_count"], 0)
-        self.assertEqual(old_dna["custom_shelf_count"], 0)
-        self.assertIsNone(old_dna["most_niche_book"]["cover_url"])
+        # No crash, enrichment still happens...
+        self.assertIn("community_averages", result)
+        # ...but legacy fields are no longer synthesized.
+        self.assertNotIn("currently_reading_books", result)
+        self.assertNotIn("currently_reading_count", result)
+        self.assertNotIn("custom_shelf_count", result)
+        self.assertNotIn("cover_url", result["most_niche_book"])
 
 
 class RecommendationCurrentlyReadingBoostTests(TestCase):
@@ -218,63 +224,58 @@ class RecommendationCurrentlyReadingBoostTests(TestCase):
         self.book.genres.add(self.genre)
 
     def test_matching_author_gives_boost(self):
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _calculate_currently_reading_boost
 
-        engine = RecommendationEngine()
         context = {
             "currently_reading_authors": {self.author.id},
             "currently_reading_genres": set(),
         }
 
-        boost = engine._calculate_currently_reading_boost(self.book, context)
+        boost = _calculate_currently_reading_boost(self.book, context)
         self.assertGreater(boost, 0)
         self.assertGreaterEqual(boost, 0.10)
 
     def test_matching_genre_gives_boost(self):
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _calculate_currently_reading_boost
 
-        engine = RecommendationEngine()
         context = {
             "currently_reading_authors": set(),
             "currently_reading_genres": {"fantasy"},
         }
 
-        boost = engine._calculate_currently_reading_boost(self.book, context)
+        boost = _calculate_currently_reading_boost(self.book, context)
         self.assertGreater(boost, 0)
 
     def test_no_match_gives_zero(self):
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _calculate_currently_reading_boost
 
-        engine = RecommendationEngine()
         context = {
             "currently_reading_authors": set(),
             "currently_reading_genres": set(),
         }
 
-        boost = engine._calculate_currently_reading_boost(self.book, context)
+        boost = _calculate_currently_reading_boost(self.book, context)
         self.assertEqual(boost, 0.0)
 
     def test_boost_capped_at_015(self):
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _calculate_currently_reading_boost
 
-        engine = RecommendationEngine()
         # Both author and genre match
         context = {
             "currently_reading_authors": {self.author.id},
             "currently_reading_genres": {"fantasy"},
         }
 
-        boost = engine._calculate_currently_reading_boost(self.book, context)
+        boost = _calculate_currently_reading_boost(self.book, context)
         self.assertLessEqual(boost, 0.15)
 
     def test_empty_context_keys_handled(self):
         """Context without currently_reading keys should return 0."""
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _calculate_currently_reading_boost
 
-        engine = RecommendationEngine()
         context = {}
 
-        boost = engine._calculate_currently_reading_boost(self.book, context)
+        boost = _calculate_currently_reading_boost(self.book, context)
         self.assertEqual(boost, 0.0)
 
 

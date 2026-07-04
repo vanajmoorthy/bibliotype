@@ -211,6 +211,19 @@ class BookEnrichmentIntegrationTests(TestCase):
         self.assertTrue(Genre.objects.filter(name="fantasy").exists())
         self.assertTrue(Genre.objects.filter(name="science fiction").exists())
 
+    def test_canonicalize_google_books_categories_snapshot(self):
+        """US-035b: outputs must not drift when GB canonicalization is rewritten
+        to delegate to `_clean_and_canonicalize_genres`. Snapshot captured from
+        the pre-refactor implementation."""
+        from core.book_enrichment_service import _canonicalize_google_books_categories
+
+        self.assertEqual(
+            _canonicalize_google_books_categories(["Fiction/Romance", "Self-Help"]),
+            {"romance", "self-help"},
+        )
+        self.assertEqual(_canonicalize_google_books_categories(["Juvenile Fiction"]), set())
+        self.assertEqual(_canonicalize_google_books_categories(["Computers/Programming Languages"]), set())
+
     @patch("core.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
     @patch("core.book_enrichment_service._fetch_from_open_library")
     def test_google_books_genres_used_when_ol_has_no_genres(self, mock_ol, mock_gb):

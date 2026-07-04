@@ -413,11 +413,10 @@ class GlobalPopularityFallbackTestCase(TestCase):
 
     def test_global_fallback_has_discovery_explanation(self):
         """Global fallback recommendations get a 'discovery' explanation component."""
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _build_user_context, _get_fallback_candidates
 
-        engine = RecommendationEngine()
-        context = engine._build_user_context(self.user)
-        fallback = engine._get_fallback_candidates(context, limit=6)
+        context = _build_user_context(self.user)
+        fallback = _get_fallback_candidates(context, limit=6)
 
         # Verify fallback candidates have global_popularity source type
         for book_id, candidate in fallback.items():
@@ -439,11 +438,10 @@ class GlobalPopularityFallbackTestCase(TestCase):
         )
         extra_book.genres.add(self.genre)
 
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _build_user_context, _get_fallback_candidates
 
-        engine = RecommendationEngine()
-        context = engine._build_user_context(self.user)
-        fallback = engine._get_fallback_candidates(context, limit=10)
+        context = _build_user_context(self.user)
+        fallback = _get_fallback_candidates(context, limit=10)
 
         # Count books per author in global_popularity candidates
         author_counts = {}
@@ -466,11 +464,10 @@ class GlobalPopularityFallbackTestCase(TestCase):
             google_books_ratings_count=100000,
         )
 
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _build_user_context, _get_fallback_candidates
 
-        engine = RecommendationEngine()
-        context = engine._build_user_context(self.user)
-        fallback = engine._get_fallback_candidates(context, limit=10)
+        context = _build_user_context(self.user)
+        fallback = _get_fallback_candidates(context, limit=10)
 
         fallback_ids = set(fallback.keys())
         self.assertNotIn(low_book.id, fallback_ids)
@@ -560,3 +557,116 @@ class EmptyStateRecommendationsViewTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No recommended books yet")
         self.assertContains(response, "more readers join Bibliotype")
+
+    @patch("core.tasks.generate_recommendations_task")
+    def test_dashboard_renders_new_shape_recommendation_without_reexpansion(self, mock_rec_task):
+        """US-032: recs with pre-baked rec['book'] render unchanged (new shape)."""
+        mock_rec_task.delay = MagicMock()
+
+        new_shape_rec = {
+            "book_id": 1,
+            "book_title": "New Shape Book",
+            "book_author": "New Shape Author",
+            "book_average_rating": 4.5,
+            "confidence": 0.8,
+            "confidence_pct": 80,
+            "score": 1.0,
+            "recommender_count": 2,
+            "genre_alignment": 0.5,
+            "sources": [{"type": "similar_user", "username": "other", "similarity_score": 0.8}],
+            "explanation_components": {"rating": "Highly rated (4.5)"},
+            "primary_source_user": {
+                "username": "other",
+                "match_quality": "Literary twin",
+                "badge_class": "bg-badge-5",
+            },
+            "book": {
+                "id": 1,
+                "title": "New Shape Book",
+                "author": {"name": "New Shape Author"},
+                "average_rating": 4.5,
+            },
+        }
+        self.user.userprofile.recommendations_data = [new_shape_rec]
+        self.user.userprofile.save()
+        self.client.login(username="emptyrecuser", password="test123")
+
+        response = self.client.get("/dashboard/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "New Shape Book")
+        # `book` was already baked; the saved value must be untouched.
+        stored = self.user.userprofile.recommendations_data[0]
+        self.assertEqual(stored["book"]["title"], "New Shape Book")
+        self.assertEqual(stored["primary_source_user"]["badge_class"], "bg-badge-5")
+
+    @patch("core.tasks.generate_recommendations_task")
+    def test_dashboard_expands_legacy_shape_recommendation(self, mock_rec_task):
+        """US-032: recs without rec['book'] (legacy DB rows) trigger the fallback."""
+        mock_rec_task.delay = MagicMock()
+
+        legacy_shape_rec = {
+            "book_id": 2,
+            "book_title": "Legacy Shape Book",
+            "book_author": "Legacy Shape Author",
+            "book_average_rating": 4.2,
+            "confidence": 0.7,
+            "confidence_pct": 70,
+            "score": 0.9,
+            "recommender_count": 1,
+            "genre_alignment": 0.4,
+            "sources": [],
+            "explanation_components": {},
+            "primary_source_user": {"username": "other", "match_quality": "Kindred reader"},
+        }
+        self.user.userprofile.recommendations_data = [legacy_shape_rec]
+        self.user.userprofile.save()
+        self.client.login(username="emptyrecuser", password="test123")
+
+        response = self.client.get("/dashboard/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Legacy Shape Book")
+        self.assertContains(response, "Legacy Shape Author")
+
+    def test_public_profile_renders_new_and_legacy_shapes(self):
+        """US-032: dual-shape compat holds for /u/<username>/ too."""
+        self.user.userprofile.is_public = True
+        self.user.userprofile.recommendations_data = [
+            {
+                "book_id": 3,
+                "book_title": "Public New Shape",
+                "book_author": "Author A",
+                "book_average_rating": 4.7,
+                "confidence": 0.9,
+                "confidence_pct": 90,
+                "score": 1.1,
+                "recommender_count": 3,
+                "genre_alignment": 0.6,
+                "sources": [],
+                "explanation_components": {},
+                "book": {
+                    "id": 3,
+                    "title": "Public New Shape",
+                    "author": {"name": "Author A"},
+                    "average_rating": 4.7,
+                },
+            },
+            {
+                "book_id": 4,
+                "book_title": "Public Legacy Shape",
+                "book_author": "Author B",
+                "book_average_rating": 4.1,
+                "confidence": 0.6,
+                "confidence_pct": 60,
+                "score": 0.8,
+                "recommender_count": 1,
+                "genre_alignment": 0.3,
+                "sources": [],
+                "explanation_components": {},
+            },
+        ]
+        self.user.userprofile.save()
+
+        response = self.client.get(f"/u/{self.user.username}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Public New Shape")
+        self.assertContains(response, "Public Legacy Shape")

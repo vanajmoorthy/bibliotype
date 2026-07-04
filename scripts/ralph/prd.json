@@ -541,7 +541,7 @@
         "**Final verification:** `git grep RecommendationEngine` returns ZERO matches (this includes strings inside `@patch` decorators).",
         "**Risk note:** highest-risk story in the PRD. If full test suite goes red, do NOT loosen tests \u2014 investigate semantic divergence in the converted functions."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 36
     },
@@ -555,7 +555,7 @@
         "Drop the `include_explanations` parameter (always `True` at every call site); always run `_add_explanations`.",
         "**Test command:** `manage.py test` (full suite)."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 37
     },
@@ -572,7 +572,7 @@
         "**Follow-up note in `progress.txt`:** \"US-032 ships dual-shape compat. After \u226530 days OR after a forced `regenerate_recommendations` run, the legacy fallback (`if 'book' not in rec`) can be removed in a follow-up story.\"",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 38
     },
@@ -588,7 +588,7 @@
         "Keep the re-upload nudge (`messages.info(...)` around dashboard render) \u2014 it's the fallback for any user who never triggers a regeneration.",
         "`manage.py test core.tests.test_views_e2e core.tests.test_math_accuracy` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 39
     },
@@ -614,7 +614,7 @@
         "Existing claim integration test still passes.",
         "`manage.py test core.tests.test_tasks_integration` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 41
     },
@@ -629,7 +629,7 @@
         "`manage.py test core.tests.test_integration core.tests.test_enrichment_stats` passes.",
         "**Risk note:** order of priority application may differ subtly because Google Books had its own ordering. The snapshot test catches drift."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 42
     },
@@ -642,7 +642,7 @@
         "Author-service test still passes.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 43
     },
@@ -657,7 +657,7 @@
         "`manage.py test` passes.",
         "`progress.txt`: note that LLM model is now configurable via env var."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 44
     },
@@ -670,7 +670,7 @@
         "Replace all four hardcoded URLs.",
         "`manage.py test core.tests.test_backfill_covers` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 45
     },
@@ -683,7 +683,7 @@
         "Both call sites import and use it; cap difference handled with a `[:N]` slice at call site.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 46
     },
@@ -698,7 +698,7 @@
         "**Test:** add a unit test that calls the helper (or the inlined formula) with the same fixture inputs and asserts identical output across auth and anon paths.",
         "`manage.py test core.tests.test_fiction_book_extremes` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 47
     },
@@ -711,7 +711,7 @@
         "All inline literals replaced with the named constants.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 48
     },
@@ -724,7 +724,7 @@
         "Add `exc_info=True` to the three sites listed above. Verify with `grep -B1 -A1 \"exc_info\" core/services/dna_analyser.py core/services/anonymization_service.py core/services/llm_service.py`.",
         "`manage.py test` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 49
     },

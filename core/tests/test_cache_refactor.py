@@ -134,10 +134,9 @@ class UserRecommendationsCacheKeyTests(TestCase):
 
     def test_cache_key_does_not_include_limit(self):
         """After Fix 5, the cache key should be user_recommendations_{id} without limit suffix."""
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import get_recommendations_for_user
 
-        engine = RecommendationEngine()
-        engine.get_recommendations_for_user(self.user, limit=6)
+        get_recommendations_for_user(self.user, limit=6)
 
         # The key should be just user_recommendations_{id}
         cached = cache.get(f"user_recommendations_{self.user.id}")
@@ -149,11 +148,10 @@ class UserRecommendationsCacheKeyTests(TestCase):
 
     def test_different_limits_share_same_cache(self):
         """Calling with limit=6 then limit=10 should return cached result from first call."""
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import get_recommendations_for_user
 
-        engine = RecommendationEngine()
-        result1 = engine.get_recommendations_for_user(self.user, limit=6)
-        result2 = engine.get_recommendations_for_user(self.user, limit=10)
+        result1 = get_recommendations_for_user(self.user, limit=6)
+        result2 = get_recommendations_for_user(self.user, limit=10)
 
         # Both should return the same cached result (from the first call)
         self.assertEqual(len(result1), len(result2))
@@ -271,7 +269,7 @@ class TaskInvalidationTests(TestCase):
     def setUp(self):
         cache.clear()
 
-    @patch("core.services.recommendation_service.RecommendationEngine.get_recommendations_for_user")
+    @patch("core.services.recommendation_service.get_recommendations_for_user")
     def test_recommendations_task_uses_delete_not_set_none(self, mock_get_recs):
         """generate_recommendations_task should use safe_cache_delete, not safe_cache_set(key, None, 1)."""
         mock_get_recs.return_value = []
@@ -290,6 +288,59 @@ class TaskInvalidationTests(TestCase):
         # Cache should be deleted, not set to None
         result = cache.get(f"user_recommendations_{user.id}")
         self.assertIsNone(result)
+
+    @patch("core.services.recommendation_service.get_recommendations_for_user")
+    def test_recommendations_task_bakes_book_dict_and_badge_class(self, mock_get_recs):
+        """US-032: stored recs include rec['book'] dict + primary_source_user.badge_class."""
+        author = Author.objects.create(name="Bake Author")
+        book = Book.objects.create(title="Bake Book", author=author, average_rating=4.6)
+
+        mock_get_recs.return_value = [
+            {
+                "book": book,
+                "confidence": 0.75,
+                "score": 1.2,
+                "recommender_count": 1,
+                "genre_alignment": 0.5,
+                "sources": [
+                    {
+                        "type": "similar_user",
+                        "user_id": 99,
+                        "username": "twin",
+                        "match_quality": "Literary twin",
+                        "similarity_score": 0.9,
+                    }
+                ],
+                "explanation_components": {},
+            }
+        ]
+
+        user = User.objects.create_user(username="bakeuser", password="test123")
+        user.userprofile.dna_data = {"reader_type": "Test"}
+        user.userprofile.save()
+
+        from core.tasks import generate_recommendations_task
+
+        generate_recommendations_task(user.id)
+        user.userprofile.refresh_from_db()
+
+        stored = user.userprofile.recommendations_data
+        self.assertEqual(len(stored), 1)
+        rec = stored[0]
+
+        self.assertIn("book", rec)
+        self.assertEqual(rec["book"]["id"], book.id)
+        self.assertEqual(rec["book"]["title"], "Bake Book")
+        self.assertEqual(rec["book"]["author"], {"name": "Bake Author"})
+        self.assertEqual(rec["book"]["average_rating"], 4.6)
+
+        # Legacy flat keys still present for dual-shape safety.
+        self.assertEqual(rec["book_id"], book.id)
+        self.assertEqual(rec["book_title"], "Bake Book")
+
+        # primary_source_user.badge_class is baked from BADGE_COLOR_MAP.
+        self.assertIn("primary_source_user", rec)
+        self.assertEqual(rec["primary_source_user"]["badge_class"], "bg-badge-5")
 
 
 @override_settings(
@@ -319,11 +370,10 @@ class AnonProfilesSampleTests(TestCase):
 
     def test_cache_key_is_global_not_per_user(self):
         """After Fix 3, anon_profiles_sample should be a global key without user_id."""
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _build_user_context, _collect_candidates_for_user
 
-        engine = RecommendationEngine()
-        user_context = engine._build_user_context(self.user1)
-        engine._collect_candidates_for_user(self.user1, user_context, limit=10)
+        user_context = _build_user_context(self.user1)
+        _collect_candidates_for_user(self.user1, user_context, limit=10)
 
         # Global key should exist
         cached = cache.get("anon_profiles_sample")
@@ -349,11 +399,10 @@ class AnonProfilesSampleTests(TestCase):
             expires_at=timezone.now() + timedelta(days=7),
         )
 
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _build_anonymous_context, _collect_candidates_for_anonymous
 
-        engine = RecommendationEngine()
-        anon_context = engine._build_anonymous_context(anon_session)
-        engine._collect_candidates_for_anonymous(anon_session, anon_context)
+        anon_context = _build_anonymous_context(anon_session)
+        _collect_candidates_for_anonymous(anon_session, anon_context)
 
         # Should use the same global key
         cached = cache.get("anon_profiles_sample")
@@ -401,23 +450,20 @@ class AnonymousRecommendationCacheTests(TestCase):
     def test_anonymous_recommendations_served_from_cache(self):
         """Second call should return cached result without re-running pipeline."""
         self._create_anon_session()
-        from core.services.recommendation_service import RecommendationEngine
-
-        engine = RecommendationEngine()
+        from core.services.recommendation_service import get_recommendations_for_anonymous
 
         # First call populates cache
-        result1 = engine.get_recommendations_for_anonymous("anon_cache_test", limit=6)
+        result1 = get_recommendations_for_anonymous("anon_cache_test", limit=6)
 
         # Manually verify cache hit by checking the cached object is identical
-        result2 = engine.get_recommendations_for_anonymous("anon_cache_test", limit=6)
+        result2 = get_recommendations_for_anonymous("anon_cache_test", limit=6)
         self.assertEqual(len(result1), len(result2))
 
     def test_anonymous_cache_returns_empty_for_missing_session(self):
         """Should return [] for nonexistent session, and not cache the empty result."""
-        from core.services.recommendation_service import RecommendationEngine
+        from core.services.recommendation_service import _get_recommendations_for_anonymous_uncached
 
-        engine = RecommendationEngine()
-        result = engine.get_recommendations_for_anonymous("nonexistent_session")
+        result = _get_recommendations_for_anonymous_uncached("nonexistent_session")
 
         self.assertEqual(result, [])
         # Empty result from missing session should not be cached

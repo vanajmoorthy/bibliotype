@@ -43,12 +43,14 @@ from .analytics.events import (
     track_user_logged_in,
     track_user_signed_up,
 )
-from .cache_utils import safe_cache_add, safe_cache_delete, safe_cache_get, safe_cache_set
+from .cache_utils import DNA_CACHE_TTL, safe_cache_add, safe_cache_delete, safe_cache_get, safe_cache_set
 from .dna_constants import CANONICAL_GENRE_MAP, FICTION_GENRES, GLOBAL_AVERAGES, NONFICTION_GENRES
 from .forms import CustomUserCreationForm, UpdateDisplayNameForm
 from .tasks import _save_dna_to_profile, claim_anonymous_dna_task, generate_reading_dna_task
 
 logger = logging.getLogger(__name__)
+
+MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024  # 10MB CSV upload limit
 
 # Upload validation caps (US-018). 50k rows comfortably covers the largest
 # Goodreads exports observed in the wild; 100 cols is well above any real
@@ -339,8 +341,8 @@ def _compute_enrichment_progress(user, profile, dna_data):
 def _enrich_dna_for_display(dna_data):
     """Patch dna_data with fresh community averages, global averages, and comparative text.
 
-    This ensures old stored DNA (missing new fields) renders correctly, and that
-    community averages are always up-to-date rather than stale from generation time.
+    Community averages and percentiles are always up-to-date rather than stale
+    from generation time.
     """
     if not dna_data:
         return dna_data
@@ -368,48 +370,7 @@ def _enrich_dna_for_display(dna_data):
         k: v if v is not None else COMMUNITY_FALLBACKS.get(k, 0) for k, v in raw_community.items()
     }
 
-    # Backfill missing fields for old DNA data
     user_stats = dna_data.get("user_stats", {})
-    stats_by_year = dna_data.get("stats_by_year", [])
-    dated_book_count = sum(y.get("count", 0) for y in stats_by_year)
-
-    if "avg_books_per_year" not in user_stats:
-        if stats_by_year:
-            num_years = len(stats_by_year)
-            user_stats["avg_books_per_year"] = round(dated_book_count / num_years, 1) if num_years > 0 else 0
-            user_stats["num_reading_years"] = num_years
-        else:
-            user_stats["avg_books_per_year"] = 0
-            user_stats["num_reading_years"] = 0
-
-    if "books_with_dates" not in user_stats:
-        user_stats["books_with_dates"] = dated_book_count
-
-    # Backfill currently-reading fields for old DNA data
-    if "currently_reading_books" not in dna_data:
-        dna_data["currently_reading_books"] = []
-    if "currently_reading_count" not in dna_data:
-        dna_data["currently_reading_count"] = 0
-    if "custom_shelf_count" not in dna_data:
-        dna_data["custom_shelf_count"] = 0
-    niche_book = dna_data.get("most_niche_book")
-    if niche_book and "cover_url" not in niche_book:
-        niche_book["cover_url"] = None
-
-    longest_book = dna_data.get("longest_book")
-    if longest_book and "cover_url" not in longest_book:
-        longest_book["cover_url"] = None
-
-    shortest_book = dna_data.get("shortest_book")
-    if shortest_book and "cover_url" not in shortest_book:
-        shortest_book["cover_url"] = None
-
-    # Backfill page_difference for old DNA data (key absent = old DNA, not same-page-count None)
-    if "page_difference" not in dna_data:
-        longest = dna_data.get("longest_book")
-        shortest = dna_data.get("shortest_book")
-        if longest and shortest and longest.get("page_count") and shortest.get("page_count"):
-            dna_data["page_difference"] = longest["page_count"] - shortest["page_count"]
 
     # Recalculate percentiles from current aggregate data so they're never stale.
     # Cached for 10 minutes to avoid a DB hit on every page load while still staying fresh.
@@ -532,6 +493,22 @@ BADGE_COLOR_MAP = {
 }
 
 
+def _expand_book_dict(rec, badge_color_map):
+    # Legacy fallback: stored recs predating US-032 only have flat
+    # `book_*` keys. Reconstruct the nested template shape and bake
+    # the `primary_source_user.badge_class` here so both views can
+    # collapse the old 18-line for-loop to a single guard.
+    if rec.get("primary_source_user"):
+        match_quality = rec["primary_source_user"].get("match_quality", "")
+        rec["primary_source_user"]["badge_class"] = badge_color_map.get(match_quality, "bg-brand-purple")
+    return {
+        "id": rec.get("book_id"),
+        "title": rec.get("book_title", "Unknown Title"),
+        "author": {"name": rec.get("book_author", "Unknown Author")},
+        "average_rating": rec.get("book_average_rating"),
+    }
+
+
 def display_dna_view(request):
     is_processing = request.GET.get("processing") == "true"
 
@@ -556,20 +533,8 @@ def display_dna_view(request):
                     stored_recs = user_profile.recommendations_data
 
                     for rec in stored_recs:
-                        # Create nested book structure for template compatibility
-                        rec["book"] = {
-                            "id": rec.get("book_id"),
-                            "title": rec.get("book_title", "Unknown Title"),
-                            "author": {"name": rec.get("book_author", "Unknown Author")},
-                            "average_rating": rec.get("book_average_rating"),
-                        }
-
-                        # Add badge classes for display (these aren't stored in DB)
-                        if rec.get("primary_source_user"):
-                            match_quality = rec["primary_source_user"].get("match_quality", "")
-                            rec["primary_source_user"]["badge_class"] = BADGE_COLOR_MAP.get(
-                                match_quality, "bg-brand-purple"
-                            )
+                        if "book" not in rec:
+                            rec["book"] = _expand_book_dict(rec, BADGE_COLOR_MAP)
 
                     recommendations = stored_recs
                     logger.info(f"Loaded {len(recommendations)} stored recommendations for user {request.user.id}")
@@ -767,7 +732,7 @@ def upload_view(request):
         return redirect("core:home")
 
     try:
-        if csv_file.size > 10 * 1024 * 1024:  # 10MB limit
+        if csv_file.size > MAX_UPLOAD_SIZE_BYTES:
             messages.error(request, "File is too large. Please upload an export smaller than 10MB.")
             return redirect("core:home")
 
@@ -845,7 +810,7 @@ def upload_view(request):
             import uuid
 
             upload_nonce = str(uuid.uuid4())
-            safe_cache_set(f"upload_nonce_{request.user.id}", upload_nonce, timeout=3600)
+            safe_cache_set(f"upload_nonce_{request.user.id}", upload_nonce, timeout=DNA_CACHE_TTL)
 
             result = generate_reading_dna_task.delay(csv_content, request.user.id)
 
@@ -878,7 +843,7 @@ def upload_view(request):
             task_id = result.id
 
             request.session["anonymous_task_id"] = task_id
-            safe_cache_set(f"task_owner_{task_id}", session_key, 3600)
+            safe_cache_set(f"task_owner_{task_id}", session_key, DNA_CACHE_TTL)
             request.session.save()
 
             return redirect("core:task_status", task_id=task_id)
@@ -1299,19 +1264,8 @@ def public_profile_view(request, username):
                     stored_recs = profile.recommendations_data
 
                     for rec in stored_recs:
-                        rec["book"] = {
-                            "id": rec.get("book_id"),
-                            "title": rec.get("book_title", "Unknown Title"),
-                            "author": {"name": rec.get("book_author", "Unknown Author")},
-                            "average_rating": rec.get("book_average_rating"),
-                        }
-
-                        # Add badge classes for display (these aren't stored in DB)
-                        if rec.get("primary_source_user"):
-                            match_quality = rec["primary_source_user"].get("match_quality", "")
-                            rec["primary_source_user"]["badge_class"] = BADGE_COLOR_MAP.get(
-                                match_quality, "bg-brand-purple"
-                            )
+                        if "book" not in rec:
+                            rec["book"] = _expand_book_dict(rec, BADGE_COLOR_MAP)
 
                     recommendations = stored_recs
                     logger.info(

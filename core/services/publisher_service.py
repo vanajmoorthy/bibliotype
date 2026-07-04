@@ -1,16 +1,12 @@
-import logging
-import os
-import re
 import json
-import requests
-import google.generativeai as genai
+import logging
 from urllib.parse import quote
 
-logger = logging.getLogger(__name__)
+import requests
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+from . import _gemini
+
+logger = logging.getLogger(__name__)
 
 BIG_5_PUBLISHERS = [
     "Penguin Random House",
@@ -25,7 +21,8 @@ def research_publisher_identity(publisher_name: str, session: requests.Session) 
     """Uses Wikipedia and an LLM to determine a publisher's parent company and mainstream status."""
     findings = {"is_mainstream": False, "parent_company_name": None, "reasoning": None, "error": None}
 
-    if not GEMINI_API_KEY:
+    model = _gemini.client()
+    if model is None:
         findings["error"] = "GEMINI_API_KEY not configured."
         return findings
 
@@ -81,7 +78,6 @@ def research_publisher_identity(publisher_name: str, session: requests.Session) 
         JSON Response:
         """
 
-        model = genai.GenerativeModel("models/gemini-2.5-flash")
         response = model.generate_content(prompt)
 
         # Clean up the response to extract only the JSON part

@@ -1530,6 +1530,39 @@ GLOBAL_AVERAGES = {
     "avg_publish_year": 2009,
 }
 
+# Priority ordering for genre selection in book enrichment: most specific first,
+# generic/classics last. Genres absent from this list sort to the end.
+# Used by core/book_enrichment_service.py to pick the top-N genres for a book
+# after merging Open Library and Google Books canonical genre sets.
+GENRE_PRIORITY = [
+    # Fiction genres (most specific to generic)
+    "fantasy",
+    "science fiction",
+    "dystopian",
+    "thriller",
+    "horror",
+    "historical fiction",
+    "romance",
+    "humorous fiction",
+    "young adult",
+    "short stories",
+    # Non-fiction genres
+    "biography",
+    "philosophy",
+    "psychology",
+    "history",
+    "social science",
+    "non-fiction",
+    "science",
+    "nature",
+    "art & music",
+    "travel",
+    # Generic/classics
+    "classics",
+    "plays & drama",
+    "children's literature",
+]
+
 NICHE_THRESHOLD = 5
 
 CONTRARINESS_SCALE = [

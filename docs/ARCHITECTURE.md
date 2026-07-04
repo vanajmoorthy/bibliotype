@@ -408,7 +408,7 @@ This means a 5-star book with a glowing review can score up to 130 points, while
 
 ## 12. The Recommendation Engine
 
-The recommendation system is the most algorithmically complex part of the application. It's built as a class (`RecommendationEngine`) with a multi-stage pipeline.
+The recommendation system is the most algorithmically complex part of the application. It's a module of pipeline functions in `core/services/recommendation_service.py` with `get_recommendations_for_user` and `get_recommendations_for_anonymous` as the public entry points.
 
 ### Candidate Collection: Three Sources
 

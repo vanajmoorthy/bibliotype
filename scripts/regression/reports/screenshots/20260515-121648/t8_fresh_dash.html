@@ -1,0 +1,345 @@
+
+<!doctype html>
+<html lang="en" class="h-full">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+        
+        <title>Bibliotype – Dashboard</title>
+        <meta
+            name="description"
+            content="
+    View your personalised reading DNA dashboard with insights into your literary personality, favourite genres, reading
+    statistics, and book recommendations.
+"
+        />
+        <meta
+            name="keywords"
+            content="
+    reading DNA dashboard, literary personality results, reading statistics, genre analysis, book recommendations,
+    reading insights
+"
+        />
+        <meta name="author" content="Bibliotype" />
+        <meta
+            name="robots"
+            content="noindex, nofollow"
+        />
+        <meta name="language" content="English" />
+        <meta name="revisit-after" content="7 days" />
+        <meta name="theme-color" content="#f5f5f5" />
+        <meta name="format-detection" content="telephone=no" />
+        <link
+            rel="canonical"
+            href="http://localhost:8000/dashboard/"
+        />
+        <link rel="alternate" hreflang="en" href="http://localhost:8000/dashboard/" />
+
+        
+        <meta property="og:type" content="website" />
+        <meta
+            property="og:url"
+            content="http://localhost:8000/dashboard/"
+        />
+        <meta property="og:title" content="Bibliotype - Discover Your Reading DNA" />
+        <meta
+            property="og:description"
+            content="
+                Discover your unique reading DNA and literary personality type. Get personalised insights into your
+                reading habits and book preferences.
+            "
+        />
+        <meta
+            property="og:image"
+            content="http://localhost:8000/static/android-chrome-512x512.png"
+        />
+        <meta property="og:image:width" content="512" />
+        <meta property="og:image:height" content="512" />
+        <meta property="og:image:alt" content="Bibliotype - Reading DNA Logo" />
+        <meta property="og:site_name" content="Bibliotype" />
+        <meta property="og:locale" content="en_US" />
+
+        
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta
+            name="twitter:url"
+            content="http://localhost:8000/dashboard/"
+        />
+        <meta
+            name="twitter:title"
+            content="Bibliotype - Discover Your Reading DNA"
+        />
+        <meta
+            name="twitter:description"
+            content="
+                Discover your unique reading DNA and literary personality type. Get personalised insights into your
+                reading habits.
+            "
+        />
+        <meta
+            name="twitter:image"
+            content="http://localhost:8000/static/android-chrome-512x512.png"
+        />
+        <meta
+            name="twitter:image:alt"
+            content="Bibliotype - Reading DNA Logo"
+        />
+
+        
+        <link
+            rel="icon"
+            type="image/svg+xml"
+            href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧬</text></svg>"
+        />
+        <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png" />
+        <link rel="shortcut icon" href="/static/favicon.ico" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+        <link rel="manifest" href="/static/site.webmanifest" />
+
+        
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+
+        
+        <link
+            rel="preload"
+            href="https://fonts.googleapis.com/css2?family=VT323&display=swap"
+            as="style"
+            onload="this.onload=null;this.rel='stylesheet'"
+        />
+        <noscript>
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap" />
+        </noscript>
+        <link href="/static/dist/output.css" rel="stylesheet" />
+
+        
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "WebApplication",
+                "name": "Bibliotype",
+                "alternateName": "Reading DNA",
+                "url": "http://localhost:8000",
+                "description": "Discover your unique reading DNA and literary personality type. Upload your Goodreads data to get personalised insights into your reading habits, favourite genres, and book preferences.",
+                "applicationCategory": "UtilityApplication",
+                "operatingSystem": "Web",
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "USD"
+                },
+                "featureList": [
+                    "Reading DNA Analysis",
+                    "Literary Personality Types",
+                    "Genre & Author Insights",
+                    "Reading Statistics Dashboard",
+                    "Community Benchmarking",
+                    "AI-Powered Reading Vibe"
+                ],
+                "screenshot": "http://localhost:8000/static/android-chrome-512x512.png"
+            }
+        </script>
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "Organization",
+                "name": "Bibliotype",
+                "url": "http://localhost:8000",
+                "logo": "http://localhost:8000/static/android-chrome-512x512.png",
+                "description": "Discover your unique reading DNA and literary personality type.",
+                "sameAs": ["https://github.com/vanajmoorthy/bibliotype"]
+            }
+        </script>
+        
+
+        
+        
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
+
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.8/dist/cdn.min.js"></script>
+
+        
+        
+            <script>
+                !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys getNextSurveyStep onSessionId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+                posthog.init('phc_pllMlznD5mSLC3Ad2Klz5z1kWfwr8U71ACDjULYfrUs', {
+                    api_host: 'https://eu.i.posthog.com',
+                    person_profiles: 'identified_only',
+                    cookieless_mode: 'always',
+                });
+                
+                    posthog.identify('39');
+                
+            </script>
+        
+    </head>
+    <body class="bg-brand-background text-brand-text grid-background flex h-full flex-col font-sans antialiased">
+        <div class="bg-brand-green border-brand-text border-b-2 px-4 py-3 text-center text-lg">
+            Bibliotype is currently in beta while I finish development and iron out the kinks. Thank you for being a
+            beta tester — I'd hugely appreciate it if you could fill out
+            <a
+                href="https://forms.gle/EoZAbYdigngwFdpm9"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="hover:bg-brand-yellow font-bold underline"
+                >this feedback form</a
+            >!
+        </div>
+        <nav class="p-4">
+            <div class="container mx-auto flex items-center justify-between">
+                <a
+                    href="/"
+                    class="text-brand-text text-2xl font-bold tracking-widest uppercase md:text-3xl"
+                >
+                    🧬<span class="border-brand-text border-b-2 lg:px-1">Bibliotype</span>
+                </a>
+                <div class="flex items-center space-x-2 text-base font-bold uppercase md:space-x-4 md:text-lg">
+                    
+                        
+                        
+                        
+                            
+    
+        <a
+            href="/dashboard/"
+            class="hover:bg-brand-pink border-brand-text shadow-neo-sm border-2 bg-white px-2 whitespace-nowrap transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+            >Dashboard</a
+        >
+    
+
+
+                        
+                        
+                            
+    
+        <a
+            href="/logout/"
+            class="hover:bg-brand-cyan border-brand-text shadow-neo-sm border-2 bg-white px-2 whitespace-nowrap transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
+            >Logout</a
+        >
+    
+
+
+                        
+                    
+                </div>
+            </div>
+        </nav>
+        <main class="container mx-auto flex-grow p-2 md:p-6">
+            
+            
+    <div class="mx-auto h-full max-w-4xl space-y-6 p-2">
+        
+            <div class="flex h-full flex-col p-4">
+                <div class="w-full">
+                    <h1 class="mb-4 text-center text-5xl font-bold tracking-widest uppercase md:mb-8">
+                        <span class="relative z-10"> <div
+    x-data="{ editing: false, newName: 't8a4686', originalName: 't8a4686', errorMessage: '',  get isNewNameValid() { return this.newName.trim() !== '' && this.newName.length <= 15; },  updateUsername: function() { if (!this.isNewNameValid) return; this.errorMessage = ''; fetch('/api/update-username/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': 'JoV7s2Nh9ty1GhtqdndEt6NnDQzLN53aMKnIwWMy8VYaBe0yQDAzgof3IoWwmKoD' }, body: JSON.stringify({ username: this.newName }) }) .then(response => response.json()) .then(data => { if (data.status === 'success') { window.location.reload(); } else { this.errorMessage = data.message; } }) .catch(() => { this.errorMessage = 'Could not connect to the server.'; }); } }"
+    class="inline-block"
+>
+    <div
+        x-show="!editing"
+        class="flex flex-col items-center justify-center gap-y-2 text-4xl sm:text-5xl md:flex-row md:gap-x-3"
+    >
+        <div class="inline-flex items-center">
+            <div
+                @click="editing = true; $nextTick(() => $refs.usernameInput.select())"
+                class="group relative cursor-pointer"
+            >
+                <span
+                    class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"
+                ></span>
+                <span class="relative z-20 px-2" x-text="originalName"></span>
+                <div class="text-brand-text absolute -right-2 -bottom-2 z-30">
+                    <svg
+                        class="h-7 w-7"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                    >
+                        <path
+                            d="M14 0l2 2-2 2-2-2 2-2zM12 2l2 2-8 8H4v-2l8-8zM2 12v2h2l-l-2-2z"
+                        />
+                    </svg>
+                </div>
+            </div>
+            <span x-text="originalName.toLowerCase().endsWith('s') ? `'` : `'s`"></span>
+        </div>
+        <span>Bibliotype</span>
+    </div>
+    <div x-show="editing" x-cloak class="flex justify-center">
+        <form
+            @submit.prevent="updateUsername"
+            @keydown.escape.window="editing = false; newName = originalName"
+            class="inline-flex items-stretch gap-4"
+        >
+            <input
+                type="text"
+                x-ref="usernameInput"
+                x-model="newName"
+                maxlength="15"
+                class="border-brand-text focus:border-brand-purple w-full border-2 bg-white p-1 text-4xl font-bold tracking-widest uppercase focus:outline-none sm:text-5xl"
+            />
+            
+    
+        <button
+            type="submit"
+            class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:shadow-none active:translate-x-0.5 active:translate-y-0.5 cursor-pointer text-xl"
+            :disabled="!isNewNameValid" :class="{ 'opacity-50 cursor-not-allowed': !isNewNameValid }"
+            >
+            Save
+        </button>
+    
+
+
+        </form>
+    </div>
+    <div x-show="editing && newName.length > 15" class="mt-2 text-lg font-bold text-red-600">
+        Display name cannot be more than 15 characters.
+    </div>
+    <div
+        x-show="editing && errorMessage"
+        x-text="errorMessage"
+        class="mt-2 text-lg font-bold text-red-600"
+    ></div>
+</div>
+ </span>
+                    </h1>
+                </div>
+                <div class="flex flex-grow items-center justify-center">
+                    <div class="w-full text-center">
+                        <h2 class="mb-4 text-4xl font-bold uppercase">uh oh</h2>
+                        <p class="text-brand-text text-xl italic">
+                            Your account is ready but you haven't uploaded your data yet! To generate your Bibliotype,
+                            please go to the homepage and upload your library export.
+                        </p>
+                        
+                        
+    <a
+        href="/"
+        class="bg-brand-green text-brand-text border-brand-text shadow-neo-sm hover:bg-opacity-90 hover:shadow-none border-2 px-3 py-3 text-center font-bold uppercase transition-all duration-150 ease-in-out active:translate-x-0.5 active:translate-y-0.5 cursor-pointer mt-8 inline-block"
+        >
+        Upload Your Library File
+    </a>
+
+
+                    </div>
+                </div>
+            </div>
+        
+    </div>
+
+        </main>
+        <footer class="container mx-auto flex justify-center gap-6 p-4 text-lg font-normal">
+            <a href="/about/" class="hover:bg-brand-yellow cursor-pointer uppercase underline">About</a>
+            <a href="/privacy/" class="hover:bg-brand-yellow cursor-pointer uppercase underline"
+                >Privacy</a
+            >
+            <a href="/terms/" class="hover:bg-brand-yellow cursor-pointer uppercase underline">Terms</a>
+        </footer>
+    </body>
+</html>
