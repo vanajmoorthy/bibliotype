@@ -1597,3 +1597,13 @@
   `views.sitemap_xml_view` references keep resolving.
 - No test module covers these views directly (grep for robots/sitemap in
   core/tests/ is empty), so verification = manage.py check + URL counts.
+
+## 2026-07-04 16:40 — US-046
+- Moved signup_view / _login_view_throttled / login_view / logout_view /
+  handler404 / CustomPasswordResetView verbatim into core/views/auth.py.
+  client_ip_key + get_real_client_ip came along from ..ratelimit_utils.
+- bibliotype/urls.py (`from core.views import CustomPasswordResetView,
+  handler404`) and settings.py (`handler404 = 'core.views.handler404'`) both
+  resolve via the __init__ re-export — no edits needed there.
+- 44 tests green (test_views_e2e + test_password_reset + test_login_ratelimit);
+  no patch targets referenced the moved names.
