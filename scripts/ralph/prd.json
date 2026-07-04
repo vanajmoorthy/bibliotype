@@ -853,7 +853,7 @@
         "`python manage.py check` passes; URL count check matches.",
         "`manage.py test core.tests.test_profile_and_recommendations` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 58
     },

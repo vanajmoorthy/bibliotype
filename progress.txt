@@ -1636,3 +1636,12 @@
 - Moved home_view / about_view / privacy_view / terms_view into
   core/views/pages.py (only `render` needed). Re-exported from __init__.
 - Trivial move; verified via manage.py check + URL-count probe.
+
+## 2026-07-04 17:06 — US-049
+- Moved update_privacy_view / update_display_name_view /
+  _update_username_api_throttled / update_username_api /
+  update_recommendation_visibility into core/views/profile.py.
+  update_username_api keeps the try/except-Ratelimited wrapper around the
+  @ratelimit(key="user") inner function, all decorators preserved.
+- __init__.py is now header + re-export imports only. 17 tests green
+  (profile_and_recommendations + update_username_ratelimit).
