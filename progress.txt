@@ -1671,3 +1671,15 @@
   test_math_accuracy (72 tests) OK; re-pointed patcher modules
   (views_e2e, tasks_integration, storygraph_integration, subtitle_data,
   82 tests) OK.
+
+## 2026-07-04 16:57 — US-051
+- Extracted core/services/dna/csv_parser.py: _detect_and_normalize_csv +
+  STORYGRAPH_TO_GOODREADS (verbatim; imports _isbn_to_isbn13 from .utils).
+- Moved STORYGRAPH_TAG_TO_GENRE into core/dna_constants.py (genre-mapping
+  home per US intent); dna/__init__ imports it from ...dna_constants where
+  process_book_row uses it, and still exposes it for the shim's star-import.
+  No management command references it (grepped core/management).
+- __init__ re-exports _detect_and_normalize_csv / STORYGRAPH_TO_GOODREADS
+  from .csv_parser; dropped now-unused `math` import.
+- manage.py check clean; test_storygraph_integration + test_tasks_unit +
+  test_math_accuracy (79 tests) OK.

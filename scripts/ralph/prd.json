@@ -880,7 +880,7 @@
         "**Delete moved code from `core/services/dna/__init__.py`** (or its temporary monolithic source); add `from .csv_parser import _detect_and_normalize_csv` re-export.",
         "`manage.py test core.tests.test_storygraph_integration` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 60
     },
