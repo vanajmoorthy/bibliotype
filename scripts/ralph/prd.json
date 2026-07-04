@@ -919,7 +919,7 @@
         "**Delete moved code from `core/services/dna/__init__.py`**; add re-export.",
         "`manage.py test core.tests.test_views_e2e core.tests.test_tasks_integration` passes."
       ],
-      "passes": false,
+      "passes": true,
       "notes": "",
       "priority": 63
     },

@@ -1704,3 +1704,18 @@
 - dna/__init__ re-exports assign_reader_type from .reader_type; no patchers
   target it (only direct imports via the shim, unchanged until US-055).
 - manage.py check clean; test_math_accuracy + test_tasks_unit (59 tests) OK.
+
+## 2026-07-04 17:09 — US-054
+- Moved _save_dna_to_profile + save_anonymous_session_data verbatim into
+  core/services/dna/persistence.py. Kept the lazy in-function imports
+  (...cache_utils, ...tasks.generate_recommendations_task — annotated the
+  circular-import reason; datetime/timezone/AnonymousUserSession) exactly
+  as before; the lazy tasks import exists in only one place, nothing to
+  consolidate.
+- __init__ re-exports both from .persistence; header import of
+  MIN_REVIEW_LENGTH_FOR_SENTIMENT / compute_book_score moved with the code
+  (calculate_and_store_top_books stays — used by calculate_full_dna).
+- core/tasks.py continues importing _save_dna_to_profile via the shim
+  (same function object) until US-055; no patchers target these names.
+- manage.py check clean; test_views_e2e + test_tasks_integration +
+  test_profile_and_recommendations (43 tests) OK.
