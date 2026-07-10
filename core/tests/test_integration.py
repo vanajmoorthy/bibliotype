@@ -590,6 +590,35 @@ class InlineEnrichmentDuringDnaTests(TransactionTestCase):
     @patch("core.tasks.enrich_book_task.delay")
     @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    def test_goodreads_bookshelves_break_ties_in_split(
+        self, mock_inline, mock_vibe, mock_delay, mock_author, mock_recs
+    ):
+        """With no API genres, the Goodreads Bookshelves column decides the split;
+        non-genre shelves are ignored."""
+        from core.services.dna import calculate_full_dna
+
+        mock_inline.side_effect = lambda book, session, **kwargs: (book, 0, 0)  # no genres found
+        csv = (
+            "Title,Author,Exclusive Shelf,Bookshelves,My Rating,Number of Pages,"
+            "Original Publication Year,Date Read,Average Rating,My Review,ISBN13\n"
+            'Shelf Book A,Shelf Author,read,"read, nonfiction, owned",5,300,2020,2023/01/10,4.0,,\n'
+            'Shelf Book B,Shelf Author,read,"read, fiction, favorites",4,250,2019,2023/02/15,4.5,,\n'
+            'Shelf Book C,Shelf Author,read,"read, to-read",3,200,2018,2023/03/20,4.2,,\n'
+        )
+        user = User.objects.create_user(username="shelf_user", password="pw")
+
+        dna = calculate_full_dna(csv, user=user)
+
+        self.assertEqual(
+            dna["fiction_nonfiction_split"],
+            {"fiction_count": 1, "nonfiction_count": 1, "defaulted_count": 1},
+        )
+
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.delay")
+    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     @patch("core.services.dna.enrichment_budget._EnrichmentBudget.has_remaining", return_value=False)
     def test_async_fallback_when_budget_exhausted(
         self, mock_budget, mock_inline, mock_vibe, mock_delay, mock_author, mock_recs

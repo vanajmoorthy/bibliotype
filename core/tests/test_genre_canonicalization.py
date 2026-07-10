@@ -26,6 +26,7 @@ from core.services.genre_classification import (
     canonicalize_genre_names,
     classify_genres,
     count_fiction_nonfiction,
+    parse_shelf_signals,
 )
 
 
@@ -173,6 +174,64 @@ class ClassifyGenresMatrixTests(TestCase):
         self.assertEqual(classify_genres(canonicalize_genre_names(["classics"])), "fiction")
 
 
+class ShelfSignalTiebreakerTests(TestCase):
+    """The plan's 6-case shelf matrix: shelf signals never override clear API genres."""
+
+    def test_clear_nonfiction_api_signal_beats_fiction_shelf(self):
+        self.assertEqual(classify_genres({"history", "biography"}, shelf_fiction=True), "nonfiction")
+
+    def test_clear_fiction_api_signal_beats_nonfiction_shelf(self):
+        self.assertEqual(classify_genres({"fantasy"}, shelf_nonfiction=True), "fiction")
+
+    def test_no_api_signal_nonfiction_shelf_wins(self):
+        self.assertEqual(classify_genres(set(), shelf_nonfiction=True), "nonfiction")
+
+    def test_no_api_signal_fiction_shelf_wins(self):
+        self.assertEqual(classify_genres(set(), shelf_fiction=True), "fiction")
+
+    def test_nonfiction_shelf_disambiguates_ambiguous_only_genres(self):
+        self.assertEqual(classify_genres({"classic fiction"}, shelf_nonfiction=True), "nonfiction")
+
+    def test_no_api_signal_no_shelf_is_defaulted(self):
+        self.assertIsNone(classify_genres(set()))
+
+    def test_shelf_genres_supplement_empty_api_genres(self):
+        self.assertEqual(classify_genres(set(), shelf_genres=frozenset({"history"})), "nonfiction")
+        self.assertEqual(classify_genres(set(), shelf_genres=frozenset({"fantasy"})), "fiction")
+
+
+class ParseShelfSignalsTests(TestCase):
+    """Goodreads Bookshelves parsing: comma-split, special-cased fiction/nonfiction."""
+
+    def test_fiction_shelf_sets_fiction_signal(self):
+        self.assertEqual(parse_shelf_signals("read, fiction, favorites"), (True, False, frozenset()))
+
+    def test_nonfiction_spellings_set_nonfiction_signal(self):
+        for spelling in ("nonfiction", "non-fiction"):
+            shelf_fiction, shelf_nonfiction, shelf_genres = parse_shelf_signals(f"read, {spelling}")
+            self.assertFalse(shelf_fiction)
+            self.assertTrue(shelf_nonfiction)
+            self.assertEqual(shelf_genres, frozenset())
+
+    def test_genre_shelves_canonicalize(self):
+        shelf_fiction, shelf_nonfiction, shelf_genres = parse_shelf_signals("read, fantasy, memoirs")
+        self.assertFalse(shelf_fiction)
+        self.assertFalse(shelf_nonfiction)
+        self.assertEqual(shelf_genres, frozenset({"fantasy", "memoir"}))
+
+    def test_non_genre_shelves_are_ignored(self):
+        self.assertEqual(parse_shelf_signals("read, to-read, owned, favorites"), (False, False, frozenset()))
+
+    def test_empty_and_missing_values(self):
+        self.assertEqual(parse_shelf_signals(""), (False, False, frozenset()))
+        self.assertEqual(parse_shelf_signals(None), (False, False, frozenset()))
+
+    def test_case_and_whitespace_insensitive(self):
+        shelf_fiction, shelf_nonfiction, _ = parse_shelf_signals("  Fiction ,  NONFICTION  ")
+        self.assertTrue(shelf_fiction)
+        self.assertTrue(shelf_nonfiction)
+
+
 class CountFictionNonfictionTests(TestCase):
     """Counter independence: defaulted books are never added to fiction."""
 
@@ -197,6 +256,26 @@ class CountFictionNonfictionTests(TestCase):
 
     def test_empty_iterable(self):
         self.assertEqual(count_fiction_nonfiction([]), (0, 0, 0))
+
+    def test_shelf_signals_break_ties_without_overriding_api(self):
+        genre_sets = [
+            {"history", "biography"},  # nonfiction — fiction shelf can't override
+            {"fantasy"},  # fiction — nonfiction shelf can't override
+            set(),  # nonfiction via shelf tiebreaker
+            set(),  # fiction via shelf tiebreaker
+            {"classic fiction"},  # nonfiction — shelf disambiguates ambiguous-only
+            set(),  # defaulted — no shelf signal
+        ]
+        shelf_signals = [
+            (True, False, frozenset()),
+            (False, True, frozenset()),
+            (False, True, frozenset()),
+            (True, False, frozenset()),
+            (False, True, frozenset()),
+            (False, False, frozenset()),
+        ]
+        fiction, nonfiction, defaulted = count_fiction_nonfiction(genre_sets, shelf_signals)
+        self.assertEqual((fiction, nonfiction, defaulted), (2, 3, 1))
 
 
 class EnrichmentBudgetTests(TestCase):

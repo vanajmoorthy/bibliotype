@@ -29,7 +29,7 @@ from ...dna_constants import (
     compute_contrariness,
 )
 from ...models import Author, Book, Genre
-from ..genre_classification import canonicalize_genre_names, count_fiction_nonfiction
+from ..genre_classification import canonicalize_genre_names, count_fiction_nonfiction, parse_shelf_signals
 from ...percentile_engine import (
     calculate_community_means,
     calculate_percentiles_from_aggregates,
@@ -338,16 +338,29 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     if progress_cb:
                         progress_cb(processed, total_books, "Syncing books")
 
+        # Goodreads `Bookshelves` (exact column name — NOT "Bookshelves with
+        # positions", whose "(#N)" suffixes would break matching) carries
+        # user-curated shelf names used as weak fiction/nonfiction tiebreakers.
+        # StoryGraph exports have no such column, so this is Goodreads-only.
+        has_shelf_column = "Bookshelves" in read_df.columns
         book_genre_sets = []
+        shelf_signal_list = []
         for book, genres, original_row in results:
             if book:
                 user_book_objects.append(book)
                 all_raw_genres.extend(genres)
                 book_genre_sets.append(canonicalize_genre_names(genres))
+                raw_shelves = original_row.get("Bookshelves") if has_shelf_column else None
+                if raw_shelves is None or pd.isna(raw_shelves):
+                    raw_shelves = ""
+                shelf_signal_list.append(parse_shelf_signals(raw_shelves))
 
         # Context-dependent fiction/nonfiction classification. Books with no
         # classifiable genres are tracked in defaulted_count — never fiction.
-        fiction_count, nonfiction_count, defaulted_count = count_fiction_nonfiction(book_genre_sets)
+        # Shelf signals only decide when API genres give no clear signal.
+        fiction_count, nonfiction_count, defaulted_count = count_fiction_nonfiction(
+            book_genre_sets, shelf_signal_list
+        )
 
         # Sync currently-reading books to DB (Book/Author only, no UserBook, no global_read_count)
         if currently_reading_books:
