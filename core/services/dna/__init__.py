@@ -40,6 +40,10 @@ from .csv_parser import (  # noqa: F401 — re-exported for stable import paths
     STORYGRAPH_TO_GOODREADS,
     _detect_and_normalize_csv,
 )
+from .enrichment_budget import (  # noqa: F401 — re-exported for stable import paths
+    INLINE_ENRICHMENT_BUDGET_SECONDS,
+    _EnrichmentBudget,
+)
 from .persistence import (  # noqa: F401 — re-exported for stable import paths
     _save_dna_to_profile,
     save_anonymous_session_data,
@@ -150,7 +154,13 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             from ...cache_utils import safe_cache_get
 
             upload_nonce = safe_cache_get(f"upload_nonce_{user.id}")
+        # Wall-clock budget for inline enrichment, shared across the 8 sync
+        # workers via the process_book_row closure. Lazily started (the timer
+        # only runs once a book actually needs inline enrichment) and
+        # lock-guarded so the start is exactly-once under concurrency.
+        enrichment_budget = _EnrichmentBudget()
         with requests.Session() as session:
+            session.headers.update({"User-Agent": "BibliotypeApp/1.0"})
 
             def process_book_row(original_row):
                 author_name_from_csv = original_row.get("Author", "").strip()
@@ -260,17 +270,31 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                             has_genres = True
                             logger.debug(f"Applied {len(tag_genres)} tag-derived genres for '{book.title}': {tag_genres}")
 
-                # Dispatch enrichment as a background task to avoid blocking upload
-                # Skip if the full enrichment pipeline already ran (google_books_last_checked is set)
+                # Inline-first enrichment: while the 90s budget lasts, enrich
+                # synchronously with quick_mode timeouts so genres land in THIS
+                # DNA calculation (no async race). On failure or once the budget
+                # is exhausted, fall back to the async task exactly as before.
+                # Skip if the full pipeline already ran (google_books_last_checked set).
                 already_attempted = not created and book.google_books_last_checked is not None
                 needs_page_data = not book.page_count or not book.publish_year
                 if not already_attempted and (created or not has_genres or needs_page_data):
-                    from ...tasks import enrich_book_task
+                    enriched_inline = False
+                    if enrichment_budget.has_remaining():
+                        try:
+                            from ..book_enrichment_service import enrich_book_from_apis
 
-                    logger.debug(
-                        f"Dispatching enrichment for '{book.title}' (created={created}, has_genres={has_genres}, needs_page_data={needs_page_data})"
-                    )
-                    enrich_book_task.delay(book.pk, user_id=upload_user_id, upload_nonce=upload_nonce)
+                            logger.debug(
+                                f"Inline enrichment for '{book.title}' (created={created}, has_genres={has_genres}, needs_page_data={needs_page_data})"
+                            )
+                            enrich_book_from_apis(book, session, slow_down=False, quick_mode=True)
+                            enriched_inline = True
+                        except Exception as e:
+                            logger.warning(f"Inline enrichment failed for '{book.title}': {e}")
+                    if not enriched_inline:
+                        from ...tasks import enrich_book_task
+
+                        logger.debug(f"Dispatching async enrichment for '{book.title}' (budget exhausted or inline failed)")
+                        enrich_book_task.delay(book.pk, user_id=upload_user_id, upload_nonce=upload_nonce)
                 else:
                     logger.debug(f"Book '{book.title}' already enriched. Skipping.")
 
@@ -292,6 +316,15 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             # Publisher is resolved by the unique constraints rather than serialising at
             # the executor level. The legacy max_workers=1 was a vestige of SQLite's
             # database-wide write lock and is no longer needed in the prod stack.
+            #
+            # Shared inline-enrichment state across the workers:
+            # - `session`: one requests.Session for all workers. Session.get is
+            #   thread-safe for concurrent requests (urllib3's connection pool
+            #   handles per-connection checkout); we only mutate headers once,
+            #   before the executor starts.
+            # - `enrichment_budget`: lazy start is lock-guarded (exactly-once);
+            #   has_remaining() reads are race-tolerant by design — at the
+            #   boundary a few in-flight workers may each admit one extra book.
             with ThreadPoolExecutor(max_workers=8) as executor:
                 results = []
                 processed = 0
