@@ -5,7 +5,7 @@ import requests
 from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import TestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from core.models import (
@@ -501,6 +501,138 @@ class BookEnrichmentIntegrationTests(TestCase):
 
         self.book.refresh_from_db()
         self.assertEqual(self.book.cover_url, "https://covers.openlibrary.org/b/id/999-M.jpg")
+
+
+# ──────────────────────────────────────────────
+# Class 1a: Inline Enrichment During DNA Calculation
+# ──────────────────────────────────────────────
+
+
+@override_settings(
+    CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
+)
+class InlineEnrichmentDuringDnaTests(TransactionTestCase):
+    """calculate_full_dna enriches new books inline (budget permitting) and
+    falls back to the async enrich_book_task on failure or budget exhaustion.
+
+    TransactionTestCase because calculate_full_dna's ThreadPoolExecutor workers
+    open their own DB connections — they must see the test's data (and vice
+    versa), which a transaction-wrapped TestCase would prevent."""
+
+    CSV = (
+        "Title,Author,Exclusive Shelf,My Rating,Number of Pages,"
+        "Original Publication Year,Date Read,Average Rating,My Review,ISBN13\n"
+        "Inline Book A,Inline Author,read,5,300,2020,2023/01/10,4.0,,\n"
+        "Inline Book B,Inline Author,read,4,250,2019,2023/02/15,4.5,,\n"
+    )
+
+    def _run_dna(self, user):
+        from core.services.dna import calculate_full_dna
+
+        return calculate_full_dna(self.CSV, user=user)
+
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.delay")
+    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    def test_inline_enrichment_provides_genres(self, mock_inline, mock_vibe, mock_delay, mock_author, mock_recs):
+        """New books are enriched inline with quick_mode=True; the genres land in
+        the same DNA calculation (top_genres + fiction/nonfiction split)."""
+
+        def add_genre(book, session, slow_down=False, quick_mode=False):
+            # get_or_create inside the side effect: it runs on the worker
+            # thread's own DB connection, like the real enrichment does.
+            fantasy, _ = Genre.objects.get_or_create(name="fantasy")
+            book.genres.add(fantasy)
+            return book, 1, 1
+
+        mock_inline.side_effect = add_genre
+        user = User.objects.create_user(username="inline_user", password="pw")
+
+        dna = self._run_dna(user)
+
+        self.assertEqual(mock_inline.call_count, 2)
+        for call in mock_inline.call_args_list:
+            self.assertFalse(call.kwargs["slow_down"])
+            self.assertTrue(call.kwargs["quick_mode"])
+        # Inline succeeded — no async fallback
+        mock_delay.assert_not_called()
+        # Inline genres flow into the per-book genre collection used downstream
+        self.assertIn("fantasy", [g for g, _ in dna["top_genres"]])
+        self.assertEqual(
+            dna["fiction_nonfiction_split"],
+            {"fiction_count": 2, "nonfiction_count": 0, "defaulted_count": 0},
+        )
+
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.delay")
+    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    def test_async_fallback_on_inline_exception(self, mock_inline, mock_vibe, mock_delay, mock_author, mock_recs):
+        """Inline failure falls back to enrich_book_task.delay with the upload-nonce args."""
+        mock_inline.side_effect = requests.RequestException("API timeout")
+        user = User.objects.create_user(username="fallback_user", password="pw")
+
+        dna = self._run_dna(user)
+
+        self.assertEqual(mock_inline.call_count, 2)
+        self.assertEqual(mock_delay.call_count, 2)
+        for call in mock_delay.call_args_list:
+            self.assertEqual(call.kwargs["user_id"], user.id)
+            self.assertIn("upload_nonce", call.kwargs)
+        # No genres → both books tracked as defaulted, split is None
+        self.assertIsNone(dna["fiction_nonfiction_split"])
+
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.delay")
+    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    def test_goodreads_bookshelves_break_ties_in_split(
+        self, mock_inline, mock_vibe, mock_delay, mock_author, mock_recs
+    ):
+        """With no API genres, the Goodreads Bookshelves column decides the split;
+        non-genre shelves are ignored."""
+        from core.services.dna import calculate_full_dna
+
+        mock_inline.side_effect = lambda book, session, **kwargs: (book, 0, 0)  # no genres found
+        csv = (
+            "Title,Author,Exclusive Shelf,Bookshelves,My Rating,Number of Pages,"
+            "Original Publication Year,Date Read,Average Rating,My Review,ISBN13\n"
+            'Shelf Book A,Shelf Author,read,"read, nonfiction, owned",5,300,2020,2023/01/10,4.0,,\n'
+            'Shelf Book B,Shelf Author,read,"read, fiction, favorites",4,250,2019,2023/02/15,4.5,,\n'
+            'Shelf Book C,Shelf Author,read,"read, to-read",3,200,2018,2023/03/20,4.2,,\n'
+        )
+        user = User.objects.create_user(username="shelf_user", password="pw")
+
+        dna = calculate_full_dna(csv, user=user)
+
+        self.assertEqual(
+            dna["fiction_nonfiction_split"],
+            {"fiction_count": 1, "nonfiction_count": 1, "defaulted_count": 1},
+        )
+
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.delay")
+    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.dna.enrichment_budget._EnrichmentBudget.has_remaining", return_value=False)
+    def test_async_fallback_when_budget_exhausted(
+        self, mock_budget, mock_inline, mock_vibe, mock_delay, mock_author, mock_recs
+    ):
+        """Once the 90s budget is exhausted, remaining books skip inline enrichment
+        and dispatch the async task exactly as before."""
+        user = User.objects.create_user(username="budget_user", password="pw")
+
+        self._run_dna(user)
+
+        mock_inline.assert_not_called()
+        self.assertEqual(mock_delay.call_count, 2)
+        for call in mock_delay.call_args_list:
+            self.assertEqual(call.kwargs["user_id"], user.id)
 
 
 # ──────────────────────────────────────────────

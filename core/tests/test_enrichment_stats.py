@@ -167,6 +167,36 @@ class ComputeEnrichmentProgressTests(TestCase):
         self.assertEqual(result["total"], 2)
         self.assertEqual(result["percent"], 50)
 
+    def test_genre_coverage_gate_applies_to_goodreads_uploads(self):
+        """enrichment pending + genres_pending for a Goodreads upload with <50%
+        genre coverage — the coverage gate is source-agnostic, not StoryGraph-only."""
+        self._add_book("A", attempted=True, has_genre=True)
+        self._add_book("B", attempted=False)
+        self._add_book("C", attempted=False)
+        self._add_book("D", attempted=False)
+
+        dna_data = {"csv_source": "goodreads"}
+        result = _compute_enrichment_progress(self.user, self.profile, dna_data)
+
+        self.assertTrue(result["pending"])
+        self.assertEqual(result["csv_source"], "goodreads")
+        # 1 of 4 books has genres → 25% coverage, below the 50% gate
+        self.assertTrue(result["genres_pending"])
+        self.assertEqual(result["genre_coverage_pct"], 25)
+
+    def test_genre_coverage_pct_above_gate(self):
+        """Coverage >= 50% clears genres_pending while enrichment continues."""
+        self._add_book("A", attempted=True, has_genre=True)
+        self._add_book("B", attempted=False, has_genre=True)
+        self._add_book("C", attempted=False, has_genre=True)
+        self._add_book("D", attempted=False)
+
+        result = _compute_enrichment_progress(self.user, self.profile, {})
+
+        self.assertTrue(result["pending"])
+        self.assertFalse(result["genres_pending"])
+        self.assertEqual(result["genre_coverage_pct"], 75)
+
     def test_finalize_flips_exactly_once(self):
         """All books attempted → finalize block runs once; second call no-ops the save."""
         self._add_book("A", attempted=True, has_genre=True, page_count=300)
@@ -192,6 +222,51 @@ class ComputeEnrichmentProgressTests(TestCase):
 
         self.profile.refresh_from_db()
         self.assertTrue(self.profile.dna_data.get("enrichment_finalized"))
+
+
+class FictionNonfictionCoverageSubtitleTests(TestCase):
+    """The card's 'Based on X of Y books' subtitle: shown only while enrichment
+    is pending AND some books were defaulted (unclassifiable)."""
+
+    def _render(self, split, enrichment):
+        from django.template.loader import render_to_string
+
+        return render_to_string(
+            "core/partials/dna/fiction_nonfiction_card.html",
+            {"dna": {"fiction_nonfiction_split": split}, "enrichment": enrichment},
+        )
+
+    def test_subtitle_shown_when_pending_with_defaulted_books(self):
+        html = self._render(
+            {"fiction_count": 6, "nonfiction_count": 4, "defaulted_count": 5},
+            {"pending": True, "genre_coverage_pct": 40},
+        )
+        self.assertIn("Based on 10 of", html)
+        self.assertIn("15 books", html)
+        self.assertIn("refresh in a", html)
+
+    def test_subtitle_hidden_when_enrichment_finished(self):
+        html = self._render(
+            {"fiction_count": 6, "nonfiction_count": 4, "defaulted_count": 5},
+            None,
+        )
+        self.assertNotIn("Based on", html)
+
+    def test_subtitle_hidden_when_nothing_defaulted(self):
+        html = self._render(
+            {"fiction_count": 6, "nonfiction_count": 4, "defaulted_count": 0},
+            {"pending": True, "genre_coverage_pct": 100},
+        )
+        self.assertNotIn("Based on", html)
+
+    def test_subtitle_hidden_for_old_format_split(self):
+        """Old stored DNA has no defaulted_count key — the card must still render."""
+        html = self._render(
+            {"fiction_count": 6, "nonfiction_count": 4},
+            {"pending": True, "genre_coverage_pct": 40},
+        )
+        self.assertNotIn("Based on", html)
+        self.assertIn("Fiction", html)
 
 
 @override_settings(

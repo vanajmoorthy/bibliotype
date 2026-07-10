@@ -1,9 +1,14 @@
 """Tests for the expanded canonical genre set and shared fiction/nonfiction classification.
 
 Covers the genre-accuracy work: 8 new canonical genres, ambiguous sub-splits
-with backward-compat aliases, EXCLUDED_GENRES regression guards, and the
-context-dependent classifier in core/services/genre_classification.py.
+with backward-compat aliases, EXCLUDED_GENRES regression guards, the
+context-dependent classifier in core/services/genre_classification.py, and the
+inline-enrichment wall-clock budget.
 """
+
+import threading
+from itertools import count
+from unittest.mock import patch
 
 from django.test import TestCase
 
@@ -21,6 +26,7 @@ from core.services.genre_classification import (
     canonicalize_genre_names,
     classify_genres,
     count_fiction_nonfiction,
+    parse_shelf_signals,
 )
 
 
@@ -168,6 +174,64 @@ class ClassifyGenresMatrixTests(TestCase):
         self.assertEqual(classify_genres(canonicalize_genre_names(["classics"])), "fiction")
 
 
+class ShelfSignalTiebreakerTests(TestCase):
+    """The plan's 6-case shelf matrix: shelf signals never override clear API genres."""
+
+    def test_clear_nonfiction_api_signal_beats_fiction_shelf(self):
+        self.assertEqual(classify_genres({"history", "biography"}, shelf_fiction=True), "nonfiction")
+
+    def test_clear_fiction_api_signal_beats_nonfiction_shelf(self):
+        self.assertEqual(classify_genres({"fantasy"}, shelf_nonfiction=True), "fiction")
+
+    def test_no_api_signal_nonfiction_shelf_wins(self):
+        self.assertEqual(classify_genres(set(), shelf_nonfiction=True), "nonfiction")
+
+    def test_no_api_signal_fiction_shelf_wins(self):
+        self.assertEqual(classify_genres(set(), shelf_fiction=True), "fiction")
+
+    def test_nonfiction_shelf_disambiguates_ambiguous_only_genres(self):
+        self.assertEqual(classify_genres({"classic fiction"}, shelf_nonfiction=True), "nonfiction")
+
+    def test_no_api_signal_no_shelf_is_defaulted(self):
+        self.assertIsNone(classify_genres(set()))
+
+    def test_shelf_genres_supplement_empty_api_genres(self):
+        self.assertEqual(classify_genres(set(), shelf_genres=frozenset({"history"})), "nonfiction")
+        self.assertEqual(classify_genres(set(), shelf_genres=frozenset({"fantasy"})), "fiction")
+
+
+class ParseShelfSignalsTests(TestCase):
+    """Goodreads Bookshelves parsing: comma-split, special-cased fiction/nonfiction."""
+
+    def test_fiction_shelf_sets_fiction_signal(self):
+        self.assertEqual(parse_shelf_signals("read, fiction, favorites"), (True, False, frozenset()))
+
+    def test_nonfiction_spellings_set_nonfiction_signal(self):
+        for spelling in ("nonfiction", "non-fiction"):
+            shelf_fiction, shelf_nonfiction, shelf_genres = parse_shelf_signals(f"read, {spelling}")
+            self.assertFalse(shelf_fiction)
+            self.assertTrue(shelf_nonfiction)
+            self.assertEqual(shelf_genres, frozenset())
+
+    def test_genre_shelves_canonicalize(self):
+        shelf_fiction, shelf_nonfiction, shelf_genres = parse_shelf_signals("read, fantasy, memoirs")
+        self.assertFalse(shelf_fiction)
+        self.assertFalse(shelf_nonfiction)
+        self.assertEqual(shelf_genres, frozenset({"fantasy", "memoir"}))
+
+    def test_non_genre_shelves_are_ignored(self):
+        self.assertEqual(parse_shelf_signals("read, to-read, owned, favorites"), (False, False, frozenset()))
+
+    def test_empty_and_missing_values(self):
+        self.assertEqual(parse_shelf_signals(""), (False, False, frozenset()))
+        self.assertEqual(parse_shelf_signals(None), (False, False, frozenset()))
+
+    def test_case_and_whitespace_insensitive(self):
+        shelf_fiction, shelf_nonfiction, _ = parse_shelf_signals("  Fiction ,  NONFICTION  ")
+        self.assertTrue(shelf_fiction)
+        self.assertTrue(shelf_nonfiction)
+
+
 class CountFictionNonfictionTests(TestCase):
     """Counter independence: defaulted books are never added to fiction."""
 
@@ -192,3 +256,95 @@ class CountFictionNonfictionTests(TestCase):
 
     def test_empty_iterable(self):
         self.assertEqual(count_fiction_nonfiction([]), (0, 0, 0))
+
+    def test_shelf_signals_break_ties_without_overriding_api(self):
+        genre_sets = [
+            {"history", "biography"},  # nonfiction — fiction shelf can't override
+            {"fantasy"},  # fiction — nonfiction shelf can't override
+            set(),  # nonfiction via shelf tiebreaker
+            set(),  # fiction via shelf tiebreaker
+            {"classic fiction"},  # nonfiction — shelf disambiguates ambiguous-only
+            set(),  # defaulted — no shelf signal
+        ]
+        shelf_signals = [
+            (True, False, frozenset()),
+            (False, True, frozenset()),
+            (False, True, frozenset()),
+            (True, False, frozenset()),
+            (False, True, frozenset()),
+            (False, False, frozenset()),
+        ]
+        fiction, nonfiction, defaulted = count_fiction_nonfiction(genre_sets, shelf_signals)
+        self.assertEqual((fiction, nonfiction, defaulted), (2, 3, 1))
+
+
+class EnrichmentBudgetTests(TestCase):
+    """_EnrichmentBudget: lazy start, exhaustion, exactly-once start under threads."""
+
+    def test_creation_does_not_start_the_clock(self):
+        from core.services.dna.enrichment_budget import _EnrichmentBudget
+
+        with patch("core.services.dna.enrichment_budget.time.monotonic") as mock_monotonic:
+            budget = _EnrichmentBudget()
+
+        mock_monotonic.assert_not_called()
+        self.assertIsNone(budget._started_at)
+
+    def test_first_call_starts_clock_and_returns_true(self):
+        from core.services.dna.enrichment_budget import _EnrichmentBudget
+
+        budget = _EnrichmentBudget(max_seconds=90)
+        with patch("core.services.dna.enrichment_budget.time.monotonic", return_value=1000.0):
+            self.assertTrue(budget.has_remaining())
+        self.assertEqual(budget._started_at, 1000.0)
+
+    def test_exhaustion_after_max_seconds(self):
+        from core.services.dna.enrichment_budget import _EnrichmentBudget
+
+        budget = _EnrichmentBudget(max_seconds=90)
+        clock = iter([1000.0, 1000.0 + 89.0, 1000.0 + 91.0])
+        with patch("core.services.dna.enrichment_budget.time.monotonic", side_effect=lambda: next(clock)):
+            self.assertTrue(budget.has_remaining())  # starts the clock at t=1000
+            self.assertTrue(budget.has_remaining())  # 89s elapsed — still within budget
+            self.assertFalse(budget.has_remaining())  # 91s elapsed — exhausted
+
+    def test_default_budget_is_90_seconds(self):
+        from core.services.dna.enrichment_budget import INLINE_ENRICHMENT_BUDGET_SECONDS, _EnrichmentBudget
+
+        self.assertEqual(INLINE_ENRICHMENT_BUDGET_SECONDS, 90)
+        self.assertEqual(_EnrichmentBudget()._max, 90)
+
+    def test_thread_safety_clock_starts_exactly_once(self):
+        """8 racing workers: exactly one call may take the start path (returns True
+        directly); every other concurrent call must observe the already-started
+        clock. The fake clock returns 0.0 for the very first monotonic call (the
+        start, made under the lock) and a huge value afterwards — so if a second
+        thread also 'started' the clock, later calls would wrongly return True."""
+        from core.services.dna.enrichment_budget import _EnrichmentBudget
+
+        budget = _EnrichmentBudget(max_seconds=90)
+        calls = count()
+
+        def fake_monotonic():
+            return 0.0 if next(calls) == 0 else 10_000.0
+
+        results = []
+        results_lock = threading.Lock()
+        barrier = threading.Barrier(8)
+
+        def worker():
+            barrier.wait()
+            result = budget.has_remaining()
+            with results_lock:
+                results.append(result)
+
+        with patch("core.services.dna.enrichment_budget.time.monotonic", side_effect=fake_monotonic):
+            threads = [threading.Thread(target=worker) for _ in range(8)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+
+            self.assertEqual(results.count(True), 1, "clock must start exactly once across racing threads")
+            self.assertEqual(budget._started_at, 0.0)
+            self.assertFalse(budget.has_remaining())
