@@ -1,9 +1,14 @@
 """Tests for the expanded canonical genre set and shared fiction/nonfiction classification.
 
 Covers the genre-accuracy work: 8 new canonical genres, ambiguous sub-splits
-with backward-compat aliases, EXCLUDED_GENRES regression guards, and the
-context-dependent classifier in core/services/genre_classification.py.
+with backward-compat aliases, EXCLUDED_GENRES regression guards, the
+context-dependent classifier in core/services/genre_classification.py, and the
+inline-enrichment wall-clock budget.
 """
+
+import threading
+from itertools import count
+from unittest.mock import patch
 
 from django.test import TestCase
 
@@ -192,3 +197,75 @@ class CountFictionNonfictionTests(TestCase):
 
     def test_empty_iterable(self):
         self.assertEqual(count_fiction_nonfiction([]), (0, 0, 0))
+
+
+class EnrichmentBudgetTests(TestCase):
+    """_EnrichmentBudget: lazy start, exhaustion, exactly-once start under threads."""
+
+    def test_creation_does_not_start_the_clock(self):
+        from core.services.dna.enrichment_budget import _EnrichmentBudget
+
+        with patch("core.services.dna.enrichment_budget.time.monotonic") as mock_monotonic:
+            budget = _EnrichmentBudget()
+
+        mock_monotonic.assert_not_called()
+        self.assertIsNone(budget._started_at)
+
+    def test_first_call_starts_clock_and_returns_true(self):
+        from core.services.dna.enrichment_budget import _EnrichmentBudget
+
+        budget = _EnrichmentBudget(max_seconds=90)
+        with patch("core.services.dna.enrichment_budget.time.monotonic", return_value=1000.0):
+            self.assertTrue(budget.has_remaining())
+        self.assertEqual(budget._started_at, 1000.0)
+
+    def test_exhaustion_after_max_seconds(self):
+        from core.services.dna.enrichment_budget import _EnrichmentBudget
+
+        budget = _EnrichmentBudget(max_seconds=90)
+        clock = iter([1000.0, 1000.0 + 89.0, 1000.0 + 91.0])
+        with patch("core.services.dna.enrichment_budget.time.monotonic", side_effect=lambda: next(clock)):
+            self.assertTrue(budget.has_remaining())  # starts the clock at t=1000
+            self.assertTrue(budget.has_remaining())  # 89s elapsed — still within budget
+            self.assertFalse(budget.has_remaining())  # 91s elapsed — exhausted
+
+    def test_default_budget_is_90_seconds(self):
+        from core.services.dna.enrichment_budget import INLINE_ENRICHMENT_BUDGET_SECONDS, _EnrichmentBudget
+
+        self.assertEqual(INLINE_ENRICHMENT_BUDGET_SECONDS, 90)
+        self.assertEqual(_EnrichmentBudget()._max, 90)
+
+    def test_thread_safety_clock_starts_exactly_once(self):
+        """8 racing workers: exactly one call may take the start path (returns True
+        directly); every other concurrent call must observe the already-started
+        clock. The fake clock returns 0.0 for the very first monotonic call (the
+        start, made under the lock) and a huge value afterwards — so if a second
+        thread also 'started' the clock, later calls would wrongly return True."""
+        from core.services.dna.enrichment_budget import _EnrichmentBudget
+
+        budget = _EnrichmentBudget(max_seconds=90)
+        calls = count()
+
+        def fake_monotonic():
+            return 0.0 if next(calls) == 0 else 10_000.0
+
+        results = []
+        results_lock = threading.Lock()
+        barrier = threading.Barrier(8)
+
+        def worker():
+            barrier.wait()
+            result = budget.has_remaining()
+            with results_lock:
+                results.append(result)
+
+        with patch("core.services.dna.enrichment_budget.time.monotonic", side_effect=fake_monotonic):
+            threads = [threading.Thread(target=worker) for _ in range(8)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+
+            self.assertEqual(results.count(True), 1, "clock must start exactly once across racing threads")
+            self.assertEqual(budget._started_at, 0.0)
+            self.assertFalse(budget.has_remaining())

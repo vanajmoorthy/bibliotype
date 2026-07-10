@@ -145,10 +145,10 @@ def _extract_edition_data(edition_data, book_details):
         book_details["isbn_13"] = isbns_10[0]
 
 
-def _fetch_work_genres(work_key, book_title, session, book_details, slow_down=False):
+def _fetch_work_genres(work_key, book_title, session, book_details, slow_down=False, timeout=5):
     """Fetch genres from an OL work endpoint. Returns number of API calls made."""
     work_url = f"https://openlibrary.org{work_key}.json"
-    work_response = session.get(work_url, timeout=5)
+    work_response = session.get(work_url, timeout=timeout)
     if slow_down:
         _throttle()
     if work_response.status_code == 200:
@@ -161,13 +161,19 @@ def _fetch_work_genres(work_key, book_title, session, book_details, slow_down=Fa
     return 1
 
 
-def _fetch_from_open_library(book, session, slow_down=False):
+def _fetch_from_open_library(book, session, slow_down=False, quick_mode=False):
     """
     Fetches metadata from Open Library. Uses direct ISBN endpoint when available
     (skips search), then work endpoint for genres, and edition endpoint only if
     the book is missing page count/publisher/year data.
+
+    quick_mode=True (inline enrichment during DNA calculation) uses reduced
+    HTTP timeouts: 2s for search, 1.5s for work/edition/isbn detail endpoints.
     """
     logger.debug(f"Querying Open Library for '{book.title}'")
+
+    search_timeout = 2 if quick_mode else 10
+    detail_timeout = 1.5 if quick_mode else 5
 
     book_details = {
         "genres": [],
@@ -183,7 +189,7 @@ def _fetch_from_open_library(book, session, slow_down=False):
         # Fast path: direct ISBN lookup (skips search entirely)
         if book.isbn13:
             isbn_url = f"https://openlibrary.org/isbn/{book.isbn13}.json"
-            res = session.get(isbn_url, timeout=5)
+            res = session.get(isbn_url, timeout=detail_timeout)
             api_calls += 1
             if slow_down:
                 _throttle()
@@ -200,7 +206,9 @@ def _fetch_from_open_library(book, session, slow_down=False):
                 if works := edition_data.get("works"):
                     work_key = works[0].get("key")
                     if work_key:
-                        api_calls += _fetch_work_genres(work_key, book.title, session, book_details, slow_down)
+                        api_calls += _fetch_work_genres(
+                            work_key, book.title, session, book_details, slow_down, timeout=detail_timeout
+                        )
 
                 track_external_api_call("open_library", book.pk, book.title, "success")
                 return book_details, api_calls
@@ -209,7 +217,7 @@ def _fetch_from_open_library(book, session, slow_down=False):
         # Fallback: search by title+author
         search_url = "https://openlibrary.org/search.json"
         search_params = {"title": _clean_title_for_api(book.title), "author": book.author.name}
-        res = session.get(search_url, params=search_params, timeout=10)
+        res = session.get(search_url, params=search_params, timeout=search_timeout)
         api_calls += 1
         if slow_down:
             _throttle()
@@ -229,14 +237,16 @@ def _fetch_from_open_library(book, session, slow_down=False):
 
         # Fetch genres from work endpoint
         if work_key:
-            api_calls += _fetch_work_genres(work_key, book.title, session, book_details, slow_down)
+            api_calls += _fetch_work_genres(
+                work_key, book.title, session, book_details, slow_down, timeout=detail_timeout
+            )
 
         # Skip edition endpoint if book already has all edition data
         if book.page_count and book.publisher and book.publish_year and book.isbn13:
             logger.debug(f"Skipping OL edition for '{book.title}' — already has page/publisher/year/isbn data")
         elif edition_key:
             edition_url = f"https://openlibrary.org/books/{edition_key}.json"
-            edition_response = session.get(edition_url, timeout=5)
+            edition_response = session.get(edition_url, timeout=detail_timeout)
             api_calls += 1
             if slow_down:
                 _throttle()
@@ -253,11 +263,13 @@ def _fetch_from_open_library(book, session, slow_down=False):
         return {}, api_calls or 1
 
 
-def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=False):
+def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=False, quick_mode=False):
     """
     Fetches ratings AND categories (genres) from Google Books.
     Google Books categories are often more accurate than Open Library subjects.
     Returns a dictionary of data and the number of API calls made (always 1 or 0).
+
+    quick_mode=True uses a reduced 2s HTTP timeout for inline enrichment.
     """
     if not GOOGLE_BOOKS_API_KEY:
         return {}, 0  # No API key, so no call is made
@@ -273,7 +285,7 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
     url = f"https://www.googleapis.com/books/v1/volumes?q={query}&key={GOOGLE_BOOKS_API_KEY}"
 
     try:
-        res = session.get(url, timeout=10)
+        res = session.get(url, timeout=2 if quick_mode else 10)
 
         if slow_down:
             _throttle()
@@ -323,11 +335,15 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
         return {}, 1
 
 
-def enrich_book_from_apis(book, session, slow_down=False):
+def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
     """
     The main public function to enrich a single Book object.
     It orchestrates the calls to the different APIs, but only if data is missing.
     Returns the updated book object and the total number of API calls made.
+
+    quick_mode=True reduces internal HTTP timeouts (2s OL search, 1.5s OL
+    work/edition, 2s Google Books) for inline enrichment during DNA calculation,
+    where a single slow API response must not stall the whole upload.
     """
     ol_api_calls = 0
     gb_api_calls = 0
@@ -335,7 +351,7 @@ def enrich_book_from_apis(book, session, slow_down=False):
     is_updated = False
 
     # Always refresh genres from Open Library even if other data exists
-    ol_data, calls_made = _fetch_from_open_library(book, session, slow_down)
+    ol_data, calls_made = _fetch_from_open_library(book, session, slow_down, quick_mode=quick_mode)
     ol_api_calls += calls_made
 
     if ol_data:
@@ -366,7 +382,9 @@ def enrich_book_from_apis(book, session, slow_down=False):
     # subjects, so they lead the merge below.
     gb_genres = set()
     if book.google_books_last_checked is None:
-        gb_data, calls_made = _fetch_ratings_and_categories_from_google_books(book, session, slow_down)
+        gb_data, calls_made = _fetch_ratings_and_categories_from_google_books(
+            book, session, slow_down, quick_mode=quick_mode
+        )
         gb_api_calls += calls_made
 
         if gb_data:
