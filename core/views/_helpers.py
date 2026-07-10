@@ -156,7 +156,12 @@ def _compute_enrichment_progress(user, profile, dna_data):
         "total": total,
         "percent": round(attempted / total * 100),
         "genres_done": genres_done,
+        # Genre-coverage gate — applies to ALL CSV sources (Goodreads included,
+        # not just StoryGraph): while fewer than 50% of the user's books have
+        # genres, genre-derived stats are flagged pending. genre_coverage_pct
+        # feeds the fiction/nonfiction card's coverage subtitle.
         "genres_pending": (genres_done / total) < 0.5,
+        "genre_coverage_pct": round(genres_done / total * 100),
         "pages_done": pages_done,
         "pages_pending": (pages_done / total) < 0.5,
         # Per-stat banner gates: True iff any book is still missing this field.
