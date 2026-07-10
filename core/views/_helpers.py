@@ -9,7 +9,8 @@ from django.db import transaction
 from django.db.models import Count, Q
 
 from ..cache_utils import safe_cache_get, safe_cache_set
-from ..dna_constants import CANONICAL_GENRE_MAP, FICTION_GENRES, GLOBAL_AVERAGES, NONFICTION_GENRES
+from ..dna_constants import CANONICAL_GENRE_MAP, GLOBAL_AVERAGES
+from ..services.genre_classification import canonicalize_genre_names, count_fiction_nonfiction
 
 logger = logging.getLogger(__name__)
 
@@ -42,19 +43,18 @@ def _compute_enrichment_stats(user):
     page_counts = [b.page_count for b in books if b.page_count]
 
     all_genres = []
-    fiction_count = 0
-    nonfiction_count = 0
+    genre_sets = []
     mainstream_count = 0
     for book in books:
         book_genres = [g.name for g in book.genres.all()]
         all_genres.extend(book_genres)
-        canonical = {CANONICAL_GENRE_MAP.get(g, g) for g in book_genres}
-        if canonical & FICTION_GENRES:
-            fiction_count += 1
-        elif canonical & NONFICTION_GENRES:
-            nonfiction_count += 1
+        genre_sets.append(canonicalize_genre_names(book_genres))
         if book.author.is_mainstream or (book.publisher and book.publisher.is_mainstream):
             mainstream_count += 1
+
+    # Context-dependent fiction/nonfiction classification (shared helper).
+    # Books with no classifiable genres land in defaulted_count, never fiction.
+    fiction_count, nonfiction_count, defaulted_count = count_fiction_nonfiction(genre_sets)
 
     mapped = [CANONICAL_GENRE_MAP.get(g, g) for g in all_genres]
 
@@ -64,7 +64,11 @@ def _compute_enrichment_stats(user):
         "top_genres": Counter(mapped).most_common(10),
         "unique_genres_count": len(set(mapped)),
         "fiction_nonfiction_split": (
-            {"fiction_count": fiction_count, "nonfiction_count": nonfiction_count}
+            {
+                "fiction_count": fiction_count,
+                "nonfiction_count": nonfiction_count,
+                "defaulted_count": defaulted_count,
+            }
             if (fiction_count + nonfiction_count) > 0
             else None
         ),
