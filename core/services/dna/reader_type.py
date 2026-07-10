@@ -39,9 +39,22 @@ def assign_reader_type(read_df, enriched_data, all_genres):
     genre_counts = Counter(mapped_genres)
     logger.debug(f"Genre counts: {genre_counts}")
 
-    # These scores are now based on CLEAN, CANONICAL genre counts
-    scores["Fantasy Fanatic"] += genre_counts.get("fantasy", 0) + genre_counts.get("science fiction", 0) + genre_counts.get("dystopian", 0)
-    scores["Non-Fiction Ninja"] += genre_counts.get("non-fiction", 0)
+    # These scores are now based on CLEAN, CANONICAL genre counts.
+    # Mystery, literary fiction, and poetry get no dedicated type — they
+    # contribute to genre diversity (Versatile Valedictorian) only.
+    scores["Fantasy Fanatic"] += (
+        genre_counts.get("fantasy", 0)
+        + genre_counts.get("science fiction", 0)
+        + genre_counts.get("dystopian", 0)
+        + genre_counts.get("adventure", 0)
+    )
+    scores["Non-Fiction Ninja"] += (
+        genre_counts.get("non-fiction", 0)
+        + genre_counts.get("memoir", 0)
+        + genre_counts.get("true crime", 0)
+        + genre_counts.get("essays", 0)
+        + genre_counts.get("classic nonfiction", 0)
+    )
     scores["Philosophical Philomath"] += genre_counts.get("philosophy", 0)
     scores["Nature Nut Case"] += genre_counts.get("nature", 0)
     scores["Social Savant"] += genre_counts.get("social science", 0)
