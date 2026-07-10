@@ -278,11 +278,12 @@ class StoryGraphTagMappingTests(TestCase):
         sci_targets = {STORYGRAPH_TAG_TO_GENRE[t] for t in ["sci-fi", "scifi", "science fiction"]}
         self.assertEqual(sci_targets, {"science fiction"})
 
-        biography_targets = {STORYGRAPH_TAG_TO_GENRE[t] for t in ["biography", "memoir"]}
-        self.assertEqual(biography_targets, {"biography"})
+        # memoir is its own canonical genre now — no longer lumped into biography
+        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["biography"], "biography")
+        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["memoir"], "memoir")
 
         ya_targets = {STORYGRAPH_TAG_TO_GENRE[t] for t in ["young adult", "ya"]}
-        self.assertEqual(ya_targets, {"young adult"})
+        self.assertEqual(ya_targets, {"young adult fiction"})
 
 
 # ────────────────────────────────────────────

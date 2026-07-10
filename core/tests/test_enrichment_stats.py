@@ -61,11 +61,14 @@ class ComputeEnrichmentStatsTests(TestCase):
         self._add_book("Novel B", genres=["thriller"])  # fiction
         self._add_book("Memoir", genres=["biography"])  # non-fiction
         self._add_book("History Book", genres=["history"])  # non-fiction
-        self._add_book("Untagged")  # neither
+        self._add_book("Untagged")  # neither — tracked as defaulted, never fiction
 
         result = _compute_enrichment_stats(self.user)
 
-        self.assertEqual(result["fiction_nonfiction_split"], {"fiction_count": 2, "nonfiction_count": 2})
+        self.assertEqual(
+            result["fiction_nonfiction_split"],
+            {"fiction_count": 2, "nonfiction_count": 2, "defaulted_count": 1},
+        )
 
     def test_mainstream_count_via_author(self):
         """Mainstream score counts books whose author is_mainstream."""

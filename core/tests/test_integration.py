@@ -45,8 +45,8 @@ class BookEnrichmentIntegrationTests(TestCase):
     @patch("core.services.book_enrichment_service._fetch_from_open_library")
     def test_enrich_book_task_updates_book_with_api_data(self, mock_ol, mock_gb):
         """Full enrichment pipeline: task → service → DB updates.
-        When OL returns genres, GB is skipped (optimization) so google_books_last_checked
-        is set but ratings come from the GB-skip path (no actual GB call)."""
+        GB is fetched alongside OL (genres merge, ratings apply) and
+        google_books_last_checked is set."""
         from core.tasks import enrich_book_task
 
         mock_ol.return_value = (
@@ -67,8 +67,10 @@ class BookEnrichmentIntegrationTests(TestCase):
         self.assertEqual(self.book.publish_year, 2020)
         self.assertEqual(self.book.page_count, 350)
         self.assertIsNotNone(self.book.google_books_last_checked)
-        # GB is skipped when OL found genres, so no ratings from GB
-        mock_gb.assert_not_called()
+        # GB is always fetched on first enrichment — ratings now apply even when OL found genres
+        mock_gb.assert_called_once()
+        self.assertEqual(self.book.google_books_ratings_count, 500)
+        self.assertEqual(self.book.google_books_average_rating, 4.1)
 
         # Check publisher was created and linked
         self.assertIsNotNone(self.book.publisher)
@@ -256,8 +258,8 @@ class BookEnrichmentIntegrationTests(TestCase):
 
     @patch("core.services.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
     @patch("core.services.book_enrichment_service._fetch_from_open_library")
-    def test_gb_skipped_when_ol_found_genres(self, mock_ol, mock_gb):
-        """When OL returns genres, GB is skipped entirely (optimization)."""
+    def test_google_books_genres_merged_with_open_library_genres(self, mock_ol, mock_gb):
+        """GB categories no longer replace OL genres — both sources merge."""
         from core.services.book_enrichment_service import enrich_book_from_apis
 
         mock_ol.return_value = (
@@ -270,15 +272,46 @@ class BookEnrichmentIntegrationTests(TestCase):
             },
             2,
         )
+        mock_gb.return_value = (
+            {"categories": ["Fiction/Romance"], "ratings_count": 100, "average_rating": 4.0},
+            1,
+        )
 
         session = MagicMock()
         enrich_book_from_apis(self.book, session)
 
-        mock_gb.assert_not_called()
+        mock_gb.assert_called_once()
         self.book.refresh_from_db()
         self.assertIsNotNone(self.book.google_books_last_checked)
         genre_names = set(self.book.genres.values_list("name", flat=True))
-        self.assertIn("fantasy", genre_names)
+        self.assertEqual(genre_names, {"fantasy", "romance"})
+
+    @patch("core.services.book_enrichment_service._fetch_ratings_and_categories_from_google_books")
+    @patch("core.services.book_enrichment_service._fetch_from_open_library")
+    def test_merged_genres_capped_by_priority(self, mock_ol, mock_gb):
+        """The merged OL+GB set is priority-sorted and capped at 5 when the 6th genre is generic."""
+        from core.services.book_enrichment_service import enrich_book_from_apis
+
+        mock_ol.return_value = (
+            {
+                "genres": ["fantasy", "science fiction", "poetry", "classic fiction", "non-fiction"],
+                "publish_year": None,
+                "page_count": None,
+                "publisher": None,
+                "isbn_13": None,
+            },
+            2,
+        )
+        mock_gb.return_value = ({"categories": ["Fiction/Mystery", "Fiction/Romance"]}, 1)
+
+        session = MagicMock()
+        enrich_book_from_apis(self.book, session)
+
+        self.book.refresh_from_db()
+        genre_names = set(self.book.genres.values_list("name", flat=True))
+        # 7 merged genres → top 5 by GENRE_PRIORITY (the 6th, "poetry", is not a
+        # specific fiction genre, so the 6-genre allowance doesn't kick in)
+        self.assertEqual(genre_names, {"fantasy", "science fiction", "mystery", "romance", "non-fiction"})
 
     def test_ol_isbn_direct_lookup_skips_search(self):
         """When book has isbn13, _fetch_from_open_library uses /isbn/ endpoint, not search."""
