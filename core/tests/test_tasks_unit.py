@@ -251,10 +251,11 @@ class StoryGraphTagMappingTests(TestCase):
         self.assertEqual(STORYGRAPH_TAG_TO_GENRE["sci-fi"], "science fiction")
         self.assertEqual(STORYGRAPH_TAG_TO_GENRE["fantasy"], "fantasy")
         self.assertEqual(STORYGRAPH_TAG_TO_GENRE["dystopian"], "dystopian")
-        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["classic"], "classics")
+        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["classic"], "classic fiction")
         self.assertEqual(STORYGRAPH_TAG_TO_GENRE["non-fiction"], "non-fiction")
-        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["ya"], "young adult")
-        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["memoir"], "biography")
+        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["ya"], "young adult fiction")
+        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["memoir"], "memoir")
+        self.assertEqual(STORYGRAPH_TAG_TO_GENRE["mystery"], "mystery")
 
     def test_unknown_tags_are_not_in_mapping(self):
         """Tags not in the mapping are silently ignored during processing."""

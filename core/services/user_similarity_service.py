@@ -1,9 +1,23 @@
 import numpy as np
 from collections import Counter, defaultdict
+from ..dna_constants import CANONICAL_GENRE_MAP
 from ..models import UserBook, User, Book, Author, AnonymousUserSession, AnonymizedReadingProfile
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _canonicalize_genre_counter(counts):
+    """Fold a {genre_name: weight} mapping onto canonical genre names.
+
+    Stored genre distributions and Genre DB rows may predate genre renames
+    (e.g. "classics" → "classic fiction"). Canonicalizing both sides before
+    cosine similarity keeps old and new vocabularies comparable.
+    """
+    canonical = Counter()
+    for name, weight in counts.items():
+        canonical[CANONICAL_GENRE_MAP.get(name, name)] += weight
+    return canonical
 
 
 def _calculate_cosine_similarity(counter1, counter2):
@@ -62,9 +76,9 @@ def _build_user_context_for_similarity(user):
 
         weight = rating if rating else 3
 
-        # Genres (prefetched, no query)
+        # Genres (prefetched, no query) — canonicalized so old genre rows compare
         for genre in ub.book.genres.all():
-            genre_weights[genre.name] += weight
+            genre_weights[CANONICAL_GENRE_MAP.get(genre.name, genre.name)] += weight
 
         # Authors (select_related, no query)
         author_weights[ub.book.author.normalized_name] += weight
@@ -297,7 +311,7 @@ def _bulk_build_user_contexts(user_ids):
             weight = rating if rating else 3
 
             for genre in ub.book.genres.all():
-                genre_weights[genre.name] += weight
+                genre_weights[CANONICAL_GENRE_MAP.get(genre.name, genre.name)] += weight
 
             author_weights[ub.book.author.normalized_name] += weight
 
@@ -401,7 +415,7 @@ def calculate_anonymous_similarity_with_context(anonymous_session, user_ctx):
     """
     anon_books = set(anonymous_session.books_data or [])
     anon_top_books = set(anonymous_session.top_books_data or [])
-    anon_genres = Counter(anonymous_session.genre_distribution or {})
+    anon_genres = _canonicalize_genre_counter(anonymous_session.genre_distribution or {})
     anon_authors = Counter(anonymous_session.author_distribution or {})
     anon_ratings = getattr(anonymous_session, "book_ratings", None) or {}
 
@@ -515,9 +529,9 @@ def calculate_similarity_with_anonymized(profile_data, anon_profile, user_ctx=No
             user_authors = Counter()
             user_top_books = set(UserBook.objects.filter(user=user, is_top_book=True).values_list("book_id", flat=True))
 
-            # Extract from DNA data
+            # Extract from DNA data (canonicalized; += folds renamed duplicates together)
             for genre, count in dna.get("top_genres", []):
-                user_genres[genre] = count
+                user_genres[CANONICAL_GENRE_MAP.get(genre, genre)] += count
 
             for author, count in dna.get("top_authors", []):
                 normalized = Author._normalize(author)
@@ -530,19 +544,19 @@ def calculate_similarity_with_anonymized(profile_data, anon_profile, user_ctx=No
 
     elif isinstance(profile_data, AnonymousUserSession):
         # AnonymousUserSession object
-        user_genres = Counter(profile_data.genre_distribution or {})
+        user_genres = _canonicalize_genre_counter(profile_data.genre_distribution or {})
         user_authors = Counter(profile_data.author_distribution or {})
         user_top_books = set(profile_data.top_books_data or [])
         user_rating_dist = Counter()  # Anonymous sessions may not have this
     else:
         # Dict with anonymous session data
-        user_genres = Counter(profile_data.get("genre_distribution", {}))
+        user_genres = _canonicalize_genre_counter(profile_data.get("genre_distribution", {}))
         user_authors = Counter(profile_data.get("author_distribution", {}))
         user_top_books = set(profile_data.get("top_books_data", []))
         user_rating_dist = Counter(profile_data.get("rating_distribution", {}))
 
     # Extract anonymized profile data
-    anon_genres = Counter(anon_profile.genre_distribution or {})
+    anon_genres = _canonicalize_genre_counter(anon_profile.genre_distribution or {})
     anon_authors = Counter(anon_profile.author_distribution or {})
     anon_top_books = set(anon_profile.top_book_ids or [])
     anon_rating_dist = Counter(getattr(anon_profile, "rating_distribution", None) or {})

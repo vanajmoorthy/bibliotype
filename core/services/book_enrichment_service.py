@@ -357,54 +357,14 @@ def enrich_book_from_apis(book, session, slow_down=False):
                 book.publisher = publisher_obj
                 is_updated = True
 
-        if new_genres := ol_data.get("genres"):
-            # Always clear and replace existing genres with fresh API data
-            book.genres.clear()
-            # No need to save here - ManyToMany changes are persisted immediately
+    # Open Library genres are held back and merged with Google Books below —
+    # neither source replaces the other any more.
+    ol_genres = set(ol_data.get("genres") or []) if ol_data else set()
 
-            logger.debug(f"Adding genres for '{book.title}': {new_genres}")
-
-            # Limit to top 5-6 genres max - prioritize specific over generic
-            # Sort genres by priority (most specific first)
-            prioritized_genres = sorted(
-                new_genres, key=lambda g: GENRE_PRIORITY.index(g) if g in GENRE_PRIORITY else 999
-            )
-
-            # Take top 5-6 genres (aim for 5, allow up to 6 if they're all highly specific)
-            if len(prioritized_genres) <= 6:
-                genres_to_add_limited = prioritized_genres
-            elif len(prioritized_genres) >= 6 and prioritized_genres[5] in [
-                "fantasy",
-                "science fiction",
-                "thriller",
-                "horror",
-                "historical fiction",
-                "romance",
-            ]:
-                # If we have 6+ specific fiction genres, take all 6
-                genres_to_add_limited = prioritized_genres[:6]
-            else:
-                # Otherwise, take top 5
-                genres_to_add_limited = prioritized_genres[:5]
-
-            # Add the limited genres
-            if genres_to_add_limited:
-                genre_objs = [Genre.objects.get_or_create(name=g_name)[0] for g_name in genres_to_add_limited]
-                book.genres.add(*genre_objs)
-                is_updated = True
-                logger.debug(
-                    f"Added {len(genres_to_add_limited)} genres (limited from {len(new_genres)}): {genres_to_add_limited}"
-                )
-            else:
-                logger.debug(f"No genres to add after limiting")
-
-    # Skip Google Books when OL already found good genres — GB is mainly a genre fallback
-    if ol_data.get("genres") and book.google_books_last_checked is None:
-        book.google_books_last_checked = timezone.now()
-        is_updated = True
-        logger.debug(f"OL found genres for '{book.title}', skipping Google Books")
-
-    # Google Books: only called if OL didn't find genres (fallback for ratings + categories)
+    # Google Books: fetched once per book (guarded by google_books_last_checked)
+    # for ratings + categories. Its categories carry higher confidence than OL
+    # subjects, so they lead the merge below.
+    gb_genres = set()
     if book.google_books_last_checked is None:
         gb_data, calls_made = _fetch_ratings_and_categories_from_google_books(book, session, slow_down)
         gb_api_calls += calls_made
@@ -417,34 +377,50 @@ def enrich_book_from_apis(book, session, slow_down=False):
                 book.google_books_average_rating = gb_data["average_rating"]
                 is_updated = True
 
-            # Use Google Books categories as primary source for genres if available
             if google_genres := gb_data.get("categories"):
-                canonical_google_genres = list(_canonicalize_google_books_categories(google_genres))
-
-                # Only use Google Books genres if we got good results
-                if canonical_google_genres:
-                    logger.debug(f"Using Google Books categories for '{book.title}': {canonical_google_genres}")
-
-                    # Clear ALL existing genres and replace with Google Books (more accurate)
-                    book.genres.clear()
-
-                    prioritized_genres = sorted(
-                        canonical_google_genres,
-                        key=lambda g: GENRE_PRIORITY.index(g) if g in GENRE_PRIORITY else 999,
-                    )
-
-                    # Take top 5 (Google Books categories are usually more accurate)
-                    genres_to_add_limited = prioritized_genres[:5]
-
-                    if genres_to_add_limited:
-                        genre_objs = [Genre.objects.get_or_create(name=g_name)[0] for g_name in genres_to_add_limited]
-                        book.genres.add(*genre_objs)
-                        is_updated = True
-                        logger.debug(f"Added Google Books genres for '{book.title}': {genres_to_add_limited}")
+                gb_genres = set(_canonicalize_google_books_categories(google_genres))
 
         # Mark as checked *after* the API call is attempted.
         book.google_books_last_checked = timezone.now()
         is_updated = True  # Always true if we ran the check
+
+    # Merge both sources: Google Books canonical genres first (higher
+    # confidence), Open Library supplements. The combined set is priority-sorted
+    # so the most specific genres survive the cap regardless of source.
+    if combined_genres := gb_genres | ol_genres:
+        logger.debug(f"Merged genres for '{book.title}': GB={sorted(gb_genres)}, OL={sorted(ol_genres)}")
+
+        # Sort genres by priority (most specific first)
+        prioritized_genres = sorted(
+            combined_genres, key=lambda g: GENRE_PRIORITY.index(g) if g in GENRE_PRIORITY else 999
+        )
+
+        # Take top 5-6 genres (aim for 5, allow up to 6 if they're all highly specific)
+        if len(prioritized_genres) <= 6:
+            genres_to_add_limited = prioritized_genres
+        elif prioritized_genres[5] in [
+            "fantasy",
+            "science fiction",
+            "thriller",
+            "horror",
+            "historical fiction",
+            "romance",
+        ]:
+            # If we have 6+ specific fiction genres, take all 6
+            genres_to_add_limited = prioritized_genres[:6]
+        else:
+            # Otherwise, take top 5
+            genres_to_add_limited = prioritized_genres[:5]
+
+        # Always clear and replace existing genres with fresh API data.
+        # No need to save here - ManyToMany changes are persisted immediately.
+        book.genres.clear()
+        genre_objs = [Genre.objects.get_or_create(name=g_name)[0] for g_name in genres_to_add_limited]
+        book.genres.add(*genre_objs)
+        is_updated = True
+        logger.debug(
+            f"Added {len(genres_to_add_limited)} genres (limited from {len(combined_genres)}): {genres_to_add_limited}"
+        )
 
     # --- Set cover_url from best available source (only if not already set) ---
     if not book.cover_url:

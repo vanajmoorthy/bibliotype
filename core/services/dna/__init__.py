@@ -22,15 +22,14 @@ from core.services.llm_service import generate_vibe_with_llm
 
 from ...dna_constants import (
     CANONICAL_GENRE_MAP,
-    FICTION_GENRES,
     GLOBAL_AVERAGES,
     NICHE_THRESHOLD,
-    NONFICTION_GENRES,
     READER_TYPE_DESCRIPTIONS,
     STORYGRAPH_TAG_TO_GENRE,
     compute_contrariness,
 )
 from ...models import Author, Book, Genre
+from ..genre_classification import canonicalize_genre_names, count_fiction_nonfiction
 from ...percentile_engine import (
     calculate_community_means,
     calculate_percentiles_from_aggregates,
@@ -306,20 +305,16 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     if progress_cb:
                         progress_cb(processed, total_books, "Syncing books")
 
-        fiction_count = 0
-        nonfiction_count = 0
-
+        book_genre_sets = []
         for book, genres, original_row in results:
             if book:
                 user_book_objects.append(book)
                 all_raw_genres.extend(genres)
-                # Fiction-first: books with any fiction genre are counted as fiction,
-                # even if they also carry nonfiction genres (e.g. historical fiction).
-                canonical = {CANONICAL_GENRE_MAP.get(g, g) for g in genres}
-                if canonical & FICTION_GENRES:
-                    fiction_count += 1
-                elif canonical & NONFICTION_GENRES:
-                    nonfiction_count += 1
+                book_genre_sets.append(canonicalize_genre_names(genres))
+
+        # Context-dependent fiction/nonfiction classification. Books with no
+        # classifiable genres are tracked in defaulted_count — never fiction.
+        fiction_count, nonfiction_count, defaulted_count = count_fiction_nonfiction(book_genre_sets)
 
         # Sync currently-reading books to DB (Book/Author only, no UserBook, no global_read_count)
         if currently_reading_books:
@@ -722,7 +717,11 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             "currently_reading_count": currently_reading_count,
             "custom_shelf_count": custom_shelf_count,
             "fiction_nonfiction_split": (
-                {"fiction_count": fiction_count, "nonfiction_count": nonfiction_count}
+                {
+                    "fiction_count": fiction_count,
+                    "nonfiction_count": nonfiction_count,
+                    "defaulted_count": defaulted_count,
+                }
                 if (fiction_count + nonfiction_count) > 0
                 else None
             ),

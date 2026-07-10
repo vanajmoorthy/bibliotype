@@ -3,11 +3,11 @@ from unittest.mock import MagicMock
 from django.test import TestCase
 
 from core.dna_constants import (
-    CANONICAL_GENRE_MAP,
     FICTION_GENRES,
     GENRE_ALIASES,
     NONFICTION_GENRES,
 )
+from core.services.genre_classification import canonicalize_genre_names, classify_genres
 from core.services.top_books_service import compute_book_score
 
 
@@ -25,16 +25,10 @@ class FictionNonfictionConstantsTests(TestCase):
 
 
 class FictionNonfictionClassificationTests(TestCase):
-    """Test the fiction-first classification logic used in core.services.dna."""
+    """Test the shared context-dependent classifier used by core.services.dna and views."""
 
     def _classify(self, genre_names):
-        """Reproduce the classification logic from core.services.dna."""
-        canonical = {CANONICAL_GENRE_MAP.get(g, g) for g in genre_names}
-        if canonical & FICTION_GENRES:
-            return "fiction"
-        elif canonical & NONFICTION_GENRES:
-            return "nonfiction"
-        return "unclassified"
+        return classify_genres(canonicalize_genre_names(genre_names))
 
     def test_pure_fiction(self):
         self.assertEqual(self._classify(["fantasy fiction", "epic fantasy"]), "fiction")
@@ -43,20 +37,36 @@ class FictionNonfictionClassificationTests(TestCase):
         self.assertEqual(self._classify(["history", "military history"]), "nonfiction")
 
     def test_mixed_genres_fiction_wins(self):
-        """A book with both fiction and nonfiction genres should classify as fiction."""
+        """A book with an unambiguous fiction genre classifies as fiction even with nonfiction genres."""
         self.assertEqual(self._classify(["fantasy", "history"]), "fiction")
 
     def test_no_matching_genres(self):
-        self.assertEqual(self._classify(["unknown genre xyz"]), "unclassified")
+        self.assertIsNone(self._classify(["unknown genre xyz"]))
 
     def test_empty_genres(self):
-        self.assertEqual(self._classify([]), "unclassified")
+        self.assertIsNone(self._classify([]))
 
     def test_alias_maps_to_fiction(self):
         self.assertEqual(self._classify(["ghost stories"]), "fiction")
 
     def test_alias_maps_to_nonfiction(self):
         self.assertEqual(self._classify(["autobiography"]), "nonfiction")
+
+    def test_ambiguous_genre_with_fiction_signal(self):
+        """classics + fantasy → fiction (unambiguous fiction signal wins)."""
+        self.assertEqual(self._classify(["classics", "fantasy"]), "fiction")
+
+    def test_ambiguous_genre_with_nonfiction_signal(self):
+        """classics + history → nonfiction (e.g. 'A Brief History of Time')."""
+        self.assertEqual(self._classify(["classics", "history"]), "nonfiction")
+
+    def test_ambiguous_genre_no_signal_defaults_fiction(self):
+        """classics alone → fiction (the conservative default)."""
+        self.assertEqual(self._classify(["classics"]), "fiction")
+
+    def test_ambiguous_plus_nonfiction_plus_fiction_stays_fiction(self):
+        """classics + history + fantasy → fiction (historical fantasy, not nonfiction)."""
+        self.assertEqual(self._classify(["classics", "history", "fantasy"]), "fiction")
 
 
 class BookExtremesTests(TestCase):
