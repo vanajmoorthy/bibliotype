@@ -150,7 +150,6 @@ GENRE_ALIASES = {
         "fantastique",
         "quests (expeditions)",
         "discworld (imaginary place",  # Typo fix
-        "adventure fiction",
         "epic literature",
     },
     "science fiction": {
@@ -171,28 +170,26 @@ GENRE_ALIASES = {
     "dystopian": {
         "dystopian fiction",
         "dystopias",
+        "dystopia",
+        "post-apocalyptic",
         "fiction, dystopian",
         "totalitarianism",
         "totalitarianism -- fiction",
     },
     "thriller": {
         "thriller",
-        "mystery fiction",
         "crime fiction",
         "suspense fiction",
         "assassins",
-        "detective and mystery stories",
         "thrillers (fiction)",
         "spy stories",
         "crime",
-        "mystery",
         "murder",
         "murderers",
         "fiction, crime",
         "theft",
         "assassination",
         "fiction, thrillers",
-        "detectives",
         "criminal investigation",
         "revenge",
         "crime, fiction",
@@ -201,11 +198,31 @@ GENRE_ALIASES = {
         "fiction, thrillers, general",
         "investigation",
         "malicious accusation",
-        "mystery and detective stories",
-        "adventure stories",
         "suspense",
         "espionage",
+    },
+    "mystery": {
+        "mystery fiction",
+        "detective and mystery stories",
+        "mystery and detective stories",
+        "detectives",
+        "whodunit",
+        "cozy mystery",
+    },
+    "adventure": {
+        "adventure fiction",
+        "adventure stories",
         "adventure and adventurers",
+        "action and adventure",
+    },
+    "literary fiction": {
+        "contemporary literary fiction",
+        "literary novels",
+    },
+    "poetry": {
+        "poems",
+        "verse",
+        "collected poems",
     },
     "horror": {
         "horror fiction",
@@ -284,8 +301,13 @@ GENRE_ALIASES = {
         "humor.",
         "fiction, humorous",
     },
-    "young adult": {
-        "young adult fiction",
+    # Ambiguous genres are split into fiction/nonfiction sub-categories. The old
+    # canonical names ("young adult", "children's literature", "classics") are kept
+    # as aliases of the *fiction* defaults so existing Genre DB rows still classify.
+    # Context-dependent resolution (co-occurring nonfiction genres) happens at DNA
+    # analysis time via core/services/genre_classification.py.
+    "young adult fiction": {
+        "young adult",
         "juvenile literature",
         "ya",
         "juvenile",
@@ -297,20 +319,28 @@ GENRE_ALIASES = {
         "teenage boys",
         "youth, fiction",
     },
-    "children's literature": {
+    "young adult nonfiction": {
+        "juvenile nonfiction",
+    },
+    "children's fiction": {
+        "children's literature",
         "children's stories",
         "picture books",
         "boys",
         "children's plays",
         "children's plays, english",
     },
-    "classics": {
+    # Classification label only — resolved from "children's fiction" at analysis time.
+    "children's nonfiction": set(),
+    "classic fiction": {
+        "classics",
         "classic",
         "classical literature",
         "fiction classics",
-        "classic fiction",
         "classic literature",
     },
+    # Classification label only — resolved from "classic fiction" at analysis time.
+    "classic nonfiction": set(),
     "mythology & folklore": {
         "mythology",
         "retellings",
@@ -341,13 +371,25 @@ GENRE_ALIASES = {
     "holiday fiction": {"christmas stories"},
     "fairy tales & fables": {"fairy tales", "fables", "fairy tale fiction"},
     # --- NON-FICTION ---
-    "non-fiction": {"nonfiction", "essays", "journalism", "creative nonfiction", "doctrines"},
+    "non-fiction": {"nonfiction", "journalism", "creative nonfiction", "doctrines"},
+    "essays": {
+        "collected essays",
+        "literary essays",
+        "personal essays",
+    },
+    "memoir": {
+        "memoirs",
+        "personal narratives",
+        "autobiographies",
+    },
+    "true crime": {
+        "crime nonfiction",
+        "murder nonfiction",
+    },
     "biography": {
         "biography",
         "autobiography",
-        "memoir",
         "biographies",
-        "memoirs",
         "diaries",
         "fiction, biographical",
         "biography & autobiography",
@@ -603,7 +645,6 @@ EXCLUDED_GENRES = {
     "romans, nouvelles",
     "english literature",
     "juvenile fiction",
-    "children's fiction",
     "general",
     "fiction / general",
     "fictional works",
@@ -714,7 +755,6 @@ EXCLUDED_GENRES = {
     "labyrinths",
     "life change events",
     "livres et lecture",
-    "love",
     "male friendship",
     "man",
     "man-woman relationships",
@@ -740,7 +780,6 @@ EXCLUDED_GENRES = {
     "motion picture industry",
     "moški in ženske",
     "mujeres",
-    "musicians",
     "musicians, fiction",
     "médicos",
     "neighbors",
@@ -780,7 +819,6 @@ EXCLUDED_GENRES = {
     "rebellion",
     "refugees",
     "reincarnation",
-    "revenge",
     "rich people",
     "riot grrrl movement",
     "rock musicians",
@@ -834,7 +872,6 @@ EXCLUDED_GENRES = {
     "women hermits",
     "women journalists",
     "women poets",
-    "women rock musicians",
     "writers",
     "young adults",
     "young men",
@@ -856,7 +893,6 @@ EXCLUDED_GENRES = {
     "indiana, fiction",
     "jalisco (méxico)",
     "england in fiction",
-    "france in fiction",
     "mexico, fiction",
     "vermont, fiction",
     "united states, fiction",
@@ -888,13 +924,8 @@ EXCLUDED_GENRES = {
     "roman",
     "romans",
     "romans, nouvelles",
-    "drama",
-    "drama (dramatic works by one author)",
-    "adventure stories",
     "coming-of-age",
     "erotic fiction",
-    "literary fiction",
-    "short stories",
     "children's books",
     "audiobooks",
     "electronic books",
@@ -913,7 +944,6 @@ EXCLUDED_GENRES = {
     "spanish",
     "ficción juvenil",
     "ficción",
-    "novela fantástica",
     # Character/topic subjects not genres
     "vampires",
     "vampiros",
@@ -924,7 +954,6 @@ EXCLUDED_GENRES = {
     "the blitz",
     "fauns",
     "turkish delight",
-    "good and evil",
     "bien y mal",
     "end of the world",
     "apocalypse",
@@ -937,7 +966,6 @@ EXCLUDED_GENRES = {
     "brothers and sisters, fiction",
     "brothers and sisters--fiction",
     "jealousy",
-    "revenge",
     "affront",
     "truth",
     "loyalty",
@@ -971,7 +999,6 @@ EXCLUDED_GENRES = {
     "burial--fiction",
     "soul",
     "hedonism",
-    "fate and fatalism",
     "fate",
     "painting, fiction",
     "painting",
@@ -987,7 +1014,6 @@ EXCLUDED_GENRES = {
     "oklahoma",
     "mississippi",
     "dust bowl era, 1931-1939",
-    "great depression, 1929-1939",
     "depressions",
     "depressions--fiction",
     "agricultural laborers",
@@ -1000,9 +1026,6 @@ EXCLUDED_GENRES = {
     # More specific exclusions from enrichment logs
     "open library staff picks",
     "international relations",
-    "adventure",
-    "music",
-    "revenge",
     "school",
     "best sellers",
     "novelists",
@@ -1067,16 +1090,11 @@ EXCLUDED_GENRES = {
     "narnia (imaginary place)",
     "middle earth (imaginary place)",
     "yoknapatawpha county (imaginary place)",
-    "dune (imaginary place)",
     "seven kingdoms (imaginary place)",
     "battle school (imaginary place)",
     "matrix (imaginary place)",
     "rama (imaginary space vehicle)",
     # Literary style/subgenre terms (not genres)
-    "southern gothic",
-    "urban fantasy",
-    "high fantasy",
-    "epic fantasy",
     # Collection tags
     "collection:eanes challenge",
     "collection:bannedbooks",
@@ -1105,15 +1123,12 @@ EXCLUDED_GENRES = {
     "earthquake zones",
     "geographical myths",
     "complex (psychology)",
-    "drama",
     "slavery",
     "communism",
     "german",
     "literary collections",
     "coloring books",
-    "detective and mystery stories",
     # Google Books categories that aren't meaningful genres
-    "brigands and robbers",
     "future life",
     "imaginary wars and battles",
     "reference",
@@ -1123,7 +1138,6 @@ EXCLUDED_GENRES = {
     "comics & graphic novels, general",
     "comics & graphic novels, literary",
     "comics & graphic novels, adaptations",
-    "comic books, strips",
     "migrant agricultural laborers--california--fiction",
     "labor camps--california--fiction",
     "migrant agricultural laborers--fiction",
@@ -1151,7 +1165,6 @@ EXCLUDED_GENRES = {
     "orphans, fiction",
     "orphans in fiction",
     "homeless children",
-    "runaway teenagers",
     "immigrant children",
     "illegal alien children",
     "adoptees, fiction",
@@ -1186,8 +1199,6 @@ EXCLUDED_GENRES = {
     "photographers",
     "photographers, fiction",
     "rock musicians",
-    "women rock musicians",
-    "musicians",
     "musicians, fiction",
     "lawyers",
     "lawyers, fiction",
@@ -1217,8 +1228,6 @@ EXCLUDED_GENRES = {
     "photographers",
     "photographers, fiction",
     "rock musicians",
-    "women rock musicians",
-    "musicians",
     "musicians, fiction",
     "lawyers",
     "lawyers, fiction",
@@ -1282,7 +1291,6 @@ EXCLUDED_GENRES = {
     "narnia (imaginary place)",
     "narnia (imaginary place), fiction",
     "series",
-    "demons",
     "homeless children",
     "antiheroes",
     "storytelling",
@@ -1359,9 +1367,7 @@ EXCLUDED_GENRES = {
     "children--fiction",
     "teenagers",
     "teenage girls",
-    "teenage boys",
     "teenage boy/girl relations",
-    "runaway teenagers",
     "alienation in teenagers",
     "high school seniors",
     "preparatory school students",
@@ -1402,7 +1408,6 @@ EXCLUDED_GENRES = {
     "orphans, fiction",
     "orphans in fiction",
     "homeless children",
-    "runaway teenagers",
     "immigrant children",
     "illegal alien children",
     "adoptees, fiction",
@@ -1436,8 +1441,6 @@ EXCLUDED_GENRES = {
     "photographers",
     "photographers, fiction",
     "rock musicians",
-    "women rock musicians",
-    "musicians",
     "musicians, fiction",
     "lawyers",
     "lawyers, fiction",
@@ -1490,8 +1493,6 @@ EXCLUDED_GENRES = {
     "photographers",
     "photographers, fiction",
     "rock musicians",
-    "women rock musicians",
-    "musicians",
     "musicians, fiction",
     "lawyers",
     "lawyers, fiction",
@@ -1531,7 +1532,8 @@ GLOBAL_AVERAGES = {
 }
 
 # Priority ordering for genre selection in book enrichment: most specific first,
-# generic/classics last. Genres absent from this list sort to the end.
+# generic/classics last. Must contain EVERY canonical genre (asserted below) so
+# nothing silently sorts to the end.
 # Used by core/services/book_enrichment_service.py to pick the top-N genres for a book
 # after merging Open Library and Google Books canonical genre sets.
 GENRE_PRIORITY = [
@@ -1540,12 +1542,18 @@ GENRE_PRIORITY = [
     "science fiction",
     "dystopian",
     "thriller",
+    "mystery",
     "horror",
     "historical fiction",
     "romance",
+    "literary fiction",
     "humorous fiction",
-    "young adult",
+    "adventure",
+    "young adult fiction",
+    "young adult nonfiction",
     "short stories",
+    "memoir",
+    "true crime",
     # Non-fiction genres
     "biography",
     "philosophy",
@@ -1553,14 +1561,25 @@ GENRE_PRIORITY = [
     "history",
     "social science",
     "non-fiction",
+    "essays",
+    "self-help",
     "science",
     "nature",
     "art & music",
     "travel",
+    "poetry",
     # Generic/classics
-    "classics",
+    "classic fiction",
+    "classic nonfiction",
     "plays & drama",
-    "children's literature",
+    "children's fiction",
+    "children's nonfiction",
+    "food & cooking",
+    "religion & spirituality",
+    "holiday fiction",
+    "fairy tales & fables",
+    "mythology & folklore",
+    "comics & graphic novels",
 ]
 
 NICHE_THRESHOLD = 5
@@ -1594,13 +1613,18 @@ FICTION_GENRES = {
     "science fiction",
     "dystopian",
     "thriller",
+    "mystery",
+    "adventure",
     "horror",
     "historical fiction",
     "romance",
+    "literary fiction",
     "humorous fiction",
-    "young adult",
-    "children's literature",
-    "classics",
+    # Poetry is classified as fiction by default — a known simplification.
+    "poetry",
+    "young adult fiction",
+    "children's fiction",
+    "classic fiction",
     "mythology & folklore",
     "short stories",
     "comics & graphic novels",
@@ -1611,6 +1635,9 @@ FICTION_GENRES = {
 
 NONFICTION_GENRES = {
     "non-fiction",
+    "essays",
+    "memoir",
+    "true crime",
     "biography",
     "history",
     "psychology",
@@ -1623,11 +1650,30 @@ NONFICTION_GENRES = {
     "art & music",
     "food & cooking",
     "religion & spirituality",
+    "young adult nonfiction",
+    "children's nonfiction",
+    "classic nonfiction",
+}
+
+# Genres that default to fiction but could be nonfiction based on context
+# (co-occurring genres on the same book). Resolved at DNA analysis time by
+# core/services/genre_classification.py.
+AMBIGUOUS_FICTION_GENRES = {"classic fiction", "young adult fiction", "children's fiction"}
+
+# Mapping to nonfiction variants when context indicates nonfiction.
+AMBIGUOUS_TO_NONFICTION = {
+    "classic fiction": "classic nonfiction",
+    "young adult fiction": "young adult nonfiction",
+    "children's fiction": "children's nonfiction",
 }
 
 _all_canonical = set(GENRE_ALIASES.keys())
 _classified = FICTION_GENRES | NONFICTION_GENRES
 assert _classified == _all_canonical, f"Unclassified genres: {_all_canonical - _classified}"
+assert set(GENRE_PRIORITY) == _all_canonical, (
+    f"GENRE_PRIORITY out of sync with canonical genres. "
+    f"Missing: {_all_canonical - set(GENRE_PRIORITY)}; extra: {set(GENRE_PRIORITY) - _all_canonical}"
+)
 
 # Maps common StoryGraph user tags to canonical genres.
 # Applied before enrichment dispatch so tagged books can skip API genre lookups.
@@ -1638,22 +1684,27 @@ STORYGRAPH_TAG_TO_GENRE = {
     "fantasy": "fantasy",
     "dystopian": "dystopian",
     "dystopia": "dystopian",
-    "classic": "classics",
-    "classics": "classics",
+    "classic": "classic fiction",
+    "classics": "classic fiction",
     "non-fiction": "non-fiction",
     "nonfiction": "non-fiction",
     "horror": "horror",
     "romance": "romance",
     "thriller": "thriller",
-    "mystery": "thriller",
+    "mystery": "mystery",
+    "adventure": "adventure",
     "biography": "biography",
-    "memoir": "biography",
+    "memoir": "memoir",
+    "true crime": "true crime",
+    "essays": "essays",
+    "poetry": "poetry",
+    "literary fiction": "literary fiction",
     "history": "history",
     "philosophy": "philosophy",
     "psychology": "psychology",
     "historical fiction": "historical fiction",
-    "young adult": "young adult",
-    "ya": "young adult",
+    "young adult": "young adult fiction",
+    "ya": "young adult fiction",
     "short stories": "short stories",
     "travel": "travel",
     "science": "science",
