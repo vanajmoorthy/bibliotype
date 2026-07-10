@@ -38,7 +38,7 @@ class Command(BaseCommand):
 
     def _get_queryset(self, process_all):
         if process_all:
-            self._warn("--process-all flag set. Re-checking all books.")
+            self._warn("--process-all flag set. Re-checking all books (Google Books will be re-fetched).")
             return Book.objects.all()
         return Book.objects.filter(
             Q(publish_year__isnull=True) | Q(genres__isnull=True) | Q(google_books_last_checked__isnull=True)
@@ -70,19 +70,27 @@ class Command(BaseCommand):
             self._log("Dry run — no tasks dispatched.")
             return
 
-        if options["sync"]:
-            self._sync_enrich(queryset, options["google_books_limit"])
-        else:
-            self._async_enrich(queryset)
+        # Re-enrichment must re-fetch Google Books data so OL + GB genres get
+        # merged; enrich_book_from_apis skips the GB call for books whose
+        # google_books_last_checked is already set.
+        reset_gb = options["process_all"]
 
-    def _async_enrich(self, queryset):
+        if options["sync"]:
+            self._sync_enrich(queryset, options["google_books_limit"], reset_gb)
+        else:
+            self._async_enrich(queryset, reset_gb)
+
+    def _async_enrich(self, queryset, reset_gb=False):
         dispatched = 0
         for book in queryset.iterator():
+            if reset_gb and book.google_books_last_checked is not None:
+                # The Celery task reloads the book from the DB, so the reset must be persisted.
+                Book.objects.filter(pk=book.pk).update(google_books_last_checked=None)
             enrich_book_task.delay(book.pk)
             dispatched += 1
         self._log(f"Dispatched {dispatched} enrichment tasks to Celery.")
 
-    def _sync_enrich(self, queryset, gb_limit):
+    def _sync_enrich(self, queryset, gb_limit, reset_gb=False):
         session = requests.Session()
         session.headers.update({"User-Agent": "BibliotypeApp/1.0"})
         gb_calls = 0
@@ -97,6 +105,9 @@ class Command(BaseCommand):
             processed += 1
             self._log(f'  -> Processing: "{book.title}" ({processed}) | OL: {ol_calls} | GB: {gb_calls}')
 
+            if reset_gb:
+                # enrich_book_from_apis checks the in-memory instance and persists on save.
+                book.google_books_last_checked = None
             _, ol, gb = enrich_book_from_apis(book, session, slow_down=True)
             ol_calls += ol
             gb_calls += gb
