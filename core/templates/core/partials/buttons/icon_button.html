@@ -1,7 +1,7 @@
 {% if color == 'pink' %}
     <button
         type="button"
-        class="shadow-neo bg-brand-pink border-brand-text border-2 p-1 transition-all {{ extra_classes|default:'' }} hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-neo-lg active:translate-x-1 active:translate-y-1 active:shadow-none"
+        class="shadow-neo bg-brand-pink border-brand-text border-2 p-1 transition-all {{ extra_classes|default:'' }} hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-neo-sm active:translate-x-1 active:translate-y-1 active:shadow-none"
         {{ extra_attrs|safe }}
         >
         {{ icon_svg|safe }}
@@ -9,7 +9,7 @@
 {% elif color == 'green' %}
     <button
         type="button"
-        class="shadow-neo bg-brand-green border-brand-text border-2 p-1 transition-all {{ extra_classes|default:'' }} hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-neo-lg active:translate-x-1 active:translate-y-1 active:shadow-none"
+        class="shadow-neo bg-brand-green border-brand-text border-2 p-1 transition-all {{ extra_classes|default:'' }} hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-neo-sm active:translate-x-1 active:translate-y-1 active:shadow-none"
         {{ extra_attrs|safe }}
         >
         {{ icon_svg|safe }}
@@ -17,7 +17,7 @@
 {% else %}
     <button
         type="button"
-        class="shadow-neo bg-brand-pink border-brand-text border-2 p-1 transition-all {{ extra_classes|default:'' }} hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-neo-lg active:translate-x-1 active:translate-y-1 active:shadow-none"
+        class="shadow-neo bg-brand-pink border-brand-text border-2 p-1 transition-all {{ extra_classes|default:'' }} hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-neo-sm active:translate-x-1 active:translate-y-1 active:shadow-none"
         {{ extra_attrs|safe }}
         >
         {{ icon_svg|safe }}
