@@ -513,7 +513,8 @@ class IsbnNormalizationTests(TestCase):
         from unittest.mock import patch
 
         with patch("core.services.dna.generate_vibe_with_llm", return_value=["a", "b"]), \
-             patch("core.tasks.enrich_book_task.delay"):
+             patch("core.tasks.enrich_book_task.delay"), \
+             patch("core.services.book_enrichment_service.enrich_book_from_apis"):
             calculate_full_dna(goodreads_csv, user=user)
             calculate_full_dna(storygraph_csv, user=user)
 

@@ -284,7 +284,8 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                             from ..book_enrichment_service import enrich_book_from_apis
 
                             logger.debug(
-                                f"Inline enrichment for '{book.title}' (created={created}, has_genres={has_genres}, needs_page_data={needs_page_data})"
+                                f"Inline enrichment for '{book.title}' (created={created}, "
+                                f"has_genres={has_genres}, needs_page_data={needs_page_data})"
                             )
                             enrich_book_from_apis(book, session, slow_down=False, quick_mode=True)
                             enriched_inline = True
@@ -293,7 +294,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     if not enriched_inline:
                         from ...tasks import enrich_book_task
 
-                        logger.debug(f"Dispatching async enrichment for '{book.title}' (budget exhausted or inline failed)")
+                        logger.debug(
+                            f"Dispatching async enrichment for '{book.title}' (budget exhausted or inline failed)"
+                        )
                         enrich_book_task.delay(book.pk, user_id=upload_user_id, upload_nonce=upload_nonce)
                 else:
                     logger.debug(f"Book '{book.title}' already enriched. Skipping.")

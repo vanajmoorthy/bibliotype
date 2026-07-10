@@ -28,6 +28,11 @@ class TaskIntegrationTests(TransactionTestCase):
             cache.clear()
         except Exception:
             pass
+        # Inline enrichment must never hit real APIs from tests — a no-op mock
+        # keeps books genre-less here, matching the old async-only behaviour.
+        inline_patcher = patch("core.services.book_enrichment_service.enrich_book_from_apis")
+        self.mock_inline_enrich = inline_patcher.start()
+        self.addCleanup(inline_patcher.stop)
 
     # Mock the slow, external network calls
     @patch("core.tasks.generate_recommendations_task.delay")
