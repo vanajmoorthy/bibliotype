@@ -21,7 +21,7 @@
 
     --shadow-neo: 4px 4px 0px 0px var(--color-brand-text);
     --shadow-neo-sm: 2px 2px 0px 0px var(--color-brand-text);
-    --shadow-neo-lg: 6px 6px 0px 0px var(--color-brand-text);
+    --shadow-neo-xs: 1px 1px 0px 0px var(--color-brand-text);
 
     --font-sans: "VT323", ui-sans-serif, system-ui, sans-serif;
 
