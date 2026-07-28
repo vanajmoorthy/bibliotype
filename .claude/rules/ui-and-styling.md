@@ -19,8 +19,9 @@ Hard 2px borders, heavy offset shadows, bright saturated colors, VT323 retro mon
 
 **Shadows:**
 - `shadow-neo`: `4px 4px 0px 0px var(--color-brand-text)` (standard)
+- `shadow-neo-md`: `3px 3px 0px 0px var(--color-brand-text)` (hover quarter-press for standard buttons)
 - `shadow-neo-sm`: `2px 2px 0px 0px var(--color-brand-text)` (small)
-- `shadow-neo-xs`: `1px 1px 0px 0px var(--color-brand-text)` (hover half-press for `-sm` buttons)
+- `shadow-neo-xs`: `1px 1px 0px 0px var(--color-brand-text)` (hover press for `-sm` buttons)
 
 **Font:** `--font-sans: "VT323", ui-sans-serif, system-ui, sans-serif`
 
@@ -35,14 +36,14 @@ Hard 2px borders, heavy offset shadows, bright saturated colors, VT323 retro mon
 ```html
 <button class="bg-brand-green shadow-neo border-brand-text border-2 px-4 py-3 font-bold
     transition-all duration-150 ease-in-out
-    hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-neo-sm
+    hover:translate-x-px hover:translate-y-px hover:shadow-neo-md
     active:translate-x-1 active:translate-y-1 active:shadow-none cursor-pointer">
 ```
 - The shadow's outer edge is the button's fixed "contact point with the page" — it must never move
-- Hover half-presses the button (translate by half the shadow offset while the shadow shrinks by the same amount)
+- Hover subtly depresses the button (translate by 1px while the shadow shrinks by 1px)
 - Active presses it flat: translate by exactly the shadow offset while the shadow shrinks to none
 - The button only ever moves DOWN toward the page — never lifts on the z-axis
-- Pairings: `shadow-neo` (4px) → hover `translate-*-0.5` + `shadow-neo-sm`, active `translate-*-1` + `shadow-none`; `shadow-neo-sm` (2px) → hover `translate-*-px` + `shadow-neo-xs`, active `translate-*-0.5` + `shadow-none`
+- Pairings: `shadow-neo` (4px) → hover `translate-*-px` + `shadow-neo-md`, active `translate-*-1` + `shadow-none`; `shadow-neo-sm` (2px) → hover `translate-*-px` + `shadow-neo-xs`, active `translate-*-0.5` + `shadow-none`
 
 **Button partials** in `templates/core/partials/buttons/`: `primary_button`, `secondary_button` (multi-color/size), `nav_button`, `small_button`, `small_link_button`, `link_button`, `close_button`, `icon_button`. Include with context vars like `text`, `color`, `size`, `hover_color`.
 

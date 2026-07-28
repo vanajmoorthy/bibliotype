@@ -20,6 +20,7 @@
     --color-badge-2: #ecfdf5; /* Weak Match */
 
     --shadow-neo: 4px 4px 0px 0px var(--color-brand-text);
+    --shadow-neo-md: 3px 3px 0px 0px var(--color-brand-text);
     --shadow-neo-sm: 2px 2px 0px 0px var(--color-brand-text);
     --shadow-neo-xs: 1px 1px 0px 0px var(--color-brand-text);
 
@@ -31,6 +32,59 @@
 @keyframes enrichPulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
+}
+
+/* 3D bevel triangles that complete the offset-shadow illusion by filling the
+   top-right and bottom-left "notches" where the shadow's outer corners would
+   otherwise sit as square blocks. See docs/plans/2026-07-10-feat-neo-shadow-3d-plan.md.
+
+   Two utilities cover both button shadow sizes; each has state baked in so a
+   single class per button mirrors the shadow-shrink pattern (shadow-neo →
+   hover:shadow-neo-sm → active:shadow-none):
+
+     - neo-3d      pairs with shadow-neo    (4px → hover 2px → active 0)
+     - neo-3d-sm   pairs with shadow-neo-sm (2px → hover 1px → active 0)
+
+   Shared pseudo-element geometry is declared once; the utilities only own the
+   size + state. Uses `[class~="…"]` because Tailwind @utility variants may
+   name-mangle the class, and the geometry needs to attach to the base name. */
+[class~="neo-3d"]::before,
+[class~="neo-3d"]::after,
+[class~="neo-3d-sm"]::before,
+[class~="neo-3d-sm"]::after {
+    content: "";
+    position: absolute;
+    width: var(--neo-3d-size);
+    height: var(--neo-3d-size);
+    background: var(--color-brand-text);
+    pointer-events: none;
+    transition: all 150ms ease-in-out;
+}
+[class~="neo-3d"]::before,
+[class~="neo-3d-sm"]::before {
+    top: 0;
+    right: calc(var(--neo-3d-size) * -1);
+    clip-path: polygon(0 0, 0 100%, 100% 100%);
+}
+[class~="neo-3d"]::after,
+[class~="neo-3d-sm"]::after {
+    bottom: calc(var(--neo-3d-size) * -1);
+    left: 0;
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+@utility neo-3d {
+    position: relative;
+    --neo-3d-size: 4px;
+    &:hover { --neo-3d-size: 3px; }
+    &:active { --neo-3d-size: 0; }
+}
+
+@utility neo-3d-sm {
+    position: relative;
+    --neo-3d-size: 2px;
+    &:hover { --neo-3d-size: 1px; }
+    &:active { --neo-3d-size: 0; }
 }
 
 /* Reserve uniform top space on every tile in a row when one of them shows
