@@ -82,21 +82,31 @@ def generate_recommendations_task(self, user_id: int):
 
             processed_recs.append(processed_rec)
 
+        from ..dna_constants import compute_uniqueness
+
         similar_user_set = set()
         min_overlap_pct = None
+        max_similarity = 0.0
         for rec in processed_recs:
             for source in rec.get("sources", []):
                 if source.get("type") == "similar_user" and source.get("user_id"):
                     similar_user_set.add(source["user_id"])
                     similarity = source.get("similarity_score", 0)
+                    max_similarity = max(max_similarity, similarity)
                     overlap = int(round(similarity * 100))
                     if min_overlap_pct is None or overlap < min_overlap_pct:
                         min_overlap_pct = overlap
 
         recommendations_meta = {
             "similar_users_count": len(similar_user_set),
+            # min_overlap_pct kept one release for stale templates/meta; the UI now leads with max
             "min_overlap_pct": min_overlap_pct or 0,
+            "max_similarity_pct": int(round(max_similarity * 100)),
         }
+
+        uniqueness = compute_uniqueness(len(similar_user_set), max_similarity)
+        if uniqueness:
+            recommendations_meta["uniqueness_label"], recommendations_meta["uniqueness_color"] = uniqueness
 
         profile.recommendations_data = processed_recs
         profile.recommendations_meta = recommendations_meta

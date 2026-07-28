@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     "django.contrib.humanize",
     "core",
     "django_celery_results",
+    "waffle",
 ]
 
 # Django Silk for profiling - opt-in via ENABLE_SILK=True (local development only)
@@ -84,6 +85,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "waffle.middleware.WaffleMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "core.analytics.middleware.PostHogExceptionMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -92,6 +94,9 @@ MIDDLEWARE = [
 # Django Silk middleware for profiling - opt-in via ENABLE_SILK=True (local development only)
 if ENABLE_SILK:
     MIDDLEWARE.insert(0, "silk.middleware.SilkyMiddleware")
+
+# django-waffle feature flags: a switch missing from the DB evaluates to off
+WAFFLE_SWITCH_DEFAULT = False
 
 
 ROOT_URLCONF = "bibliotype.urls"

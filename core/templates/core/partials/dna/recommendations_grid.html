@@ -25,14 +25,48 @@
     x-init="init()"
     class="border-brand-text shadow-neo border-2 bg-white p-6"
 >
-{# djlint:on #}
+    {# djlint:on #}
     <h2 class="mb-1 text-2xl font-bold uppercase">{{ rec_title|default:"Recommended for You" }}</h2>
-    {% if recommendations_meta.similar_users_count %}
-        <p class="mb-4 text-base italic text-gray-500">
-            We found {{ recommendations_meta.similar_users_count }} user{{ recommendations_meta.similar_users_count|pluralize }} that share at least a {{ recommendations_meta.min_overlap_pct }}% overlap with {{ pronoun_pos|default:"your" }} library
+    {% load waffle_tags %}
+    {% if recommendations_meta.max_similarity_pct %}
+        <p class="mb-4 text-base text-gray-500 italic">
+            {{ pronoun_pos|default:"your"|capfirst }} closest match: a reader with
+            {{ recommendations_meta.max_similarity_pct }}% similar taste.
+            {% with others=recommendations_meta.similar_users_count|add:"-1" %}
+                {% if others > 0 %}
+                    {{ others }}
+                    other reader{{ others|pluralize }} contributed to these picks.
+                {% endif %}
+            {% endwith %}
+            {% if recommendations_pool_display %}
+                Out of over {{ recommendations_pool_display }} readers on Bibliotype.
+            {% endif %}
+            {% switch 'uniqueness-badge' %}
+                {% if recommendations_meta.uniqueness_label %}
+                    {% include 'core/partials/badge_chip.html' with chip_label=recommendations_meta.uniqueness_label chip_color=recommendations_meta.uniqueness_color %}
+                {% endif %}
+            {% endswitch %}
+        </p>
+    {% elif recommendations_meta.uniqueness_label %}
+        {# No reader cleared the similarity floor — lean into it #}
+        <p class="mb-4 text-base text-gray-500 italic">
+            Hardly anyone reads like {{ pronoun_sub|default:"you" }}. These picks lean on
+            {{ pronoun_pos|default:"your" }} genres and authors.
+            {% if recommendations_pool_display %}
+                Out of over {{ recommendations_pool_display }} readers on Bibliotype.
+            {% endif %}
+            {% switch 'uniqueness-badge' %}
+                {% include 'core/partials/badge_chip.html' with chip_label=recommendations_meta.uniqueness_label chip_color=recommendations_meta.uniqueness_color %}
+            {% endswitch %}
+        </p>
+    {% elif recommendations_meta.similar_users_count %}
+        <p class="mb-4 text-base text-gray-500 italic">
+            We found {{ recommendations_meta.similar_users_count }}
+            reader{{ recommendations_meta.similar_users_count|pluralize }} with taste similar to
+            {{ pronoun_pos|default:"your" }}.
         </p>
     {% else %}
-        <p class="mb-4 text-base italic text-gray-500">Based on readers with similar taste</p>
+        <p class="mb-4 text-base text-gray-500 italic">Based on readers with similar taste</p>
     {% endif %}
     <div class="grid grid-cols-1 gap-4 md:grid-cols-3" x-ref="recGrid">
         {% for rec in recommendations %}
@@ -73,42 +107,42 @@
                             </div>
                         {% endif %}
                         {% if is_public_view %}
-                            {% if rec.explanation_components.shared_public %}<p>
-                                • {{ rec.explanation_components.shared_public }}
-                            </p>{% endif %}
+                            {% if rec.explanation_components.shared_public %}
+                                <p>• {{ rec.explanation_components.shared_public }}</p>
+                            {% endif %}
                         {% else %}
-                            {% if rec.explanation_components.shared %}<p>
-                                • {{ rec.explanation_components.shared }}
-                            </p>{% endif %}
+                            {% if rec.explanation_components.shared %}
+                                <p>• {{ rec.explanation_components.shared }}</p>
+                            {% endif %}
                         {% endif %}
                         {% if is_public_view %}
-                            {% if rec.explanation_components.genre_public %}<p>
-                                • {{ rec.explanation_components.genre_public }}
-                            </p>{% elif rec.explanation_components.genre %}<p>
-                                • {{ rec.explanation_components.genre }}
-                            </p>{% endif %}
+                            {% if rec.explanation_components.genre_public %}
+                                <p>• {{ rec.explanation_components.genre_public }}</p>
+                            {% elif rec.explanation_components.genre %}
+                                <p>• {{ rec.explanation_components.genre }}</p>
+                            {% endif %}
                         {% else %}
-                            {% if rec.explanation_components.genre %}<p>
-                                • {{ rec.explanation_components.genre }}
-                            </p>{% endif %}
+                            {% if rec.explanation_components.genre %}
+                                <p>• {{ rec.explanation_components.genre }}</p>
+                            {% endif %}
                         {% endif %}
                         {% if is_public_view %}
-                            {% if rec.explanation_components.popularity_public %}<p>
-                                • {{ rec.explanation_components.popularity_public }}
-                            </p>{% elif rec.explanation_components.popularity %}<p>
-                                • {{ rec.explanation_components.popularity }}
-                            </p>{% endif %}
+                            {% if rec.explanation_components.popularity_public %}
+                                <p>• {{ rec.explanation_components.popularity_public }}</p>
+                            {% elif rec.explanation_components.popularity %}
+                                <p>• {{ rec.explanation_components.popularity }}</p>
+                            {% endif %}
                         {% else %}
-                            {% if rec.explanation_components.popularity %}<p>
-                                • {{ rec.explanation_components.popularity }}
-                            </p>{% endif %}
+                            {% if rec.explanation_components.popularity %}
+                                <p>• {{ rec.explanation_components.popularity }}</p>
+                            {% endif %}
                         {% endif %}
-                        {% if rec.explanation_components.rating %}<p>
-                            • {{ rec.explanation_components.rating }}
-                        </p>{% endif %}
-                        {% if rec.explanation_components.discovery %}<p>
-                            • {{ rec.explanation_components.discovery }}
-                        </p>{% endif %}
+                        {% if rec.explanation_components.rating %}
+                            <p>• {{ rec.explanation_components.rating }}</p>
+                        {% endif %}
+                        {% if rec.explanation_components.discovery %}
+                            <p>• {{ rec.explanation_components.discovery }}</p>
+                        {% endif %}
                     </div>
                 </div>
             </div>

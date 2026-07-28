@@ -1601,6 +1601,19 @@ def compute_contrariness(avg_diff):
     return "Aligned with consensus", "bg-brand-green"
 
 
+# Best-match similarity below this means no matched reader shares much taste
+UNIQUENESS_WEAK_MATCH_THRESHOLD = 0.40
+
+
+def compute_uniqueness(similar_users_count, max_similarity):
+    """Return (label, color) for how unique a reader's taste is, or None for no badge."""
+    if similar_users_count == 0:
+        return "One of a kind", "bg-brand-pink"
+    if max_similarity < UNIQUENESS_WEAK_MATCH_THRESHOLD:
+        return "Pretty unique", "bg-brand-cyan"
+    return None
+
+
 # Create a reverse mapping for fast lookups (alias -> canonical).
 CANONICAL_GENRE_MAP = {}
 for canonical, aliases in GENRE_ALIASES.items():
