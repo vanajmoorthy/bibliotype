@@ -51,6 +51,15 @@
             "#fe9393",
         ];
 
+        // Live-enrichment state: chart instances are captured on creation so the
+        // enrichment poller can call chart.update() (no teardown), and the data
+        // sources are mutable so a chart created lazily AFTER an update still
+        // renders the freshest values.
+        let topGenresChart = null;
+        let fictionChart = null;
+        let liveGenres = dnaData.top_genres;
+        let liveFiction = dnaData.fiction_nonfiction_split;
+
         // --- Helper to parse data (Array of tuples vs Object) ---
         function parseChartData(data) {
             if (Array.isArray(data)) {
@@ -86,10 +95,10 @@
         }
 
         // --- Top Genres Chart ---
-        if (dnaData.top_genres) {
-            const { labels: genreLabels, values: genreValues } = parseChartData(dnaData.top_genres);
+        if (liveGenres) {
             createChartOnScroll("topGenresChart", (ctx) => {
-                new Chart(ctx, {
+                const { labels: genreLabels, values: genreValues } = parseChartData(liveGenres);
+                topGenresChart = new Chart(ctx, {
                     type: "doughnut",
                     data: {
                         labels: genreLabels,
@@ -198,13 +207,13 @@
         }
 
         // --- Fiction vs Nonfiction Chart ---
-        if (dnaData.fiction_nonfiction_split) {
+        if (liveFiction) {
             createChartOnScroll("fictionNonfictionChart", (ctx) => {
                 const fictionPattern = createStripePattern(ctx, "#ffb4dd", "#ffcce8");
                 const nonfictionPattern = createStripePattern(ctx, "#8bbfff", "#b0d4ff");
 
-                const split = dnaData.fiction_nonfiction_split;
-                new Chart(ctx, {
+                const split = liveFiction;
+                fictionChart = new Chart(ctx, {
                     type: "pie",
                     data: {
                         labels: ["Fiction", "Nonfiction"],
@@ -232,8 +241,11 @@
                             tooltip: {
                                 callbacks: {
                                     label: function (context) {
-                                        const total = split.fiction_count + split.nonfiction_count;
-                                        const pct = Math.round((context.parsed / total) * 100);
+                                        // Read from the live dataset (not the closure) so
+                                        // tooltips stay correct after chart.update().
+                                        const data = context.dataset.data;
+                                        const total = data.reduce((a, b) => a + b, 0);
+                                        const pct = total ? Math.round((context.parsed / total) * 100) : 0;
                                         return context.label + ": " + pct + "%";
                                     },
                                 },
@@ -243,6 +255,169 @@
                 });
             });
         }
+
+        // ============================================================
+        // Live enrichment updates
+        //
+        // The dashboard poller dispatches `enrichment:update` with the same
+        // `updated_stats` payload the completion reload would render. We mutate
+        // the already-rendered cards + charts in place (chart.update(), no
+        // teardown) so tiles move during enrichment instead of freezing.
+        //
+        // Guarded throughout on element/instance existence: cards still showing
+        // a skeleton (no canvas/chart yet) are simply skipped — they fill in on
+        // the completion reload.
+        // ============================================================
+        function escapeHtml(value) {
+            const div = document.createElement("div");
+            div.textContent = value == null ? "" : String(value);
+            return div.innerHTML;
+        }
+
+        function updateTopGenres(genres, uniqueCount) {
+            if (!Array.isArray(genres) || !genres.length) return;
+            liveGenres = genres;
+
+            const listEl = document.getElementById("top-genres-list");
+            if (listEl) {
+                listEl.innerHTML = genres
+                    .map(([genre, count], i) => {
+                        const color = chartColors[i % chartColors.length];
+                        return (
+                            `<li class="capitalize">` +
+                            `<span class="border-brand-text border-2 px-2 py-1 font-bold mr-2" ` +
+                            `style="background-color: ${color}">${escapeHtml(genre)}</span> ` +
+                            `(${count} books)</li>`
+                        );
+                    })
+                    .join("");
+            }
+
+            const countEl = document.getElementById("unique-genres-count");
+            if (countEl && typeof uniqueCount === "number") countEl.textContent = uniqueCount;
+
+            if (topGenresChart) {
+                const { labels, values } = parseChartData(genres);
+                topGenresChart.data.labels = labels;
+                topGenresChart.data.datasets[0].data = values;
+                topGenresChart.update();
+            }
+        }
+
+        function updateFictionNonfiction(split) {
+            if (!split) return;
+            const total = split.fiction_count + split.nonfiction_count;
+            if (total <= 0) return;
+            liveFiction = split;
+
+            const fEl = document.getElementById("fiction-pct");
+            const nfEl = document.getElementById("nonfiction-pct");
+            if (fEl) fEl.textContent = Math.round((split.fiction_count / total) * 100) + "%";
+            if (nfEl) nfEl.textContent = Math.round((split.nonfiction_count / total) * 100) + "%";
+
+            const note = document.getElementById("fiction-coverage-note");
+            if (note) {
+                if (split.defaulted_count) {
+                    note.textContent =
+                        `Based on ${total} of ${total + split.defaulted_count} books — ` +
+                        "refresh in a few minutes for more complete data";
+                    note.style.display = "";
+                } else {
+                    note.style.display = "none";
+                }
+            }
+
+            if (fictionChart) {
+                fictionChart.data.datasets[0].data = [split.fiction_count, split.nonfiction_count];
+                fictionChart.update();
+            }
+        }
+
+        // Build a single book cover node, replicating the template's img-load
+        // fallback (crosshatch placeholder → real cover, or accent initial on
+        // failure) in vanilla JS so we don't depend on Alpine re-init.
+        function buildBookCover(book, accentBg) {
+            const box = document.createElement("div");
+            const initial = book.initial || (book.title ? book.title[0].toUpperCase() : "?");
+            const showInitial = () => {
+                box.className =
+                    `${accentBg} border-brand-text shadow-neo-sm flex h-40 w-[6.75rem] ` +
+                    "items-center justify-center border-2 text-5xl font-bold";
+                box.textContent = initial;
+            };
+            if (book.cover_url) {
+                box.className = "cover-crosshatch border-brand-text shadow-neo-sm h-40 w-[6.75rem] border-2";
+                const probe = new Image();
+                probe.onload = () => {
+                    if (probe.naturalWidth < 10) {
+                        showInitial();
+                        return;
+                    }
+                    box.className = "border-brand-text shadow-neo-sm h-40 w-[6.75rem] overflow-hidden border-2";
+                    box.innerHTML = "";
+                    const shown = document.createElement("img");
+                    shown.src = book.cover_url;
+                    shown.alt = "Cover of " + book.title;
+                    shown.className = "h-full w-full object-cover";
+                    box.appendChild(shown);
+                };
+                probe.onerror = showInitial;
+                probe.src = book.cover_url;
+            } else {
+                showInitial();
+            }
+            return box;
+        }
+
+        function buildBookRow(book, label, accentBg) {
+            const row = document.createElement("div");
+            row.className = "flex items-start gap-4";
+
+            const coverWrap = document.createElement("div");
+            coverWrap.className = "shrink-0";
+            coverWrap.appendChild(buildBookCover(book, accentBg));
+
+            const info = document.createElement("div");
+            info.className = "min-w-0 flex-1";
+            info.innerHTML =
+                `<span class="${accentBg} border-brand-text mb-2 inline-block border-2 px-2 py-0.5 ` +
+                `text-sm font-bold uppercase">${label}</span>` +
+                `<p class="line-clamp-2 text-xl font-bold">${escapeHtml(book.title)}</p>` +
+                `<p class="truncate text-lg text-gray-600">by ${escapeHtml(book.author)}</p>` +
+                `<p class="text-lg font-bold">${book.page_count} pages</p>`;
+
+            row.appendChild(coverWrap);
+            row.appendChild(info);
+            return row;
+        }
+
+        function updateBookExtremes(stats) {
+            const card = document.getElementById("book-extremes-card");
+            if (!card) return;
+            const longest = stats.longest_book;
+            const shortest = stats.shortest_book;
+            // Only swap once we have a genuine pair — never flash an empty state.
+            if (!longest || !shortest) return;
+
+            card.innerHTML =
+                `<h2 class="mb-1 text-center text-2xl font-bold uppercase">Book Extremes</h2>` +
+                `<p class="mb-4 text-center text-base text-gray-500 italic">A ${stats.page_difference}-page ` +
+                `difference between your longest and shortest reads</p>` +
+                `<div class="flex flex-col gap-6" id="book-extremes-rows"></div>`;
+
+            const rows = card.querySelector("#book-extremes-rows");
+            rows.appendChild(buildBookRow(longest, "Longest", "bg-brand-orange"));
+            rows.appendChild(buildBookRow(shortest, "Shortest", "bg-brand-green"));
+        }
+
+        function applyEnrichmentUpdate(stats) {
+            if (!stats) return;
+            updateTopGenres(stats.top_genres, stats.unique_genres_count);
+            updateFictionNonfiction(stats.fiction_nonfiction_split);
+            updateBookExtremes(stats);
+        }
+
+        window.addEventListener("enrichment:update", (event) => applyEnrichmentUpdate(event.detail));
     });
 
     window.addEventListener("resize", updateVibeSeparators);

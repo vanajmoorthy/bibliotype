@@ -10,6 +10,7 @@ from django.db.models import Count, Q
 
 from ..cache_utils import safe_cache_get, safe_cache_set
 from ..dna_constants import CANONICAL_GENRE_MAP, GLOBAL_AVERAGES
+from ..services.dna.utils import _build_cover_url, _cover_initial
 from ..services.genre_classification import canonicalize_genre_names, count_fiction_nonfiction
 
 logger = logging.getLogger(__name__)
@@ -80,6 +81,34 @@ def _compute_enrichment_stats(user):
 
     mapped = [CANONICAL_GENRE_MAP.get(g, g) for g in all_genres]
 
+    # Book extremes (longest/shortest read). Mirror the generation-time logic in
+    # core/services/dna/__init__.py so live-poll values match the final render.
+    # Needs >= 2 books with a page count and a genuine spread, else stays None.
+    longest_book = None
+    shortest_book = None
+    page_difference = None
+    books_with_pages = [b for b in books if b.page_count]
+    if len(books_with_pages) >= 2:
+        books_with_pages.sort(key=lambda b: (-b.page_count, b.normalized_title))
+        longest = books_with_pages[0]
+        shortest = books_with_pages[-1]
+        if longest.page_count != shortest.page_count:
+            longest_book = {
+                "title": longest.title,
+                "author": longest.author.name,
+                "page_count": longest.page_count,
+                "cover_url": longest.cover_url or _build_cover_url(longest.isbn13),
+                "initial": _cover_initial(longest.title),
+            }
+            shortest_book = {
+                "title": shortest.title,
+                "author": shortest.author.name,
+                "page_count": shortest.page_count,
+                "cover_url": shortest.cover_url or _build_cover_url(shortest.isbn13),
+                "initial": _cover_initial(shortest.title),
+            }
+            page_difference = longest.page_count - shortest.page_count
+
     stats = {
         "total_pages_read": sum(page_counts) if page_counts else None,
         "avg_book_length": round(sum(page_counts) / len(page_counts)) if page_counts else None,
@@ -95,6 +124,9 @@ def _compute_enrichment_stats(user):
             else None
         ),
         "mainstream_score_percent": round((mainstream_count / total) * 100),
+        "longest_book": longest_book,
+        "shortest_book": shortest_book,
+        "page_difference": page_difference,
     }
 
     safe_cache_set(cache_key, stats, timeout=ENRICHMENT_STATS_CACHE_TTL)
@@ -118,6 +150,12 @@ def _recalculate_enrichment_stats(user, dna_data):
     dna_data["unique_genres_count"] = stats["unique_genres_count"]
     dna_data["fiction_nonfiction_split"] = stats["fiction_nonfiction_split"]
     dna_data["mainstream_score_percent"] = stats["mainstream_score_percent"]
+    # Only overwrite extremes once we have a genuine pair — never regress a
+    # populated Book Extremes card back to an empty/skeleton state mid-enrichment.
+    if stats["longest_book"] is not None:
+        dna_data["longest_book"] = stats["longest_book"]
+        dna_data["shortest_book"] = stats["shortest_book"]
+        dna_data["page_difference"] = stats["page_difference"]
 
 
 def _compute_enrichment_progress(user, profile, dna_data):

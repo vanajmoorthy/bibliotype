@@ -229,8 +229,12 @@ def enrichment_status_view(request):
             "total_pages_read": user_stats.get("total_pages_read", 0),
             "avg_book_length": user_stats.get("avg_book_length", 0),
             "top_genres": dna_data.get("top_genres", []),
+            "unique_genres_count": dna_data.get("unique_genres_count", 0),
             "mainstream_score_percent": dna_data.get("mainstream_score_percent", 0),
             "fiction_nonfiction_split": dna_data.get("fiction_nonfiction_split"),
+            "longest_book": dna_data.get("longest_book"),
+            "shortest_book": dna_data.get("shortest_book"),
+            "page_difference": dna_data.get("page_difference"),
         },
     })
 

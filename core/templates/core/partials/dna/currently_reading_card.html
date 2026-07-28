@@ -15,6 +15,7 @@
                                 src="{{ book.cover_url }}"
                                 alt="Cover of {{ book.title }}"
                                 class="absolute h-0 w-0 opacity-0"
+                                x-init="if ($el.complete) { imgLoaded = true; if ($el.naturalWidth < 10) imgFailed = true }"
                                 x-on:error="imgFailed = true"
                                 x-on:load="imgLoaded = true; if ($el.naturalWidth < 10) imgFailed = true"
                             />
