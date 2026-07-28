@@ -35,6 +35,7 @@ All three catch bare `Exception`, log a warning, and track via `track_redis_cach
 | `public_users_for_recs_sample` | 30min | recommendation_service | recommendation_service |
 | `dna_result_{task_id}` | 1hr | tasks.py (anonymous only) | tasks.py, views.py |
 | `session_key_{task_id}` | 1hr | tasks.py (anonymous only) | tasks.py |
+| `recommendations_pool_count` | 1hr | user_similarity_service | views/_helpers.py |
 | `community_means` | 10min | views.py | views.py |
 | `fresh_pct_{bl}_{br}_{bpy}_{py}` | 10min | views.py | views.py |
 

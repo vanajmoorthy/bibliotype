@@ -15,6 +15,28 @@ logger = logging.getLogger(__name__)
 
 ENRICHMENT_STATS_CACHE_TTL = 2  # seconds — short, since dashboard polls every 5s
 
+# Don't advertise the pool size until it's large enough to be flattering
+RECS_POOL_MIN_DISPLAY = 100
+
+
+def _friendly_floor(n):
+    """Round down to a display-friendly magnitude, so copy reads "over 230" not "over 237"."""
+    if n < 500:
+        return (n // 10) * 10
+    if n < 2000:
+        return (n // 50) * 50
+    return (n // 100) * 100
+
+
+def _get_recommendation_pool_display():
+    """Rounded-down eligible-reader count for "out of over X" copy, or None while the pool is small."""
+    from ..services.user_similarity_service import get_recommendation_pool_size
+
+    count = get_recommendation_pool_size()
+    if count < RECS_POOL_MIN_DISPLAY:
+        return None
+    return _friendly_floor(count)
+
 
 def _compute_enrichment_stats(user):
     """Compute enrichment-derived stats from DB in a single QuerySet pass.

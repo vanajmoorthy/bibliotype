@@ -14,7 +14,13 @@ from ..analytics.events import (
     track_recommendations_generated,
 )
 from ..cache_utils import safe_cache_add
-from ._helpers import BADGE_COLOR_MAP, _compute_enrichment_progress, _enrich_dna_for_display, _expand_book_dict
+from ._helpers import (
+    BADGE_COLOR_MAP,
+    _compute_enrichment_progress,
+    _enrich_dna_for_display,
+    _expand_book_dict,
+    _get_recommendation_pool_display,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -208,8 +214,11 @@ def display_dna_view(request):
             enrichment = progress
 
     recommendations_meta = {}
+    recommendations_pool_display = None
     if request.user.is_authenticated and user_profile:
         recommendations_meta = user_profile.recommendations_meta or {}
+        if recommendations_meta:
+            recommendations_pool_display = _get_recommendation_pool_display()
 
     # Flag to tell the template to poll for recommendations
     recommendations_pending = (
@@ -225,6 +234,7 @@ def display_dna_view(request):
         "is_processing": False,
         "recommendations": recommendations,
         "recommendations_meta": recommendations_meta,
+        "recommendations_pool_display": recommendations_pool_display,
         "recommendations_pending": recommendations_pending,
         "title": title,
         "enrichment": enrichment,
@@ -304,6 +314,9 @@ def public_profile_view(request, username):
             "heading_name": heading_name,
             "recommendations": recommendations,
             "recommendations_meta": profile.recommendations_meta or {},
+            "recommendations_pool_display": (
+                _get_recommendation_pool_display() if profile.recommendations_meta else None
+            ),
         }
         return render(request, "core/public_profile.html", context)
     except User.DoesNotExist:

@@ -394,6 +394,23 @@ def find_similar_users(user, top_n=30, min_similarity=0.15):
     return result
 
 
+def get_recommendation_pool_size():
+    """Count users eligible for similarity matching — same filter as find_similar_users."""
+    from ..cache_utils import safe_cache_get, safe_cache_set
+
+    cache_key = "recommendations_pool_count"
+    cached = safe_cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    count = User.objects.filter(
+        userprofile__dna_data__isnull=False,
+        userprofile__visible_in_recommendations=True,
+    ).count()
+    safe_cache_set(cache_key, count, 3600)
+    return count
+
+
 def calculate_anonymous_similarity_with_context(anonymous_session, user_ctx):
     """
     OPTIMIZED: Calculate similarity using pre-built user context.
