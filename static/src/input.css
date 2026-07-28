@@ -20,6 +20,7 @@
     --color-badge-2: #ecfdf5; /* Weak Match */
 
     --shadow-neo: 4px 4px 0px 0px var(--color-brand-text);
+    --shadow-neo-md: 3px 3px 0px 0px var(--color-brand-text);
     --shadow-neo-sm: 2px 2px 0px 0px var(--color-brand-text);
     --shadow-neo-xs: 1px 1px 0px 0px var(--color-brand-text);
 
@@ -75,7 +76,7 @@
 @utility neo-3d {
     position: relative;
     --neo-3d-size: 4px;
-    &:hover { --neo-3d-size: 2px; }
+    &:hover { --neo-3d-size: 3px; }
     &:active { --neo-3d-size: 0; }
 }
 
