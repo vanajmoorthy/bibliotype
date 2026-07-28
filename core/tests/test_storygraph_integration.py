@@ -295,6 +295,62 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
         data = response.json()
         self.assertTrue(data["year_any_missing"])
 
+    def _add_genres(self, book, genre_names):
+        from core.models import Genre
+
+        for name in genre_names:
+            genre, _ = Genre.objects.get_or_create(name=name)
+            book.genres.add(genre)
+
+    def test_updated_stats_includes_live_fields(self):
+        """The poll payload carries top_genres, unique_genres_count, and the
+        fiction/nonfiction split so those tiles can update live (PR1)."""
+        a = self._create_book("A", "9789000000030", attempted=True, page_count=300)
+        self._add_genres(a, ["fantasy"])  # fiction
+        b = self._create_book("B", "9789000000031", attempted=False, page_count=200)
+        self._add_genres(b, ["history"])  # non-fiction
+
+        response = self.client.get(reverse("core:api_enrichment_status"))
+        data = response.json()
+        self.assertTrue(data["pending"])
+
+        stats = data["updated_stats"]
+        self.assertIn("top_genres", stats)
+        self.assertEqual(stats["unique_genres_count"], 2)
+        split = stats["fiction_nonfiction_split"]
+        self.assertEqual(split["fiction_count"], 1)
+        self.assertEqual(split["nonfiction_count"], 1)
+        self.assertIn("defaulted_count", split)
+
+    def test_updated_stats_includes_book_extremes(self):
+        """Book extremes are derived from the DB and included in the poll payload
+        once at least two books have differing page counts."""
+        self._create_book("Long One", "9789000000032", attempted=True, page_count=500)
+        self._create_book("Short One", "9789000000033", attempted=False, page_count=120)
+
+        response = self.client.get(reverse("core:api_enrichment_status"))
+        stats = response.json()["updated_stats"]
+
+        self.assertIsNotNone(stats["longest_book"])
+        self.assertEqual(stats["longest_book"]["title"], "Long One")
+        self.assertEqual(stats["longest_book"]["page_count"], 500)
+        self.assertEqual(stats["shortest_book"]["title"], "Short One")
+        self.assertEqual(stats["shortest_book"]["page_count"], 120)
+        self.assertEqual(stats["page_difference"], 380)
+
+    def test_book_extremes_null_when_fewer_than_two_paged_books(self):
+        """With fewer than two books carrying a page count, extremes stay null so
+        the client keeps the skeleton rather than flashing an empty card."""
+        self._create_book("Only Paged", "9789000000034", attempted=True, page_count=300)
+        self._create_book("No Pages", "9789000000035", attempted=False, page_count=None)
+
+        response = self.client.get(reverse("core:api_enrichment_status"))
+        stats = response.json()["updated_stats"]
+
+        self.assertIsNone(stats["longest_book"])
+        self.assertIsNone(stats["shortest_book"])
+        self.assertIsNone(stats["page_difference"])
+
 
 @override_settings(
     CELERY_TASK_ALWAYS_EAGER=True,

@@ -105,6 +105,31 @@ class ComputeEnrichmentStatsTests(TestCase):
         self.assertEqual(result["total_pages_read"], 900)
         self.assertEqual(result["avg_book_length"], 300)
 
+    def test_book_extremes_computed_from_page_counts(self):
+        """Longest/shortest reads + page difference are derived from the DB books."""
+        self._add_book("Tiny", page_count=80)
+        self._add_book("Huge", page_count=640)
+        self._add_book("Middle", page_count=300)
+
+        result = _compute_enrichment_stats(self.user)
+
+        self.assertEqual(result["longest_book"]["title"], "Huge")
+        self.assertEqual(result["longest_book"]["page_count"], 640)
+        self.assertEqual(result["shortest_book"]["title"], "Tiny")
+        self.assertEqual(result["shortest_book"]["page_count"], 80)
+        self.assertEqual(result["page_difference"], 560)
+
+    def test_book_extremes_none_with_single_paged_book(self):
+        """Need at least two books with page counts, else extremes stay None."""
+        self._add_book("Solo", page_count=250)
+        self._add_book("NoPages")
+
+        result = _compute_enrichment_stats(self.user)
+
+        self.assertIsNone(result["longest_book"])
+        self.assertIsNone(result["shortest_book"])
+        self.assertIsNone(result["page_difference"])
+
     def test_cache_hit_within_ttl(self):
         """Second call within the cache window returns the cached dict without re-querying."""
         from core.cache_utils import safe_cache_set
@@ -308,3 +333,40 @@ class RecalculateEnrichmentStatsTests(TestCase):
         self.assertEqual(dna_data["user_stats"]["avg_book_length"], 200)
         self.assertEqual(dna_data["unique_genres_count"], 1)
         self.assertEqual(dna_data["mainstream_score_percent"], 0)
+
+    def _add_paged_book(self, title, page_count):
+        book = Book.objects.create(
+            title=title,
+            normalized_title=title.lower().replace(" ", ""),
+            author=self.author,
+            page_count=page_count,
+        )
+        UserBook.objects.create(user=self.user, book=book)
+        return book
+
+    def test_applies_book_extremes(self):
+        """Extremes derived from the DB are written onto dna_data."""
+        self._add_paged_book("Big", 500)
+        self._add_paged_book("Small", 100)
+
+        dna_data = {}
+        _recalculate_enrichment_stats(self.user, dna_data)
+
+        self.assertEqual(dna_data["longest_book"]["title"], "Big")
+        self.assertEqual(dna_data["shortest_book"]["title"], "Small")
+        self.assertEqual(dna_data["page_difference"], 400)
+
+    def test_extremes_not_regressed_when_data_insufficient(self):
+        """A populated Book Extremes card is never reset to empty mid-enrichment
+        when the DB temporarily has fewer than two paged books."""
+        self._add_paged_book("OnlyOne", 250)
+
+        dna_data = {
+            "longest_book": {"title": "Existing Long", "page_count": 900},
+            "shortest_book": {"title": "Existing Short", "page_count": 50},
+            "page_difference": 850,
+        }
+        _recalculate_enrichment_stats(self.user, dna_data)
+
+        self.assertEqual(dna_data["longest_book"]["title"], "Existing Long")
+        self.assertEqual(dna_data["page_difference"], 850)
