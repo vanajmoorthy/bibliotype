@@ -3,17 +3,21 @@
 
 {% block seo_title %}Bibliotype – {{ heading_name }} Reading DNA{% endblock %}
 
-{% block seo_description %}{% if dna %}View {{ title }} and literary personality. Discover their favourite genres, reading statistics, and book preferences.{% else %}{{ title }} profile.{% endif %}{% endblock %}
+{% block seo_description %}{% if dna %}View {{ title }} and literary personality. Discover their favourite genres,
+reading statistics, and book preferences.{% else %}{{ title }} profile.{% endif %}{% endblock %}
 
-{% block seo_keywords %}{{ heading_name }} reading DNA, {{ heading_name }} literary personality, reading profile, book analysis, reader type, reading statistics{% endblock %}
+{% block seo_keywords %}{{ heading_name }} reading DNA, {{ heading_name }} literary personality, reading profile, book
+analysis, reader type, reading statistics{% endblock %}
 
 {% block og_title %}{{ title }}{% endblock %}
 
-{% block og_description %}{% if dna %}Discover {{ title }} and their unique reading DNA, literary personality, favourite genres, and reading insights.{% else %}{{ title }} profile.{% endif %}{% endblock %}
+{% block og_description %}{% if dna %}Discover {{ title }} and their unique reading DNA, literary personality, favourite
+genres, and reading insights.{% else %}{{ title }} profile.{% endif %}{% endblock %}
 
 {% block twitter_title %}{{ title }}{% endblock %}
 
-{% block twitter_description %}{% if dna %}View {{ title }} and discover their literary personality.{% else %}{{ title }} profile.{% endif %}{% endblock %}
+{% block twitter_description %}{% if dna %}View {{ title }} and discover their literary personality.{% else %}{{ title }}
+profile.{% endif %}{% endblock %}
 
 {% block extra_head_js %}
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -111,7 +115,7 @@
 
                 {% if recommendations %}
                     {% with name=profile_user.first_name|default:profile_user.username %}
-                        {% include 'core/partials/dna/recommendations_grid.html' with rec_title="Recommended for "|add:name is_public_view=True pronoun_pos="their" %}
+                        {% include 'core/partials/dna/recommendations_grid.html' with rec_title="Recommended for "|add:name is_public_view=True pronoun_pos="their" pronoun_sub="them" %}
                     {% endwith %}
                 {% else %}
                     <div class="border-brand-text shadow-neo border-2 bg-white p-6">

@@ -62,8 +62,7 @@
     {% elif recommendations_meta.similar_users_count %}
         <p class="mb-4 text-base text-gray-500 italic">
             We found {{ recommendations_meta.similar_users_count }}
-            reader{{ recommendations_meta.similar_users_count|pluralize }} with taste similar to
-            {{ pronoun_pos|default:"your" }}.
+            reader{{ recommendations_meta.similar_users_count|pluralize }} with similar taste.
         </p>
     {% else %}
         <p class="mb-4 text-base text-gray-500 italic">Based on readers with similar taste</p>

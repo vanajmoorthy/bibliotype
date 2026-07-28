@@ -134,8 +134,27 @@ class RecommendationsGridRenderTests(TestCase):
     def test_stale_meta_falls_back_to_count_copy(self):
         # Old meta with no max_similarity_pct
         html = _render_grid({"similar_users_count": 12})
-        self.assertIn("12 readers with taste similar", html)
+        self.assertIn("12 readers with similar taste", html)
         self.assertNotIn("overlap", html)
+        # Must not dangle a possessive pronoun ("similar to their.")
+        self.assertNotIn("similar to their", html)
+        self.assertNotIn("similar to your", html)
+
+    @override_switch("uniqueness-badge", active=True)
+    def test_zero_match_public_uses_them(self):
+        # Public profile passes pronoun_sub="them"; must not say "reads like you"
+        html = _render_grid(
+            {
+                "max_similarity_pct": 0,
+                "similar_users_count": 0,
+                "uniqueness_label": "One of a kind",
+                "uniqueness_color": "bg-brand-pink",
+            },
+            pronoun_pos="their",
+            pronoun_sub="them",
+        )
+        self.assertIn("Hardly anyone reads like them", html)
+        self.assertNotIn("reads like you", html)
 
     @override_switch("uniqueness-badge", active=True)
     def test_badge_rendered_when_switch_on(self):
