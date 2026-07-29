@@ -1,10 +1,12 @@
-"""Profile settings views: privacy, display name, and recommendation-visibility updates."""
+"""Profile settings views: privacy, display name, email, password, account deletion, and recommendation-visibility."""
 
 import json
 import logging
 
 from django.contrib import messages
+from django.contrib.auth import logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
@@ -13,11 +15,16 @@ from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 from django_ratelimit.exceptions import Ratelimited
 
-from ..analytics.events import track_profile_made_public, track_settings_updated
+from ..analytics.events import track_account_deleted, track_profile_made_public, track_settings_updated
 from ..cache_utils import safe_cache_delete
-from ..forms import UpdateDisplayNameForm
+from ..forms import ChangePasswordForm, UpdateDisplayNameForm, UpdateEmailForm
 
 logger = logging.getLogger(__name__)
+
+
+def _wants_json(request):
+    """Return True when the caller expects a JSON response (AJAX fetch)."""
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
 
 @login_required
@@ -29,18 +36,22 @@ def update_privacy_view(request):
     profile.save()
 
     if is_public:
-        # Track profile made public
         track_profile_made_public(request.user.id)
 
         public_url = request.build_absolute_uri(
             reverse("core:public_profile", kwargs={"username": request.user.username})
         )
+        if _wants_json(request):
+            return JsonResponse({"status": "success", "is_public": True, "public_url": public_url})
+
         message_text = render_to_string(
             "core/partials/messages_with_link.html",
             {"public_url": public_url, "username": request.user.username},
         )
         messages.success(request, message_text)
     else:
+        if _wants_json(request):
+            return JsonResponse({"status": "success", "is_public": False})
         messages.success(request, "Your profile is now private.")
 
     if "dna_data" in request.session:
@@ -55,7 +66,6 @@ def update_display_name_view(request):
     form = UpdateDisplayNameForm(request.POST, user=request.user, instance=request.user)
     if form.is_valid():
         form.save()
-        # Track settings update
         track_settings_updated(request.user.id, setting_type="display_name")
         messages.success(request, "Your display name has been updated!")
     else:
@@ -110,13 +120,9 @@ def update_recommendation_visibility(request):
     profile.visible_in_recommendations = is_visible
     profile.save()
 
-    # Invalidate caches keyed on this user's recommendation/similarity output so
-    # the toggle takes effect immediately (US-024c).
     safe_cache_delete(f"user_recommendations_{request.user.id}")
     safe_cache_delete(f"similar_users_{request.user.id}")
 
-    # When opting OUT, also flush the candidate-pool cache so the user is
-    # dropped from other readers' similarity searches on the next refresh.
     if was_visible and not is_visible:
         safe_cache_delete("public_users_for_recs_sample")
         logger.info(
@@ -124,8 +130,15 @@ def update_recommendation_visibility(request):
             extra={"user_id": request.user.id},
         )
 
-    # Track settings update
     track_settings_updated(request.user.id, setting_type="recommendation_visibility")
+
+    if _wants_json(request):
+        msg = (
+            "You are now visible as a recommendation source to similar readers!"
+            if is_visible
+            else "You've opted out of being shown as a recommendation source."
+        )
+        return JsonResponse({"status": "success", "visible_in_recommendations": is_visible, "message": msg})
 
     if is_visible:
         messages.success(request, "You are now visible as a recommendation source to similar readers!")
@@ -133,3 +146,88 @@ def update_recommendation_visibility(request):
         messages.success(request, "You've opted out of being shown as a recommendation source.")
 
     return redirect("core:display_dna")
+
+
+@login_required
+@require_POST
+def update_email_view(request):
+    """Change the authenticated user's email address."""
+    form = UpdateEmailForm(request.POST, user=request.user)
+    if form.is_valid():
+        request.user.email = form.cleaned_data["email"]
+        request.user.save(update_fields=["email"])
+        track_settings_updated(request.user.id, setting_type="email")
+
+        if _wants_json(request):
+            return JsonResponse({"status": "success", "message": "Email updated successfully."})
+
+        messages.success(request, "Your email has been updated.")
+        return redirect("core:display_dna")
+
+    if _wants_json(request):
+        errors = [msg for field_errors in form.errors.values() for msg in field_errors]
+        return JsonResponse({"status": "error", "message": errors[0] if errors else "Invalid email."}, status=400)
+
+    for error in form.errors.values():
+        messages.error(request, error)
+    return redirect("core:display_dna")
+
+
+@login_required
+@require_POST
+def change_password_view(request):
+    """Change the authenticated user's password while keeping the session alive."""
+    form = ChangePasswordForm(request.POST, user=request.user)
+    if form.is_valid():
+        user = request.user
+        user.set_password(form.cleaned_data["new_password1"])
+        user.save()
+        update_session_auth_hash(request, user)
+        track_settings_updated(user.id, setting_type="password")
+
+        if _wants_json(request):
+            return JsonResponse({"status": "success", "message": "Password changed successfully."})
+
+        messages.success(request, "Your password has been changed.")
+        return redirect("core:display_dna")
+
+    if _wants_json(request):
+        errors = [msg for field_errors in form.errors.values() for msg in field_errors]
+        return JsonResponse({"status": "error", "message": errors[0] if errors else "Invalid input."}, status=400)
+
+    for error in form.errors.values():
+        messages.error(request, error)
+    return redirect("core:display_dna")
+
+
+@login_required
+@require_POST
+def delete_account_view(request):
+    """Permanently delete the authenticated user's account after double verification."""
+    confirmation = request.POST.get("confirmation", "")
+    password = request.POST.get("password", "")
+    user = request.user
+
+    if confirmation != "DELETE":
+        if _wants_json(request):
+            return JsonResponse({"status": "error", "message": "Please type DELETE to confirm."}, status=400)
+        messages.error(request, "Please type DELETE to confirm.")
+        return redirect("core:display_dna")
+
+    if not user.check_password(password):
+        if _wants_json(request):
+            return JsonResponse({"status": "error", "message": "Incorrect password."}, status=400)
+        messages.error(request, "Incorrect password.")
+        return redirect("core:display_dna")
+
+    # Capture UID before deletion so the analytics event can still fire
+    uid = user.id
+    track_account_deleted(uid)
+    logout(request)
+    User.objects.filter(pk=uid).delete()
+
+    if _wants_json(request):
+        return JsonResponse({"status": "success", "redirect": reverse("core:home")})
+
+    messages.success(request, "Your account has been permanently deleted.")
+    return redirect("core:home")
