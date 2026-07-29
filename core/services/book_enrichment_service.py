@@ -17,6 +17,21 @@ logger = logging.getLogger(__name__)
 
 GOOGLE_BOOKS_API_KEY = os.getenv("GOOGLE_BOOKS_API_KEY")
 
+
+def _redact_api_key(text):
+    """Strip the Google Books API key from anything we log or persist.
+
+    requests embeds the full request URL (including `&key=...`) in its
+    exception string, so error logs and analytics error_messages would
+    otherwise leak the key in plaintext.
+    """
+    if not text:
+        return text
+    text = str(text)
+    if GOOGLE_BOOKS_API_KEY:
+        text = text.replace(GOOGLE_BOOKS_API_KEY, "***REDACTED***")
+    return text
+
 # US-027b: Precompile alias regexes at import time so we don't re-run
 # `re.compile(r"\b" + re.escape(alias) + r"\b")` once per book per alias.
 # Longest aliases first so e.g. "science fiction" beats "science".
@@ -168,12 +183,14 @@ def _fetch_from_open_library(book, session, slow_down=False, quick_mode=False):
     the book is missing page count/publisher/year data.
 
     quick_mode=True (inline enrichment during DNA calculation) uses reduced
-    HTTP timeouts: 2s for search, 1.5s for work/edition/isbn detail endpoints.
+    HTTP timeouts: 5s for search, 4s for work/edition/isbn detail endpoints.
+    Open Library regularly answers in 2-3s, so the previous 1.5s detail budget
+    timed out almost every call.
     """
     logger.debug(f"Querying Open Library for '{book.title}'")
 
-    search_timeout = 2 if quick_mode else 10
-    detail_timeout = 1.5 if quick_mode else 5
+    search_timeout = 5 if quick_mode else 10
+    detail_timeout = 4 if quick_mode else 5
 
     book_details = {
         "genres": [],
@@ -269,7 +286,7 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
     Google Books categories are often more accurate than Open Library subjects.
     Returns a dictionary of data and the number of API calls made (always 1 or 0).
 
-    quick_mode=True uses a reduced 2s HTTP timeout for inline enrichment.
+    quick_mode=True uses a reduced 5s HTTP timeout for inline enrichment.
     """
     if not GOOGLE_BOOKS_API_KEY:
         return {}, 0  # No API key, so no call is made
@@ -285,7 +302,7 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
     url = f"https://www.googleapis.com/books/v1/volumes?q={query}&key={GOOGLE_BOOKS_API_KEY}"
 
     try:
-        res = session.get(url, timeout=2 if quick_mode else 10)
+        res = session.get(url, timeout=5 if quick_mode else 10)
 
         if slow_down:
             _throttle()
@@ -329,9 +346,13 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
         return result, 1
 
     except requests.RequestException as e:
-        logger.error(f"Google Books API Error for '{book.title}': {e}")
+        # str(e) contains the request URL, which carries &key=... — redact before logging/persisting.
+        safe_error = _redact_api_key(e)
+        logger.error(f"Google Books API Error for '{book.title}': {safe_error}")
         status_code = getattr(e.response, "status_code", None) if hasattr(e, "response") else None
-        track_external_api_call("google_books", book.pk, book.title, "error", status_code=status_code, error_message=str(e))
+        track_external_api_call(
+            "google_books", book.pk, book.title, "error", status_code=status_code, error_message=safe_error
+        )
         return {}, 1
 
 
@@ -341,8 +362,8 @@ def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
     It orchestrates the calls to the different APIs, but only if data is missing.
     Returns the updated book object and the total number of API calls made.
 
-    quick_mode=True reduces internal HTTP timeouts (2s OL search, 1.5s OL
-    work/edition, 2s Google Books) for inline enrichment during DNA calculation,
+    quick_mode=True reduces internal HTTP timeouts (5s OL search, 4s OL
+    work/edition, 5s Google Books) for inline enrichment during DNA calculation,
     where a single slow API response must not stall the whole upload.
     """
     ol_api_calls = 0
