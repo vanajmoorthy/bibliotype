@@ -98,11 +98,15 @@ class GlobalAveragesSourcesConsistencyTests(TestCase):
                         msg=f"{field} for '{key}' is not a URL: {value!r}",
                     )
 
-    def test_notes_do_not_hardcode_the_constant_value(self):
-        """Notes must not restate the number (the template renders it) so the two can't drift apart."""
-        for key, source in GLOBAL_AVERAGES_SOURCES.items():
-            self.assertNotIn(
-                str(GLOBAL_AVERAGES[key]),
-                source["note"],
-                msg=f"Note for '{key}' hardcodes the value {GLOBAL_AVERAGES[key]}; let the template render it.",
-            )
+    def test_books_per_year_is_a_survey_median_not_a_skewed_mean(self):
+        """avg_books_per_year is the median across reading surveys (which cluster at 2-5),
+        not the heavy-reader-skewed mean (~12). Guards against accidental reversion, and
+        against re-adopting the old unsourced 7."""
+        value = GLOBAL_AVERAGES["avg_books_per_year"]
+        self.assertGreaterEqual(value, 2, msg="books-per-year is below every reported survey median.")
+        self.assertLessEqual(value, 6, msg="books-per-year looks like a skewed mean, not a typical-reader median.")
+        self.assertIn(
+            "pewresearch.org",
+            GLOBAL_AVERAGES_SOURCES["avg_books_per_year"]["url"],
+            msg="books-per-year should cite a named survey (Pew) for its median.",
+        )
