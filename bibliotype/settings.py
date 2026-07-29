@@ -184,6 +184,10 @@ AUTH_PASSWORD_VALIDATORS = [
 
 TEST_RUNNER = "bibliotype.runner.ForceDisconnectTestRunner"
 
+# @login_required redirects here; without this Django falls back to
+# /accounts/login/, which 404s (our login lives at /login/).
+LOGIN_URL = "core:login"
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
@@ -208,7 +212,17 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
-STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
+# Content-hashed static filenames (output.<hash>.css) so CDN/browser caches
+# can't serve stale assets across deploys. NOTE: the legacy STATICFILES_STORAGE
+# setting this replaces was removed in Django 5.1 and silently ignored — it
+# must live in STORAGES. Gated on DJANGO_ENV rather than DEBUG: the test
+# runner forces DEBUG=False, and manifest storage would 500 every template
+# render in tests/CI, where collectstatic never runs.
+if _django_env == "production":
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"},
+    }
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

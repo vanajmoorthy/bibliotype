@@ -705,3 +705,21 @@ class UploadValidationTests(TransactionTestCase):
 
         self.assertEqual(response.status_code, 302)
         mock_task.delay.assert_called_once()
+
+
+class LoginUrlRedirectTests(TransactionTestCase):
+    """Anonymous hits to @login_required endpoints must redirect to our real
+    login page, not Django's default /accounts/login/ (which 404s here)."""
+
+    def test_anonymous_enrichment_status_redirects_to_login(self):
+        response = self.client.get(reverse("core:api_enrichment_status"))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            response.url.startswith(reverse("core:login")),
+            f"expected redirect into {reverse('core:login')}, got {response.url}",
+        )
+
+    def test_anonymous_logout_redirects_to_login(self):
+        response = self.client.get(reverse("core:logout"))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith(reverse("core:login")))
