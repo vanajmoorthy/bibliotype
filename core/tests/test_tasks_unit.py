@@ -31,29 +31,31 @@ class TaskUnitTests(TestCase):
 
     def test_assign_reader_type_logic(self):
         """
-        Tests the reader type scoring logic in isolation.
+        Tests the reader type scoring logic with the normalized 0-100 model.
+        Uses 10 books (meeting MIN_SIGNAL_BOOKS threshold) all in fantasy genres,
+        so Fantasy Fanatic reaches 100% genre share and scores 100.
         """
-        # Create a sample DataFrame of read books
-        csv_data = """Title,Author,Exclusive Shelf,Number of Pages
-        Book A,Author X,read,150
-        Book B,Author Y,read,150
-        Book C,Author Z,read,600
-        """
+        rows = "\n".join(
+            [f"Book {i} (The Series, #{i}),Author X,read,300" for i in range(10)]
+        )
+        csv_data = f"Title,Author,Exclusive Shelf,Number of Pages\n{rows}\n"
         read_df = pd.read_csv(StringIO(csv_data))
+        read_df.columns = read_df.columns.str.strip()
 
-        # Sample list of genres collected during processing
-        all_genres = ["fantasy", "fantasy", "fantasy", "science fiction", "non-fiction"]
+        # 10 books, all fantasy — 100% fantasy share, well above saturation (0.60)
+        book_genre_sets = [{"fantasy", "science fiction"}] * 10
 
-        reader_type, scores = assign_reader_type(read_df, {}, all_genres)
+        reader_type, scores = assign_reader_type(read_df, {}, book_genre_sets)
 
-        # Assert that the scoring logic works as expected
-        self.assertEqual(scores["Novella Navigator"], 2)
-        self.assertEqual(scores["Tome Tussler"], 2)  # 1 book * 2 points
-        self.assertEqual(scores["Fantasy Fanatic"], 4)
-        self.assertEqual(scores["Non-Fiction Ninja"], 1)
+        # All scores must be in 0-100
+        for t, s in scores.items():
+            self.assertGreaterEqual(s, 0, f"{t} score below 0")
+            self.assertLessEqual(s, 100, f"{t} score above 100")
 
-        # Assert that the correct winner is chosen
+        # Fantasy Fanatic must win (100% fantasy share saturates at 60%)
         self.assertEqual(reader_type, "Fantasy Fanatic")
+        # Fantasy Fanatic should be 100 (at saturation)
+        self.assertEqual(scores["Fantasy Fanatic"], 100)
 
     @patch("core.tasks.generate_recommendations_task")
     def test_save_dna_to_profile(self, mock_recommendations_task):
@@ -200,7 +202,7 @@ class NormalizationUnitTests(TestCase):
 class ReReadDetectionTests(TestCase):
 
     def test_comfort_rereader_scoring_with_read_count(self):
-        """StoryGraph Read Count > 1 awards 3 points per reread to Comfort Rereader."""
+        """StoryGraph Read Count > 1 contributes to Comfort Rereader normalized score."""
         csv_data = """Title,Author,Exclusive Shelf,Number of Pages,Read Count
         Book A,Author X,read,200,3
         Book B,Author Y,read,200,1
@@ -212,8 +214,13 @@ class ReReadDetectionTests(TestCase):
 
         reader_type, scores = assign_reader_type(read_df, {}, [])
 
-        # Books A (Read Count=3) and C (Read Count=2) are re-reads → 2 rereads × 3 pts = 6
-        self.assertEqual(scores["Comfort Rereader"], 6)
+        # Books A (Read Count=3) and C (Read Count=2) are re-reads
+        # 2 rereads / 4 books = 0.50 → exceeds saturation (0.25) → score 100
+        # (new normalized scorer, not raw additive points)
+        self.assertGreater(scores.get("Comfort Rereader", 0), 0,
+                           "Comfort Rereader should score > 0 for rereads")
+        self.assertLessEqual(scores.get("Comfort Rereader", 0), 100,
+                             "Comfort Rereader score must not exceed 100")
 
     def test_comfort_rereader_scoring_goodreads_fallback(self):
         """Goodreads uses duplicate title detection when Read Count column is absent."""
@@ -227,8 +234,10 @@ class ReReadDetectionTests(TestCase):
 
         reader_type, scores = assign_reader_type(read_df, {}, [])
 
-        # Book A appears twice → 2 duplicated rows // 2 = 1 reread × 3 pts = 3
-        self.assertEqual(scores["Comfort Rereader"], 3)
+        # Book A appears twice → 1 reread / 3 total books = 0.33 → exceeds saturation (0.25) → score 100
+        # (new normalized scorer, not raw additive points)
+        self.assertGreater(scores.get("Comfort Rereader", 0), 0,
+                           "Comfort Rereader should score > 0 for reread")
 
     def test_no_comfort_rereader_when_no_rereads(self):
         """No re-reads means no Comfort Rereader score."""

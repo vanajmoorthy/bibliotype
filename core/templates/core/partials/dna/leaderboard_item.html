@@ -3,5 +3,5 @@
     <span class="font-bold text-xl mr-4">#{{ forloop.counter }}</span>
     <span class="font-bold">{{ item.type }}</span>
   </div>
-  <div class="font-bold px-3 py-1 border-2 {{ bordercolor }} bg-white">{{ item.score }}</div>
+  <div class="font-bold px-3 py-1 border-2 {{ bordercolor }} bg-white">{% if is_pct %}{{ item.score }}%{% else %}{{ item.score }}{% endif %}</div>
 </li>

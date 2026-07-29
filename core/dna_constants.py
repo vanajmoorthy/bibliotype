@@ -26,7 +26,7 @@ READER_TYPE_DESCRIPTIONS = {
         "You love to get lost in sprawling epics and complex narratives, as shown by the number of lengthy tomes you've conquered.",
         "Your results show a clear pattern of tackling the biggest books on the shelf. You're a true heavyweight reader.",
     ],
-    "Classic Collector": [
+    "Classics Collector": [
         "You have a great appreciation for the classics. A notable part of your reading list was published before 1970.",
         "Your reading habits show a journey through literary history, with a strong focus on timeless, classic works.",
         "You frequently read books that have stood the test of time, building a library of foundational literary classics.",
@@ -69,9 +69,124 @@ READER_TYPE_DESCRIPTIONS = {
         "Some readers race through new titles — you prefer to deepen your relationship with books that matter to you. Your rereads speak volumes.",
         "Your library isn't just a collection of books read once. You return to stories like old friends, finding new meaning with each visit.",
     ],
+    "Mystery Maven": [
+        "You live for the plot twist. Your library is packed with mysteries and thrillers that keep you guessing until the final page.",
+        "Clues, red herrings, and locked rooms — your reading history reads like a detective's case file.",
+        "You have a nose for suspense. Whodunits and thrillers dominate your shelves.",
+    ],
+    "Romance Reveller": [
+        "You believe every great story deserves a great love story. Romance is the beating heart of your library.",
+        "Meet-cutes, slow burns, and happily-ever-afters — your reading history shows a devotion to romance in all its forms.",
+        "Your shelves are full of butterflies. You consistently choose books where love takes centre stage.",
+    ],
+    "History Hound": [
+        "You read to time travel. Histories, biographies, and historical fiction fill your library with other eras.",
+        "Your bookshelf is a museum. You're drawn to the stories of real people and vanished worlds.",
+        "From ancient empires to lives lived a century ago, your reading shows a deep fascination with the past.",
+    ],
+    "Series Slayer": [
+        "Why read one book when there are seven? Your library shows a serious commitment to finishing entire series.",
+        "You don't just visit fictional worlds — you move in. Sequels and sagas dominate your reading history.",
+        "Book one is never enough. You binge series the way other people binge TV.",
+    ],
+    "Literary Luminary": [
+        "You gravitate toward the beautifully written. Literary fiction is the backbone of your library.",
+        "Prize lists and prose stylists — your reading history shows a taste for serious fiction.",
+        "Your shelves favour character over plot and sentences worth rereading. A true literary reader.",
+    ],
+    "Sonnet Slinger": [
+        "You make space for verse in a prose-heavy world. Poetry collections appear again and again in your library.",
+        "Line breaks, imagery, and compression — your reading history shows a rare devotion to poetry.",
+    ],
     "Eclectic Reader": [
         "Your reading habits are balanced and wide-ranging, with no single trait dominating the others. You are a true eclectic reader!",
     ],
+}
+
+
+# Normalized 0-100 scoring constants for assign_reader_type v2
+MIN_WINNING_SCORE = 30
+MIN_SIGNAL_BOOKS = 10
+
+
+def score_ramp(value: float, floor: float, saturation: float) -> int:
+    """Linearly map value in [floor, saturation] to 0-100, clamped."""
+    if saturation <= floor:
+        return 0
+    return round(100 * min(max((value - floor) / (saturation - floor), 0.0), 1.0))
+
+
+# (floor, saturation) tuples for each reader type's normalized 0-100 score
+READER_TYPE_THRESHOLDS = {
+    "Fantasy Fanatic":         (0.30, 0.70),   # floor raised: 30%+ speculative fiction needed
+    "Mystery Maven":           (0.20, 0.60),
+    "Romance Reveller":        (0.15, 0.50),
+    "History Hound":           (0.20, 0.55),
+    "Literary Luminary":       (0.10, 0.40),
+    "Sonnet Slinger":          (0.05, 0.25),
+    "Non-Fiction Ninja":       (0.15, 0.50),
+    "Philosophical Philomath": (0.05, 0.25),
+    "Nature Nut Case":         (0.05, 0.25),
+    "Social Savant":           (0.08, 0.30),
+    "Self Help Scholar":       (0.08, 0.30),
+    "Tome Tussler":            (0.10, 0.45),
+    "Novella Navigator":       (0.10, 0.45),
+    "Classics Collector":      (0.15, 0.45),   # floor raised: 15%+ pre-1970 needed
+    "Modern Maverick":         (0.45, 0.85),
+    "Small Press Supporter":   (0.35, 0.75),
+    "Comfort Rereader":        (0.03, 0.25),
+    "Series Slayer":           (0.25, 0.70),
+    "Rapacious Reader":        (25.0, 80.0),   # raw books/year, not fraction
+    "Versatile Valedictorian": (6.0, 14.0),    # raw count of solid genres
+}
+
+# Tiebreak order: most-specific/niche first, so a rarer identity beats a broad one on exact ties
+READER_TYPE_TIEBREAK_ORDER = [
+    "Sonnet Slinger",
+    "Philosophical Philomath",
+    "Nature Nut Case",
+    "Self Help Scholar",
+    "Social Savant",
+    "Comfort Rereader",
+    "Series Slayer",
+    "Novella Navigator",
+    "Tome Tussler",
+    "Classics Collector",
+    "Small Press Supporter",
+    "Literary Luminary",
+    "Mystery Maven",
+    "Romance Reveller",
+    "History Hound",
+    "Fantasy Fanatic",
+    "Non-Fiction Ninja",
+    "Modern Maverick",
+    "Rapacious Reader",
+    "Versatile Valedictorian",
+]
+
+READER_TYPE_COLORS = {
+    "Fantasy Fanatic":         "purple",
+    "Philosophical Philomath": "purple",
+    "Literary Luminary":       "purple",
+    "Eclectic Reader":         "purple",
+    "Rapacious Reader":        "yellow",
+    "Modern Maverick":         "yellow",
+    "Series Slayer":           "yellow",
+    "Versatile Valedictorian": "yellow",
+    "Tome Tussler":            "orange",
+    "History Hound":           "orange",
+    "Classics Collector":      "orange",
+    "Classic Collector":       "orange",   # legacy name mapping
+    "Romance Reveller":        "pink",
+    "Comfort Rereader":        "pink",
+    "Sonnet Slinger":          "pink",
+    "Mystery Maven":           "cyan",
+    "Non-Fiction Ninja":       "cyan",
+    "Social Savant":           "cyan",
+    "Novella Navigator":       "cyan",
+    "Nature Nut Case":         "green",
+    "Self Help Scholar":       "green",
+    "Small Press Supporter":   "green",
 }
 
 

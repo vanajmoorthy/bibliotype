@@ -90,32 +90,60 @@ class Command(BaseCommand):
             # Convert to list of lists for JSON serialization
             new_top_genres_serializable = [[g, c] for g, c in new_top_genres]
 
-            # Recalculate reader type scores (simplified — uses genre counts only)
-            # Full assign_reader_type requires a DataFrame, but genre scores are the main thing affected
-            genre_counts = Counter(mapped_genres)
+            # Recalculate reader type using the shared scoring function.
+            # NOTE: Raw CSV signals (Title for series detection, Read Count for rereads)
+            # are unavailable here — only enriched Book data and genres are accessible.
+            # Series Slayer and Comfort Rereader scores are carried forward from the
+            # stored reader_type_scores since their signals require the original CSV.
+            # Full accuracy restores on the user's next re-upload.
+            import pandas as _pd
+            from core.services.dna.reader_type import assign_reader_type as _assign_reader_type
+            from core.dna_constants import MIN_WINNING_SCORE as _MIN_WIN, READER_TYPE_TIEBREAK_ORDER as _TIEBREAK
+
+            rows = []
+            book_genre_sets_regen = []
+            enriched_data_regen = {}
+            for ub in user_books:
+                b = ub.book
+                rows.append({
+                    "Title": b.title or "",
+                    "Number of Pages": b.page_count,
+                    "Date Read": ub.date_read,
+                })
+                book_genre_sets_regen.append({g.name for g in b.genres.all()})
+                if b.title:
+                    enriched_data_regen[b.title] = {
+                        "publish_year": b.publish_year,
+                        "publisher": b.publisher,
+                    }
+
+            regen_df = _pd.DataFrame(rows) if rows else _pd.DataFrame(columns=["Title", "Number of Pages", "Date Read"])
+            if not regen_df.empty and "Date Read" in regen_df.columns:
+                regen_df["Date Read"] = _pd.to_datetime(regen_df["Date Read"], errors="coerce")
+
+            new_reader_type, new_scores_counter = _assign_reader_type(regen_df, enriched_data_regen, book_genre_sets_regen)
+
+            # Carry forward CSV-only signals from stored scores
             old_scores = profile.dna_data.get("reader_type_scores", {})
-            # Rebuild genre-based scores on top of existing scores
-            scores = Counter(old_scores)
-            # Zero out genre-based scores before recalculating
-            genre_types = [
-                "Fantasy Fanatic",
-                "Non-Fiction Ninja",
-                "Philosophical Philomath",
-                "Nature Nut Case",
-                "Social Savant",
-                "Self Help Scholar",
-            ]
-            for gt in genre_types:
-                scores[gt] = 0
+            scores = Counter(new_scores_counter)
+            for carry_type in ("Series Slayer", "Comfort Rereader"):
+                if carry_type in old_scores and carry_type not in scores:
+                    scores[carry_type] = old_scores[carry_type]
 
-            scores["Fantasy Fanatic"] += genre_counts.get("fantasy", 0) + genre_counts.get("science fiction", 0)
-            scores["Non-Fiction Ninja"] += genre_counts.get("non-fiction", 0)
-            scores["Philosophical Philomath"] += genre_counts.get("philosophy", 0)
-            scores["Nature Nut Case"] += genre_counts.get("nature", 0)
-            scores["Social Savant"] += genre_counts.get("social science", 0)
-            scores["Self Help Scholar"] += genre_counts.get("self-help", 0)
+            # Re-run winner selection with carry-forward scores included
+            if scores and scores.most_common(1)[0][1] >= _MIN_WIN:
+                top_score = scores.most_common(1)[0][1]
+                tied = [t for t, s in scores.items() if s == top_score]
 
-            new_reader_type = scores.most_common(1)[0][0] if scores else profile.dna_data.get("reader_type", "")
+                def _tiebreak_key(t):
+                    try:
+                        return _TIEBREAK.index(t)
+                    except ValueError:
+                        return len(_TIEBREAK)
+                new_reader_type = min(tied, key=_tiebreak_key)
+            else:
+                new_reader_type = "Eclectic Reader"
+
             new_top_types = [{"type": t, "score": s} for t, s in scores.most_common(3) if s > 0]
 
             # Recalculate mainstream score

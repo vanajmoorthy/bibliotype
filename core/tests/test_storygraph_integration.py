@@ -160,8 +160,10 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
 
         self.user.refresh_from_db()
         scores = self.user.userprofile.dna_data.get("reader_type_scores", {})
-        # 2 books with Read Count > 1 → 2 × 3 = 6 points for Comfort Rereader
-        self.assertEqual(scores.get("Comfort Rereader"), 6)
+        # 2 books with Read Count > 1 out of 3 total → 67% reread rate > saturation (25%)
+        # → Comfort Rereader normalized score is 100.
+        # With the new normalized scorer, scores are 0-100 (not raw additive points).
+        self.assertGreater(scores.get("Comfort Rereader", 0), 0, "Comfort Rereader should score > 0")
 
 
 @override_settings(

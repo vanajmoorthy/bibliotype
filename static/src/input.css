@@ -183,3 +183,32 @@ ol.list-decimal {
 html {
     overflow-y: scroll;
 }
+
+/* ── Reader-type banner colours ─────────────────────────────────────────────
+   Hand-written (not Tailwind-scanned) so class names built from Python data
+   are always present. Each variant sets --banner-color; .pixel-banner consumes it.
+   Pattern: .pixel-banner.reader-banner--{token}
+   ──────────────────────────────────────────────────────────────────────────*/
+.reader-banner--yellow { --banner-color: var(--color-brand-yellow); }
+.reader-banner--orange { --banner-color: var(--color-brand-orange); }
+.reader-banner--pink   { --banner-color: var(--color-brand-pink); }
+.reader-banner--cyan   { --banner-color: var(--color-brand-cyan); }
+.reader-banner--green  { --banner-color: var(--color-brand-green); }
+.reader-banner--purple { --banner-color: var(--color-brand-purple); }
+
+/* Pixel-square banner: two offset checkerboards layered over the type colour.
+   Lighter mix (78% colour + white) and darker mix (92% colour + brand-text)
+   at different scales produce a dithered pixel texture matching the VT323 aesthetic.
+   Solid background-color is the baseline fallback for browsers without conic-gradient. */
+.pixel-banner {
+    background-color: var(--banner-color, var(--color-brand-purple));
+    background-image:
+        repeating-conic-gradient(
+            color-mix(in srgb, var(--banner-color, var(--color-brand-purple)) 78%, white) 0% 25%,
+            transparent 0% 50%),
+        repeating-conic-gradient(
+            color-mix(in srgb, var(--banner-color, var(--color-brand-purple)) 92%, var(--color-brand-text)) 0% 25%,
+            transparent 0% 50%);
+    background-size: 1.5rem 1.5rem, 0.75rem 0.75rem;
+    background-position: 0 0, 0.375rem 0.375rem;
+}
