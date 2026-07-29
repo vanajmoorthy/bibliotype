@@ -212,7 +212,14 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
-STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
+# Content-hashed static filenames (output.<hash>.css) so CDN/browser caches
+# can't serve stale assets across deploys. NOTE: the legacy STATICFILES_STORAGE
+# setting this replaces was removed in Django 5.1 and silently ignored — it
+# must live in STORAGES. Hashing only applies when DEBUG=False (prod).
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"},
+}
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
