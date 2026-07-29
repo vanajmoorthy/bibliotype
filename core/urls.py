@@ -10,6 +10,7 @@ urlpatterns = [
     path("sitemap.xml", views.sitemap_xml_view, name="sitemap_xml"),
     path("", views.home_view, name="home"),
     path("about/", views.about_view, name="about"),
+    path("methodology/", views.methodology_view, name="methodology"),
     path("privacy/", views.privacy_view, name="privacy"),
     path("terms/", views.terms_view, name="terms"),
     path("upload/", views.upload_view, name="upload"),

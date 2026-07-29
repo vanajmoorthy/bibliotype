@@ -1646,6 +1646,21 @@ GLOBAL_AVERAGES = {
     "avg_publish_year": 2009,
 }
 
+GLOBAL_AVERAGES_SOURCES = {
+    "avg_book_length_pages": {
+        "url": "https://wordsrated.com/book-length-statistics/",
+        "title": "WordsRated — Book Length Statistics",
+    },
+    "avg_publish_year": {
+        "url": "https://ammar-alyousfi.com/2020/goodreads-books-statistics",
+        "title": "Ammar Al-Yousfi — Goodreads Books Statistics",
+    },
+    "avg_books_per_year": {
+        "url": "https://wordsrated.com/reading-statistics/",
+        "title": "WordsRated — Reading Statistics",
+    },
+}
+
 # Priority ordering for genre selection in book enrichment: most specific first,
 # generic/classics last. Must contain EVERY canonical genre (asserted below) so
 # nothing silently sorts to the end.
