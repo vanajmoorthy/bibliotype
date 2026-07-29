@@ -357,6 +357,20 @@ def track_external_api_call(api_name, book_id, book_title, status, status_code=N
     )
 
 
+def track_account_deleted(user_id):
+    """Track when a user deletes their account."""
+    environment = get_environment()
+
+    capture_event(
+        distinct_id=str(user_id),
+        event_name="account_deleted",
+        properties={
+            "user_id": user_id,
+        },
+        environment=environment,
+    )
+
+
 def track_redis_cache_error(operation, key, error_type, error_message):
     """
     Track Redis cache errors (only in production).

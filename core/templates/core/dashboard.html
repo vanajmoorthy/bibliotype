@@ -152,7 +152,7 @@
                 });
             </script>
         {% elif dna %}
-            <div x-data="shareModalData()" class="space-y-6">
+            <div x-data="{ ...shareModalData(), settingsModalOpen: false }" class="space-y-6">
                 {{ dna|json_script:"dna-data" }}
                 <h1 class="mb-4 text-center text-5xl font-bold tracking-widest uppercase md:mb-8">
                     <span class="relative z-10">
@@ -247,14 +247,15 @@
                 {% endif %}
 
                 {% if user.is_authenticated %}
-                    <div class="grid grid-cols-1 items-center gap-6 md:grid-cols-3">
+                    {% include 'core/partials/settings_modal.html' %}
+                    <div class="grid grid-cols-1 items-stretch gap-6 md:grid-cols-3">
                         <div
-                            class="border-brand-text shadow-neo flex h-full items-center border-2 bg-white p-4 md:col-span-2"
+                            class="border-brand-text shadow-neo flex h-full items-center border-2 bg-white p-4 md:col-span-1"
                         >
                             <div class="flex-grow">
                                 {% if user_profile.is_public %}
                                     <h3 class="text-xl font-bold uppercase">
-                                        <span class="flex flex-col md:flex-row md:items-center md:gap-2">
+                                        <span class="flex flex-col gap-1">
                                             <span>
                                                 Your profile is
                                                 <span
@@ -264,7 +265,7 @@
                                             </span>
                                             <a
                                                 href="{% url 'core:public_profile' username=user.username %}"
-                                                class="hover:bg-brand-yellow mt-2 ml-0 block underline sm:!mt-0 sm:ml-4 md:inline-block"
+                                                class="hover:bg-brand-yellow text-base block underline"
                                                 target="_blank"
                                                 >/u/{{ user.username }}</a
                                             >
@@ -279,16 +280,17 @@
                                     </h3>
                                 {% endif %}
                             </div>
-                            <form action="{% url 'core:update_privacy' %}" method="post" class="ml-4">
-                                {% csrf_token %}
-                                {% if user_profile.is_public %}
-                                    <input type="hidden" name="is_public" value="false" />
-                                    {% include 'core/partials/buttons/small_button.html' with text="Make Private" color="pink" hover_color="yellow" %}
-                                {% else %}
-                                    <input type="hidden" name="is_public" value="true" />
-                                    {% include 'core/partials/buttons/small_button.html' with text="Make Public" color="green" hover_color="yellow" %}
-                                {% endif %}
-                            </form>
+                        </div>
+                        <div
+                            class="border-brand-text shadow-neo flex h-full items-center justify-center border-2 bg-white p-4"
+                        >
+                            <button
+                                type="button"
+                                @click="settingsModalOpen = true"
+                                class="bg-brand-yellow border-brand-text shadow-neo-sm block w-full border-2 px-4 py-2 text-center font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
+                            >
+                                Settings
+                            </button>
                         </div>
                         <div
                             class="border-brand-text shadow-neo flex h-full items-center justify-center border-2 bg-white p-4"

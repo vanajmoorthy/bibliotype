@@ -1,0 +1,406 @@
+<template x-teleport="body">
+    <div
+        x-show="settingsModalOpen"
+        x-cloak
+        x-effect="document.body.classList.toggle('overflow-hidden', settingsModalOpen)"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        @keydown.escape.window="settingsModalOpen = false"
+        @click.self="settingsModalOpen = false"
+        class="fixed inset-0 z-50 flex items-start justify-center bg-gray-900/80 overflow-y-auto"
+        style="height: 100dvh; height: 100vh;"
+    >
+        <div class="w-full max-w-lg p-4 my-8" @click.self="settingsModalOpen = false">
+            <div class="mb-3 flex w-full items-center justify-between px-1">
+                <h2 class="text-2xl font-bold tracking-wider uppercase text-white">Settings</h2>
+                {% include 'core/partials/buttons/icon_button.html' with color="pink" extra_classes="cursor-pointer" extra_attrs='@click="settingsModalOpen = false"' icon_svg='<svg class="text-brand-text h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>' %}
+            </div>
+
+            <div class="border-brand-text shadow-neo border-2 bg-white">
+
+                {# ── Display Name ── #}
+                <div class="border-b-2 border-brand-text p-5">
+                    <h3 class="mb-3 text-lg font-bold uppercase tracking-wide">Display Name</h3>
+                    <div
+                        x-data="{
+                            newName: '{{ user.username|escapejs }}',
+                            originalName: '{{ user.username|escapejs }}',
+                            errorMessage: '',
+                            successMessage: '',
+                            get isValid() { return this.newName.trim() !== '' && this.newName.length <= 15; },
+                            save() {
+                                if (!this.isValid) return;
+                                this.errorMessage = '';
+                                this.successMessage = '';
+                                fetch('{% url "core:api_update_username" %}', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                                    body: JSON.stringify({ username: this.newName })
+                                })
+                                .then(r => r.json())
+                                .then(data => {
+                                    if (data.status === 'success') {
+                                        this.originalName = data.new_username;
+                                        this.newName = data.new_username;
+                                        this.successMessage = 'Display name updated!';
+                                    } else {
+                                        this.errorMessage = data.message;
+                                    }
+                                })
+                                .catch(() => { this.errorMessage = 'Could not connect to the server.'; });
+                            }
+                        }"
+                    >
+                        <div class="flex items-stretch gap-3">
+                            <input
+                                type="text"
+                                x-model="newName"
+                                maxlength="15"
+                                class="border-brand-text focus:border-brand-purple flex-1 border-2 bg-white px-3 py-2 font-bold uppercase focus:outline-none"
+                                placeholder="Display name"
+                            />
+                            <button
+                                type="button"
+                                @click="save()"
+                                :disabled="!isValid"
+                                :class="{ 'opacity-50 cursor-not-allowed': !isValid }"
+                                class="bg-brand-green border-brand-text shadow-neo-sm border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
+                            >
+                                Save
+                            </button>
+                        </div>
+                        <div x-show="newName.length > 15" class="mt-1 text-sm font-bold text-red-600">
+                            Display name cannot exceed 15 characters.
+                        </div>
+                        <div x-show="errorMessage" x-text="errorMessage" class="mt-1 text-sm font-bold text-red-600"></div>
+                        <div x-show="successMessage" x-text="successMessage" class="mt-1 text-sm font-bold text-green-700"></div>
+                    </div>
+                </div>
+
+                {# ── Email ── #}
+                <div class="border-b-2 border-brand-text p-5">
+                    <h3 class="mb-3 text-lg font-bold uppercase tracking-wide">Email</h3>
+                    <div
+                        x-data="{
+                            email: '{{ user.email|escapejs }}',
+                            errorMessage: '',
+                            successMessage: '',
+                            saving: false,
+                            save() {
+                                this.errorMessage = '';
+                                this.successMessage = '';
+                                this.saving = true;
+                                fetch('{% url "core:update_email" %}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                        'X-CSRFToken': '{{ csrf_token }}',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: new URLSearchParams({ email: this.email })
+                                })
+                                .then(r => r.json())
+                                .then(data => {
+                                    this.saving = false;
+                                    if (data.status === 'success') {
+                                        this.successMessage = data.message;
+                                    } else {
+                                        this.errorMessage = data.message;
+                                    }
+                                })
+                                .catch(() => { this.saving = false; this.errorMessage = 'Could not connect to the server.'; });
+                            }
+                        }"
+                    >
+                        <div class="flex items-stretch gap-3">
+                            <input
+                                type="email"
+                                x-model="email"
+                                class="border-brand-text focus:border-brand-purple flex-1 border-2 bg-white px-3 py-2 font-bold focus:outline-none"
+                                placeholder="Email address"
+                            />
+                            <button
+                                type="button"
+                                @click="save()"
+                                :disabled="saving"
+                                :class="{ 'opacity-50 cursor-not-allowed': saving }"
+                                class="bg-brand-cyan border-brand-text shadow-neo-sm border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
+                            >
+                                Save
+                            </button>
+                        </div>
+                        <div x-show="errorMessage" x-text="errorMessage" class="mt-1 text-sm font-bold text-red-600"></div>
+                        <div x-show="successMessage" x-text="successMessage" class="mt-1 text-sm font-bold text-green-700"></div>
+                    </div>
+                </div>
+
+                {# ── Password ── #}
+                <div class="border-b-2 border-brand-text p-5">
+                    <h3 class="mb-3 text-lg font-bold uppercase tracking-wide">Change Password</h3>
+                    <div
+                        x-data="{
+                            current: '',
+                            new1: '',
+                            new2: '',
+                            errorMessage: '',
+                            successMessage: '',
+                            saving: false,
+                            save() {
+                                this.errorMessage = '';
+                                this.successMessage = '';
+                                this.saving = true;
+                                fetch('{% url "core:change_password" %}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                        'X-CSRFToken': '{{ csrf_token }}',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: new URLSearchParams({ current_password: this.current, new_password1: this.new1, new_password2: this.new2 })
+                                })
+                                .then(r => r.json())
+                                .then(data => {
+                                    this.saving = false;
+                                    if (data.status === 'success') {
+                                        this.successMessage = data.message;
+                                        this.current = '';
+                                        this.new1 = '';
+                                        this.new2 = '';
+                                    } else {
+                                        this.errorMessage = data.message;
+                                    }
+                                })
+                                .catch(() => { this.saving = false; this.errorMessage = 'Could not connect to the server.'; });
+                            }
+                        }"
+                    >
+                        <div class="space-y-3">
+                            <input
+                                type="password"
+                                x-model="current"
+                                class="border-brand-text focus:border-brand-purple w-full border-2 bg-white px-3 py-2 font-bold focus:outline-none"
+                                placeholder="Current password"
+                                autocomplete="current-password"
+                            />
+                            <input
+                                type="password"
+                                x-model="new1"
+                                class="border-brand-text focus:border-brand-purple w-full border-2 bg-white px-3 py-2 font-bold focus:outline-none"
+                                placeholder="New password"
+                                autocomplete="new-password"
+                            />
+                            <input
+                                type="password"
+                                x-model="new2"
+                                class="border-brand-text focus:border-brand-purple w-full border-2 bg-white px-3 py-2 font-bold focus:outline-none"
+                                placeholder="Confirm new password"
+                                autocomplete="new-password"
+                            />
+                            <button
+                                type="button"
+                                @click="save()"
+                                :disabled="saving"
+                                :class="{ 'opacity-50 cursor-not-allowed': saving }"
+                                class="bg-brand-purple border-brand-text shadow-neo-sm border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
+                            >
+                                Change Password
+                            </button>
+                        </div>
+                        <div x-show="errorMessage" x-text="errorMessage" class="mt-2 text-sm font-bold text-red-600"></div>
+                        <div x-show="successMessage" x-text="successMessage" class="mt-2 text-sm font-bold text-green-700"></div>
+                    </div>
+                </div>
+
+                {# ── Privacy Toggle ── #}
+                <div class="border-b-2 border-brand-text p-5">
+                    <h3 class="mb-3 text-lg font-bold uppercase tracking-wide">Profile Visibility</h3>
+                    <div
+                        x-data="{
+                            isPublic: {{ user_profile.is_public|yesno:'true,false' }},
+                            saving: false,
+                            errorMessage: '',
+                            toggle() {
+                                this.saving = true;
+                                this.errorMessage = '';
+                                const next = !this.isPublic;
+                                fetch('{% url "core:update_privacy" %}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                        'X-CSRFToken': '{{ csrf_token }}',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: new URLSearchParams({ is_public: next ? 'true' : 'false' })
+                                })
+                                .then(r => r.json())
+                                .then(data => {
+                                    this.saving = false;
+                                    if (data.status === 'success') {
+                                        this.isPublic = data.is_public;
+                                        window.location.reload();
+                                    } else {
+                                        this.errorMessage = 'Could not update visibility.';
+                                    }
+                                })
+                                .catch(() => { this.saving = false; this.errorMessage = 'Could not connect to the server.'; });
+                            }
+                        }"
+                    >
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-bold" x-text="isPublic ? 'Public' : 'Private'"></p>
+                                <p class="text-sm text-gray-600" x-text="isPublic ? 'Your profile is visible to everyone.' : 'Only you can see your profile.'"></p>
+                            </div>
+                            <button
+                                type="button"
+                                @click="toggle()"
+                                :disabled="saving"
+                                :class="{ 'opacity-50 cursor-not-allowed': saving, 'bg-brand-pink': isPublic, 'bg-brand-green': !isPublic }"
+                                class="border-brand-text shadow-neo-sm border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
+                                x-text="isPublic ? 'Make Private' : 'Make Public'"
+                            ></button>
+                        </div>
+                        <div x-show="errorMessage" x-text="errorMessage" class="mt-2 text-sm font-bold text-red-600"></div>
+                    </div>
+                </div>
+
+                {# ── Recommendation Visibility ── #}
+                <div class="border-b-2 border-brand-text p-5">
+                    <h3 class="mb-3 text-lg font-bold uppercase tracking-wide">Recommendation Visibility</h3>
+                    <div
+                        x-data="{
+                            visible: {{ user_profile.visible_in_recommendations|yesno:'true,false' }},
+                            saving: false,
+                            errorMessage: '',
+                            toggle() {
+                                this.saving = true;
+                                this.errorMessage = '';
+                                const next = !this.visible;
+                                fetch('{% url "core:update_recommendation_visibility" %}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                        'X-CSRFToken': '{{ csrf_token }}',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: new URLSearchParams({ visible_in_recommendations: next ? 'true' : 'false' })
+                                })
+                                .then(r => r.json())
+                                .then(data => {
+                                    this.saving = false;
+                                    if (data.status === 'success') {
+                                        this.visible = data.visible_in_recommendations;
+                                    } else {
+                                        this.errorMessage = 'Could not update setting.';
+                                    }
+                                })
+                                .catch(() => { this.saving = false; this.errorMessage = 'Could not connect to the server.'; });
+                            }
+                        }"
+                    >
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-bold" x-text="visible ? 'Visible' : 'Hidden'"></p>
+                                <p class="text-sm text-gray-600" x-text="visible ? 'You appear as a recommendation source for similar readers.' : 'You are hidden from recommendation sources.'"></p>
+                            </div>
+                            <button
+                                type="button"
+                                @click="toggle()"
+                                :disabled="saving"
+                                :class="{ 'opacity-50 cursor-not-allowed': saving, 'bg-brand-pink': visible, 'bg-brand-green': !visible }"
+                                class="border-brand-text shadow-neo-sm border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
+                                x-text="visible ? 'Opt Out' : 'Opt In'"
+                            ></button>
+                        </div>
+                        <div x-show="errorMessage" x-text="errorMessage" class="mt-2 text-sm font-bold text-red-600"></div>
+                    </div>
+                </div>
+
+                {# ── Danger Zone ── #}
+                <div class="p-5">
+                    <h3 class="mb-3 text-lg font-bold uppercase tracking-wide text-red-700">Danger Zone</h3>
+                    <div
+                        x-data="{
+                            showConfirm: false,
+                            confirmation: '',
+                            password: '',
+                            errorMessage: '',
+                            deleting: false,
+                            get canDelete() { return this.confirmation === 'DELETE' && this.password.length > 0; },
+                            deleteAccount() {
+                                if (!this.canDelete) return;
+                                this.deleting = true;
+                                this.errorMessage = '';
+                                fetch('{% url "core:delete_account" %}', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                        'X-CSRFToken': '{{ csrf_token }}',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: new URLSearchParams({ confirmation: this.confirmation, password: this.password })
+                                })
+                                .then(r => r.json())
+                                .then(data => {
+                                    this.deleting = false;
+                                    if (data.status === 'success') {
+                                        window.location.href = data.redirect;
+                                    } else {
+                                        this.errorMessage = data.message;
+                                    }
+                                })
+                                .catch(() => { this.deleting = false; this.errorMessage = 'Could not connect to the server.'; });
+                            }
+                        }"
+                    >
+                        <p class="mb-3 text-sm text-gray-700">
+                            Permanently delete your account and all associated data. This cannot be undone.
+                        </p>
+                        <button
+                            type="button"
+                            @click="showConfirm = !showConfirm"
+                            class="bg-brand-pink border-brand-text shadow-neo-sm border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
+                        >
+                            Delete Account
+                        </button>
+
+                        <div x-show="showConfirm" x-cloak class="mt-4 space-y-3 border-2 border-red-400 bg-red-50 p-4">
+                            <p class="text-sm font-bold text-red-800">
+                                Type <span class="font-mono bg-red-200 px-1">DELETE</span> and enter your password to confirm.
+                            </p>
+                            <input
+                                type="text"
+                                x-model="confirmation"
+                                class="border-brand-text focus:border-red-500 w-full border-2 bg-white px-3 py-2 font-mono font-bold focus:outline-none"
+                                placeholder="Type DELETE here"
+                                autocomplete="off"
+                            />
+                            <input
+                                type="password"
+                                x-model="password"
+                                class="border-brand-text focus:border-red-500 w-full border-2 bg-white px-3 py-2 font-bold focus:outline-none"
+                                placeholder="Your password"
+                                autocomplete="current-password"
+                            />
+                            <button
+                                type="button"
+                                @click="deleteAccount()"
+                                :disabled="!canDelete || deleting"
+                                :class="{ 'opacity-50 cursor-not-allowed': !canDelete || deleting }"
+                                class="bg-red-600 border-2 border-red-900 text-white shadow-[4px_4px_0px_0px_rgba(127,29,29,1)] px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-[3px_3px_0px_0px_rgba(127,29,29,1)] active:translate-x-1 active:translate-y-1 active:shadow-none cursor-pointer"
+                            >
+                                <span x-text="deleting ? 'Deleting...' : 'Permanently Delete My Account'"></span>
+                            </button>
+                            <div x-show="errorMessage" x-text="errorMessage" class="text-sm font-bold text-red-700"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</template>

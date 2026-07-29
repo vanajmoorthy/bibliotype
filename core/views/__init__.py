@@ -21,7 +21,10 @@ from .dashboard import display_dna_view, public_profile_view  # noqa: F401 — r
 from .pages import about_view, home_view, privacy_view, terms_view  # noqa: F401 — re-exported for stable import paths
 from .profile import (  # noqa: F401 — re-exported for stable import paths
     _update_username_api_throttled,
+    change_password_view,
+    delete_account_view,
     update_display_name_view,
+    update_email_view,
     update_privacy_view,
     update_recommendation_visibility,
     update_username_api,
