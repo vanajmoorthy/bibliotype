@@ -31,9 +31,9 @@ from core.services.dna import (
 
 
 class ReaderTypeScoringMathTests(TestCase):
-    """Verify reader type scoring formulas produce exact expected values."""
+    """Verify reader type scoring produces correct normalized 0-100 values."""
 
-    def _df(self, rows, has_read_count=False):
+    def _make_df(self, rows, has_read_count=False):
         cols = "Title,Author,Exclusive Shelf,Number of Pages"
         if has_read_count:
             cols += ",Read Count"
@@ -42,162 +42,204 @@ class ReaderTypeScoringMathTests(TestCase):
         df.columns = df.columns.str.strip()
         return df
 
-    def test_tome_tussler_scores_2_points_per_long_book(self):
-        """Books with >490 pages give Tome Tussler 2 points each."""
-        df = self._df([
+    def _genre_sets(self, n, genre_set):
+        """n books all with the same genre set."""
+        return [genre_set] * n
+
+    def test_tome_tussler_scores_nonzero_above_floor(self):
+        """Books > 490 pages: if fraction > 45% saturation, Tome Tussler scores 100."""
+        # 6 of 10 long books = 60%, well above saturation (45%) → score 100
+        rows = [
             "Book A,Auth,read,500",
             "Book B,Auth,read,600",
             "Book C,Auth,read,491",
-            "Book D,Auth,read,490",  # boundary: 490 NOT counted (>490 strict)
-            "Book E,Auth,read,200",
-        ])
+            "Book D,Auth,read,550",
+            "Book E,Auth,read,510",
+            "Book F,Auth,read,520",
+            "Book G,Auth,read,300",  # not long
+            "Book H,Auth,read,250",  # not long
+            "Book I,Auth,read,200",  # not long
+            "Book J,Auth,read,150",  # not long
+        ]
+        df = self._make_df(rows)
         _, scores = assign_reader_type(df, {}, [])
-        self.assertEqual(scores["Tome Tussler"], 6)  # 3 books * 2 pts
+        self.assertEqual(scores["Tome Tussler"], 100)
 
-    def test_novella_navigator_scores_1_point_per_short_book(self):
-        """Books with <200 pages give Novella Navigator 1 point each."""
-        df = self._df([
+    def test_tome_tussler_zero_below_floor(self):
+        """1 of 10 books long = 10%, exactly at floor → score 0 (floor exclusive)."""
+        rows = ["Book A,Auth,read,500"] + [f"Book {i},Auth,read,300" for i in range(9)]
+        df = self._make_df(rows)
+        _, scores = assign_reader_type(df, {}, [])
+        # 1/10 = 0.10 = exactly floor → score_ramp returns 0
+        self.assertEqual(scores.get("Tome Tussler", 0), 0)
+
+    def test_novella_navigator_scores_above_floor(self):
+        """6 of 10 short books (60%) > saturation (45%) → score 100."""
+        rows = [
             "Book A,Auth,read,150",
             "Book B,Auth,read,199",
             "Book C,Auth,read,100",
-            "Book D,Auth,read,200",  # boundary: 200 NOT counted (<200 strict)
-            "Book E,Auth,read,250",
-        ])
+            "Book D,Auth,read,50",
+            "Book E,Auth,read,80",
+            "Book F,Auth,read,120",
+            "Book G,Auth,read,300",
+            "Book H,Auth,read,350",
+            "Book I,Auth,read,400",
+            "Book J,Auth,read,450",
+        ]
+        df = self._make_df(rows)
         _, scores = assign_reader_type(df, {}, [])
-        self.assertEqual(scores["Novella Navigator"], 3)
+        self.assertEqual(scores["Novella Navigator"], 100)
 
-    def test_fantasy_fanatic_combines_fantasy_scifi_dystopian(self):
-        """Fantasy Fanatic = fantasy + science fiction + dystopian counts."""
-        df = self._df(["Book A,Auth,read,300"])
-        genres = ["fantasy", "fantasy", "science fiction", "dystopian", "dystopian", "thriller"]
-        _, scores = assign_reader_type(df, {}, genres)
-        self.assertEqual(scores["Fantasy Fanatic"], 5)  # 2 + 1 + 2
+    def test_fantasy_fanatic_genre_share_above_floor(self):
+        """10 of 10 books with fantasy genres → 100% share → score 100."""
+        # 10 books required to meet MIN_SIGNAL_BOOKS threshold for genre scoring
+        book_genre_sets = [{"fantasy"}] * 5 + [{"science fiction"}] * 3 + [{"dystopian"}] * 2
+        rows = [f"B{i},Auth,read,300" for i in range(10)]
+        df = self._make_df(rows)
+        _, scores = assign_reader_type(df, {}, book_genre_sets)
+        self.assertEqual(scores["Fantasy Fanatic"], 100)
 
-    def test_versatile_valedictorian_bonus_at_diversity_threshold(self):
-        """Versatile Valedictorian gets +15 bonus when ≥10 unique canonical genres."""
-        df = self._df(["Book A,Auth,read,300"])
-        # Exactly 10 unique canonical genres
-        genres = [
-            "fantasy", "science fiction", "thriller", "horror", "romance",
-            "biography", "history", "philosophy", "psychology", "non-fiction",
-        ]
-        _, scores = assign_reader_type(df, {}, genres)
-        self.assertEqual(scores["Versatile Valedictorian"], 15)
+    def test_fantasy_fanatic_unique_book_not_double_counted(self):
+        """A book with fantasy AND sci-fi counts once for Fantasy Fanatic (not twice)."""
+        # 10 books to meet MIN_SIGNAL_BOOKS: 5 fantasy+scifi, 5 romance
+        rows = [f"B{i},Auth,read,300" for i in range(10)]
+        df = self._make_df(rows)
+        book_genre_sets = [{"fantasy", "science fiction"}] * 5 + [{"romance"}] * 5
+        _, scores = assign_reader_type(df, {}, book_genre_sets)
+        # 5 of 10 books = 0.5 share, floor=0.30, sat=0.70
+        # score_ramp(0.5, 0.30, 0.70) = round(100 * (0.5-0.30) / (0.70-0.30)) = round(50.0) = 50
+        from core.dna_constants import READER_TYPE_THRESHOLDS, score_ramp
+        floor, sat = READER_TYPE_THRESHOLDS["Fantasy Fanatic"]
+        expected = score_ramp(0.5, floor, sat)
+        self.assertEqual(scores["Fantasy Fanatic"], expected)
 
-    def test_no_versatile_bonus_below_threshold(self):
-        """No diversity bonus with 9 unique canonical genres."""
-        df = self._df(["Book A,Auth,read,300"])
-        genres = [
-            "fantasy", "science fiction", "thriller", "horror", "romance",
-            "biography", "history", "philosophy", "psychology",
-        ]
-        _, scores = assign_reader_type(df, {}, genres)
-        self.assertEqual(scores.get("Versatile Valedictorian", 0), 0)
+    def test_versatile_valedictorian_score_proportional(self):
+        """Versatile Valedictorian: 10 solid genres (between floor=6 and sat=14) → intermediate score."""
+        df = self._make_df(["Book A,Auth,read,300"] * 30)
+        # 30 books, each with a different genre combination to create 10 solid genres
+        # Each genre needs >= 2 books and >= 3% of G = 0.03*30 = 0.9 → >=1 books
+        book_genre_sets = []
+        genres = ["fantasy", "science fiction", "thriller", "horror", "romance",
+                  "biography", "history", "philosophy", "psychology", "non-fiction"]
+        for i, genre in enumerate(genres):
+            # 3 books per genre
+            book_genre_sets.extend([{genre}] * 3)
+        _, scores = assign_reader_type(df, {}, book_genre_sets)
+        # 10 solid genres, floor=6, sat=14 → score_ramp(10, 6, 14) = round(100 * (10-6)/(14-6)) = 50
+        self.assertEqual(scores.get("Versatile Valedictorian", 0), 50)
 
-    def test_comfort_rereader_3_points_per_reread_storygraph(self):
-        """StoryGraph: Comfort Rereader gets 3 pts per book with Read Count > 1."""
-        df = self._df([
-            "Book A,Auth,read,200,3",
+    def test_comfort_rereader_storygraph_reread_detection(self):
+        """StoryGraph: Comfort Rereader score > 0 when Read Count > 1."""
+        rows = [
+            "Book A,Auth,read,200,3",  # reread
             "Book B,Auth,read,200,1",
-            "Book C,Auth,read,200,5",  # also a reread
+            "Book C,Auth,read,200,5",  # reread
             "Book D,Auth,read,200,1",
-        ], has_read_count=True)
+        ]
+        df = self._make_df(rows, has_read_count=True)
         _, scores = assign_reader_type(df, {}, [])
-        self.assertEqual(scores["Comfort Rereader"], 6)  # 2 rereads * 3
+        # 2 rereads / 4 total = 0.5 > sat (0.25) → score 100
+        self.assertGreater(scores.get("Comfort Rereader", 0), 0)
 
     def test_comfort_rereader_goodreads_duplicate_titles(self):
         """Goodreads (no Read Count): duplicate titles count as rereads."""
-        df = self._df([
+        rows = [
             "Book A,Auth,read,200",
             "Book A,Auth,read,200",  # duplicate → 1 reread
             "Book B,Auth,read,200",
-            "Book B,Auth,read,200",  # duplicate → 1 reread
-            "Book C,Auth,read,200",
-        ])
+        ]
+        df = self._make_df(rows)
         _, scores = assign_reader_type(df, {}, [])
-        # 2 titles each read twice → 2 rereads * 3 pts = 6
-        self.assertEqual(scores["Comfort Rereader"], 6)
+        self.assertGreater(scores.get("Comfort Rereader", 0), 0)
 
-    def test_comfort_rereader_goodreads_three_reads(self):
-        """Goodreads: a title read 3 times = 2 rereads = 6 pts (not 1 reread)."""
-        df = self._df([
-            "Book A,Auth,read,200",
-            "Book A,Auth,read,200",
-            "Book A,Auth,read,200",
-            "Book B,Auth,read,200",  # solo, no rereads
-        ])
-        _, scores = assign_reader_type(df, {}, [])
-        # Book A: 3 reads → 2 rereads. Book B: 0. Total: 2 * 3 = 6.
-        self.assertEqual(scores["Comfort Rereader"], 6)
-
-    def test_no_comfort_rereader_when_zero_rereads(self):
-        """Zero rereads → no Comfort Rereader score (not even 0 entry)."""
-        df = self._df([
+    def test_comfort_rereader_zero_when_no_rereads(self):
+        """Zero rereads → Comfort Rereader scores 0."""
+        rows = [
             "Book A,Auth,read,200,1",
             "Book B,Auth,read,200,1",
-        ], has_read_count=True)
+        ]
+        df = self._make_df(rows, has_read_count=True)
         _, scores = assign_reader_type(df, {}, [])
         self.assertEqual(scores.get("Comfort Rereader", 0), 0)
 
-    def test_classic_collector_pre_1970(self):
-        """Books published before 1970 give Classic Collector 1 pt each."""
-        df = self._df([
-            "Book A,Auth,read,300",
-            "Book B,Auth,read,300",
-            "Book C,Auth,read,300",
-        ])
-        enriched = {
+    def test_classics_collector_pre_1970(self):
+        """Books published before 1970 contribute to Classics Collector."""
+        rows2 = ["Book A,Auth,read,300", "Book B,Auth,read,300", "Book C,Auth,read,300",
+                 "Book D,Auth,read,300", "Book E,Auth,read,300",
+                 "Book F,Auth,read,300", "Book G,Auth,read,300", "Book H,Auth,read,300",
+                 "Book I,Auth,read,300", "Book J,Auth,read,300"]
+        df2 = self._make_df(rows2)
+        enriched2 = {
             "Book A": {"publish_year": 1950, "publisher": None},
-            "Book B": {"publish_year": 1969, "publisher": None},
-            "Book C": {"publish_year": 1970, "publisher": None},  # boundary excluded
+            "Book B": {"publish_year": 1960, "publisher": None},
+            "Book C": {"publish_year": 1969, "publisher": None},
+            "Book D": {"publish_year": 1970, "publisher": None},  # boundary — excluded
+            "Book E": {"publish_year": 2000, "publisher": None},
+            "Book F": {"publish_year": 2010, "publisher": None},
+            "Book G": {"publish_year": 2015, "publisher": None},
+            "Book H": {"publish_year": 2020, "publisher": None},
+            "Book I": {"publish_year": 2021, "publisher": None},
+            "Book J": {"publish_year": 2022, "publisher": None},
         }
-        _, scores = assign_reader_type(df, enriched, [])
-        self.assertEqual(scores["Classic Collector"], 2)
+        _, scores = assign_reader_type(df2, enriched2, [])
+        # 3 pre-1970 of 10 = 30% > floor (10%), below sat (40%) → score > 0 and < 100
+        self.assertGreater(scores.get("Classics Collector", 0), 0)
+        self.assertLess(scores.get("Classics Collector", 0), 100)
 
-    def test_modern_maverick_post_2018(self):
-        """Books published after 2018 give Modern Maverick 1 pt each."""
-        df = self._df([
-            "Book A,Auth,read,300",
-            "Book B,Auth,read,300",
-            "Book C,Auth,read,300",
-        ])
-        enriched = {
-            "Book A": {"publish_year": 2019, "publisher": None},
-            "Book B": {"publish_year": 2024, "publisher": None},
-            "Book C": {"publish_year": 2018, "publisher": None},  # boundary excluded
-        }
+    def test_modern_maverick_rolling_window(self):
+        """Modern Maverick uses rolling (current_year - 6) not hardcoded 2018."""
+        import datetime
+        current_year = datetime.datetime.now().year
+        cutoff = current_year - 6
+        rows = [f"Book {i},Auth,read,300" for i in range(12)]
+        df = self._make_df(rows)
+        # Make 10 books at cutoff year (= recent), 2 old
+        enriched = {}
+        for i in range(12):
+            enriched[f"Book {i}"] = {"publish_year": cutoff if i < 10 else 1990, "publisher": None}
         _, scores = assign_reader_type(df, enriched, [])
-        self.assertEqual(scores["Modern Maverick"], 2)
+        self.assertGreater(scores.get("Modern Maverick", 0), 0)
 
-    def test_small_press_supporter_non_mainstream_publishers(self):
-        """Books from non-mainstream publishers give Small Press Supporter 1 pt each."""
-        df = self._df([
-            "Book A,Auth,read,300",
-            "Book B,Auth,read,300",
-        ])
+    def test_small_press_supporter(self):
+        """Books from non-mainstream publishers contribute to Small Press Supporter."""
+        rows = [f"Book {i},Auth,read,300" for i in range(12)]
+        df = self._make_df(rows)
         mainstream_pub = MagicMock(is_mainstream=True)
         small_pub = MagicMock(is_mainstream=False)
-        small_pub.__str__ = lambda self: "SmallPress"
-        enriched = {
-            "Book A": {"publish_year": 2000, "publisher": small_pub},
-            "Book B": {"publish_year": 2000, "publisher": mainstream_pub},
-        }
+        enriched = {}
+        for i in range(12):
+            enriched[f"Book {i}"] = {
+                "publish_year": 2020,
+                "publisher": small_pub if i < 8 else mainstream_pub,
+            }
         _, scores = assign_reader_type(df, enriched, [])
-        self.assertEqual(scores["Small Press Supporter"], 1)
+        # 8 small press of 12 = 67% > floor (35%) → score > 0
+        self.assertGreater(scores.get("Small Press Supporter", 0), 0)
 
-    def test_eclectic_reader_returned_when_all_zero_scores(self):
-        """When no reader type has positive score, returns Eclectic Reader."""
-        df = self._df(["Book A,Auth,read,300"])
+    def test_eclectic_reader_returned_when_all_low_scores(self):
+        """When no reader type reaches MIN_WINNING_SCORE, returns Eclectic Reader."""
+        df = self._make_df(["Book A,Auth,read,300"])
         reader_type, _ = assign_reader_type(df, {}, [])
         self.assertEqual(reader_type, "Eclectic Reader")
 
     def test_not_enough_data_for_empty_df(self):
         """Empty dataframe returns 'Not enough data'."""
-        df = self._df([])
-        df = df.iloc[0:0]  # ensure empty
+        df = self._make_df([])
+        df = df.iloc[0:0]
         reader_type, scores = assign_reader_type(df, {}, [])
         self.assertEqual(reader_type, "Not enough data")
         self.assertEqual(len(scores), 0)
+
+    def test_scores_all_in_0_100_range(self):
+        """All scores must be integers in [0, 100]."""
+        rows = ["Book A,Auth,read,300"] * 20
+        df = self._make_df(rows)
+        book_genre_sets = [{"fantasy"}] * 20
+        _, scores = assign_reader_type(df, {}, book_genre_sets)
+        for t, s in scores.items():
+            self.assertGreaterEqual(s, 0, f"{t} score below 0: {s}")
+            self.assertLessEqual(s, 100, f"{t} score above 100: {s}")
 
 
 # ────────────────────────────────────────────
@@ -296,24 +338,9 @@ class ReaderTypeDescriptionsTests(TestCase):
 
     def test_all_scored_reader_types_have_descriptions(self):
         """Every reader type that can be assigned must have a description in READER_TYPE_DESCRIPTIONS."""
-        # Reader types that assign_reader_type can produce
-        scored_types = {
-            "Rapacious Reader",
-            "Tome Tussler",
-            "Novella Navigator",
-            "Fantasy Fanatic",
-            "Non-Fiction Ninja",
-            "Philosophical Philomath",
-            "Nature Nut Case",
-            "Social Savant",
-            "Self Help Scholar",
-            "Classic Collector",
-            "Modern Maverick",
-            "Small Press Supporter",
-            "Comfort Rereader",
-            "Versatile Valedictorian",
-            "Eclectic Reader",
-        }
+        from core.dna_constants import READER_TYPE_TIEBREAK_ORDER
+        # All 20 types in tiebreak order plus the fallbacks
+        scored_types = set(READER_TYPE_TIEBREAK_ORDER) | {"Eclectic Reader"}
         missing = scored_types - set(READER_TYPE_DESCRIPTIONS.keys())
         self.assertEqual(missing, set(), f"Reader types with no descriptions: {missing}")
 

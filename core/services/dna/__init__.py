@@ -498,7 +498,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             if book.title
         }
 
-        reader_type, reader_type_scores = assign_reader_type(read_df, enriched_data_for_scoring, all_raw_genres)
+        reader_type, reader_type_scores = assign_reader_type(read_df, enriched_data_for_scoring, book_genre_sets)
         explanation = random.choice(READER_TYPE_DESCRIPTIONS.get(reader_type, [""]))
         top_types_list = [{"type": t, "score": s} for t, s in reader_type_scores.most_common(3) if s > 0]
         mapped_genres = [CANONICAL_GENRE_MAP.get(g, g) for g in all_raw_genres]
@@ -742,6 +742,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             "reader_type_explanation": explanation,
             "top_reader_types": top_types_list,
             "reader_type_scores": dict(reader_type_scores),
+            "reader_type_scores_version": 2,
             "top_genres": top_genres,
             "top_authors": top_authors,
             "average_rating_overall": average_rating_overall,
