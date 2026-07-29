@@ -1641,27 +1641,28 @@ EXCLUDED_GENRES = {
 
 
 GLOBAL_AVERAGES = {
-    "avg_books_per_year": 7,
+    # Median across the major reading surveys — see GLOBAL_AVERAGES_SOURCES below
+    # for the sources and the mean-vs-median reasoning. Flows live into every
+    # profile's Comparative Analytics card via _enrich_dna_for_display.
+    "avg_books_per_year": 4,
     "avg_book_length_pages": 375,
     "avg_publish_year": 2009,
 }
 
 # Sourcing for the GLOBAL_AVERAGES constants above.
 #
-# Honesty note: these three numbers are literature-derived *estimates*, not
-# measured global facts, and they are separate from the community percentiles
-# (those come from real reader data in AggregateAnalytics). The figures we
-# originally cited have all gone offline with no Wayback snapshot, and no
-# authoritative source states any of them exactly, so each entry documents what
-# the number actually is and links live adjacent context where it exists.
+# Honesty note: these are benchmark *estimates*, separate from the community
+# percentiles (those come from real reader data in AggregateAnalytics). The
+# books-per-year figure is a median aggregated from live, named surveys; the
+# other two are working estimates because no authoritative source measures them.
+# Every entry documents where its number really comes from and links live
+# context, and no entry links a dead URL.
 #
 # Schema per key: {url, archived_url, accessed, note}
-#   url          live page for further reading, or None if nothing citable exists
+#   url          live page for the source / further reading, or None if none exists
 #   archived_url Wayback snapshot, or None
-#   accessed     ISO date the url/archived_url was last checked
-#   note         plain-language explanation of where the number comes from; must
-#                never restate the constant value (the template renders that), so
-#                the two can't drift apart
+#   accessed     ISO date the url was last checked (see git history for the audit)
+#   note         plain-language explanation of where the number comes from
 # Every GLOBAL_AVERAGES key must have an entry here (enforced by test).
 GLOBAL_AVERAGES_SOURCES = {
     "avg_book_length_pages": {
@@ -1676,27 +1677,29 @@ GLOBAL_AVERAGES_SOURCES = {
         ),
     },
     "avg_publish_year": {
-        "url": None,
+        "url": "https://ammar-alyousfi.com/2024/exploring-goodreads-data-an-analysis-of-10-million-books",
         "archived_url": None,
         "accessed": "2026-07-29",
         "note": (
-            "This one is a loose anchor, not a measured global figure. I first "
-            "took it from a personal Goodreads analysis that has since gone "
-            "offline, and no authoritative source publishes an average publication "
-            "year of the books people read. It shifts with whose shelf you measure, "
-            "so treat it as a rough reference point."
+            "No survey actually measures the average publication year of the books "
+            "people read, so this is a best-effort estimate rather than a sourced "
+            "figure. Reading leans heavily toward recent decades with a long tail of "
+            "older titles, and I use this as a rough midpoint. For a sense of how "
+            "books spread across time, this analysis of 10 million Goodreads books "
+            "breaks the catalogue down decade by decade."
         ),
     },
     "avg_books_per_year": {
-        "url": "https://news.gallup.com/poll/388541/americans-reading-fewer-books-past.aspx",
+        "url": "https://www.pewresearch.org/internet/2016/09/01/book-reading-2016/",
         "archived_url": None,
         "accessed": "2026-07-29",
         "note": (
-            "This is a deliberately conservative baseline, and surveys disagree a "
-            "lot. Gallup's 2022 poll put the US mean at 12.6 books a year, while "
-            "other studies land the median nearer 4 or 5. Reading rates outside the "
-            "US tend to run lower, so I use a middle-of-the-road figure. It is "
-            "approximate, not authoritative."
+            "This is the median across the major reading surveys, which is the "
+            "honest typical-reader figure. Averages look much higher: Gallup reports "
+            "a mean of 12.6 books and Pew 12 to 14. But the mean is dragged up by a "
+            "small group of heavy readers while roughly half of adults read no books "
+            "at all, so the medians tell the real story. Pew lands at 4 to 5, YouGov "
+            "at 2 in the US and 3 in the UK, and I take the middle of those."
         ),
     },
 }
