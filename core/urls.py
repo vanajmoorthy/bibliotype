@@ -24,7 +24,6 @@ urlpatterns = [
         views.update_recommendation_visibility,
         name="update_recommendation_visibility",
     ),
-    path("dashboard/update-email/", views.update_email_view, name="update_email"),
     path("dashboard/change-password/", views.change_password_view, name="change_password"),
     path("dashboard/delete-account/", views.delete_account_view, name="delete_account"),
     path("u/<str:username>/", views.public_profile_view, name="public_profile"),

@@ -55,20 +55,6 @@ class UpdateDisplayNameForm(forms.ModelForm):
         return new_username.lower()
 
 
-class UpdateEmailForm(forms.Form):
-    email = forms.EmailField(required=True)
-
-    def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop("user", None)
-        super().__init__(*args, **kwargs)
-
-    def clean_email(self):
-        email = self.cleaned_data.get("email", "").strip()
-        if self.user and User.objects.filter(email__iexact=email).exclude(pk=self.user.pk).exists():
-            raise forms.ValidationError("That email is already in use.")
-        return email
-
-
 class ChangePasswordForm(forms.Form):
     current_password = forms.CharField(widget=forms.PasswordInput)
     new_password1 = forms.CharField(widget=forms.PasswordInput)
