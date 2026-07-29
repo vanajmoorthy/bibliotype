@@ -217,7 +217,7 @@
                 </div>
             </div>
         </nav>
-        <main class="container mx-auto flex-grow p-2 md:p-6">
+        <main class="container mx-auto flex-grow p-2 md:p-6{% block main_extra_classes %}{% endblock %}">
             {% if messages %}
                 {% for message in messages %}
                     <div
