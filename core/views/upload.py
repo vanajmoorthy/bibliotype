@@ -222,21 +222,30 @@ def enrichment_status_view(request):
     if progress is None or not progress["pending"]:
         return JsonResponse({"pending": False})
 
+    from ..dna_constants import READER_TYPE_COLORS
+
     user_stats = dna_data.get("user_stats", {})
-    return JsonResponse({
-        **progress,
-        "updated_stats": {
-            "total_pages_read": user_stats.get("total_pages_read", 0),
-            "avg_book_length": user_stats.get("avg_book_length", 0),
-            "top_genres": dna_data.get("top_genres", []),
-            "unique_genres_count": dna_data.get("unique_genres_count", 0),
-            "mainstream_score_percent": dna_data.get("mainstream_score_percent", 0),
-            "fiction_nonfiction_split": dna_data.get("fiction_nonfiction_split"),
-            "longest_book": dna_data.get("longest_book"),
-            "shortest_book": dna_data.get("shortest_book"),
-            "page_difference": dna_data.get("page_difference"),
-        },
-    })
+    updated_stats = {
+        "total_pages_read": user_stats.get("total_pages_read", 0),
+        "avg_book_length": user_stats.get("avg_book_length", 0),
+        "top_genres": dna_data.get("top_genres", []),
+        "unique_genres_count": dna_data.get("unique_genres_count", 0),
+        "mainstream_score_percent": dna_data.get("mainstream_score_percent", 0),
+        "fiction_nonfiction_split": dna_data.get("fiction_nonfiction_split"),
+        "longest_book": dna_data.get("longest_book"),
+        "shortest_book": dna_data.get("shortest_book"),
+        "page_difference": dna_data.get("page_difference"),
+    }
+    # Include live reader-type data only for users who have csv_context persisted.
+    # Older users (pre-PR2) lack this key and will get the type from the page-reload on completion.
+    if dna_data.get("reader_type_csv_context") is not None:
+        reader_type = dna_data.get("reader_type")
+        updated_stats["reader_type"] = reader_type
+        updated_stats["reader_type_explanation"] = dna_data.get("reader_type_explanation", "")
+        updated_stats["top_reader_types"] = dna_data.get("top_reader_types", [])
+        updated_stats["reader_type_color"] = READER_TYPE_COLORS.get(reader_type, "purple")
+        updated_stats["reader_type_scores_version"] = dna_data.get("reader_type_scores_version", 0)
+    return JsonResponse({**progress, "updated_stats": updated_stats})
 
 
 def task_status_view(request, task_id):

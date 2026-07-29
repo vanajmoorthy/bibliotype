@@ -410,11 +410,55 @@
             rows.appendChild(buildBookRow(shortest, "Shortest", "bg-brand-green"));
         }
 
+        function updateReaderType(stats) {
+            // No-op for older users whose poll response omits reader_type.
+            if (!stats || stats.reader_type === undefined) return;
+
+            const nameEl = document.getElementById("reader-type-name");
+            const explEl = document.getElementById("reader-type-explanation");
+            const bannerEl = document.getElementById("reader-type-banner");
+
+            if (nameEl) nameEl.textContent = stats.reader_type;
+            if (explEl) explEl.textContent = stats.reader_type_explanation || "";
+
+            // Swap the reader-banner--{color} class on the banner element.
+            if (bannerEl && stats.reader_type_color) {
+                const colorPrefix = "reader-banner--";
+                bannerEl.classList.forEach((cls) => {
+                    if (cls.startsWith(colorPrefix)) bannerEl.classList.remove(cls);
+                });
+                bannerEl.classList.add(`${colorPrefix}${stats.reader_type_color}`);
+            }
+
+            // Rebuild the top traits leaderboard from the updated list.
+            const listEl = document.getElementById("top-traits-list");
+            if (listEl && Array.isArray(stats.top_reader_types)) {
+                const medalClasses = [
+                    { bg: "bg-yellow-300", border: "border-yellow-500" },
+                    { bg: "bg-gray-300",   border: "border-gray-500"   },
+                    { bg: "bg-amber-500",  border: "border-amber-700"  },
+                ];
+                const isPct = !!stats.reader_type_scores_version;
+                listEl.innerHTML = stats.top_reader_types.slice(0, 3).map((item, idx) => {
+                    const { bg, border } = medalClasses[idx] || medalClasses[2];
+                    const scoreText = isPct ? `${item.score}%` : item.score;
+                    return `<li class="flex items-center justify-between p-2 border-2 border-brand-text ${bg} shadow-neo-sm">` +
+                        `<div class="flex items-center">` +
+                        `<span class="font-bold text-xl mr-4">#${idx + 1}</span>` +
+                        `<span class="font-bold">${item.type}</span>` +
+                        `</div>` +
+                        `<div class="font-bold px-3 py-1 border-2 ${border} bg-white">${scoreText}</div>` +
+                        `</li>`;
+                }).join("");
+            }
+        }
+
         function applyEnrichmentUpdate(stats) {
             if (!stats) return;
             updateTopGenres(stats.top_genres, stats.unique_genres_count);
             updateFictionNonfiction(stats.fiction_nonfiction_split);
             updateBookExtremes(stats);
+            updateReaderType(stats);
         }
 
         window.addEventListener("enrichment:update", (event) => applyEnrichmentUpdate(event.detail));

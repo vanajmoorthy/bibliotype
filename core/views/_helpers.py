@@ -40,16 +40,23 @@ def _get_recommendation_pool_display():
     return _friendly_floor(count)
 
 
-def _compute_enrichment_stats(user):
+def _compute_enrichment_stats(user, csv_context=None):
     """Compute enrichment-derived stats from DB in a single QuerySet pass.
 
     Cached briefly so a 5s polling cadence (plus a possible page load in the
     same window) doesn't re-hit Postgres on every tick for users with
     thousands of books.
+
+    When csv_context is provided (newer users who have reader_type_csv_context
+    persisted in dna_data), reader-type fields are included in the returned
+    stats dict and stored in the same cache entry.  The cache key encodes
+    whether csv_context is present so a None call never returns a stale entry
+    that happened to include reader-type fields (or vice-versa).
     """
     from ..models import Book
+    from ..services.dna.reader_type import recompute_reader_type_from_db
 
-    cache_key = f"enrichment_stats_{user.id}"
+    cache_key = f"enrichment_stats_{user.id}_{'rt' if csv_context is not None else 'nort'}"
     cached = safe_cache_get(cache_key)
     if cached is not None:
         return cached
@@ -129,6 +136,12 @@ def _compute_enrichment_stats(user):
         "page_difference": page_difference,
     }
 
+    # Reader-type recompute: fold into the same DB pass when csv_context is available.
+    if csv_context is not None:
+        reader_type_result = recompute_reader_type_from_db(user, csv_context, books=books)
+        if reader_type_result:
+            stats.update(reader_type_result)
+
     safe_cache_set(cache_key, stats, timeout=ENRICHMENT_STATS_CACHE_TTL)
     return stats
 
@@ -139,7 +152,8 @@ def _recalculate_enrichment_stats(user, dna_data):
     Called on each page load and poll while enrichment is pending, so the
     dashboard reflects the latest enriched data without requiring a re-upload.
     """
-    stats = _compute_enrichment_stats(user)
+    csv_context = dna_data.get("reader_type_csv_context")
+    stats = _compute_enrichment_stats(user, csv_context=csv_context)
     if not stats:
         return
     user_stats = dna_data.setdefault("user_stats", {})
@@ -156,6 +170,13 @@ def _recalculate_enrichment_stats(user, dna_data):
         dna_data["longest_book"] = stats["longest_book"]
         dna_data["shortest_book"] = stats["shortest_book"]
         dna_data["page_difference"] = stats["page_difference"]
+    # Reader type: update whenever the recompute ran (csv_context present and DB has books).
+    if "reader_type" in stats:
+        dna_data["reader_type"] = stats["reader_type"]
+        dna_data["reader_type_explanation"] = stats["reader_type_explanation"]
+        dna_data["top_reader_types"] = stats["top_reader_types"]
+        dna_data["reader_type_scores"] = stats["reader_type_scores"]
+        dna_data["reader_type_scores_version"] = stats["reader_type_scores_version"]
 
 
 def _compute_enrichment_progress(user, profile, dna_data):
@@ -199,7 +220,11 @@ def _compute_enrichment_progress(user, profile, dna_data):
                     _recalculate_enrichment_stats(user, dna_data)
                     dna_data["enrichment_finalized"] = True
                     locked.dna_data = dna_data
-                    locked.save(update_fields=["dna_data"])
+                    finalize_update_fields = ["dna_data"]
+                    if dna_data.get("reader_type"):
+                        locked.reader_type = dna_data["reader_type"]
+                        finalize_update_fields.append("reader_type")
+                    locked.save(update_fields=finalize_update_fields)
                 else:
                     # Another request already finalized — pick up its data so
                     # the in-memory dna_data the caller holds is consistent.

@@ -48,7 +48,7 @@ from .persistence import (  # noqa: F401 — re-exported for stable import paths
     _save_dna_to_profile,
     save_anonymous_session_data,
 )
-from .reader_type import assign_reader_type  # noqa: F401 — re-exported for stable import paths
+from .reader_type import assign_reader_type, compute_books_per_year, compute_reread_count  # noqa: F401 — re-exported for stable import paths
 from .utils import (  # noqa: F401 — re-exported for stable import paths
     _build_cover_url,
     _cover_initial,
@@ -498,7 +498,15 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             if book.title
         }
 
-        reader_type, reader_type_scores = assign_reader_type(read_df, enriched_data_for_scoring, book_genre_sets)
+        reader_type_reread_count = compute_reread_count(read_df)
+        reader_type_books_per_year = compute_books_per_year(read_df)
+        reader_type, reader_type_scores = assign_reader_type(
+            read_df,
+            enriched_data_for_scoring,
+            book_genre_sets,
+            reread_count_override=reader_type_reread_count,
+            books_per_year_override=reader_type_books_per_year,
+        )
         explanation = random.choice(READER_TYPE_DESCRIPTIONS.get(reader_type, [""]))
         top_types_list = [{"type": t, "score": s} for t, s in reader_type_scores.most_common(3) if s > 0]
         mapped_genres = [CANONICAL_GENRE_MAP.get(g, g) for g in all_raw_genres]
@@ -743,6 +751,10 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             "top_reader_types": top_types_list,
             "reader_type_scores": dict(reader_type_scores),
             "reader_type_scores_version": 2,
+            "reader_type_csv_context": {
+                "reread_count": reader_type_reread_count,
+                "books_per_year_avg": reader_type_books_per_year,
+            },
             "top_genres": top_genres,
             "top_authors": top_authors,
             "average_rating_overall": average_rating_overall,
