@@ -59,6 +59,11 @@
         let fictionChart = null;
         let liveGenres = dnaData.top_genres;
         let liveFiction = dnaData.fiction_nonfiction_split;
+        // Last-rendered payloads, so a poll returning identical data doesn't
+        // rebuild innerHTML (which re-probes cover images and flickers).
+        let lastTopGenresJSON = null;
+        let lastExtremesJSON = null;
+        let lastReaderTypeRendered = null;
 
         // --- Helper to parse data (Array of tuples vs Object) ---
         function parseChartData(data) {
@@ -278,6 +283,11 @@
             if (!Array.isArray(genres) || !genres.length) return;
             liveGenres = genres;
 
+            // Skip the DOM/chart rebuild when the payload is identical to last poll.
+            const genresKey = JSON.stringify([genres, uniqueCount]);
+            if (genresKey === lastTopGenresJSON) return;
+            lastTopGenresJSON = genresKey;
+
             const listEl = document.getElementById("top-genres-list");
             if (listEl) {
                 listEl.innerHTML = genres
@@ -399,6 +409,12 @@
             // Only swap once we have a genuine pair — never flash an empty state.
             if (!longest || !shortest) return;
 
+            // Skip the rebuild when unchanged, so cover <img> probes don't re-run
+            // and flicker on every poll.
+            const extremesKey = JSON.stringify([longest, shortest, stats.page_difference]);
+            if (extremesKey === lastExtremesJSON) return;
+            lastExtremesJSON = extremesKey;
+
             card.innerHTML =
                 `<h2 class="mb-1 text-center text-2xl font-bold uppercase">Book Extremes</h2>` +
                 `<p class="mb-4 text-center text-base text-gray-500 italic">A ${stats.page_difference}-page ` +
@@ -418,8 +434,13 @@
             const explEl = document.getElementById("reader-type-explanation");
             const bannerEl = document.getElementById("reader-type-banner");
 
-            if (nameEl) nameEl.textContent = stats.reader_type;
-            if (explEl) explEl.textContent = stats.reader_type_explanation || "";
+            // Only rewrite the type + blurb when the winning type actually changed,
+            // so the explanation doesn't churn on every poll.
+            if (stats.reader_type !== lastReaderTypeRendered) {
+                if (nameEl) nameEl.textContent = stats.reader_type;
+                if (explEl) explEl.textContent = stats.reader_type_explanation || "";
+                lastReaderTypeRendered = stats.reader_type;
+            }
 
             // Swap the reader-banner--{color} class on the banner element.
             if (bannerEl && stats.reader_type_color) {

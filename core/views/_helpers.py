@@ -40,7 +40,9 @@ def _get_recommendation_pool_display():
     return _friendly_floor(count)
 
 
-def _compute_enrichment_stats(user, csv_context=None):
+def _compute_enrichment_stats(
+    user, csv_context=None, shelf_signals=None, fresh=False, current_reader_type=None, current_explanation=None
+):
     """Compute enrichment-derived stats from DB in a single QuerySet pass.
 
     Cached briefly so a 5s polling cadence (plus a possible page load in the
@@ -52,14 +54,23 @@ def _compute_enrichment_stats(user, csv_context=None):
     stats dict and stored in the same cache entry.  The cache key encodes
     whether csv_context is present so a None call never returns a stale entry
     that happened to include reader-type fields (or vice-versa).
+
+    shelf_signals — the sparse {book_id: [shelf_fiction, shelf_nonfiction,
+    shelf_genres]} map persisted at generation — lets the fiction/nonfiction
+    split match generation quality instead of degrading to API-genre-only.
+
+    fresh=True skips the cache read (finalize path, so a ≤2s-stale entry can't
+    be locked in permanently).  current_reader_type / current_explanation keep
+    the reader-type blurb stable across polls when the winning type is unchanged.
     """
     from ..models import Book
     from ..services.dna.reader_type import recompute_reader_type_from_db
 
     cache_key = f"enrichment_stats_{user.id}_{'rt' if csv_context is not None else 'nort'}"
-    cached = safe_cache_get(cache_key)
-    if cached is not None:
-        return cached
+    if not fresh:
+        cached = safe_cache_get(cache_key)
+        if cached is not None:
+            return cached
 
     books = list(
         Book.objects.filter(readers__user=user)
@@ -84,7 +95,19 @@ def _compute_enrichment_stats(user, csv_context=None):
 
     # Context-dependent fiction/nonfiction classification (shared helper).
     # Books with no classifiable genres land in defaulted_count, never fiction.
-    fiction_count, nonfiction_count, defaulted_count = count_fiction_nonfiction(genre_sets)
+    # When generation persisted per-book shelf signals, align them with `books`
+    # and feed them in so the split matches generation quality (not API-only).
+    if shelf_signals:
+        shelf_signal_list = []
+        for book in books:
+            sig = shelf_signals.get(str(book.id))
+            if sig:
+                shelf_signal_list.append((bool(sig[0]), bool(sig[1]), frozenset(sig[2])))
+            else:
+                shelf_signal_list.append((False, False, frozenset()))
+        fiction_count, nonfiction_count, defaulted_count = count_fiction_nonfiction(genre_sets, shelf_signal_list)
+    else:
+        fiction_count, nonfiction_count, defaulted_count = count_fiction_nonfiction(genre_sets)
 
     mapped = [CANONICAL_GENRE_MAP.get(g, g) for g in all_genres]
 
@@ -137,8 +160,16 @@ def _compute_enrichment_stats(user, csv_context=None):
     }
 
     # Reader-type recompute: fold into the same DB pass when csv_context is available.
+    # Pass the currently-stored type/explanation so an unchanged winning type keeps
+    # its blurb instead of re-rolling random.choice on every poll.
     if csv_context is not None:
-        reader_type_result = recompute_reader_type_from_db(user, csv_context, books=books)
+        reader_type_result = recompute_reader_type_from_db(
+            user,
+            csv_context,
+            books=books,
+            current_reader_type=current_reader_type,
+            current_explanation=current_explanation,
+        )
         if reader_type_result:
             stats.update(reader_type_result)
 
@@ -146,14 +177,23 @@ def _compute_enrichment_stats(user, csv_context=None):
     return stats
 
 
-def _recalculate_enrichment_stats(user, dna_data):
+def _recalculate_enrichment_stats(user, dna_data, fresh=False):
     """Apply enrichment-derived stats to dna_data in place.
 
     Called on each page load and poll while enrichment is pending, so the
     dashboard reflects the latest enriched data without requiring a re-upload.
+    fresh=True forwards to _compute_enrichment_stats to bypass the 2s cache
+    (used on the finalize path).
     """
     csv_context = dna_data.get("reader_type_csv_context")
-    stats = _compute_enrichment_stats(user, csv_context=csv_context)
+    stats = _compute_enrichment_stats(
+        user,
+        csv_context=csv_context,
+        shelf_signals=dna_data.get("shelf_signals"),
+        fresh=fresh,
+        current_reader_type=dna_data.get("reader_type"),
+        current_explanation=dna_data.get("reader_type_explanation"),
+    )
     if not stats:
         return
     user_stats = dna_data.setdefault("user_stats", {})
@@ -216,8 +256,32 @@ def _compute_enrichment_progress(user, profile, dna_data):
 
             with transaction.atomic():
                 locked = UserProfile.objects.select_for_update().get(pk=profile.pk)
-                if not (locked.dna_data or {}).get("enrichment_finalized"):
-                    _recalculate_enrichment_stats(user, dna_data)
+                locked_dna = locked.dna_data or {}
+                if locked_dna.get("enrichment_finalized"):
+                    # Another request already finalized — pick up its data so
+                    # the in-memory dna_data the caller holds is consistent.
+                    dna_data.clear()
+                    dna_data.update(locked_dna)
+                elif locked.pending_dna_task_id or (
+                    locked_dna.get("vibe_data_hash") != dna_data.get("vibe_data_hash")
+                ):
+                    # A newer generation superseded this request between the
+                    # unfinalized read and acquiring the lock (re-upload in
+                    # flight, or the locked row is a different DNA). Don't clobber
+                    # it with our pre-lock snapshot — surface the locked data.
+                    dna_data.clear()
+                    dna_data.update(locked_dna)
+                else:
+                    # Legacy profiles have no persisted shelf_signals; a shelf-less
+                    # recompute would degrade the fiction/nonfiction split, so keep
+                    # the generation-time value rather than permanently downgrading.
+                    has_shelf_signals = bool(dna_data.get("shelf_signals"))
+                    original_split = dna_data.get("fiction_nonfiction_split")
+                    # fresh=True busts the 2s stats cache so finalize can't lock
+                    # in stale numbers (e.g. a book added within the last 2s).
+                    _recalculate_enrichment_stats(user, dna_data, fresh=True)
+                    if not has_shelf_signals and original_split is not None:
+                        dna_data["fiction_nonfiction_split"] = original_split
                     dna_data["enrichment_finalized"] = True
                     locked.dna_data = dna_data
                     finalize_update_fields = ["dna_data"]
@@ -225,11 +289,6 @@ def _compute_enrichment_progress(user, profile, dna_data):
                         locked.reader_type = dna_data["reader_type"]
                         finalize_update_fields.append("reader_type")
                     locked.save(update_fields=finalize_update_fields)
-                else:
-                    # Another request already finalized — pick up its data so
-                    # the in-memory dna_data the caller holds is consistent.
-                    dna_data.clear()
-                    dna_data.update(locked.dna_data or {})
                 profile.dna_data = dna_data
         return {"pending": False, "total": total}
 
