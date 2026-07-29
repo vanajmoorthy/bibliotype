@@ -29,7 +29,12 @@ case "$*" in
             echo "Running in PRODUCTION mode"
 
             echo "Collecting static files..."
-            poetry run python manage.py collectstatic --noinput
+            # --ignore src: static/src/ holds Tailwind build INPUTS (input.css
+            # with @import "tailwindcss"). Collecting them makes manifest
+            # post-processing chase that import as a static file ('src/tailwindcss'),
+            # which crashes collectstatic and took prod down on 2026-07-29.
+            # Only built assets (static/dist/) and real assets get collected.
+            poetry run python manage.py collectstatic --noinput --ignore src
 
             echo "Applying ownership and permissions to staticfiles for Nginx..."
             # The 'www-data' user on the host has a standard UID and GID of 33.
