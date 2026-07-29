@@ -27,8 +27,9 @@ class ComputeEnrichmentStatsTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="enrich_user", password="x")
         self.author = Author.objects.create(name="A. Writer", normalized_name="awriter")
-        # Always invalidate the cache between tests
-        safe_cache_delete(f"enrichment_stats_{self.user.id}")
+        # Always invalidate both cache key variants between tests.
+        safe_cache_delete(f"enrichment_stats_{self.user.id}_nort")
+        safe_cache_delete(f"enrichment_stats_{self.user.id}_rt")
 
     def _add_book(self, title, *, page_count=None, genres=None, mainstream_author=False, mainstream_publisher=False):
         author = self.author
@@ -135,8 +136,9 @@ class ComputeEnrichmentStatsTests(TestCase):
         from core.cache_utils import safe_cache_set
         from core.models import Book as _Book
 
-        # Pre-populate the cache with a sentinel value
-        safe_cache_set(f"enrichment_stats_{self.user.id}", {"sentinel": True}, timeout=30)
+        # Pre-populate the cache with a sentinel value.
+        # csv_context=None → cache key suffix is "nort".
+        safe_cache_set(f"enrichment_stats_{self.user.id}_nort", {"sentinel": True}, timeout=30)
 
         # If the cache is honored, _compute_enrichment_stats returns the sentinel
         # WITHOUT touching the DB. We verify that by asserting the QuerySet is
@@ -158,7 +160,8 @@ class ComputeEnrichmentProgressTests(TestCase):
         self.user = User.objects.create_user(username="prog_user", password="x")
         self.profile = self.user.userprofile
         self.author = Author.objects.create(name="P Writer", normalized_name="pwriter")
-        safe_cache_delete(f"enrichment_stats_{self.user.id}")
+        safe_cache_delete(f"enrichment_stats_{self.user.id}_nort")
+        safe_cache_delete(f"enrichment_stats_{self.user.id}_rt")
 
     def _add_book(self, title, *, attempted=False, has_genre=False, page_count=None):
         from django.utils import timezone
@@ -303,7 +306,8 @@ class RecalculateEnrichmentStatsTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="recalc_user", password="x")
         self.author = Author.objects.create(name="R Writer", normalized_name="rwriter")
-        safe_cache_delete(f"enrichment_stats_{self.user.id}")
+        safe_cache_delete(f"enrichment_stats_{self.user.id}_nort")
+        safe_cache_delete(f"enrichment_stats_{self.user.id}_rt")
 
     def test_no_books_leaves_dna_untouched(self):
         """When _compute_enrichment_stats returns None, dna_data is not mutated."""

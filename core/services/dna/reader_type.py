@@ -19,7 +19,37 @@ logger = logging.getLogger(__name__)
 _SERIES_RE = re.compile(r"\(.*#\d", re.IGNORECASE)
 
 
-def assign_reader_type(read_df, enriched_data, book_genre_sets):
+def compute_reread_count(read_df):
+    """Return the number of books read more than once, derived purely from read_df.
+
+    Uses the "Read Count" column when present (Goodreads); falls back to title
+    duplicate counting (StoryGraph or any CSV without that column).
+    """
+    if "Read Count" in read_df.columns:
+        return int((pd.to_numeric(read_df["Read Count"], errors="coerce").fillna(1) > 1).sum())
+    return int(read_df["Title"].value_counts().sub(1).clip(lower=0).sum())
+
+
+def compute_books_per_year(read_df):
+    """Return the mean books-per-year rate, derived purely from read_df.
+
+    Returns 0.0 when fewer than 24 dated reads span fewer than 2 distinct years
+    (matches the Rapacious Reader gate in assign_reader_type).
+    """
+    if "Date Read" not in read_df.columns:
+        return 0.0
+    dated_df = read_df.dropna(subset=["Date Read"])
+    dated_reads_count = len(dated_df)
+    if dated_reads_count < 24:
+        return 0.0
+    year_counts = dated_df["Date Read"].dt.year.value_counts()
+    distinct_years = len(year_counts)
+    if distinct_years < 2:
+        return 0.0
+    return dated_reads_count / distinct_years
+
+
+def assign_reader_type(read_df, enriched_data, book_genre_sets, reread_count_override=None, books_per_year_override=None):
     """
     Assign a reader type using normalized 0-100 scoring.
 
@@ -34,6 +64,12 @@ def assign_reader_type(read_df, enriched_data, book_genre_sets):
         This is the new interface replacing the old flat all_genres list.
         If the caller passes a flat list of genre strings (legacy/test compatibility),
         we detect it and convert to a single set.
+    reread_count_override : int or None
+        When not None, use this value instead of computing from read_df (for DB-based
+        recompute where Read Count is unavailable but was persisted at generation time).
+    books_per_year_override : float or None
+        When not None, use this value instead of computing from read_df (for DB-based
+        recompute where Date Read is unavailable but was persisted at generation time).
 
     Returns
     -------
@@ -98,26 +134,19 @@ def assign_reader_type(read_df, enriched_data, book_genre_sets):
                 small_press_count += 1
 
     # --- Reread detection ---
-    if "Read Count" in read_df.columns:
-        reread_count = int((pd.to_numeric(read_df["Read Count"], errors="coerce").fillna(1) > 1).sum())
+    if reread_count_override is not None:
+        reread_count = int(reread_count_override)
     else:
-        reread_count = int(read_df["Title"].value_counts().sub(1).clip(lower=0).sum())
+        reread_count = compute_reread_count(read_df)
 
     # --- Series detection (Goodreads title notation: "(Series Name, #N)") ---
     series_count = int(read_df["Title"].str.contains(_SERIES_RE, na=False).sum())
 
     # --- Rapacious Reader: books-per-year rate ---
-    mean_books_per_year = 0.0
-    dated_reads_count = 0
-    distinct_years = 0
-    if "Date Read" in read_df.columns:
-        dated_df = read_df.dropna(subset=["Date Read"])
-        dated_reads_count = len(dated_df)
-        if dated_reads_count >= 24:
-            year_counts = dated_df["Date Read"].dt.year.value_counts()
-            distinct_years = len(year_counts)
-            if distinct_years >= 2:
-                mean_books_per_year = dated_reads_count / distinct_years
+    if books_per_year_override is not None:
+        mean_books_per_year = float(books_per_year_override)
+    else:
+        mean_books_per_year = compute_books_per_year(read_df)
 
     # --- Versatile Valedictorian: count of "solid" canonical genres ---
     # A genre is solid if it covers >= 3% of G and >= 2 books
@@ -220,3 +249,76 @@ def assign_reader_type(read_df, enriched_data, book_genre_sets):
         winner = min(tied, key=tiebreak_key)
 
     return winner, scores
+
+
+def recompute_reader_type_from_db(user, csv_context, books=None):
+    """Recompute reader type entirely from DB books + persisted CSV context.
+
+    Called during enrichment polling so the reader-type card updates live as
+    genre/publisher/page data flows in, without re-reading the original CSV.
+
+    Parameters
+    ----------
+    user : User
+        The authenticated user whose books to query.
+    csv_context : dict
+        {"reread_count": int, "books_per_year_avg": float} — persisted at
+        generation time from the CSV-only signals.
+    books : list[Book] or None
+        Pre-fetched Book queryset (with select_related author/publisher and
+        prefetch_related genres). When provided, skips the DB query so the
+        caller can share one queryset pass with _compute_enrichment_stats.
+
+    Returns
+    -------
+    dict with keys: reader_type, reader_type_explanation, top_reader_types,
+                    reader_type_scores, reader_type_scores_version
+    """
+    import random
+
+    from ...dna_constants import READER_TYPE_DESCRIPTIONS
+    from ...services.genre_classification import canonicalize_genre_names
+
+    if books is None:
+        from ...models import Book as _Book
+
+        books = list(
+            _Book.objects.filter(readers__user=user)
+            .select_related("author", "publisher")
+            .prefetch_related("genres")
+        )
+
+    if not books:
+        return None
+
+    # Build a minimal DataFrame with only Title and Number of Pages.
+    # Date Read and Read Count come from csv_context via overrides — we don't
+    # reconstruct them here because they lived only in the original CSV.
+    titles = [b.title or "" for b in books]
+    page_counts = [b.page_count for b in books]
+    read_df = pd.DataFrame({"Title": titles, "Number of Pages": page_counts})
+
+    enriched_data = {
+        b.title: {"publish_year": b.publish_year, "publisher": b.publisher}
+        for b in books
+        if b.title
+    }
+    book_genre_sets = [canonicalize_genre_names([g.name for g in b.genres.all()]) for b in books]
+
+    reader_type, reader_type_scores = assign_reader_type(
+        read_df,
+        enriched_data,
+        book_genre_sets,
+        reread_count_override=csv_context.get("reread_count"),
+        books_per_year_override=csv_context.get("books_per_year_avg"),
+    )
+    explanation = random.choice(READER_TYPE_DESCRIPTIONS.get(reader_type, [""]))
+    top_types_list = [{"type": t, "score": s} for t, s in reader_type_scores.most_common(3) if s > 0]
+
+    return {
+        "reader_type": reader_type,
+        "reader_type_explanation": explanation,
+        "top_reader_types": top_types_list,
+        "reader_type_scores": dict(reader_type_scores),
+        "reader_type_scores_version": 2,
+    }
