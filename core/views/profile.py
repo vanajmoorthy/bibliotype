@@ -17,7 +17,7 @@ from django_ratelimit.exceptions import Ratelimited
 
 from ..analytics.events import track_account_deleted, track_profile_made_public, track_settings_updated
 from ..cache_utils import safe_cache_delete
-from ..forms import ChangePasswordForm, UpdateDisplayNameForm, UpdateEmailForm
+from ..forms import ChangePasswordForm, UpdateDisplayNameForm
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,21 @@ def _wants_json(request):
     return request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
 
+def _invalidate_recs_pool_caches(user_id, *, drop_pool_count=False):
+    """Clear recommendation-pool caches after a privacy/recs-visibility toggle.
+
+    A user who goes private or opts out of recommendations otherwise lingers in the
+    cached candidate pools until their TTLs expire. We can only cheaply clear the shared
+    sample/count caches and the user's own caches; other users' per-user ``similar_users_*``
+    / ``user_recommendations_*`` entries still expire on their own TTL.
+    """
+    safe_cache_delete(f"user_recommendations_{user_id}")
+    safe_cache_delete(f"similar_users_{user_id}")
+    safe_cache_delete("public_users_for_recs_sample")
+    if drop_pool_count:
+        safe_cache_delete("recommendations_pool_count")
+
+
 @login_required
 @require_POST
 def update_privacy_view(request):
@@ -34,6 +49,10 @@ def update_privacy_view(request):
     profile = request.user.userprofile
     profile.is_public = is_public
     profile.save()
+
+    # public_users_for_recs_sample filters on is_public, so refresh it either direction
+    # (private removes the user from the anonymous-recs candidate pool; public re-adds them).
+    _invalidate_recs_pool_caches(request.user.id)
 
     if is_public:
         track_profile_made_public(request.user.id)
@@ -120,13 +139,13 @@ def update_recommendation_visibility(request):
     profile.visible_in_recommendations = is_visible
     profile.save()
 
-    safe_cache_delete(f"user_recommendations_{request.user.id}")
-    safe_cache_delete(f"similar_users_{request.user.id}")
+    # visible_in_recommendations gates both the pool count and the candidate samples,
+    # so an opt-out must also drop recommendations_pool_count (else the size is stale for 1h).
+    _invalidate_recs_pool_caches(request.user.id, drop_pool_count=was_visible and not is_visible)
 
     if was_visible and not is_visible:
-        safe_cache_delete("public_users_for_recs_sample")
         logger.info(
-            "user opted out of recs; cleared candidate sample cache",
+            "user opted out of recs; cleared candidate pool caches",
             extra={"user_id": request.user.id},
         )
 
@@ -145,31 +164,6 @@ def update_recommendation_visibility(request):
     else:
         messages.success(request, "You've opted out of being shown as a recommendation source.")
 
-    return redirect("core:display_dna")
-
-
-@login_required
-@require_POST
-def update_email_view(request):
-    """Change the authenticated user's email address."""
-    form = UpdateEmailForm(request.POST, user=request.user)
-    if form.is_valid():
-        request.user.email = form.cleaned_data["email"]
-        request.user.save(update_fields=["email"])
-        track_settings_updated(request.user.id, setting_type="email")
-
-        if _wants_json(request):
-            return JsonResponse({"status": "success", "message": "Email updated successfully."})
-
-        messages.success(request, "Your email has been updated.")
-        return redirect("core:display_dna")
-
-    if _wants_json(request):
-        errors = [msg for field_errors in form.errors.values() for msg in field_errors]
-        return JsonResponse({"status": "error", "message": errors[0] if errors else "Invalid email."}, status=400)
-
-    for error in form.errors.values():
-        messages.error(request, error)
     return redirect("core:display_dna")
 
 

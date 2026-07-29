@@ -160,7 +160,40 @@
                 });
             </script>
         {% elif dna %}
-            <div x-data="{ ...shareModalData(), settingsModalOpen: false }" class="space-y-6">
+            <div
+                x-data="{
+                    ...shareModalData(),
+                    settingsModalOpen: false,
+                    isPublic: {% if user.is_authenticated %}{{ user_profile.is_public|yesno:'true,false' }}{% else %}false{% endif %},
+                    privacySaving: false,
+                    privacyError: '',
+                    togglePublic() {
+                        this.privacySaving = true;
+                        this.privacyError = '';
+                        const next = !this.isPublic;
+                        fetch('{% url "core:update_privacy" %}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-CSRFToken': '{{ csrf_token }}',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: new URLSearchParams({ is_public: next ? 'true' : 'false' })
+                        })
+                        .then(r => r.json())
+                        .then(data => {
+                            this.privacySaving = false;
+                            if (data.status === 'success') {
+                                this.isPublic = data.is_public;
+                            } else {
+                                this.privacyError = 'Could not update visibility.';
+                            }
+                        })
+                        .catch(() => { this.privacySaving = false; this.privacyError = 'Could not connect to the server.'; });
+                    }
+                }"
+                class="space-y-6"
+            >
                 {{ dna|json_script:"dna-data" }}
                 <h1 class="mb-4 text-center text-5xl font-bold tracking-widest uppercase md:mb-8">
                     <span class="relative z-10">
@@ -256,56 +289,51 @@
 
                 {% if user.is_authenticated %}
                     {% include 'core/partials/settings_modal.html' %}
-                    <div class="grid grid-cols-1 items-stretch gap-6 md:grid-cols-3">
-                        <div
-                            class="border-brand-text shadow-neo flex h-full items-center border-2 bg-white p-4 md:col-span-1"
-                        >
-                            <div class="flex-grow">
-                                {% if user_profile.is_public %}
-                                    <h3 class="text-xl font-bold uppercase">
-                                        <span class="flex flex-col gap-1">
-                                            <span>
-                                                Your profile is
-                                                <span
-                                                    class="bg-brand-green border-brand-text border-2 px-2 py-1 font-bold"
-                                                    >Public</span
-                                                >
-                                            </span>
-                                            <a
-                                                href="{% url 'core:public_profile' username=user.username %}"
-                                                class="hover:bg-brand-yellow text-base block underline"
-                                                target="_blank"
-                                                >/u/{{ user.username }}</a
-                                            >
-                                        </span>
-                                    </h3>
-                                {% else %}
-                                    <h3 class="text-xl font-bold uppercase">
+                    {# Merged long box: profile status on the left, pink Settings button on the right #}
+                    <div
+                        class="border-brand-text shadow-neo flex flex-col gap-4 border-2 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                        <div class="flex-grow">
+                            <h3 class="text-xl font-bold uppercase">
+                                <span class="flex flex-col gap-1">
+                                    <span>
                                         Your profile is
-                                        <span class="bg-brand-pink border-brand-text border-2 px-2 py-1 font-bold"
+                                        <span
+                                            x-show="isPublic"
+                                            x-cloak
+                                            class="bg-brand-green border-brand-text border-2 px-2 py-1 font-bold"
+                                            >Public</span
+                                        >
+                                        <span
+                                            x-show="!isPublic"
+                                            x-cloak
+                                            class="bg-brand-pink border-brand-text border-2 px-2 py-1 font-bold"
                                             >Private</span
                                         >
-                                    </h3>
-                                {% endif %}
-                            </div>
+                                    </span>
+                                    <a
+                                        x-show="isPublic"
+                                        x-cloak
+                                        href="{% url 'core:public_profile' username=user.username %}"
+                                        class="hover:bg-brand-yellow text-base block underline"
+                                        target="_blank"
+                                        >/u/{{ user.username }}</a
+                                    >
+                                </span>
+                            </h3>
                         </div>
-                        <div
-                            class="border-brand-text shadow-neo flex h-full items-center justify-center border-2 bg-white p-4"
+                        <button
+                            type="button"
+                            @click="settingsModalOpen = true"
+                            class="bg-brand-pink border-brand-text shadow-neo-sm block w-full border-2 px-6 py-2 text-center font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer sm:w-auto"
                         >
-                            <button
-                                type="button"
-                                @click="settingsModalOpen = true"
-                                class="bg-brand-yellow border-brand-text shadow-neo-sm block w-full border-2 px-4 py-2 text-center font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
-                            >
-                                Settings
-                            </button>
-                        </div>
-                        <div
-                            class="border-brand-text shadow-neo flex h-full items-center justify-center border-2 bg-white p-4"
-                        >
-                            {% url 'core:home' as home_url %}
-                            {% include 'core/partials/buttons/small_link_button.html' with href=home_url text="Update Bibliotype" color="purple" %}
-                        </div>
+                            Settings
+                        </button>
+                    </div>
+                    {# Update Bibliotype — own box #}
+                    <div class="border-brand-text shadow-neo flex items-center justify-center border-2 bg-white p-4">
+                        {% url 'core:home' as home_url %}
+                        {% include 'core/partials/buttons/small_link_button.html' with href=home_url text="Update Bibliotype" color="purple" %}
                     </div>
                 {% else %}
                     <div class="bg-brand-purple border-brand-text shadow-neo border-2 p-6 text-center">

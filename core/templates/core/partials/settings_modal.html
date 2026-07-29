@@ -11,20 +11,21 @@
         x-transition:leave-end="opacity-0"
         @keydown.escape.window="settingsModalOpen = false"
         @click.self="settingsModalOpen = false"
-        class="fixed inset-0 z-50 flex items-start justify-center bg-gray-900/80 overflow-y-auto"
+        class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-gray-900/80"
         style="height: 100dvh; height: 100vh;"
     >
-        <div class="w-full max-w-lg p-4 my-8" @click.self="settingsModalOpen = false">
-            <div class="mb-3 flex w-full items-center justify-between px-1">
-                <h2 class="text-2xl font-bold tracking-wider uppercase text-white">Settings</h2>
-                {% include 'core/partials/buttons/icon_button.html' with color="pink" extra_classes="cursor-pointer" extra_attrs='@click="settingsModalOpen = false"' icon_svg='<svg class="text-brand-text h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>' %}
-            </div>
+        <div class="my-8 w-full max-w-2xl p-4" @click.self="settingsModalOpen = false">
+            <div class="border-brand-text shadow-neo relative border-2 bg-white">
+                {% include 'core/partials/buttons/icon_button.html' with color="pink" extra_classes="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 cursor-pointer z-10" extra_attrs='@click="settingsModalOpen = false"' icon_svg='<svg class="text-brand-text h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>' %}
 
-            <div class="border-brand-text shadow-neo border-2 bg-white">
+                {# ── Title ── #}
+                <div class="border-brand-text border-b-2 p-5">
+                    <h2 class="text-2xl font-bold tracking-wider uppercase">Settings</h2>
+                </div>
 
                 {# ── Display Name ── #}
-                <div class="border-b-2 border-brand-text p-5">
-                    <h3 class="mb-3 text-lg font-bold uppercase tracking-wide">Display Name</h3>
+                <div class="border-brand-text border-b-2 p-5">
+                    <h3 class="mb-3 text-lg font-bold tracking-wide uppercase">Display Name</h3>
                     <div
                         x-data="{
                             newName: '{{ user.username|escapejs }}',
@@ -68,7 +69,7 @@
                                 @click="save()"
                                 :disabled="!isValid"
                                 :class="{ 'opacity-50 cursor-not-allowed': !isValid }"
-                                class="bg-brand-green border-brand-text shadow-neo-sm border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
+                                class="bg-brand-green border-brand-text shadow-neo-sm hover:shadow-neo-xs cursor-pointer border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                             >
                                 Save
                             </button>
@@ -76,71 +77,22 @@
                         <div x-show="newName.length > 15" class="mt-1 text-sm font-bold text-red-600">
                             Display name cannot exceed 15 characters.
                         </div>
-                        <div x-show="errorMessage" x-text="errorMessage" class="mt-1 text-sm font-bold text-red-600"></div>
-                        <div x-show="successMessage" x-text="successMessage" class="mt-1 text-sm font-bold text-green-700"></div>
-                    </div>
-                </div>
-
-                {# ── Email ── #}
-                <div class="border-b-2 border-brand-text p-5">
-                    <h3 class="mb-3 text-lg font-bold uppercase tracking-wide">Email</h3>
-                    <div
-                        x-data="{
-                            email: '{{ user.email|escapejs }}',
-                            errorMessage: '',
-                            successMessage: '',
-                            saving: false,
-                            save() {
-                                this.errorMessage = '';
-                                this.successMessage = '';
-                                this.saving = true;
-                                fetch('{% url "core:update_email" %}', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/x-www-form-urlencoded',
-                                        'X-CSRFToken': '{{ csrf_token }}',
-                                        'X-Requested-With': 'XMLHttpRequest'
-                                    },
-                                    body: new URLSearchParams({ email: this.email })
-                                })
-                                .then(r => r.json())
-                                .then(data => {
-                                    this.saving = false;
-                                    if (data.status === 'success') {
-                                        this.successMessage = data.message;
-                                    } else {
-                                        this.errorMessage = data.message;
-                                    }
-                                })
-                                .catch(() => { this.saving = false; this.errorMessage = 'Could not connect to the server.'; });
-                            }
-                        }"
-                    >
-                        <div class="flex items-stretch gap-3">
-                            <input
-                                type="email"
-                                x-model="email"
-                                class="border-brand-text focus:border-brand-purple flex-1 border-2 bg-white px-3 py-2 font-bold focus:outline-none"
-                                placeholder="Email address"
-                            />
-                            <button
-                                type="button"
-                                @click="save()"
-                                :disabled="saving"
-                                :class="{ 'opacity-50 cursor-not-allowed': saving }"
-                                class="bg-brand-cyan border-brand-text shadow-neo-sm border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
-                            >
-                                Save
-                            </button>
-                        </div>
-                        <div x-show="errorMessage" x-text="errorMessage" class="mt-1 text-sm font-bold text-red-600"></div>
-                        <div x-show="successMessage" x-text="successMessage" class="mt-1 text-sm font-bold text-green-700"></div>
+                        <div
+                            x-show="errorMessage"
+                            x-text="errorMessage"
+                            class="mt-1 text-sm font-bold text-red-600"
+                        ></div>
+                        <div
+                            x-show="successMessage"
+                            x-text="successMessage"
+                            class="mt-1 text-sm font-bold text-green-700"
+                        ></div>
                     </div>
                 </div>
 
                 {# ── Password ── #}
-                <div class="border-b-2 border-brand-text p-5">
-                    <h3 class="mb-3 text-lg font-bold uppercase tracking-wide">Change Password</h3>
+                <div class="border-brand-text border-b-2 p-5">
+                    <h3 class="mb-3 text-lg font-bold tracking-wide uppercase">Change Password</h3>
                     <div
                         x-data="{
                             current: '',
@@ -205,72 +157,40 @@
                                 @click="save()"
                                 :disabled="saving"
                                 :class="{ 'opacity-50 cursor-not-allowed': saving }"
-                                class="bg-brand-purple border-brand-text shadow-neo-sm border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
+                                class="bg-brand-purple border-brand-text shadow-neo-sm hover:shadow-neo-xs cursor-pointer border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                             >
                                 Change Password
                             </button>
                         </div>
-                        <div x-show="errorMessage" x-text="errorMessage" class="mt-2 text-sm font-bold text-red-600"></div>
-                        <div x-show="successMessage" x-text="successMessage" class="mt-2 text-sm font-bold text-green-700"></div>
+                        <div
+                            x-show="errorMessage"
+                            x-text="errorMessage"
+                            class="mt-2 text-sm font-bold text-red-600"
+                        ></div>
+                        <div
+                            x-show="successMessage"
+                            x-text="successMessage"
+                            class="mt-2 text-sm font-bold text-green-700"
+                        ></div>
                     </div>
                 </div>
 
-                {# ── Privacy Toggle ── #}
-                <div class="border-b-2 border-brand-text p-5">
-                    <h3 class="mb-3 text-lg font-bold uppercase tracking-wide">Profile Visibility</h3>
-                    <div
-                        x-data="{
-                            isPublic: {{ user_profile.is_public|yesno:'true,false' }},
-                            saving: false,
-                            errorMessage: '',
-                            toggle() {
-                                this.saving = true;
-                                this.errorMessage = '';
-                                const next = !this.isPublic;
-                                fetch('{% url "core:update_privacy" %}', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/x-www-form-urlencoded',
-                                        'X-CSRFToken': '{{ csrf_token }}',
-                                        'X-Requested-With': 'XMLHttpRequest'
-                                    },
-                                    body: new URLSearchParams({ is_public: next ? 'true' : 'false' })
-                                })
-                                .then(r => r.json())
-                                .then(data => {
-                                    this.saving = false;
-                                    if (data.status === 'success') {
-                                        this.isPublic = data.is_public;
-                                        window.location.reload();
-                                    } else {
-                                        this.errorMessage = 'Could not update visibility.';
-                                    }
-                                })
-                                .catch(() => { this.saving = false; this.errorMessage = 'Could not connect to the server.'; });
-                            }
-                        }"
-                    >
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="font-bold" x-text="isPublic ? 'Public' : 'Private'"></p>
-                                <p class="text-sm text-gray-600" x-text="isPublic ? 'Your profile is visible to everyone.' : 'Only you can see your profile.'"></p>
-                            </div>
-                            <button
-                                type="button"
-                                @click="toggle()"
-                                :disabled="saving"
-                                :class="{ 'opacity-50 cursor-not-allowed': saving, 'bg-brand-pink': isPublic, 'bg-brand-green': !isPublic }"
-                                class="border-brand-text shadow-neo-sm border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
-                                x-text="isPublic ? 'Make Private' : 'Make Public'"
-                            ></button>
+                {# ── Profile Visibility (binds to parent isPublic / togglePublic) ── #}
+                <div class="border-brand-text border-b-2 p-5">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <p class="text-lg font-bold tracking-wide uppercase">Enable public profile</p>
+                            <p class="mt-1 text-sm text-gray-600">
+                                When on, anyone can view your Bibliotype at /u/{{ user.username }}.
+                            </p>
                         </div>
-                        <div x-show="errorMessage" x-text="errorMessage" class="mt-2 text-sm font-bold text-red-600"></div>
+                        {% include 'core/partials/neo_switch.html' with state="isPublic" on_click="togglePublic()" disabled="privacySaving" %}
                     </div>
+                    <div x-show="privacyError" x-text="privacyError" class="mt-2 text-sm font-bold text-red-600"></div>
                 </div>
 
                 {# ── Recommendation Visibility ── #}
-                <div class="border-b-2 border-brand-text p-5">
-                    <h3 class="mb-3 text-lg font-bold uppercase tracking-wide">Recommendation Visibility</h3>
+                <div class="border-brand-text border-b-2 p-5">
                     <div
                         x-data="{
                             visible: {{ user_profile.visible_in_recommendations|yesno:'true,false' }},
@@ -302,27 +222,28 @@
                             }
                         }"
                     >
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between gap-4">
                             <div>
-                                <p class="font-bold" x-text="visible ? 'Visible' : 'Hidden'"></p>
-                                <p class="text-sm text-gray-600" x-text="visible ? 'You appear as a recommendation source for similar readers.' : 'You are hidden from recommendation sources.'"></p>
+                                <p class="text-lg font-bold tracking-wide uppercase">
+                                    Enable recommendation visibility
+                                </p>
+                                <p class="mt-1 text-sm text-gray-600">
+                                    When on, your profile helps generate recommendations for similar readers.
+                                </p>
                             </div>
-                            <button
-                                type="button"
-                                @click="toggle()"
-                                :disabled="saving"
-                                :class="{ 'opacity-50 cursor-not-allowed': saving, 'bg-brand-pink': visible, 'bg-brand-green': !visible }"
-                                class="border-brand-text shadow-neo-sm border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
-                                x-text="visible ? 'Opt Out' : 'Opt In'"
-                            ></button>
+                            {% include 'core/partials/neo_switch.html' with state="visible" on_click="toggle()" disabled="saving" %}
                         </div>
-                        <div x-show="errorMessage" x-text="errorMessage" class="mt-2 text-sm font-bold text-red-600"></div>
+                        <div
+                            x-show="errorMessage"
+                            x-text="errorMessage"
+                            class="mt-2 text-sm font-bold text-red-600"
+                        ></div>
                     </div>
                 </div>
 
                 {# ── Danger Zone ── #}
                 <div class="p-5">
-                    <h3 class="mb-3 text-lg font-bold uppercase tracking-wide text-red-700">Danger Zone</h3>
+                    <h3 class="mb-3 text-lg font-bold tracking-wide text-red-700 uppercase">Danger Zone</h3>
                     <div
                         x-data="{
                             showConfirm: false,
@@ -363,26 +284,27 @@
                         <button
                             type="button"
                             @click="showConfirm = !showConfirm"
-                            class="bg-brand-pink border-brand-text shadow-neo-sm border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
+                            class="bg-brand-pink border-brand-text shadow-neo-sm hover:shadow-neo-xs cursor-pointer border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                         >
                             Delete Account
                         </button>
 
                         <div x-show="showConfirm" x-cloak class="mt-4 space-y-3 border-2 border-red-400 bg-red-50 p-4">
                             <p class="text-sm font-bold text-red-800">
-                                Type <span class="font-mono bg-red-200 px-1">DELETE</span> and enter your password to confirm.
+                                Type <span class="bg-red-200 px-1 font-mono">DELETE</span> and enter your password to
+                                confirm.
                             </p>
                             <input
                                 type="text"
                                 x-model="confirmation"
-                                class="border-brand-text focus:border-red-500 w-full border-2 bg-white px-3 py-2 font-mono font-bold focus:outline-none"
+                                class="border-brand-text w-full border-2 bg-white px-3 py-2 font-mono font-bold focus:border-red-500 focus:outline-none"
                                 placeholder="Type DELETE here"
                                 autocomplete="off"
                             />
                             <input
                                 type="password"
                                 x-model="password"
-                                class="border-brand-text focus:border-red-500 w-full border-2 bg-white px-3 py-2 font-bold focus:outline-none"
+                                class="border-brand-text w-full border-2 bg-white px-3 py-2 font-bold focus:border-red-500 focus:outline-none"
                                 placeholder="Your password"
                                 autocomplete="current-password"
                             />
@@ -391,15 +313,18 @@
                                 @click="deleteAccount()"
                                 :disabled="!canDelete || deleting"
                                 :class="{ 'opacity-50 cursor-not-allowed': !canDelete || deleting }"
-                                class="bg-red-600 border-2 border-red-900 text-white shadow-[4px_4px_0px_0px_rgba(127,29,29,1)] px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-[3px_3px_0px_0px_rgba(127,29,29,1)] active:translate-x-1 active:translate-y-1 active:shadow-none cursor-pointer"
+                                class="cursor-pointer border-2 border-red-900 bg-red-600 px-4 py-2 font-bold text-white shadow-[4px_4px_0px_0px_rgba(127,29,29,1)] transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-[3px_3px_0px_0px_rgba(127,29,29,1)] active:translate-x-1 active:translate-y-1 active:shadow-none"
                             >
                                 <span x-text="deleting ? 'Deleting...' : 'Permanently Delete My Account'"></span>
                             </button>
-                            <div x-show="errorMessage" x-text="errorMessage" class="text-sm font-bold text-red-700"></div>
+                            <div
+                                x-show="errorMessage"
+                                x-text="errorMessage"
+                                class="text-sm font-bold text-red-700"
+                            ></div>
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>

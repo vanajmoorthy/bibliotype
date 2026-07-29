@@ -1,6 +1,5 @@
 """
 Tests for the settings modal endpoints:
-  - UpdateEmailForm / update_email_view
   - ChangePasswordForm / change_password_view
   - delete_account_view
   - update_privacy_view  (AJAX + form-POST dual-response)
@@ -11,71 +10,9 @@ Tests for the settings modal endpoints:
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-
-
-@override_settings(
-    CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
-)
-class UpdateEmailViewTests(TestCase):
-    def setUp(self):
-        self.client = Client()
-        self.password = "Str0ng-Pass!word"
-        self.user = User.objects.create_user(
-            username="emailuser",
-            email="original@example.com",
-            password=self.password,
-        )
-        self.client.force_login(self.user)
-        self.url = reverse("core:update_email")
-
-    def _post(self, email, ajax=True):
-        headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"} if ajax else {}
-        return self.client.post(self.url, {"email": email}, **headers)
-
-    def test_valid_email_change_persists(self):
-        response = self._post("new@example.com")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["status"], "success")
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.email, "new@example.com")
-
-    def test_duplicate_email_case_insensitive_rejected(self):
-        other = User.objects.create_user(username="other", email="taken@example.com", password="pass")
-        response = self._post("TAKEN@example.com")
-        self.assertEqual(response.status_code, 400)
-        data = response.json()
-        self.assertEqual(data["status"], "error")
-        self.assertIn("already in use", data["message"])
-        # Own email must NOT have changed
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.email, "original@example.com")
-
-    def test_changing_to_own_email_is_allowed(self):
-        """Changing to the same email (or its uppercase variant) must succeed."""
-        response = self._post("ORIGINAL@example.com")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["status"], "success")
-
-    def test_invalid_format_rejected(self):
-        response = self._post("not-an-email")
-        self.assertEqual(response.status_code, 400)
-        data = response.json()
-        self.assertEqual(data["status"], "error")
-
-    def test_anonymous_user_redirected(self):
-        self.client.logout()
-        response = self._post("anon@example.com")
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/login/", response["Location"])
-
-    @patch("core.views.profile.track_settings_updated")
-    def test_analytics_called_on_success(self, mock_track):
-        self._post("tracked@example.com")
-        mock_track.assert_called_once_with(self.user.id, setting_type="email")
 
 
 @override_settings(
@@ -259,6 +196,12 @@ class UpdatePrivacyDualResponseTests(TestCase):
         self.assertEqual(data["status"], "success")
         self.assertFalse(data["is_public"])
 
+    def test_privacy_toggle_invalidates_anon_recs_sample(self):
+        """is_public gates public_users_for_recs_sample, so a toggle must drop it."""
+        cache.set("public_users_for_recs_sample", ["stale"], 300)
+        self._post(False, ajax=True)
+        self.assertIsNone(cache.get("public_users_for_recs_sample"))
+
     def test_form_post_redirects(self):
         response = self._post(True, ajax=False)
         self.assertEqual(response.status_code, 302)
@@ -313,6 +256,24 @@ class UpdateRecommendationVisibilityDualResponseTests(TestCase):
         self.user.userprofile.refresh_from_db()
         self.assertTrue(self.user.userprofile.visible_in_recommendations)
 
+    def test_opt_out_invalidates_pool_caches(self):
+        """Opting out must drop the pool-count and candidate-sample caches immediately."""
+        self.user.userprofile.visible_in_recommendations = True
+        self.user.userprofile.save()
+        cache.set("recommendations_pool_count", 99, 300)
+        cache.set("public_users_for_recs_sample", ["stale"], 300)
+        self._post(False, ajax=True)
+        self.assertIsNone(cache.get("recommendations_pool_count"))
+        self.assertIsNone(cache.get("public_users_for_recs_sample"))
+
+    def test_opt_in_keeps_pool_count(self):
+        """Opting back in should not need to drop the pool-count cache."""
+        self.user.userprofile.visible_in_recommendations = False
+        self.user.userprofile.save()
+        cache.set("recommendations_pool_count", 99, 300)
+        self._post(True, ajax=True)
+        self.assertEqual(cache.get("recommendations_pool_count"), 99)
+
     def test_form_post_redirects(self):
         response = self._post(False, ajax=False)
         self.assertEqual(response.status_code, 302)
@@ -337,9 +298,6 @@ class AuthGuardTests(TestCase):
         response = self.client.post(url, post_data or {})
         self.assertEqual(response.status_code, 302)
         self.assertIn("/login/", response["Location"])
-
-    def test_update_email_auth_guard(self):
-        self._assert_redirect_to_login(reverse("core:update_email"), {"email": "x@x.com"})
 
     def test_change_password_auth_guard(self):
         self._assert_redirect_to_login(
