@@ -365,6 +365,15 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             book_genre_sets, shelf_signal_list
         )
 
+        # Persist sparse per-book shelf signals (keyed by Book id) so the
+        # poll-time recompute in core/views/_helpers.py can reproduce this
+        # shelf-informed split instead of degrading to API-genre-only
+        # classification. Only books that actually carried a signal are stored.
+        shelf_signals_map = {}
+        for signal_book, (shelf_fic, shelf_nonfic, shelf_genres) in zip(user_book_objects, shelf_signal_list):
+            if shelf_fic or shelf_nonfic or shelf_genres:
+                shelf_signals_map[str(signal_book.id)] = [shelf_fic, shelf_nonfic, sorted(shelf_genres)]
+
         # Sync currently-reading books to DB (Book/Author only, no UserBook, no global_read_count)
         if currently_reading_books:
             for cr_book in currently_reading_books:
@@ -787,6 +796,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 if (fiction_count + nonfiction_count) > 0
                 else None
             ),
+            "shelf_signals": shelf_signals_map,
             "longest_book": longest_book,
             "shortest_book": shortest_book,
             "page_difference": page_difference,
