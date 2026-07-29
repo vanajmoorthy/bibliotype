@@ -184,6 +184,10 @@ AUTH_PASSWORD_VALIDATORS = [
 
 TEST_RUNNER = "bibliotype.runner.ForceDisconnectTestRunner"
 
+# @login_required redirects here; without this Django falls back to
+# /accounts/login/, which 404s (our login lives at /login/).
+LOGIN_URL = "core:login"
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
