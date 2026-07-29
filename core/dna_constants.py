@@ -1646,18 +1646,58 @@ GLOBAL_AVERAGES = {
     "avg_publish_year": 2009,
 }
 
+# Sourcing for the GLOBAL_AVERAGES constants above.
+#
+# Honesty note: these three numbers are literature-derived *estimates*, not
+# measured global facts, and they are separate from the community percentiles
+# (those come from real reader data in AggregateAnalytics). The figures we
+# originally cited have all gone offline with no Wayback snapshot, and no
+# authoritative source states any of them exactly, so each entry documents what
+# the number actually is and links live adjacent context where it exists.
+#
+# Schema per key: {url, archived_url, accessed, note}
+#   url          live page for further reading, or None if nothing citable exists
+#   archived_url Wayback snapshot, or None
+#   accessed     ISO date the url/archived_url was last checked
+#   note         plain-language explanation of where the number comes from; must
+#                never restate the constant value (the template renders that), so
+#                the two can't drift apart
+# Every GLOBAL_AVERAGES key must have an entry here (enforced by test).
 GLOBAL_AVERAGES_SOURCES = {
     "avg_book_length_pages": {
-        "url": "https://wordsrated.com/book-length-statistics/",
-        "title": "WordsRated — Book Length Statistics",
+        "url": "https://prowritingaid.com/average-book-length",
+        "archived_url": None,
+        "accessed": "2026-07-29",
+        "note": (
+            "This is a working average, not a hard fact. Most adult novels land "
+            "somewhere between 250 and 400 pages, and I picked a round number in "
+            "that range. ProWritingAid has a good rundown of typical novel length "
+            "if you want to check my working."
+        ),
     },
     "avg_publish_year": {
-        "url": "https://ammar-alyousfi.com/2020/goodreads-books-statistics",
-        "title": "Ammar Al-Yousfi — Goodreads Books Statistics",
+        "url": None,
+        "archived_url": None,
+        "accessed": "2026-07-29",
+        "note": (
+            "This one is a loose anchor, not a measured global figure. I first "
+            "took it from a personal Goodreads analysis that has since gone "
+            "offline, and no authoritative source publishes an average publication "
+            "year of the books people read. It shifts with whose shelf you measure, "
+            "so treat it as a rough reference point."
+        ),
     },
     "avg_books_per_year": {
-        "url": "https://wordsrated.com/reading-statistics/",
-        "title": "WordsRated — Reading Statistics",
+        "url": "https://news.gallup.com/poll/388541/americans-reading-fewer-books-past.aspx",
+        "archived_url": None,
+        "accessed": "2026-07-29",
+        "note": (
+            "This is a deliberately conservative baseline, and surveys disagree a "
+            "lot. Gallup's 2022 poll put the US mean at 12.6 books a year, while "
+            "other studies land the median nearer 4 or 5. Reading rates outside the "
+            "US tend to run lower, so I use a middle-of-the-road figure. It is "
+            "approximate, not authoritative."
+        ),
     },
 }
 
