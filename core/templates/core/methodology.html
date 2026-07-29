@@ -4,28 +4,27 @@
 {% block seo_title %}How Bibliotype's Comparative Analytics Work{% endblock %}
 
 {% block seo_description %}
-    Learn how Bibliotype calculates each Comparative Analytics stat — average book length, average
-    book age, and books per year — including the data sources, assumptions, and community percentile
-    methodology behind each figure.
+    Learn how Bibliotype calculates each Comparative Analytics stat — average book length, average book age, and books
+    per year — including the data sources, assumptions, and community percentile methodology behind each figure.
 {% endblock %}
 
 {% block seo_keywords %}
-    Bibliotype methodology, comparative analytics, reading statistics methodology, book length average,
-    books per year average, reading data sources
+    Bibliotype methodology, comparative analytics, reading statistics methodology, book length average, books per year
+    average, reading data sources
 {% endblock %}
 
 {% block og_title %}How Bibliotype's Comparative Analytics Work{% endblock %}
 
 {% block og_description %}
-    Learn how Bibliotype derives each Comparative Analytics stat and how your reading compares to the
-    global average and the Bibliotype community.
+    Learn how Bibliotype derives each Comparative Analytics stat and how your reading compares to the global average and
+    the Bibliotype community.
 {% endblock %}
 
 {% block twitter_title %}How Bibliotype's Comparative Analytics Work{% endblock %}
 
 {% block twitter_description %}
-    How Bibliotype calculates average book length, book age, and books per year — data sources,
-    assumptions, and community percentile method explained.
+    How Bibliotype calculates average book length, book age, and books per year — data sources, assumptions, and
+    community percentile method explained.
 {% endblock %}
 
 {% block structured_data %}
@@ -85,29 +84,41 @@
 
 {% block content %}
     <div class="mx-auto max-w-3xl space-y-6 p-2 md:p-4">
-        <h1 class="text-center text-4xl font-bold uppercase tracking-widest md:text-5xl">Methodology</h1>
+        <h1 class="text-center text-4xl font-bold tracking-widest uppercase md:text-5xl">Methodology</h1>
 
         {# Intro card #}
         <div class="border-brand-text shadow-neo space-y-4 border-2 bg-white p-6 text-lg md:p-8">
-            <h2 class="text-2xl font-bold uppercase tracking-wider">
+            <h2 class="text-2xl font-bold tracking-wider uppercase">
                 <span class="bg-brand-cyan px-1">How Comparative Analytics Work</span>
             </h2>
             <p>
-                The <span class="bg-brand-yellow px-1 font-bold">Comparative Analytics</span> card on your
-                Bibliotype dashboard shows three stats that place your reading habits alongside both a
-                <span class="bg-brand-green px-1">global average</span> drawn from published research and a
-                <span class="bg-brand-pink px-1">community percentile</span> calculated from the reading data
-                of all Bibliotype users.
+                The <span class="bg-brand-yellow px-1 font-bold">Comparative Analytics</span> card on your dashboard
+                shows three stats, and for each one it gives you two things to compare against: a
+                <span class="bg-brand-green px-1">global average</span> and your
+                <span class="bg-brand-pink px-1">community percentile</span>. This page covers what each stat measures,
+                how it's built from your data, and how much to trust each number.
             </p>
-            <p>
-                This page explains exactly what each stat measures, how it is computed from your data,
-                where the global benchmark comes from, and what caveats apply.
-            </p>
+            <p>One distinction matters more than anything else here, so I want to be upfront about it.</p>
+            <ul class="list-outside list-disc space-y-2 pl-6">
+                <li>
+                    <span class="bg-brand-pink px-1 font-bold">Community percentiles are real data.</span>
+                    They come straight from every Bibliotype library. When the card says you read longer books than 70%
+                    of readers, that number is measured from actual uploaded shelves, and it shifts as more people join.
+                </li>
+                <li>
+                    <span class="bg-brand-green px-1 font-bold">Global averages are rough estimates.</span>
+                    The three "average reader" figures are constants I set by hand from published reading research.
+                    They're honest ballpark numbers rather than precise measurements, and I've been candid below about
+                    which ones are shaky. Lean on your community percentile; treat the global average as a loose
+                    backdrop. Once enough readers have joined, I'd like to retire these hand-set constants and derive
+                    the global averages from the community's libraries too.
+                </li>
+            </ul>
         </div>
 
         {# Book Length section #}
         <div id="book-length" class="border-brand-text shadow-neo space-y-4 border-2 bg-white p-6 text-lg md:p-8">
-            <h2 class="text-2xl font-bold uppercase tracking-wider">
+            <h2 class="text-2xl font-bold tracking-wider uppercase">
                 <span class="bg-brand-green px-1">Average Book Length</span>
             </h2>
 
@@ -115,26 +126,25 @@
                 <div>
                     <h3 class="font-bold uppercase">What it measures</h3>
                     <p>
-                        The mean page count of all books on your read shelf that have page count data available,
-                        rounded to the nearest whole page.
+                        The mean page count of every book on your read shelf that has one, rounded to the nearest whole
+                        page.
                     </p>
                 </div>
 
                 <div>
                     <h3 class="font-bold uppercase">How your value is computed</h3>
                     <p>
-                        Bibliotype reads the page count for each book from your export and supplements missing
-                        values by querying Open Library and Google Books. Only books with a resolved page count
-                        contribute to the average — books where no source reports a page count are excluded.
+                        Bibliotype pulls each book's page count from your export and fills the gaps from Open Library
+                        and Google Books. Only books with a resolved page count make it into the average. Anything still
+                        missing one sits it out.
                     </p>
                 </div>
 
                 <div>
                     <h3 class="font-bold uppercase">Community percentile</h3>
                     <p>
-                        Once your average is computed, it is ranked against the same average calculated for every
-                        other Bibliotype reader. The percentile tells you what share of readers has a lower average
-                        book length than you.
+                        Your average is ranked against the same figure for every other reader. The percentile is the
+                        share of readers whose average book length is shorter than yours.
                     </p>
                 </div>
 
@@ -142,31 +152,43 @@
                     <h3 class="font-bold uppercase">Assumptions and caveats</h3>
                     <ul class="list-outside list-disc space-y-1 pl-6">
                         <li>
-                            If enrichment is still in progress, some books may not yet have a page count and the
-                            figure will update automatically once enrichment completes.
+                            If enrichment is still in progress, some books may not yet have a page count and the figure
+                            will update automatically once enrichment completes.
                         </li>
                         <li>
-                            Different editions of the same book can have very different page counts. Bibliotype
-                            uses whichever edition Open Library or Google Books returns first, which may not match
-                            the edition you read.
+                            Different editions of the same book can have very different page counts. Bibliotype uses
+                            whichever edition Open Library or Google Books returns first, which may not match the
+                            edition you read.
                         </li>
                         <li>
-                            Very short books (e.g. novellas) and very long ones (e.g. omnibus editions) are
-                            included without trimming, so a single unusually long book can shift your average
-                            noticeably.
+                            Very short books (e.g. novellas) and very long ones (e.g. omnibus editions) are included
+                            without trimming, so a single unusually long book can shift your average noticeably.
                         </li>
                     </ul>
                 </div>
 
                 <div class="border-brand-text border-l-4 bg-gray-50 p-3 text-base">
                     <p>
-                        <span class="font-bold">Global benchmark:</span> The average reader reads books of
-                        {{ global_averages.avg_book_length_pages }} pages.
-                        Source:
-                        <a href="{{ global_averages_sources.avg_book_length_pages.url }}"
-                           target="_blank"
-                           rel="noopener"
-                           class="underline hover:bg-brand-yellow">{{ global_averages_sources.avg_book_length_pages.title }}</a>.
+                        <span class="font-bold">Global benchmark:</span> I compare your average against a working figure
+                        of {{ global_averages.avg_book_length_pages }} pages.
+                        {{ global_averages_sources.avg_book_length_pages.note }}
+                        {% if global_averages_sources.avg_book_length_pages.url %}
+                            <a
+                                href="{{ global_averages_sources.avg_book_length_pages.url }}"
+                                target="_blank"
+                                rel="noopener"
+                                class="hover:bg-brand-yellow underline"
+                                >Further reading</a
+                            >.
+                        {% elif global_averages_sources.avg_book_length_pages.archived_url %}
+                            <a
+                                href="{{ global_averages_sources.avg_book_length_pages.archived_url }}"
+                                target="_blank"
+                                rel="noopener"
+                                class="hover:bg-brand-yellow underline"
+                                >Archived copy</a
+                            >.
+                        {% endif %}
                     </p>
                 </div>
             </div>
@@ -174,7 +196,7 @@
 
         {# Book Age section #}
         <div id="book-age" class="border-brand-text shadow-neo space-y-4 border-2 bg-white p-6 text-lg md:p-8">
-            <h2 class="text-2xl font-bold uppercase tracking-wider">
+            <h2 class="text-2xl font-bold tracking-wider uppercase">
                 <span class="bg-brand-orange px-1">Average Book Age</span>
             </h2>
 
@@ -182,26 +204,26 @@
                 <div>
                     <h3 class="font-bold uppercase">What it measures</h3>
                     <p>
-                        The mean original publication year of all books on your read shelf that have a known
-                        publish year, giving a sense of whether you tend to read newer releases or reach further
-                        back into the backlist.
+                        The mean original publication year of all books on your read shelf that have a known publish
+                        year, giving a sense of whether you tend to read newer releases or reach further back into the
+                        backlist.
                     </p>
                 </div>
 
                 <div>
                     <h3 class="font-bold uppercase">How your value is computed</h3>
                     <p>
-                        Bibliotype reads the publication year from your export and fills gaps via Open Library
-                        and Google Books. Only books with a resolved publication year contribute to the average.
+                        Bibliotype pulls the publication year from your export and fills the gaps from Open Library and
+                        Google Books. Only books with a resolved publication year count toward the average.
                     </p>
                 </div>
 
                 <div>
                     <h3 class="font-bold uppercase">Community percentile</h3>
                     <p>
-                        Your average publish year is ranked against the same figure for every other Bibliotype
-                        reader. A higher percentile means your reading skews more recent compared to the community;
-                        a lower percentile means you tend to read older books.
+                        Your average publish year is ranked against the same figure for every other Bibliotype reader. A
+                        higher percentile means your reading skews more recent compared to the community; a lower
+                        percentile means you tend to read older books.
                     </p>
                 </div>
 
@@ -209,30 +231,43 @@
                     <h3 class="font-bold uppercase">Assumptions and caveats</h3>
                     <ul class="list-outside list-disc space-y-1 pl-6">
                         <li>
-                            If enrichment is still in progress, some books may be missing a publish year and the
-                            figure will update automatically once enrichment completes.
+                            If enrichment is still in progress, some books may be missing a publish year and the figure
+                            will update automatically once enrichment completes.
                         </li>
                         <li>
-                            Bibliotype uses the <em>original</em> publication year where possible, not the year
-                            of a reprint or new edition. If Open Library or Google Books only provides an edition
-                            date, that is used instead.
+                            Bibliotype uses the <em>original</em> publication year where possible, not the year of a
+                            reprint or new edition. If Open Library or Google Books only provides an edition date, that
+                            is used instead.
                         </li>
                         <li>
-                            Books from ancient or medieval periods can pull the average down significantly if
-                            you read a lot of classics.
+                            Books from ancient or medieval periods can pull the average down significantly if you read a
+                            lot of classics.
                         </li>
                     </ul>
                 </div>
 
                 <div class="border-brand-text border-l-4 bg-gray-50 p-3 text-base">
                     <p>
-                        <span class="font-bold">Global benchmark:</span> The average publish year of a book
-                        read by the average reader is {{ global_averages.avg_publish_year }}.
-                        Source:
-                        <a href="{{ global_averages_sources.avg_publish_year.url }}"
-                           target="_blank"
-                           rel="noopener"
-                           class="underline hover:bg-brand-yellow">{{ global_averages_sources.avg_publish_year.title }}</a>.
+                        <span class="font-bold">Global benchmark:</span> the baseline I compare against is a publish
+                        year of {{ global_averages.avg_publish_year }}.
+                        {{ global_averages_sources.avg_publish_year.note }}
+                        {% if global_averages_sources.avg_publish_year.url %}
+                            <a
+                                href="{{ global_averages_sources.avg_publish_year.url }}"
+                                target="_blank"
+                                rel="noopener"
+                                class="hover:bg-brand-yellow underline"
+                                >Further reading</a
+                            >.
+                        {% elif global_averages_sources.avg_publish_year.archived_url %}
+                            <a
+                                href="{{ global_averages_sources.avg_publish_year.archived_url }}"
+                                target="_blank"
+                                rel="noopener"
+                                class="hover:bg-brand-yellow underline"
+                                >Archived copy</a
+                            >.
+                        {% endif %}
                     </p>
                 </div>
             </div>
@@ -240,7 +275,7 @@
 
         {# Books Per Year section #}
         <div id="books-per-year" class="border-brand-text shadow-neo space-y-4 border-2 bg-white p-6 text-lg md:p-8">
-            <h2 class="text-2xl font-bold uppercase tracking-wider">
+            <h2 class="text-2xl font-bold tracking-wider uppercase">
                 <span class="bg-brand-purple px-1">Books Per Year</span>
             </h2>
 
@@ -248,26 +283,25 @@
                 <div>
                     <h3 class="font-bold uppercase">What it measures</h3>
                     <p>
-                        Your average annual reading pace, calculated only from books with a recorded finish date
-                        in your export.
+                        Your average annual reading pace, calculated only from books with a recorded finish date in your
+                        export.
                     </p>
                 </div>
 
                 <div>
                     <h3 class="font-bold uppercase">How your value is computed</h3>
                     <p>
-                        Bibliotype counts the number of books with a recorded finish date, then divides by the
-                        number of distinct calendar years in which you finished at least one book. For example,
-                        if you finished 50 books spread across 5 different years, your pace is 10 books a year.
+                        Bibliotype counts the number of books with a recorded finish date, then divides by the number of
+                        distinct calendar years in which you finished at least one book. For example, if you finished 50
+                        books spread across 5 different years, your pace is 10 books a year.
                     </p>
                 </div>
 
                 <div>
                     <h3 class="font-bold uppercase">Community percentile</h3>
                     <p>
-                        Your books-per-year figure is ranked against the same figure for every other Bibliotype
-                        reader. The percentile tells you what share of readers has a lower annual reading pace
-                        than you.
+                        Your pace is ranked against every other reader's. The percentile is the share of readers who get
+                        through fewer books a year than you do.
                     </p>
                 </div>
 
@@ -275,31 +309,43 @@
                     <h3 class="font-bold uppercase">Assumptions and caveats</h3>
                     <ul class="list-outside list-disc space-y-1 pl-6">
                         <li>
-                            Only books with a recorded finish date count. If you mark books as read on Goodreads
-                            without entering a date, they are excluded and your pace may appear lower than reality.
+                            Only books with a recorded finish date count. If you mark books as read on Goodreads without
+                            entering a date, they are excluded and your pace may appear lower than reality.
                         </li>
                         <li>
-                            The calculation uses the number of years in which you finished at least one book,
-                            not the total span between your first and last recorded finish date. A reading gap
-                            of several years does not pull your average down.
+                            The calculation uses the number of years in which you finished at least one book, not the
+                            total span between your first and last recorded finish date. A reading gap of several years
+                            does not pull your average down.
                         </li>
                         <li>
-                            If you finished only one book or all your books fall in the same calendar year,
-                            the community percentile comparison is omitted and a simpler total-books count is
-                            shown instead.
+                            If you finished only one book or all your books fall in the same calendar year, the
+                            community percentile comparison is omitted and a simpler total-books count is shown instead.
                         </li>
                     </ul>
                 </div>
 
                 <div class="border-brand-text border-l-4 bg-gray-50 p-3 text-base">
                     <p>
-                        <span class="font-bold">Global benchmark:</span> The average reader reads
+                        <span class="font-bold">Global benchmark:</span> I compare against roughly
                         {{ global_averages.avg_books_per_year }} books a year.
-                        Source:
-                        <a href="{{ global_averages_sources.avg_books_per_year.url }}"
-                           target="_blank"
-                           rel="noopener"
-                           class="underline hover:bg-brand-yellow">{{ global_averages_sources.avg_books_per_year.title }}</a>.
+                        {{ global_averages_sources.avg_books_per_year.note }}
+                        {% if global_averages_sources.avg_books_per_year.url %}
+                            <a
+                                href="{{ global_averages_sources.avg_books_per_year.url }}"
+                                target="_blank"
+                                rel="noopener"
+                                class="hover:bg-brand-yellow underline"
+                                >Further reading</a
+                            >.
+                        {% elif global_averages_sources.avg_books_per_year.archived_url %}
+                            <a
+                                href="{{ global_averages_sources.avg_books_per_year.archived_url }}"
+                                target="_blank"
+                                rel="noopener"
+                                class="hover:bg-brand-yellow underline"
+                                >Archived copy</a
+                            >.
+                        {% endif %}
                     </p>
                 </div>
             </div>
@@ -309,7 +355,7 @@
         <div class="text-center">
             <a
                 href="{% url 'core:home' %}"
-                class="border-brand-text shadow-neo bg-brand-green inline-block border-2 px-6 py-3 text-xl font-bold uppercase transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-neo-md active:translate-x-1 active:translate-y-1 active:shadow-none"
+                class="border-brand-text shadow-neo bg-brand-green hover:shadow-neo-md inline-block border-2 px-6 py-3 text-xl font-bold uppercase transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-1 active:translate-y-1 active:shadow-none"
             >
                 Generate Your Bibliotype Now
             </a>
