@@ -162,11 +162,11 @@ def _login_view_throttled(request):
 
         user = None
         if email and password:
-            try:
-                user_obj = User.objects.get(email__iexact=email)
+            # .get() would 500 the login page if duplicate case-variant emails ever exist;
+            # take the earliest account deterministically instead.
+            user_obj = User.objects.filter(email__iexact=email).order_by("id").first()
+            if user_obj:
                 user = authenticate(request, username=user_obj.username, password=password)
-            except User.DoesNotExist:
-                pass
 
         if user is not None:
             login(request, user)
