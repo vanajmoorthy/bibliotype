@@ -3,10 +3,12 @@
 import json
 import logging
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
@@ -27,13 +29,33 @@ def _wants_json(request):
     return request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
 
+def _ratelimited_response(request):
+    """Uniform 429 for the throttled settings endpoints (JSON for AJAX, redirect otherwise)."""
+    if _wants_json(request):
+        return JsonResponse({"status": "error", "message": "Too many attempts, try again later."}, status=429)
+    messages.error(request, "Too many attempts, try again later.")
+    return redirect("core:display_dna")
+
+
 @login_required
 @require_POST
 def update_privacy_view(request):
     is_public = request.POST.get("is_public") == "true"
     profile = request.user.userprofile
+    was_public = profile.is_public
     profile.is_public = is_public
     profile.save()
+
+    # Going private removes the user from the recommendation candidate pool, so drop
+    # the recs caches that could still surface them (mirrors update_recommendation_visibility).
+    if was_public and not is_public:
+        safe_cache_delete(f"user_recommendations_{request.user.id}")
+        safe_cache_delete(f"similar_users_{request.user.id}")
+        safe_cache_delete("public_users_for_recs_sample")
+        logger.info(
+            "profile set private; cleared recs caches",
+            extra={"user_id": request.user.id},
+        )
 
     if is_public:
         track_profile_made_public(request.user.id)
@@ -148,15 +170,38 @@ def update_recommendation_visibility(request):
     return redirect("core:display_dna")
 
 
-@login_required
-@require_POST
-def update_email_view(request):
-    """Change the authenticated user's email address."""
-    form = UpdateEmailForm(request.POST, user=request.user)
+def _notify_old_email_of_change(request, old_email, new_email):
+    """Best-effort notify the previous address that the account email changed."""
+    if not old_email or old_email.strip().lower() == new_email.strip().lower():
+        return
+    try:
+        reset_url = request.build_absolute_uri(reverse("password_reset"))
+        send_mail(
+            subject="Your Bibliotype email was changed",
+            message=(
+                f"Your Bibliotype account email was changed to {new_email}.\n\n"
+                f"If this wasn't you, reset your password right away at {reset_url}"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[old_email],
+            fail_silently=False,
+        )
+    except Exception as exc:
+        logger.warning(f"Could not send email-change notification to old address: {exc}")
+
+
+@ratelimit(key="user", rate="5/m", method="POST", block=True)
+def _update_email_view_throttled(request):
+    """Change the authenticated user's email address (requires current password)."""
+    user = request.user
+    old_email = user.email
+    form = UpdateEmailForm(request.POST, user=user)
     if form.is_valid():
-        request.user.email = form.cleaned_data["email"]
-        request.user.save(update_fields=["email"])
-        track_settings_updated(request.user.id, setting_type="email")
+        new_email = form.cleaned_data["email"]
+        user.email = new_email
+        user.save(update_fields=["email"])
+        track_settings_updated(user.id, setting_type="email")
+        _notify_old_email_of_change(request, old_email, new_email)
 
         if _wants_json(request):
             return JsonResponse({"status": "success", "message": "Email updated successfully."})
@@ -175,7 +220,15 @@ def update_email_view(request):
 
 @login_required
 @require_POST
-def change_password_view(request):
+def update_email_view(request):
+    try:
+        return _update_email_view_throttled(request)
+    except Ratelimited:
+        return _ratelimited_response(request)
+
+
+@ratelimit(key="user", rate="5/m", method="POST", block=True)
+def _change_password_view_throttled(request):
     """Change the authenticated user's password while keeping the session alive."""
     form = ChangePasswordForm(request.POST, user=request.user)
     if form.is_valid():
@@ -202,7 +255,15 @@ def change_password_view(request):
 
 @login_required
 @require_POST
-def delete_account_view(request):
+def change_password_view(request):
+    try:
+        return _change_password_view_throttled(request)
+    except Ratelimited:
+        return _ratelimited_response(request)
+
+
+@ratelimit(key="user", rate="5/m", method="POST", block=True)
+def _delete_account_view_throttled(request):
     """Permanently delete the authenticated user's account after double verification."""
     confirmation = request.POST.get("confirmation", "")
     password = request.POST.get("password", "")
@@ -223,6 +284,8 @@ def delete_account_view(request):
     # Capture UID before deletion so the analytics event can still fire
     uid = user.id
     track_account_deleted(uid)
+    # Drop the recs candidate sample so the deleted user can't linger in it.
+    safe_cache_delete("public_users_for_recs_sample")
     logout(request)
     User.objects.filter(pk=uid).delete()
 
@@ -231,3 +294,12 @@ def delete_account_view(request):
 
     messages.success(request, "Your account has been permanently deleted.")
     return redirect("core:home")
+
+
+@login_required
+@require_POST
+def delete_account_view(request):
+    try:
+        return _delete_account_view_throttled(request)
+    except Ratelimited:
+        return _ratelimited_response(request)

@@ -31,7 +31,8 @@ class CustomUserCreationForm(UserCreationForm):
         # path is handled in `signup_view` (US-017): a password-reset email is
         # sent to the legitimate owner and the user is redirected to the generic
         # "check your inbox" page, identical to the new-signup path's tone.
-        return self.cleaned_data.get("email")
+        # Normalize to lowercase so case-variants can't create lookalike duplicates.
+        return self.cleaned_data.get("email", "").strip().lower()
 
 
 class UpdateDisplayNameForm(forms.ModelForm):
@@ -57,13 +58,21 @@ class UpdateDisplayNameForm(forms.ModelForm):
 
 class UpdateEmailForm(forms.Form):
     email = forms.EmailField(required=True)
+    current_password = forms.CharField(widget=forms.PasswordInput)
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
 
+    def clean_current_password(self):
+        current = self.cleaned_data.get("current_password")
+        if self.user and not self.user.check_password(current):
+            raise forms.ValidationError("Your current password is incorrect.")
+        return current
+
     def clean_email(self):
-        email = self.cleaned_data.get("email", "").strip()
+        # Normalize to lowercase so case-variants can't create lookalike duplicates.
+        email = self.cleaned_data.get("email", "").strip().lower()
         if self.user and User.objects.filter(email__iexact=email).exclude(pk=self.user.pk).exists():
             raise forms.ValidationError("That email is already in use.")
         return email

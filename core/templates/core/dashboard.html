@@ -20,12 +20,20 @@
     <script defer src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
 {% endblock %}
 
+{% block main_extra_classes %}{% if is_processing %} flex flex-col{% endif %}{% endblock %}
+
 {% block content %}
-    <div class="mx-auto h-full max-w-4xl space-y-6 p-2">
+    <div
+        class="mx-auto {% if is_processing %}
+            flex w-full max-w-4xl flex-grow flex-col p-2
+        {% else %}
+            h-full max-w-4xl space-y-6 p-2
+        {% endif %}"
+    >
         {% if is_processing %}
             <div
                 id="processing-container"
-                class="flex h-full flex-col items-center justify-center p-4"
+                class="flex w-full flex-grow flex-col items-center justify-center p-4"
                 x-data="{ status: 'PENDING' }"
             >
                 <div class="w-full max-w-2xl text-center" x-show="status !== 'FAILURE'">

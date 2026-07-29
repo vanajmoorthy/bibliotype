@@ -11,15 +11,20 @@ Tests for the settings modal endpoints:
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.core import mail
+from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 
 @override_settings(
     CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
 )
 class UpdateEmailViewTests(TestCase):
     def setUp(self):
+        cache.clear()
+        mail.outbox = []
         self.client = Client()
         self.password = "Str0ng-Pass!word"
         self.user = User.objects.create_user(
@@ -30,9 +35,10 @@ class UpdateEmailViewTests(TestCase):
         self.client.force_login(self.user)
         self.url = reverse("core:update_email")
 
-    def _post(self, email, ajax=True):
+    def _post(self, email, current_password=None, ajax=True):
         headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"} if ajax else {}
-        return self.client.post(self.url, {"email": email}, **headers)
+        body = {"email": email, "current_password": self.password if current_password is None else current_password}
+        return self.client.post(self.url, body, **headers)
 
     def test_valid_email_change_persists(self):
         response = self._post("new@example.com")
@@ -42,8 +48,34 @@ class UpdateEmailViewTests(TestCase):
         self.user.refresh_from_db()
         self.assertEqual(self.user.email, "new@example.com")
 
+    def test_wrong_current_password_rejected(self):
+        response = self._post("new@example.com", current_password="WrongPass!1")
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertEqual(data["status"], "error")
+        # Email must NOT have changed and no notification sent
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "original@example.com")
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_correct_password_changes_email_and_notifies_old_address(self):
+        response = self._post("moved@example.com")
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "moved@example.com")
+        # Exactly one notification, sent to the OLD address
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["original@example.com"])
+        self.assertIn("moved@example.com", mail.outbox[0].body)
+
+    def test_email_normalized_to_lowercase(self):
+        response = self._post("MixedCase@Example.com")
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "mixedcase@example.com")
+
     def test_duplicate_email_case_insensitive_rejected(self):
-        other = User.objects.create_user(username="other", email="taken@example.com", password="pass")
+        User.objects.create_user(username="other", email="taken@example.com", password="pass")
         response = self._post("TAKEN@example.com")
         self.assertEqual(response.status_code, 400)
         data = response.json()
@@ -54,11 +86,13 @@ class UpdateEmailViewTests(TestCase):
         self.assertEqual(self.user.email, "original@example.com")
 
     def test_changing_to_own_email_is_allowed(self):
-        """Changing to the same email (or its uppercase variant) must succeed."""
+        """Changing to the same email (or its uppercase variant) must succeed without notifying."""
         response = self._post("ORIGINAL@example.com")
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["status"], "success")
+        # Same address after normalization → no self-notification
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_invalid_format_rejected(self):
         response = self._post("not-an-email")
@@ -153,6 +187,7 @@ class ChangePasswordViewTests(TestCase):
 )
 class DeleteAccountViewTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = Client()
         self.password = "Del3te-Me!"
         self.user = User.objects.create_user(
@@ -166,6 +201,13 @@ class DeleteAccountViewTests(TestCase):
     def _post(self, confirmation, password, ajax=True):
         headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"} if ajax else {}
         return self.client.post(self.url, {"confirmation": confirmation, "password": password}, **headers)
+
+    @patch("core.views.profile.track_account_deleted")
+    def test_delete_clears_recs_candidate_sample_cache(self, _mock_track):
+        cache.set("public_users_for_recs_sample", "cached", 300)
+        response = self._post("DELETE", self.password)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(cache.get("public_users_for_recs_sample"))
 
     @patch("core.views.profile.track_account_deleted")
     def test_correct_confirmation_and_password_deletes_account(self, mock_track):
@@ -228,6 +270,7 @@ class DeleteAccountViewTests(TestCase):
 )
 class UpdatePrivacyDualResponseTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = Client()
         self.user = User.objects.create_user(
             username="privacyuser",
@@ -240,6 +283,31 @@ class UpdatePrivacyDualResponseTests(TestCase):
     def _post(self, is_public, ajax=True):
         headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"} if ajax else {}
         return self.client.post(self.url, {"is_public": "true" if is_public else "false"}, **headers)
+
+    def _prime_recs_caches(self):
+        keys = [
+            f"user_recommendations_{self.user.id}",
+            f"similar_users_{self.user.id}",
+            "public_users_for_recs_sample",
+        ]
+        for key in keys:
+            cache.set(key, "cached", 300)
+        return keys
+
+    def test_public_to_private_clears_recs_caches(self):
+        self.user.userprofile.is_public = True
+        self.user.userprofile.save()
+        keys = self._prime_recs_caches()
+        self._post(False, ajax=True)
+        for key in keys:
+            self.assertIsNone(cache.get(key), f"{key} should have been invalidated on going private")
+
+    def test_private_to_public_keeps_recs_caches(self):
+        # Profile starts private (default); going public must not clear the trio.
+        keys = self._prime_recs_caches()
+        self._post(True, ajax=True)
+        for key in keys:
+            self.assertEqual(cache.get(key), "cached", f"{key} should NOT be invalidated on going public")
 
     def test_ajax_make_public_returns_json(self):
         response = self._post(True, ajax=True)
