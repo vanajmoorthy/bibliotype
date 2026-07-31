@@ -11,6 +11,13 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 
 Prioritised 
 
+ops / deploy — do first (added 2026-07-31)
+- rotate/replace the Google Books API key and set its restriction to "none" or an IP allowlist (NOT "HTTP referrers") so the server-side enrichment calls stop 403ing; make sure the Books API is enabled on the project; update the prod `.env`; `docker compose -f docker-compose.prod.yml up -d --force-recreate web worker`; delete the old key
+- confirm prod redeployed the latest `main` (settings-modal hardening, enrichment timeout widening + log key-redaction, live-enrichment recompute) and that web/worker restarted on the new image
+- re-test a Goodreads upload end to end: enrichment should finish instead of hanging around ~93%, with far fewer Open Library timeouts and no Google Books 403s
+- browser smoke-test the settings modal: email change now requires the current password + emails the old address; change password; privacy/recs toggles; confirm password managers can fill/save
+- follow-up: recompute the comparative-analytics "global averages" from community aggregates once N is large enough (they're literature-derived constants today)
+
 ongoing
 - settings modal
 - lock down canonical genres and improve mapping (improve fiction/non fiction split)

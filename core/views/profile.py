@@ -27,19 +27,33 @@ def _wants_json(request):
     return request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
 
+def _ratelimited_response(request):
+    """Uniform 429 for the throttled settings endpoints (JSON for AJAX, redirect otherwise)."""
+    if _wants_json(request):
+        return JsonResponse({"status": "error", "message": "Too many attempts, try again later."}, status=429)
+    messages.error(request, "Too many attempts, try again later.")
+    return redirect("core:display_dna")
+
+
 @login_required
 @require_POST
 def update_privacy_view(request):
     is_public = request.POST.get("is_public") == "true"
     profile = request.user.userprofile
+    was_public = profile.is_public
     profile.is_public = is_public
     profile.save()
 
-    if not is_public:
-        # public_users_for_recs_sample filters on is_public, so going private must drop it
-        # immediately (otherwise the now-private user lingers in the anon-recs candidate pool
-        # for up to its TTL). Going public is left to lazily refresh on TTL.
+    # Going private removes the user from the recommendation candidate pool, so drop
+    # the recs caches that could still surface them (mirrors update_recommendation_visibility).
+    if was_public and not is_public:
+        safe_cache_delete(f"user_recommendations_{request.user.id}")
+        safe_cache_delete(f"similar_users_{request.user.id}")
         safe_cache_delete("public_users_for_recs_sample")
+        logger.info(
+            "profile set private; cleared recs caches",
+            extra={"user_id": request.user.id},
+        )
 
     if is_public:
         track_profile_made_public(request.user.id)
@@ -126,14 +140,12 @@ def update_recommendation_visibility(request):
     profile.visible_in_recommendations = is_visible
     profile.save()
 
-    # Always refresh the user's own caches so their next read reflects the new state.
     safe_cache_delete(f"user_recommendations_{request.user.id}")
     safe_cache_delete(f"similar_users_{request.user.id}")
 
     if was_visible and not is_visible:
         # Opting out removes the user from the shared candidate sample AND the pool count
-        # (both filter visible_in_recommendations), so drop them immediately. The opt-in
-        # direction leaves the shared sample to refresh lazily on TTL.
+        # (both filter visible_in_recommendations), so drop them immediately.
         safe_cache_delete("public_users_for_recs_sample")
         safe_cache_delete("recommendations_pool_count")
         logger.info(
@@ -159,9 +171,8 @@ def update_recommendation_visibility(request):
     return redirect("core:display_dna")
 
 
-@login_required
-@require_POST
-def change_password_view(request):
+@ratelimit(key="user", rate="5/m", method="POST", block=True)
+def _change_password_view_throttled(request):
     """Change the authenticated user's password while keeping the session alive."""
     form = ChangePasswordForm(request.POST, user=request.user)
     if form.is_valid():
@@ -188,7 +199,15 @@ def change_password_view(request):
 
 @login_required
 @require_POST
-def delete_account_view(request):
+def change_password_view(request):
+    try:
+        return _change_password_view_throttled(request)
+    except Ratelimited:
+        return _ratelimited_response(request)
+
+
+@ratelimit(key="user", rate="5/m", method="POST", block=True)
+def _delete_account_view_throttled(request):
     """Permanently delete the authenticated user's account after double verification."""
     confirmation = request.POST.get("confirmation", "")
     password = request.POST.get("password", "")
@@ -209,6 +228,8 @@ def delete_account_view(request):
     # Capture UID before deletion so the analytics event can still fire
     uid = user.id
     track_account_deleted(uid)
+    # Drop the recs candidate sample so the deleted user can't linger in it.
+    safe_cache_delete("public_users_for_recs_sample")
     logout(request)
     User.objects.filter(pk=uid).delete()
 
@@ -217,3 +238,12 @@ def delete_account_view(request):
 
     messages.success(request, "Your account has been permanently deleted.")
     return redirect("core:home")
+
+
+@login_required
+@require_POST
+def delete_account_view(request):
+    try:
+        return _delete_account_view_throttled(request)
+    except Ratelimited:
+        return _ratelimited_response(request)

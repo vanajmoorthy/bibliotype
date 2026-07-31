@@ -251,7 +251,9 @@ def assign_reader_type(read_df, enriched_data, book_genre_sets, reread_count_ove
     return winner, scores
 
 
-def recompute_reader_type_from_db(user, csv_context, books=None):
+def recompute_reader_type_from_db(
+    user, csv_context, books=None, current_reader_type=None, current_explanation=None
+):
     """Recompute reader type entirely from DB books + persisted CSV context.
 
     Called during enrichment polling so the reader-type card updates live as
@@ -268,6 +270,10 @@ def recompute_reader_type_from_db(user, csv_context, books=None):
         Pre-fetched Book queryset (with select_related author/publisher and
         prefetch_related genres). When provided, skips the DB query so the
         caller can share one queryset pass with _compute_enrichment_stats.
+    current_reader_type / current_explanation : str or None
+        The type/blurb currently stored for the user. When the recomputed type
+        matches, the stored blurb is reused instead of re-rolling random.choice,
+        so the explanation doesn't churn on every poll.
 
     Returns
     -------
@@ -312,7 +318,12 @@ def recompute_reader_type_from_db(user, csv_context, books=None):
         reread_count_override=csv_context.get("reread_count"),
         books_per_year_override=csv_context.get("books_per_year_avg"),
     )
-    explanation = random.choice(READER_TYPE_DESCRIPTIONS.get(reader_type, [""]))
+    # Keep the existing blurb when the winning type is unchanged; only re-roll
+    # when the type actually flips, so polling doesn't churn the explanation.
+    if reader_type == current_reader_type and current_explanation:
+        explanation = current_explanation
+    else:
+        explanation = random.choice(READER_TYPE_DESCRIPTIONS.get(reader_type, [""]))
     top_types_list = [{"type": t, "score": s} for t, s in reader_type_scores.most_common(3) if s > 0]
 
     return {

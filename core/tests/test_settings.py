@@ -90,6 +90,7 @@ class ChangePasswordViewTests(TestCase):
 )
 class DeleteAccountViewTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = Client()
         self.password = "Del3te-Me!"
         self.user = User.objects.create_user(
@@ -103,6 +104,13 @@ class DeleteAccountViewTests(TestCase):
     def _post(self, confirmation, password, ajax=True):
         headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"} if ajax else {}
         return self.client.post(self.url, {"confirmation": confirmation, "password": password}, **headers)
+
+    @patch("core.views.profile.track_account_deleted")
+    def test_delete_clears_recs_candidate_sample_cache(self, _mock_track):
+        cache.set("public_users_for_recs_sample", "cached", 300)
+        response = self._post("DELETE", self.password)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(cache.get("public_users_for_recs_sample"))
 
     @patch("core.views.profile.track_account_deleted")
     def test_correct_confirmation_and_password_deletes_account(self, mock_track):
@@ -165,6 +173,7 @@ class DeleteAccountViewTests(TestCase):
 )
 class UpdatePrivacyDualResponseTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = Client()
         self.user = User.objects.create_user(
             username="privacyuser",
@@ -177,6 +186,31 @@ class UpdatePrivacyDualResponseTests(TestCase):
     def _post(self, is_public, ajax=True):
         headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"} if ajax else {}
         return self.client.post(self.url, {"is_public": "true" if is_public else "false"}, **headers)
+
+    def _prime_recs_caches(self):
+        keys = [
+            f"user_recommendations_{self.user.id}",
+            f"similar_users_{self.user.id}",
+            "public_users_for_recs_sample",
+        ]
+        for key in keys:
+            cache.set(key, "cached", 300)
+        return keys
+
+    def test_public_to_private_clears_recs_caches(self):
+        self.user.userprofile.is_public = True
+        self.user.userprofile.save()
+        keys = self._prime_recs_caches()
+        self._post(False, ajax=True)
+        for key in keys:
+            self.assertIsNone(cache.get(key), f"{key} should have been invalidated on going private")
+
+    def test_private_to_public_keeps_recs_caches(self):
+        # Profile starts private (default); going public must not clear the trio.
+        keys = self._prime_recs_caches()
+        self._post(True, ajax=True)
+        for key in keys:
+            self.assertEqual(cache.get(key), "cached", f"{key} should NOT be invalidated on going public")
 
     def test_ajax_make_public_returns_json(self):
         response = self._post(True, ajax=True)
@@ -195,12 +229,6 @@ class UpdatePrivacyDualResponseTests(TestCase):
         data = response.json()
         self.assertEqual(data["status"], "success")
         self.assertFalse(data["is_public"])
-
-    def test_privacy_toggle_invalidates_anon_recs_sample(self):
-        """is_public gates public_users_for_recs_sample, so a toggle must drop it."""
-        cache.set("public_users_for_recs_sample", ["stale"], 300)
-        self._post(False, ajax=True)
-        self.assertIsNone(cache.get("public_users_for_recs_sample"))
 
     def test_form_post_redirects(self):
         response = self._post(True, ajax=False)
@@ -256,17 +284,15 @@ class UpdateRecommendationVisibilityDualResponseTests(TestCase):
         self.user.userprofile.refresh_from_db()
         self.assertTrue(self.user.userprofile.visible_in_recommendations)
 
-    def test_opt_out_invalidates_pool_caches(self):
-        """Opting out must drop the pool-count and candidate-sample caches immediately."""
+    def test_opt_out_clears_recommendations_pool_count(self):
+        """Opting out must drop the pool-count cache (it filters visible_in_recommendations)."""
         self.user.userprofile.visible_in_recommendations = True
         self.user.userprofile.save()
         cache.set("recommendations_pool_count", 99, 300)
-        cache.set("public_users_for_recs_sample", ["stale"], 300)
         self._post(False, ajax=True)
         self.assertIsNone(cache.get("recommendations_pool_count"))
-        self.assertIsNone(cache.get("public_users_for_recs_sample"))
 
-    def test_opt_in_keeps_pool_count(self):
+    def test_opt_in_preserves_recommendations_pool_count(self):
         """Opting back in should not need to drop the pool-count cache."""
         self.user.userprofile.visible_in_recommendations = False
         self.user.userprofile.save()

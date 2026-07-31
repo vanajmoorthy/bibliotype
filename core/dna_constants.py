@@ -1641,23 +1641,66 @@ EXCLUDED_GENRES = {
 
 
 GLOBAL_AVERAGES = {
-    "avg_books_per_year": 7,
+    # Median across the major reading surveys — see GLOBAL_AVERAGES_SOURCES below
+    # for the sources and the mean-vs-median reasoning. Flows live into every
+    # profile's Comparative Analytics card via _enrich_dna_for_display.
+    "avg_books_per_year": 4,
     "avg_book_length_pages": 375,
     "avg_publish_year": 2009,
 }
 
+# Sourcing for the GLOBAL_AVERAGES constants above.
+#
+# Honesty note: these are benchmark *estimates*, separate from the community
+# percentiles (those come from real reader data in AggregateAnalytics). The
+# books-per-year figure is a median aggregated from live, named surveys; the
+# other two are working estimates because no authoritative source measures them.
+# Every entry documents where its number really comes from and links live
+# context, and no entry links a dead URL.
+#
+# Schema per key: {url, archived_url, accessed, note}
+#   url          live page for the source / further reading, or None if none exists
+#   archived_url Wayback snapshot, or None
+#   accessed     ISO date the url was last checked (see git history for the audit)
+#   note         plain-language explanation of where the number comes from
+# Every GLOBAL_AVERAGES key must have an entry here (enforced by test).
 GLOBAL_AVERAGES_SOURCES = {
     "avg_book_length_pages": {
-        "url": "https://wordsrated.com/book-length-statistics/",
-        "title": "WordsRated — Book Length Statistics",
+        "url": "https://prowritingaid.com/average-book-length",
+        "archived_url": None,
+        "accessed": "2026-07-29",
+        "note": (
+            "This is a working average, not a hard fact. Most adult novels land "
+            "somewhere between 250 and 400 pages, and I picked a round number in "
+            "that range. ProWritingAid has a good rundown of typical novel length "
+            "if you want to check my working."
+        ),
     },
     "avg_publish_year": {
-        "url": "https://ammar-alyousfi.com/2020/goodreads-books-statistics",
-        "title": "Ammar Al-Yousfi — Goodreads Books Statistics",
+        "url": "https://ammar-alyousfi.com/2024/exploring-goodreads-data-an-analysis-of-10-million-books",
+        "archived_url": None,
+        "accessed": "2026-07-29",
+        "note": (
+            "No survey actually measures the average publication year of the books "
+            "people read, so this is a best-effort estimate rather than a sourced "
+            "figure. Reading leans heavily toward recent decades with a long tail of "
+            "older titles, and I use this as a rough midpoint. For a sense of how "
+            "books spread across time, this analysis of 10 million Goodreads books "
+            "breaks the catalogue down decade by decade."
+        ),
     },
     "avg_books_per_year": {
-        "url": "https://wordsrated.com/reading-statistics/",
-        "title": "WordsRated — Reading Statistics",
+        "url": "https://www.pewresearch.org/internet/2016/09/01/book-reading-2016/",
+        "archived_url": None,
+        "accessed": "2026-07-29",
+        "note": (
+            "This is the median across the major reading surveys, which is the "
+            "honest typical-reader figure. Averages look much higher: Gallup reports "
+            "a mean of 12.6 books and Pew 12 to 14. But the mean is dragged up by a "
+            "small group of heavy readers while roughly half of adults read no books "
+            "at all, so the medians tell the real story. Pew lands at 4 to 5, YouGov "
+            "at 2 in the US and 3 in the UK, and I take the middle of those."
+        ),
     },
 }
 

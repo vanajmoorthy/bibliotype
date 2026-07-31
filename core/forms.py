@@ -31,7 +31,8 @@ class CustomUserCreationForm(UserCreationForm):
         # path is handled in `signup_view` (US-017): a password-reset email is
         # sent to the legitimate owner and the user is redirected to the generic
         # "check your inbox" page, identical to the new-signup path's tone.
-        return self.cleaned_data.get("email")
+        # Normalize to lowercase so case-variants can't create lookalike duplicates.
+        return self.cleaned_data.get("email", "").strip().lower()
 
 
 class UpdateDisplayNameForm(forms.ModelForm):

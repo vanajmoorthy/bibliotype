@@ -56,24 +56,26 @@
                             }
                         }"
                     >
-                        <div class="flex items-stretch gap-3">
+                        <form @submit.prevent="save()" class="flex items-stretch gap-3">
                             <input
+                                id="settings-display-name"
+                                name="display_name"
                                 type="text"
                                 x-model="newName"
                                 maxlength="15"
+                                autocomplete="nickname"
                                 class="border-brand-text focus:border-brand-purple flex-1 border-2 bg-white px-3 py-2 font-bold uppercase focus:outline-none"
                                 placeholder="Display name"
                             />
                             <button
-                                type="button"
-                                @click="save()"
+                                type="submit"
                                 :disabled="!isValid"
                                 :class="{ 'opacity-50 cursor-not-allowed': !isValid }"
                                 class="bg-brand-green border-brand-text shadow-neo-sm hover:shadow-neo-xs cursor-pointer border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                             >
                                 Save
                             </button>
-                        </div>
+                        </form>
                         <div x-show="newName.length > 15" class="mt-1 text-sm font-bold text-red-600">
                             Display name cannot exceed 15 characters.
                         </div>
@@ -130,8 +132,10 @@
                             }
                         }"
                     >
-                        <div class="space-y-3">
+                        <form @submit.prevent="save()" class="space-y-3">
                             <input
+                                id="settings-current-password"
+                                name="current_password"
                                 type="password"
                                 x-model="current"
                                 class="border-brand-text focus:border-brand-purple w-full border-2 bg-white px-3 py-2 font-bold focus:outline-none"
@@ -139,6 +143,8 @@
                                 autocomplete="current-password"
                             />
                             <input
+                                id="settings-new-password"
+                                name="new_password1"
                                 type="password"
                                 x-model="new1"
                                 class="border-brand-text focus:border-brand-purple w-full border-2 bg-white px-3 py-2 font-bold focus:outline-none"
@@ -146,6 +152,8 @@
                                 autocomplete="new-password"
                             />
                             <input
+                                id="settings-confirm-password"
+                                name="new_password2"
                                 type="password"
                                 x-model="new2"
                                 class="border-brand-text focus:border-brand-purple w-full border-2 bg-white px-3 py-2 font-bold focus:outline-none"
@@ -153,15 +161,14 @@
                                 autocomplete="new-password"
                             />
                             <button
-                                type="button"
-                                @click="save()"
+                                type="submit"
                                 :disabled="saving"
                                 :class="{ 'opacity-50 cursor-not-allowed': saving }"
                                 class="bg-brand-purple border-brand-text shadow-neo-sm hover:shadow-neo-xs cursor-pointer border-2 px-4 py-2 font-bold transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                             >
                                 Change Password
                             </button>
-                        </div>
+                        </form>
                         <div
                             x-show="errorMessage"
                             x-text="errorMessage"
@@ -289,12 +296,19 @@
                             Delete Account
                         </button>
 
-                        <div x-show="showConfirm" x-cloak class="mt-4 space-y-3 border-2 border-red-400 bg-red-50 p-4">
+                        <form
+                            x-show="showConfirm"
+                            x-cloak
+                            @submit.prevent="deleteAccount()"
+                            class="mt-4 space-y-3 border-2 border-red-400 bg-red-50 p-4"
+                        >
                             <p class="text-sm font-bold text-red-800">
                                 Type <span class="bg-red-200 px-1 font-mono">DELETE</span> and enter your password to
                                 confirm.
                             </p>
                             <input
+                                id="settings-delete-confirmation"
+                                name="confirmation"
                                 type="text"
                                 x-model="confirmation"
                                 class="border-brand-text w-full border-2 bg-white px-3 py-2 font-mono font-bold focus:border-red-500 focus:outline-none"
@@ -302,6 +316,8 @@
                                 autocomplete="off"
                             />
                             <input
+                                id="settings-delete-password"
+                                name="password"
                                 type="password"
                                 x-model="password"
                                 class="border-brand-text w-full border-2 bg-white px-3 py-2 font-bold focus:border-red-500 focus:outline-none"
@@ -309,8 +325,7 @@
                                 autocomplete="current-password"
                             />
                             <button
-                                type="button"
-                                @click="deleteAccount()"
+                                type="submit"
                                 :disabled="!canDelete || deleting"
                                 :class="{ 'opacity-50 cursor-not-allowed': !canDelete || deleting }"
                                 class="cursor-pointer border-2 border-red-900 bg-red-600 px-4 py-2 font-bold text-white shadow-[4px_4px_0px_0px_rgba(127,29,29,1)] transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px hover:shadow-[3px_3px_0px_0px_rgba(127,29,29,1)] active:translate-x-1 active:translate-y-1 active:shadow-none"
@@ -322,7 +337,7 @@
                                 x-text="errorMessage"
                                 class="text-sm font-bold text-red-700"
                             ></div>
-                        </div>
+                        </form>
                     </div>
                 </div>
             </div>
