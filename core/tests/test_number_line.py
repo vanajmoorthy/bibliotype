@@ -313,12 +313,16 @@ class NumberLineRenderTests(TestCase):
         return self.client.get(reverse("core:display_dna"))
 
     def test_comparative_analytics_renders_three_number_lines(self):
-        """The dashboard should contain 5 number lines: 3 comparative + 2 controversial."""
+        """The dashboard should contain 3 number lines, all from comparative analytics.
+
+        Controversial ratings now use podium bars (not number lines), so they no
+        longer contribute any `number-line-wrap` markup.
+        """
         response = self._get_dashboard()
         self.assertEqual(response.status_code, 200)
         content = response.content.decode()
-        # 3 from comparative analytics + 2 from controversial ratings (test data has 2 books)
-        self.assertEqual(content.count("number-line-wrap"), 5)
+        # 3 from comparative analytics + 0 from controversial ratings (podium bars now)
+        self.assertEqual(content.count("number-line-wrap"), 3)
 
     def test_number_line_renders_user_marker(self):
         """Number line contains a user diamond marker with the correct color class."""
@@ -353,16 +357,15 @@ class NumberLineRenderTests(TestCase):
         self.assertContains(response, "Community")
         self.assertContains(response, "World Avg")
 
-    def test_number_line_renders_endpoint_labels(self):
-        """Min and max labels use dynamic ranges and new unit formats."""
+    def test_number_line_shows_units_in_legend(self):
+        """The endpoint (min/max) labels were removed from the number line; the
+        unit suffixes now live only in the per-marker legend / poster values."""
         response = self._get_dashboard()
-        current_year = date.today().year
-        # Book length: dynamic range with "pages" unit
+        # Units still appear in the legend / poster values (the legend itself is
+        # Alpine-rendered from the marker data; the standalone endpoint label
+        # spans that used to bracket the track are gone).
         self.assertContains(response, "pages")
-        # Book age: dynamic range with "CE" suffix
-        self.assertContains(response, "1980 CE")
-        self.assertContains(response, f"{current_year} CE")
-        # Books per year: "per year" label
+        self.assertContains(response, "CE")
         self.assertContains(response, "per year")
 
     def test_number_line_renders_hatching_bands(self):
@@ -373,15 +376,16 @@ class NumberLineRenderTests(TestCase):
         self.assertIn("bandStyle", content)
         self.assertIn("mask-image", content)
 
-    def test_number_line_two_marker_mode(self):
-        """Controversial ratings number lines render without third marker (2-marker variant)."""
+    def test_controversial_ratings_render_podium_bars(self):
+        """Controversial ratings now render as two-bar podium charts (You vs Goodreads)."""
         response = self._get_dashboard()
         content = response.content.decode()
-        # Controversial ratings uses bg-brand-cyan and bg-brand-orange
+        # Podium bars use bg-brand-cyan (You) and bg-brand-orange (Goodreads)
         self.assertIn("bg-brand-cyan", content)
         self.assertIn("bg-brand-orange", content)
-        # The Goodreads Average tag appears in the controversial section
-        self.assertContains(response, "Goodreads Average")
+        # The "Goodreads" bar tag and the difference chip appear in the section
+        self.assertContains(response, "Goodreads")
+        self.assertContains(response, "difference:")
 
     def test_number_line_no_layout_js(self):
         """The new template should not contain the old layoutLabels JS."""
@@ -445,8 +449,11 @@ class NumberLineEdgeCaseTests(TestCase):
         response = self._render_with_dna(dna)
         self.assertEqual(response.status_code, 200)
         content = response.content.decode()
-        # Only controversial number lines should render (2 books in test data)
-        self.assertEqual(content.count("number-line-wrap"), 2)
+        # No number lines at all: comparative is hidden, and controversial ratings
+        # use podium bars (not number lines).
+        self.assertEqual(content.count("number-line-wrap"), 0)
+        # Controversial ratings still render as podium bars below the fallback.
+        self.assertContains(response, "Goodreads")
         # Fallback text should be shown for comparative section
         self.assertContains(response, "community rankings and percentiles")
 

@@ -1,102 +1,106 @@
+{% comment %}
+    Comparative Analytics — colour poster swipe deck. Each stat (avg book length / avg book age / reading pace) is a
+    full-saturation poster led by a giant number. Horizontal snap-scroll on mobile, 3-up grid on desktop. The number
+    line's World Avg legend item doubles as the [source] link (via nl_third_href).
+{% endcomment %}
 <div class="border-brand-text shadow-neo border-2 bg-white p-4 sm:p-6">
     <h2 class="mb-1 text-2xl font-bold uppercase">Comparative Analytics</h2>
-    <p class="mb-3 text-base italic text-gray-500">How {{ pronoun_sub|default:"you" }} compare to global averages and the Bibliotype community</p>
+    <p class="mb-3 text-base text-gray-500 italic">
+        How {{ pronoun_sub|default:"you" }} compare to global averages and the Bibliotype community
+    </p>
     {% if dna.bibliotype_percentiles %}
-        <div class="space-y-4 text-lg">
-            <!-- Average Book Length -->
-            <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
+        {% url 'core:methodology' as methodology_url %}
+        <div
+            class="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:px-0 md:pb-0"
+        >
+            <!-- Poster: book length -->
+            <div
+                class="bg-brand-pink border-brand-text shadow-neo-sm min-w-[80%] snap-center border-2 p-4 md:min-w-0"
+                x-data
+            >
                 {% if enrichment.pages_any_missing %}
-                <template x-if="$store.enrichment?.pages_any_missing">
-                    <p class="-mx-3 -mt-3 mb-2 bg-brand-yellow/30 py-0.5 text-center text-xs animate-[enrichPulse_2s_ease-in-out_infinite]">
-                        Still enriching
-                    </p>
-                </template>
+                    <template x-if="$store.enrichment?.pages_any_missing">
+                        <p
+                            class="bg-brand-yellow/40 -mx-4 -mt-4 mb-3 animate-[enrichPulse_2s_ease-in-out_infinite] py-0.5 text-center text-sm"
+                        >
+                            Still enriching
+                        </p>
+                    </template>
                 {% endif %}
-                <div x-data
-                     class="transition-opacity duration-500 {% if enrichment.pages_any_missing %}opacity-60{% endif %}"
-                     :class="{ 'opacity-60': $store.enrichment?.pages_any_missing }">
-                <p>
-                    The average length of books {{ pronoun_sub|default:"you" }} read is
-                    <strong><span id="stat-avg-length">{{ dna.user_stats.avg_book_length }}</span> pages</strong>.
-                </p>
-                <p class="mt-1 text-base">
-                    This is <strong>{{ dna.comparative_text.length_direction }}</strong> than
-                    <strong>{{ dna.comparative_text.length_pct }}%</strong> of
-                    other Bibliotype readers.
-                </p>
-                <p class="mt-1 text-sm text-gray-500">
-                    The average length of a book read by the average reader is {{ dna.global_averages.avg_book_length_pages }} pages.
-                    <a href="{% url 'core:methodology' %}#book-length" class="underline hover:text-brand-text">[source]</a>
-                </p>
-                {% include 'core/partials/dna/number_line.html' with nl_min=dna.number_line_ranges.pages.min nl_max=dna.number_line_ranges.pages.max nl_min_label=dna.number_line_ranges.pages.min_label nl_max_label=dna.number_line_ranges.pages.max_label nl_user_value=dna.user_stats.avg_book_length nl_user_tag="You" nl_compare_value=dna.community_averages.avg_book_length nl_compare_tag="Community" nl_unit="pages" nl_third_value=dna.global_averages.avg_book_length_pages nl_third_tag="World Avg" %}
+                <div
+                    class="{% if enrichment.pages_any_missing %}opacity-60{% endif %} transition-opacity duration-500"
+                    :class="{ 'opacity-60': $store.enrichment?.pages_any_missing }"
+                >
+                    <p class="text-sm font-bold tracking-widest uppercase">Avg book length</p>
+                    <p class="mt-1 text-6xl leading-none font-bold">
+                        {{ dna.user_stats.avg_book_length }}<span class="ml-1 text-2xl">pages</span>
+                    </p>
+                    <p class="mt-2 text-lg leading-snug">
+                        {{ dna.comparative_text.length_direction|capfirst }} than
+                        <strong>{{ dna.comparative_text.length_pct }}%</strong> of Bibliotype readers
+                    </p>
+                    {% include 'core/partials/dna/number_line.html' with nl_min=dna.number_line_ranges.pages.min nl_max=dna.number_line_ranges.pages.max nl_user_value=dna.user_stats.avg_book_length nl_user_tag="You" nl_user_color="bg-white" nl_compare_value=dna.community_averages.avg_book_length nl_compare_tag="Community" nl_unit="pages" nl_third_value=dna.global_averages.avg_book_length_pages nl_third_tag="World Avg" nl_third_href=methodology_url|add:'#book-length' %}
                 </div>
             </div>
 
-            <!-- Average Book Age -->
-            <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
+            <!-- Poster: book age -->
+            <div
+                class="bg-brand-cyan border-brand-text shadow-neo-sm min-w-[80%] snap-center border-2 p-4 md:min-w-0"
+                x-data
+            >
                 {% if enrichment.year_any_missing %}
-                <template x-if="$store.enrichment?.year_any_missing">
-                    <p class="-mx-3 -mt-3 mb-2 bg-brand-yellow/30 py-0.5 text-center text-xs animate-[enrichPulse_2s_ease-in-out_infinite]">
-                        Still enriching
-                    </p>
-                </template>
+                    <template x-if="$store.enrichment?.year_any_missing">
+                        <p
+                            class="bg-brand-yellow/40 -mx-4 -mt-4 mb-3 animate-[enrichPulse_2s_ease-in-out_infinite] py-0.5 text-center text-sm"
+                        >
+                            Still enriching
+                        </p>
+                    </template>
                 {% endif %}
-                <div x-data
-                     class="transition-opacity duration-500 {% if enrichment.year_any_missing %}opacity-60{% endif %}"
-                     :class="{ 'opacity-60': $store.enrichment?.year_any_missing }">
-                <p>
-                    The average age of books {{ pronoun_sub|default:"you" }} read is from
-                    <strong>{{ dna.user_stats.avg_publish_year|floatformat:0 }}</strong>.
-                </p>
-                <p class="mt-1 text-base">
-                    {{ pronoun_pos|default:"your"|capfirst }} reading tastes are <strong>{{ dna.comparative_text.age_direction }}</strong> than
-                    <strong>{{ dna.comparative_text.age_pct }}%</strong> of
-                    other Bibliotype readers.
-                </p>
-                <p class="mt-1 text-sm text-gray-500">
-                    The average publish year of a book read by the average reader is {{ dna.global_averages.avg_publish_year }}.
-                    <a href="{% url 'core:methodology' %}#book-age" class="underline hover:text-brand-text">[source]</a>
-                </p>
-                {% include 'core/partials/dna/number_line.html' with nl_min=dna.number_line_ranges.year.min nl_max=dna.number_line_ranges.year.max nl_min_label=dna.number_line_ranges.year.min_label nl_max_label=dna.number_line_ranges.year.max_label nl_user_value=dna.user_stats.avg_publish_year nl_user_tag="You" nl_compare_value=dna.community_averages.avg_publish_year nl_compare_tag="Community" nl_unit="CE" nl_third_value=dna.global_averages.avg_publish_year nl_third_tag="World Avg" %}
+                <div
+                    class="{% if enrichment.year_any_missing %}opacity-60{% endif %} transition-opacity duration-500"
+                    :class="{ 'opacity-60': $store.enrichment?.year_any_missing }"
+                >
+                    <p class="text-sm font-bold tracking-widest uppercase">Avg book age</p>
+                    <p class="mt-1 text-6xl leading-none font-bold">
+                        {{ dna.user_stats.avg_publish_year|floatformat:0 }}<span class="ml-1 text-2xl">CE</span>
+                    </p>
+                    <p class="mt-2 text-lg leading-snug">
+                        {{ dna.comparative_text.age_direction|capfirst }} than
+                        <strong>{{ dna.comparative_text.age_pct }}%</strong> of Bibliotype readers
+                    </p>
+                    {% include 'core/partials/dna/number_line.html' with nl_min=dna.number_line_ranges.year.min nl_max=dna.number_line_ranges.year.max nl_user_value=dna.user_stats.avg_publish_year nl_user_tag="You" nl_user_color="bg-white" nl_compare_value=dna.community_averages.avg_publish_year nl_compare_tag="Community" nl_compare_color="bg-brand-pink" nl_unit="CE" nl_third_value=dna.global_averages.avg_publish_year nl_third_tag="World Avg" nl_third_href=methodology_url|add:'#book-age' %}
                 </div>
             </div>
 
-            <!-- Books Per Year -->
-            <div class="border-brand-text shadow-neo-sm border-2 bg-gray-50 p-3">
-                <p>
-                    {{ pronoun_sub|default:"You"|title }}'ve read
-                    <strong>{{ dna.user_stats.books_with_dates }} books</strong>
-                    {% if dna.user_stats.num_reading_years %}
-                        across <strong>{{ dna.user_stats.num_reading_years }} year{{ dna.user_stats.num_reading_years|pluralize }}</strong>, averaging
-                        <strong>{{ dna.user_stats.avg_books_per_year }} books a year</strong>.
-                    {% else %}
-                        with a recorded finish date.
-                    {% endif %}
+            <!-- Poster: reading pace -->
+            <div class="bg-brand-green border-brand-text shadow-neo-sm min-w-[80%] snap-center border-2 p-4 md:min-w-0">
+                <p class="text-sm font-bold tracking-widest uppercase">Reading pace</p>
+                <p class="mt-1 text-6xl leading-none font-bold">
+                    {{ dna.user_stats.avg_books_per_year }}<span class="ml-1 text-2xl">/year</span>
                 </p>
                 {% if dna.user_stats.avg_books_per_year and dna.comparative_text.bpy_pct %}
-                    <p class="mt-1 text-base">
-                        This is <strong>{{ dna.comparative_text.bpy_direction }}</strong> than
-                        <strong>{{ dna.comparative_text.bpy_pct }}%</strong> of
-                        other Bibliotype readers.
+                    <p class="mt-2 text-lg leading-snug">
+                        <strong>{{ dna.user_stats.books_with_dates }} books</strong> in
+                        {{ dna.user_stats.num_reading_years }} year{{ dna.user_stats.num_reading_years|pluralize }} —
+                        {{ dna.comparative_text.bpy_direction }} than
+                        <strong>{{ dna.comparative_text.bpy_pct }}%</strong> of readers
                     </p>
-                    <p class="mt-1 text-sm text-gray-500">
-                        The average reader reads {{ dna.global_averages.avg_books_per_year }} books a year.
-                        <a href="{% url 'core:methodology' %}#books-per-year" class="underline hover:text-brand-text">[source]</a>
+                    {% include 'core/partials/dna/number_line.html' with nl_min=dna.number_line_ranges.bpy.min nl_max=dna.number_line_ranges.bpy.max nl_user_value=dna.user_stats.avg_books_per_year nl_user_tag="You" nl_user_color="bg-white" nl_compare_value=dna.community_averages.avg_books_per_year nl_compare_tag="Community" nl_unit="per year" nl_decimals=1 nl_third_value=dna.global_averages.avg_books_per_year nl_third_tag="World Avg" nl_third_color="bg-brand-pink" nl_third_href=methodology_url|add:'#books-per-year' %}
+                    <p class="mt-2 text-sm leading-snug">
+                        * Based on books with a recorded finish date. If this seems low, some books on
+                        {{ pronoun_pos|lower|default:"your" }} "read" shelf may be missing a read date.
                     </p>
-                    {% include 'core/partials/dna/number_line.html' with nl_min=dna.number_line_ranges.bpy.min nl_max=dna.number_line_ranges.bpy.max nl_min_label=dna.number_line_ranges.bpy.min_label nl_max_label=dna.number_line_ranges.bpy.max_label nl_user_value=dna.user_stats.avg_books_per_year nl_user_tag="You" nl_compare_value=dna.community_averages.avg_books_per_year nl_compare_tag="Community" nl_unit="per year" nl_decimals=1 nl_third_value=dna.global_averages.avg_books_per_year nl_third_tag="World Avg" %}
                 {% else %}
-                    <p class="mt-1 text-base">
+                    <p class="mt-2 text-lg leading-snug">
                         {{ pronoun_sub|default:"You"|title }}'ve read more books than
-                        <strong>{{ dna.bibliotype_percentiles.total_books_read|floatformat:1 }}%</strong> of
-                        other Bibliotype readers.
+                        <strong>{{ dna.bibliotype_percentiles.total_books_read|floatformat:1 }}%</strong> of other
+                        Bibliotype readers.
                     </p>
                 {% endif %}
-                <p class="mt-2 text-xs text-gray-400">
-                    * Based on books with a recorded finish date. If this seems low, some books
-                    on {{ pronoun_pos|lower|default:"your" }} "read" shelf may be missing a read date.
-                </p>
             </div>
         </div>
+        <p class="mt-2 text-center text-sm text-gray-400 md:hidden">&larr; swipe &rarr;</p>
     {% else %}
         <p class="text-lg text-gray-600">
             {% if is_public %}
