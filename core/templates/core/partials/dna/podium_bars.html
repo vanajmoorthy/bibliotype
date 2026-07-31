@@ -1,0 +1,81 @@
+{% comment %}
+    Podium Bars Partial — vertical bar comparison, an alternative to the horizontal number line. Two or three chunky
+    coloured bars with the value on top and the tag underneath the baseline. Bar heights use the same min/max window as
+    the number line (not a zero baseline) so small differences stay readable; the scale note below keeps that honest.
+    Bars animate up on first scroll into view. Required: pb_min, pb_max — numeric window for the scale pb_user_value/tag
+    — user bar pb_comp_value/tag — comparison bar Optional: pb_user_color / pb_comp_color / pb_third_color — Tailwind bg
+    classes pb_third_value/tag — optional third bar pb_decimals — decimal places (default 0) pb_scale_note — small print
+    under the chart (e.g. "scale: 300–400 pages")
+{% endcomment %}
+
+{# djlint:off #}
+<div
+    class="mt-3"
+    x-data="{
+         min: {{ pb_min }}, max: {{ pb_max }},
+         u: {{ pb_user_value }}, c: {{ pb_comp_value }}, t: {{ pb_third_value|default:'null' }},
+         decimals: {{ pb_decimals|default:'0' }},
+         p: 0, hasAnimated: false,
+         hPct(v) {
+             const cl = Math.max(this.min, Math.min(this.max, v));
+             return (12 + 88 * (cl - this.min) / (this.max - this.min)) * this.p;
+         },
+         fmt(v) { return this.decimals > 0 ? Number(v).toFixed(this.decimals) : Math.round(v); },
+         animate() {
+             const duration = 600; let start = null;
+             const step = (ts) => {
+                 if (!start) start = ts;
+                 const m = Math.min((ts - start) / duration, 1);
+                 this.p = 0.5 - Math.cos(m * Math.PI) / 2;
+                 if (m < 1) requestAnimationFrame(step); else this.p = 1;
+             };
+             requestAnimationFrame(step);
+         },
+         init() {
+             const o = new IntersectionObserver((e) => {
+                 if (e[0].isIntersecting && !this.hasAnimated) {
+                     this.hasAnimated = true; this.animate(); o.unobserve(this.$el);
+                 }
+             }, { threshold: 0.3 });
+             o.observe(this.$el);
+         }
+     }"
+    x-init="init()"
+>
+    <div class="border-brand-text flex items-end justify-center gap-5 border-b-2 sm:gap-7" style="height: 140px;">
+        <div class="flex h-full w-14 flex-col items-center justify-end sm:w-16">
+            <div class="mb-1 text-lg leading-none font-bold" x-text="fmt(u)"></div>
+            <div
+                class="{{ pb_user_color|default:'bg-brand-pink' }} border-brand-text w-full border-2 border-b-0"
+                :style="'height:' + hPct(u) + '%'"
+            ></div>
+        </div>
+        <div class="flex h-full w-14 flex-col items-center justify-end sm:w-16">
+            <div class="mb-1 text-lg leading-none font-bold" x-text="fmt(c)"></div>
+            <div
+                class="{{ pb_comp_color|default:'bg-brand-cyan' }} border-brand-text w-full border-2 border-b-0"
+                :style="'height:' + hPct(c) + '%'"
+            ></div>
+        </div>
+        {% if pb_third_value %}
+            <div class="flex h-full w-14 flex-col items-center justify-end sm:w-16">
+                <div class="mb-1 text-lg leading-none font-bold" x-text="fmt(t)"></div>
+                <div
+                    class="{{ pb_third_color|default:'bg-brand-green' }} border-brand-text w-full border-2 border-b-0"
+                    :style="'height:' + hPct(t) + '%'"
+                ></div>
+            </div>
+        {% endif %}
+    </div>
+    <div class="mt-1 flex justify-center gap-5 sm:gap-7">
+        <p class="w-14 text-center text-sm leading-tight font-bold sm:w-16">{{ pb_user_tag }}</p>
+        <p class="w-14 text-center text-sm leading-tight font-bold sm:w-16">{{ pb_comp_tag }}</p>
+        {% if pb_third_value %}
+            <p class="w-14 text-center text-sm leading-tight font-bold sm:w-16">{{ pb_third_tag }}</p>
+        {% endif %}
+    </div>
+    {% if pb_scale_note %}
+        <p class="mt-1 text-right text-sm text-gray-400">{{ pb_scale_note }}</p>
+    {% endif %}
+</div>
+{# djlint:on #}
