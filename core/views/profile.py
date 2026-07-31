@@ -27,21 +27,6 @@ def _wants_json(request):
     return request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
 
-def _invalidate_recs_pool_caches(user_id, *, drop_pool_count=False):
-    """Clear recommendation-pool caches after a privacy/recs-visibility toggle.
-
-    A user who goes private or opts out of recommendations otherwise lingers in the
-    cached candidate pools until their TTLs expire. We can only cheaply clear the shared
-    sample/count caches and the user's own caches; other users' per-user ``similar_users_*``
-    / ``user_recommendations_*`` entries still expire on their own TTL.
-    """
-    safe_cache_delete(f"user_recommendations_{user_id}")
-    safe_cache_delete(f"similar_users_{user_id}")
-    safe_cache_delete("public_users_for_recs_sample")
-    if drop_pool_count:
-        safe_cache_delete("recommendations_pool_count")
-
-
 @login_required
 @require_POST
 def update_privacy_view(request):
@@ -50,9 +35,11 @@ def update_privacy_view(request):
     profile.is_public = is_public
     profile.save()
 
-    # public_users_for_recs_sample filters on is_public, so refresh it either direction
-    # (private removes the user from the anonymous-recs candidate pool; public re-adds them).
-    _invalidate_recs_pool_caches(request.user.id)
+    if not is_public:
+        # public_users_for_recs_sample filters on is_public, so going private must drop it
+        # immediately (otherwise the now-private user lingers in the anon-recs candidate pool
+        # for up to its TTL). Going public is left to lazily refresh on TTL.
+        safe_cache_delete("public_users_for_recs_sample")
 
     if is_public:
         track_profile_made_public(request.user.id)
@@ -139,11 +126,16 @@ def update_recommendation_visibility(request):
     profile.visible_in_recommendations = is_visible
     profile.save()
 
-    # visible_in_recommendations gates both the pool count and the candidate samples,
-    # so an opt-out must also drop recommendations_pool_count (else the size is stale for 1h).
-    _invalidate_recs_pool_caches(request.user.id, drop_pool_count=was_visible and not is_visible)
+    # Always refresh the user's own caches so their next read reflects the new state.
+    safe_cache_delete(f"user_recommendations_{request.user.id}")
+    safe_cache_delete(f"similar_users_{request.user.id}")
 
     if was_visible and not is_visible:
+        # Opting out removes the user from the shared candidate sample AND the pool count
+        # (both filter visible_in_recommendations), so drop them immediately. The opt-in
+        # direction leaves the shared sample to refresh lazily on TTL.
+        safe_cache_delete("public_users_for_recs_sample")
+        safe_cache_delete("recommendations_pool_count")
         logger.info(
             "user opted out of recs; cleared candidate pool caches",
             extra={"user_id": request.user.id},
