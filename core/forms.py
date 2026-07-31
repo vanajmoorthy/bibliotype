@@ -56,28 +56,6 @@ class UpdateDisplayNameForm(forms.ModelForm):
         return new_username.lower()
 
 
-class UpdateEmailForm(forms.Form):
-    email = forms.EmailField(required=True)
-    current_password = forms.CharField(widget=forms.PasswordInput)
-
-    def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop("user", None)
-        super().__init__(*args, **kwargs)
-
-    def clean_current_password(self):
-        current = self.cleaned_data.get("current_password")
-        if self.user and not self.user.check_password(current):
-            raise forms.ValidationError("Your current password is incorrect.")
-        return current
-
-    def clean_email(self):
-        # Normalize to lowercase so case-variants can't create lookalike duplicates.
-        email = self.cleaned_data.get("email", "").strip().lower()
-        if self.user and User.objects.filter(email__iexact=email).exclude(pk=self.user.pk).exists():
-            raise forms.ValidationError("That email is already in use.")
-        return email
-
-
 class ChangePasswordForm(forms.Form):
     current_password = forms.CharField(widget=forms.PasswordInput)
     new_password1 = forms.CharField(widget=forms.PasswordInput)

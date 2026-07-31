@@ -1,6 +1,5 @@
 """
 Tests for the settings modal endpoints:
-  - UpdateEmailForm / update_email_view
   - ChangePasswordForm / change_password_view
   - delete_account_view
   - update_privacy_view  (AJAX + form-POST dual-response)
@@ -11,105 +10,9 @@ Tests for the settings modal endpoints:
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.core import mail
 from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-
-
-@override_settings(
-    CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
-    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
-)
-class UpdateEmailViewTests(TestCase):
-    def setUp(self):
-        cache.clear()
-        mail.outbox = []
-        self.client = Client()
-        self.password = "Str0ng-Pass!word"
-        self.user = User.objects.create_user(
-            username="emailuser",
-            email="original@example.com",
-            password=self.password,
-        )
-        self.client.force_login(self.user)
-        self.url = reverse("core:update_email")
-
-    def _post(self, email, current_password=None, ajax=True):
-        headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"} if ajax else {}
-        body = {"email": email, "current_password": self.password if current_password is None else current_password}
-        return self.client.post(self.url, body, **headers)
-
-    def test_valid_email_change_persists(self):
-        response = self._post("new@example.com")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["status"], "success")
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.email, "new@example.com")
-
-    def test_wrong_current_password_rejected(self):
-        response = self._post("new@example.com", current_password="WrongPass!1")
-        self.assertEqual(response.status_code, 400)
-        data = response.json()
-        self.assertEqual(data["status"], "error")
-        # Email must NOT have changed and no notification sent
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.email, "original@example.com")
-        self.assertEqual(len(mail.outbox), 0)
-
-    def test_correct_password_changes_email_and_notifies_old_address(self):
-        response = self._post("moved@example.com")
-        self.assertEqual(response.status_code, 200)
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.email, "moved@example.com")
-        # Exactly one notification, sent to the OLD address
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].to, ["original@example.com"])
-        self.assertIn("moved@example.com", mail.outbox[0].body)
-
-    def test_email_normalized_to_lowercase(self):
-        response = self._post("MixedCase@Example.com")
-        self.assertEqual(response.status_code, 200)
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.email, "mixedcase@example.com")
-
-    def test_duplicate_email_case_insensitive_rejected(self):
-        User.objects.create_user(username="other", email="taken@example.com", password="pass")
-        response = self._post("TAKEN@example.com")
-        self.assertEqual(response.status_code, 400)
-        data = response.json()
-        self.assertEqual(data["status"], "error")
-        self.assertIn("already in use", data["message"])
-        # Own email must NOT have changed
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.email, "original@example.com")
-
-    def test_changing_to_own_email_is_allowed(self):
-        """Changing to the same email (or its uppercase variant) must succeed without notifying."""
-        response = self._post("ORIGINAL@example.com")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["status"], "success")
-        # Same address after normalization → no self-notification
-        self.assertEqual(len(mail.outbox), 0)
-
-    def test_invalid_format_rejected(self):
-        response = self._post("not-an-email")
-        self.assertEqual(response.status_code, 400)
-        data = response.json()
-        self.assertEqual(data["status"], "error")
-
-    def test_anonymous_user_redirected(self):
-        self.client.logout()
-        response = self._post("anon@example.com")
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("/login/", response["Location"])
-
-    @patch("core.views.profile.track_settings_updated")
-    def test_analytics_called_on_success(self, mock_track):
-        self._post("tracked@example.com")
-        mock_track.assert_called_once_with(self.user.id, setting_type="email")
 
 
 @override_settings(
@@ -381,6 +284,22 @@ class UpdateRecommendationVisibilityDualResponseTests(TestCase):
         self.user.userprofile.refresh_from_db()
         self.assertTrue(self.user.userprofile.visible_in_recommendations)
 
+    def test_opt_out_clears_recommendations_pool_count(self):
+        """Opting out must drop the pool-count cache (it filters visible_in_recommendations)."""
+        self.user.userprofile.visible_in_recommendations = True
+        self.user.userprofile.save()
+        cache.set("recommendations_pool_count", 99, 300)
+        self._post(False, ajax=True)
+        self.assertIsNone(cache.get("recommendations_pool_count"))
+
+    def test_opt_in_preserves_recommendations_pool_count(self):
+        """Opting back in should not need to drop the pool-count cache."""
+        self.user.userprofile.visible_in_recommendations = False
+        self.user.userprofile.save()
+        cache.set("recommendations_pool_count", 99, 300)
+        self._post(True, ajax=True)
+        self.assertEqual(cache.get("recommendations_pool_count"), 99)
+
     def test_form_post_redirects(self):
         response = self._post(False, ajax=False)
         self.assertEqual(response.status_code, 302)
@@ -405,9 +324,6 @@ class AuthGuardTests(TestCase):
         response = self.client.post(url, post_data or {})
         self.assertEqual(response.status_code, 302)
         self.assertIn("/login/", response["Location"])
-
-    def test_update_email_auth_guard(self):
-        self._assert_redirect_to_login(reverse("core:update_email"), {"email": "x@x.com"})
 
     def test_change_password_auth_guard(self):
         self._assert_redirect_to_login(

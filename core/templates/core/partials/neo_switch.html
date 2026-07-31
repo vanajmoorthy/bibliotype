@@ -1,0 +1,24 @@
+{% comment %}
+    Neobrutalist toggle switch — rectangular thumb, hard borders, offset shadow. Renders a `<button role="switch">
+        ` whose bindings resolve in the SURROUNDING Alpine x-data scope, so the caller owns the state and the toggle
+        handler. Context vars: state — Alpine boolean expression backing the switch (e.g. "isPublic"). on_click — Alpine
+        handler run on toggle (e.g. "togglePublic()"). disabled — (optional) Alpine boolean expression for the
+        disabled/saving state (e.g. "privacySaving"). Defaults to never-disabled. Usage:
+        {% include 'core/partials/neo_switch.html' with state="isPublic" on_click="togglePublic()" disabled="privacySaving" %}
+    </button>
+{% endcomment %}
+<button
+    type="button"
+    role="switch"
+    :aria-checked="{{ state }}"
+    @click="{{ on_click }}"
+    :disabled="{{ disabled|default:'false' }}"
+    class="border-brand-text shadow-neo-sm relative inline-flex h-8 w-16 flex-shrink-0 cursor-pointer items-center border-2 p-1 transition-colors duration-150"
+    :class="{ 'bg-brand-green': {{ state }}, 'bg-gray-300': !({{ state }}), 'opacity-50 cursor-not-allowed': {{ disabled|default:'false' }} }"
+>
+    <span
+        aria-hidden="true"
+        class="border-brand-text pointer-events-none block h-full w-1/2 border-2 bg-white transition-transform duration-150 ease-in-out"
+        :class="{ 'translate-x-full': {{ state }} }"
+    ></span>
+</button>

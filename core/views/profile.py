@@ -3,12 +3,10 @@
 import json
 import logging
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
@@ -19,7 +17,7 @@ from django_ratelimit.exceptions import Ratelimited
 
 from ..analytics.events import track_account_deleted, track_profile_made_public, track_settings_updated
 from ..cache_utils import safe_cache_delete
-from ..forms import ChangePasswordForm, UpdateDisplayNameForm, UpdateEmailForm
+from ..forms import ChangePasswordForm, UpdateDisplayNameForm
 
 logger = logging.getLogger(__name__)
 
@@ -146,9 +144,12 @@ def update_recommendation_visibility(request):
     safe_cache_delete(f"similar_users_{request.user.id}")
 
     if was_visible and not is_visible:
+        # Opting out removes the user from the shared candidate sample AND the pool count
+        # (both filter visible_in_recommendations), so drop them immediately.
         safe_cache_delete("public_users_for_recs_sample")
+        safe_cache_delete("recommendations_pool_count")
         logger.info(
-            "user opted out of recs; cleared candidate sample cache",
+            "user opted out of recs; cleared candidate pool caches",
             extra={"user_id": request.user.id},
         )
 
@@ -168,63 +169,6 @@ def update_recommendation_visibility(request):
         messages.success(request, "You've opted out of being shown as a recommendation source.")
 
     return redirect("core:display_dna")
-
-
-def _notify_old_email_of_change(request, old_email, new_email):
-    """Best-effort notify the previous address that the account email changed."""
-    if not old_email or old_email.strip().lower() == new_email.strip().lower():
-        return
-    try:
-        reset_url = request.build_absolute_uri(reverse("password_reset"))
-        send_mail(
-            subject="Your Bibliotype email was changed",
-            message=(
-                f"Your Bibliotype account email was changed to {new_email}.\n\n"
-                f"If this wasn't you, reset your password right away at {reset_url}"
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[old_email],
-            fail_silently=False,
-        )
-    except Exception as exc:
-        logger.warning(f"Could not send email-change notification to old address: {exc}")
-
-
-@ratelimit(key="user", rate="5/m", method="POST", block=True)
-def _update_email_view_throttled(request):
-    """Change the authenticated user's email address (requires current password)."""
-    user = request.user
-    old_email = user.email
-    form = UpdateEmailForm(request.POST, user=user)
-    if form.is_valid():
-        new_email = form.cleaned_data["email"]
-        user.email = new_email
-        user.save(update_fields=["email"])
-        track_settings_updated(user.id, setting_type="email")
-        _notify_old_email_of_change(request, old_email, new_email)
-
-        if _wants_json(request):
-            return JsonResponse({"status": "success", "message": "Email updated successfully."})
-
-        messages.success(request, "Your email has been updated.")
-        return redirect("core:display_dna")
-
-    if _wants_json(request):
-        errors = [msg for field_errors in form.errors.values() for msg in field_errors]
-        return JsonResponse({"status": "error", "message": errors[0] if errors else "Invalid email."}, status=400)
-
-    for error in form.errors.values():
-        messages.error(request, error)
-    return redirect("core:display_dna")
-
-
-@login_required
-@require_POST
-def update_email_view(request):
-    try:
-        return _update_email_view_throttled(request)
-    except Ratelimited:
-        return _ratelimited_response(request)
 
 
 @ratelimit(key="user", rate="5/m", method="POST", block=True)

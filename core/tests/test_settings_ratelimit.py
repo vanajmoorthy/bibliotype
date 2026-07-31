@@ -1,8 +1,8 @@
 """Rate-limit coverage for the settings-modal write endpoints.
 
-update_email / change_password / delete_account are password/email oracles, so
-each is throttled to 5 POSTs/minute/user via django-ratelimit (mirrors
-update_username_api). The 6th POST inside a minute must return 429.
+change_password / delete_account are password oracles, so each is throttled to
+5 POSTs/minute/user via django-ratelimit (mirrors update_username_api). The 6th
+POST inside a minute must return 429.
 """
 
 from django.contrib.auth.models import User
@@ -23,7 +23,6 @@ AJAX = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"}
         }
     },
     RATELIMIT_ENABLE=True,
-    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
 )
 class SettingsEndpointsRateLimitTests(TestCase):
     """Each write endpoint allows 5 POSTs/minute/user, then 429s."""
@@ -51,13 +50,6 @@ class SettingsEndpointsRateLimitTests(TestCase):
             response = self.client.post(url, body, **AJAX)
         self.assertEqual(response.status_code, 429)
         self.assertEqual(response.json()["status"], "error")
-
-    def test_update_email_rate_limited(self):
-        # Wrong password keeps every attempt a 400 (no side effects) until the 429.
-        self._assert_sixth_post_429s(
-            reverse("core:update_email"),
-            {"email": "new@example.com", "current_password": "WrongPass!1"},
-        )
 
     def test_change_password_rate_limited(self):
         self._assert_sixth_post_429s(
