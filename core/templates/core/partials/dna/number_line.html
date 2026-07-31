@@ -174,8 +174,8 @@
         {% endif %}
     </div>
 
-    <!-- ── LEGEND (sorted left→right to match marker positions) ── -->
-    <div class="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-sm">
+    <!-- ── LEGEND (one item per line, sorted left→right to match marker positions) ── -->
+    <div class="mt-2 flex flex-col items-center gap-y-0.5 text-sm">
         <template x-for="(item, idx) in legendItems" :key="idx">
             <span class="inline-flex items-center gap-1 font-bold whitespace-nowrap">
                 <span

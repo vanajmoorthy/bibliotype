@@ -87,10 +87,6 @@
                         <strong>{{ dna.comparative_text.bpy_pct }}%</strong> of readers
                     </p>
                     {% include 'core/partials/dna/number_line.html' with nl_min=dna.number_line_ranges.bpy.min nl_max=dna.number_line_ranges.bpy.max nl_user_value=dna.user_stats.avg_books_per_year nl_user_tag="You" nl_user_color="bg-white" nl_compare_value=dna.community_averages.avg_books_per_year nl_compare_tag="Community" nl_unit="per year" nl_decimals=1 nl_third_value=dna.global_averages.avg_books_per_year nl_third_tag="World Avg" nl_third_color="bg-brand-pink" nl_third_href=methodology_url|add:'#books-per-year' %}
-                    <p class="mt-2 text-sm leading-snug">
-                        * Based on books with a recorded finish date. If this seems low, some books on
-                        {{ pronoun_pos|lower|default:"your" }} "read" shelf may be missing a read date.
-                    </p>
                 {% else %}
                     <p class="mt-2 text-lg leading-snug">
                         {{ pronoun_sub|default:"You"|title }}'ve read more books than

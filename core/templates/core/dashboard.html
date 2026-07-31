@@ -289,10 +289,12 @@
 
                 {% if user.is_authenticated %}
                     {% include 'core/partials/settings_modal.html' %}
-                    {# Merged long box: profile status on the left, pink Settings button on the right #}
-                    <div
-                        class="border-brand-text shadow-neo flex flex-col gap-4 border-2 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
-                    >
+                    {# Profile status + Update Bibliotype side by side, each 50% on desktop #}
+                    <div class="flex flex-col gap-8 md:flex-row md:items-stretch">
+                        {# Merged box: profile status on the left, pink Settings button on the right #}
+                        <div
+                            class="border-brand-text shadow-neo flex flex-col gap-4 border-2 bg-white p-4 sm:flex-row sm:items-center sm:justify-between md:w-1/2"
+                        >
                         <div class="flex-grow">
                             <h3 class="text-xl font-bold uppercase">
                                 <span class="flex flex-col gap-1">
@@ -330,10 +332,11 @@
                             Settings
                         </button>
                     </div>
-                    {# Update Bibliotype — own box #}
-                    <div class="border-brand-text shadow-neo flex items-center justify-center border-2 bg-white p-4">
-                        {% url 'core:home' as home_url %}
-                        {% include 'core/partials/buttons/small_link_button.html' with href=home_url text="Update Bibliotype" color="purple" %}
+                        {# Update Bibliotype — own box #}
+                        <div class="border-brand-text shadow-neo flex items-center justify-center border-2 bg-white p-4 md:w-1/2">
+                            {% url 'core:home' as home_url %}
+                            {% include 'core/partials/buttons/small_link_button.html' with href=home_url text="Update Bibliotype" color="purple" %}
+                        </div>
                     </div>
                 {% else %}
                     <div class="bg-brand-purple border-brand-text shadow-neo border-2 p-6 text-center">
