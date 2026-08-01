@@ -7,54 +7,195 @@ The app uses a Python backend with Pandas for data analysis and calls the Gemini
 https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 
 
-## TODO
+## TODO / Known Undone Work
 
-Prioritised 
+A living backlog of everything known to be unfinished, deferred, or in-progress — sourced from
+`docs/plans/`, `docs/handoffs/`, `docs/GENRES.md`, `docs/SCALING.md`,
+`docs/scaling-implementation-plan.md`, `docs/ARCHITECTURE.md`, code, and in-flight worktrees.
+Legend: 🙅 not started · 🚧 partial/in-progress · ❓ needs verification · ✅ shipped (kept briefly
+for reference). See the linked docs for full detail.
 
-ops / deploy — do first (added 2026-07-31)
-- rotate/replace the Google Books API key and set its restriction to "none" or an IP allowlist (NOT "HTTP referrers") so the server-side enrichment calls stop 403ing; make sure the Books API is enabled on the project; update the prod `.env`; `docker compose -f docker-compose.prod.yml up -d --force-recreate web worker`; delete the old key
-- confirm prod redeployed the latest `main` (settings-modal hardening, enrichment timeout widening + log key-redaction, live-enrichment recompute) and that web/worker restarted on the new image
-- re-test a Goodreads upload end to end: enrichment should finish instead of hanging around ~93%, with far fewer Open Library timeouts and no Google Books 403s
-- browser smoke-test the settings modal: email change now requires the current password + emails the old address; change password; privacy/recs toggles; confirm password managers can fill/save
-- follow-up: recompute the comparative-analytics "global averages" from community aggregates once N is large enough (they're literature-derived constants today)
+### Ops / deploy — do first
+- **Google Books API key** — rotate/replace it and set its restriction to "none" or an IP allowlist
+  (NOT "HTTP referrers") so server-side enrichment stops 403ing; make sure the Books API is enabled
+  on the project; update prod `.env`;
+  `docker compose -f docker-compose.prod.yml up -d --force-recreate web worker`; delete the old key.
+- **Re-enrich existing books on the VPS** — run `enrich_books --process-all` to re-fetch/merge Google
+  Books genres into books already in the DB. Until this runs, existing users' genres + fiction/nonfiction
+  splits only refresh when they re-upload. (Pending in both the 2026-07-22 and 2026-07-29 handoffs.)
+- Re-test a Goodreads upload end to end: enrichment should finish instead of hanging around ~93%, with
+  far fewer Open Library timeouts and no Google Books 403s.
+- Post-deploy monitoring gap: no synthetic user tests, error-rate dashboards, or enrichment-uptime
+  tracking exist in-repo. 🙅
+- ✅ Prod is on the latest `main` (settings-modal redesign + hardening, comparative/controversial
+  redesign, small-text readability — the redesign was verified live on the deployed site).
 
-ongoing
-- settings modal
-- lock down canonical genres and improve mapping (improve fiction/non fiction split)
-- storygraph support ✅ follow ups:
-    - concurrent uploads stuck at 50%, revoke previous upload
-    - Reader type doesn't update live during enrichment
-    - Polling backoff after 90% complete: Currently fixed 5s. Stretch to 10–15s once percent > 90% to reduce DB churn during the long tail.
-    - enrichmentPoller lifecycle (x-show → x-if): Banner DOM elements stay rendered when complete; switching to x-if would unmount cleanly and remove the dead $store.enrichment references.
-    - Existing-book title-update policy" update_or_create ISBN match keeps the oldest row's title. Decide: update titles on match, or document keep-oldest as the invariant. Likely intentional — investigate before changing.
-    - Probe <img> absolute positioning
-    - Cover-art probe element from earlier UI review needs designer pass to coordinate with the comparative-analytics tile.
-    - Skeleton/placeholder cohesion pass (handoff §3)
-    - The three skeleton templates work but have inconsistent copy ("Still figuring out…" / "Still discovering…" / "Still fetching…") and incoherent design
-      
-todo  
-- add see password button, forgot password link too close to input
-- fix button hover animation 
-- adjust reader type calculations,
-    -  different colour for diff types? pixel square background for banner? animated? 🙅 (not done)
-- (double check but probably fine) check that when a user generates dna, the book covers get set and load. right now they only appear after refreshing.
-- (need to link methodology pages or something) update the sources for comparative analytics
-- improve ai generated vibe. add llm metrics with posthog 🙅 (not done)
-- save llm vibe against the dna dictionary, cache this for a month and only refetch if dictionary has changed
-    - user a uploads a csv, vibe generated
-    - user b uploads the same csv, we want to reuse this same vibe instead of hitting gemini again
-    - so need to keep a mapping of dictionary hashes to llm vibes and reuse llm vibe when same dictionary is presented again
-    - this would prevent several llm vibes being generated during testing 🙅 (not done)
+### Genre & fiction/nonfiction split 🚧
+- Lock down the canonical genre set and improve mapping (`CANONICAL_GENRE_MAP` / `GENRE_PRIORITY` in
+  `core/dna_constants.py`, `core/services/genre_classification.py`). 8 canonical genres landed
+  (PR #120/#121); coverage still partial.
+- **~35% of books get zero genres** on some Goodreads libraries — Open Library / Google Books subjects
+  don't match the canonical map (case-insensitivity, "fiction" / "literary fiction" aliases). StoryGraph
+  is higher (~80%+ via tag extraction). Confirm how much the #120/#121 overhaul actually closed this. ❓
+- `STORYGRAPH_TAG_TO_GENRE` mappings are lossy (e.g. memoir→biography, mystery→thriller) — may need
+  refinement.
+- Known classification simplifications (`docs/GENRES.md` §8): `poetry` is always classified as fiction;
+  ambiguous genres are always stored as the *fiction* default in the Genre DB (the nonfiction variant
+  exists only as an analysis-time label, e.g. "classic fiction" never "classic nonfiction"); the
+  StoryGraph `Tags` column is not parsed for shelf-style signals (format unverified — only the tag→genre
+  map applies).
+- Genre-split round-trip tests: fixtures for both Goodreads + StoryGraph asserting split counts sum
+  correctly. ❓
+- See `docs/plans/2026-03-02-feat-genre-accuracy-and-fiction-nonfiction-split-plan.md`, `docs/GENRES.md`.
 
+### Reader type 🚧 (overhaul landed PR #125; several decisions deferred)
+- **Retirement decision pending a verdict to Vanaj.** Over a 200-library synthetic corpus, ~9–11 of 20
+  types never win (candidates: Nature Nut Case, Social Savant, History Hound, Comfort Rereader, Series
+  Slayer, Modern Maverick, Rapacious Reader, Tome Tussler, Novella Navigator, Eclectic Reader). Decide
+  whether to drop/clean any.
+- Distribution-domination cap relaxed ≤25% → ≤30% (Fantasy Fanatic ~26.5%, structural to the test
+  corpus) — can be tightened later.
+- Reread/series signals aren't `MIN_SIGNAL_BOOKS`-guarded like genre/page/year signals; tiny libraries
+  with rereads can still score Comfort Rereader / Series Slayer. Documented as defensible; may refine.
+- **Series Slayer is unearnable for StoryGraph uploads** (no series markers) — permanent limitation.
+- No fleet `regenerate_dna` on prod and no backfill of `reader_type_csv_context` — existing profiles keep
+  their old vocabulary/scoring until users re-upload (intentional). `AnonymizedReadingProfile.reader_type`
+  keeps the old vocabulary permanently (no migration).
+- Out of scope / future: per-type share-card palettes + pixel-art mascots/banners; percentile-based
+  community-relative scoring ("you're in the top X% of rereaders"); different colour / animated banner
+  per type. 🙅
+- See `docs/plans/2026-07-04-feat-reader-type-overhaul-plan.md`, `core/services/dna/reader_type.py`,
+  `core/tests/test_reader_type_distribution.py`.
 
-- allow user to delete profile - settings panel maybe? put make private there too, and opt out of recs, display name can also be there, email update as well? and change password functionality might as well
-    - make sure public by default
-    - allow users to opt out of recommendations
-- how similar are you/similarity percentage for 2 or more people
-  - add page for this
-  - allow similarity comparison with multiple users (only public) 🙅 (not done)
-- ~sign up form validate password and all on blur (done)~
-- long author names and genre names cutting of count when hovering on chart 🙅 (not done)
+### Live enrichment 🚧 (PR #127 landed reader-type recompute; stat/chart updates incomplete)
+- Live stat updates only touch 3 text nodes (`#stat-pages`, `#mainstream-score`, `#stat-avg-length`).
+  Still stale during enrichment: top-genres list, top-genres donut (Chart.js instance never updated),
+  fiction/nonfiction split (numbers + chart), book extremes, and most comparative-analytics body text.
+  Extend `_compute_enrichment_stats` + `enrichment_status_view` and wire `Alpine.store('enrichment')` to
+  drive chart updates.
+- Reader type doesn't update live for users who were mid-enrichment when PR #127 shipped (no
+  `reader_type_csv_context` in stored `dna_data`) — only new uploads get it.
+- Live reader-type *movement* (PR 14) was never browser-verified — hard to stage in-progress enrichment
+  locally; eyeball on a genuinely fresh upload post-deploy. ❓
+- Polling backoff: fixed 5s today. Stretch to 10–15s once percent > 90% to cut DB churn during the long tail.
+- Banner lifecycle (x-show → x-if): PR #131 landed; verify the banner DOM unmounts cleanly and dead
+  `$store.enrichment` refs are gone. ❓
+- See `docs/plans/live-enrichment-updates-plan.md`.
+
+### Enrichment performance & robustness 🚧
+- Re-upload re-enriches already-attempted books that got zero genres; add a `last_enrichment_attempt`
+  timestamp + 24h skip. Re-upload can also *show complete prematurely* when old books dominate
+  `all_attempted` — scope the completion check to the current upload session.
+- **Verify the enrichment cache doesn't expire** — `SCALING.md` Phase A leans on caching enrichment
+  indefinitely; confirm current behaviour in `book_enrichment_service.py`. ❓
+- Speed ~5–13s/book. Direct ISBN lookup for StoryGraph books (skip the search call) unclear if landed.
+  `ENABLE_PARALLEL_ENRICHMENT` exists (default off); book-sync uses a single-threaded executor as a
+  deliberate placeholder for future parallelism.
+- Concurrent uploads from the same user can hang at 50% — need a reject-while-pending or
+  revoke-previous-upload guard.
+- Banner overlap on small cards (key stats, comparative sub-tiles) — add `pt-8` / thinner banner.
+- Skeleton cohesion pass: the three skeleton templates work but have inconsistent copy ("Still figuring
+  out…" / "Still discovering…" / "Still fetching…") and incoherent design.
+- Cover-art probe `<img>` absolute-positioning needs a designer pass to coordinate with the
+  comparative-analytics tile.
+- See `docs/plans/enrichment-ux-improvements.md`, `docs/plans/2026-04-06-feat-enrichment-ux-and-performance-plan.md`.
+
+### Scaling, performance & infra 🙅 (none of `docs/scaling-implementation-plan.md` applied yet)
+- **Phase 1 (app):** Gunicorn threaded workers; DB `conn_max_age` + health checks; Celery task time
+  limits + worker recycling; frontend polling backoff (3s→10s / 5s→15s).
+- **Phase 2 (VPS):** 1 GB swap + swappiness tuning; nginx tuning (`client_max_body_size`, gzip, static
+  caching, rate limiting); Redis `maxmemory` cap; small-RAM Postgres tuning; per-container `mem_limit`s.
+- **Phase 3 (ops):** Silk `.prof` disk cleanup; Docker + Django log rotation; daily Postgres backup cron;
+  UFW firewall; Uptime Robot monitoring; resource-monitoring cron.
+- **Google Books free quota ceiling (10k calls/day)** binds with many cold uploads. Mitigation ladder
+  (unbuilt): lean on Open Library + cache enrichment indefinitely → paid GB tier → pre-enrich popular
+  books from a curated NYT/Goodreads-top-1000 list so cold uploads hit cache.
+- **Single Celery worker** serializes uploads until a 2nd worker is added (needs the $12+ tier).
+- **Deploy migration race:** web + worker both run `migrate`; the worker can die on a duplicate-index
+  error with no restart policy. Gate migrations to web only, or add `restart: unless-stopped` on the worker.
+- Deferred to higher tiers: PgBouncer / managed Postgres, WhiteNoise, Cloudflare CDN, Sentry/APM,
+  splitting web + Celery onto separate droplets.
+- See `docs/SCALING.md`, `docs/scaling-implementation-plan.md`.
+
+### Security & auth follow-ups 🚧
+- **US-017 email enumeration** not fully closed — signup redirects still differ by whether the email
+  exists; the real fix is an email-verification flow (deferred as feature work).
+- **US-024 double-dispatch window** — `_save_dna_to_profile` doesn't set the dispatch sentinel before
+  `.delay()`; a poll in the millisecond window can double-dispatch the recommendations task (bounded to
+  2, idempotent). Worth a follow-up story.
+- **`is_public` now defaults to `True`** for new signups — confirm that's the intended launch posture.
+- Settings-modal cache lag: other users' `similar_users_{id}` / `user_recommendations_{id}` caches may
+  hold a now-private user until TTL expiry — accepted as low-severity, not fixed.
+- ✅ In-app email change removed entirely (was an unauthenticated-reauth account-takeover vector).
+
+### Recommendations & similarity 🚧
+- "How similar are you?" — similarity percentage between 2+ **public** users on a dedicated N-way
+  comparison page (not just 1:1). 🙅
+- **Remove the legacy `min_overlap_pct` write + fallback** once most active users have regenerated —
+  still present at `core/tasks/recommendations.py:103` ("kept one release for stale templates/meta").
+- Tune the 0.40 "weak match" uniqueness threshold once real `max_similarity_pct` distributions are
+  visible (a PostHog bucket can inform it).
+- Verify the `uniqueness-badge` django-waffle switch is deployed (badge shows "One of a kind" /
+  "Pretty unique"), and the eligible-pool-count display ("out of over X readers", magnitude-aware
+  flooring — `recommendations_pool_size()` + `friendly_floor()`). ❓
+- Backwards-compat: old `recommendations_meta` lacks `max_similarity_pct`/uniqueness fields; the template
+  must degrade to count-only copy until users regenerate.
+- See `docs/plans/2026-07-10-feat-similar-readers-stat-and-uniqueness-badge-plan.md`.
+
+### Book covers 🚧
+- Covers are fetched + stored during enrichment but **only appear after a page refresh** — the initial
+  dashboard render shows crosshatch placeholders. Verify lazy-load / re-query after enrichment completes
+  (`core/services/_book_urls.py`, `cover_url`).
+
+### AI vibe / LLM 🙅
+- Cache the AI vibe against a DNA-dictionary hash (~1-month TTL, refetch only if the dict changed) so an
+  identical library reuses a vibe instead of re-hitting Gemini — also avoids generating many vibes during
+  testing.
+- Add PostHog metrics for LLM vibe quality/usage; improve the generated vibe itself.
+
+### Comparative analytics — residual (redesign ✅ shipped, PRs #140/#141)
+- **Recompute the "global averages" from community aggregates** once N is large enough — they're
+  literature-derived constants today (`GLOBAL_AVERAGES_SOURCES`). Note it as "future work" on the
+  methodology page.
+- (Redesign done: colour-poster swipe deck + podium bars, 50/50 profile row, always-3-line legend with
+  the World Avg item as the methodology source link, finish-date caveat moved to the methodology page.)
+
+### UI / UX polish 🚧
+- **Share cards** (`core/templates/core/partials/share/*`) still use `text-[10px]` / `text-xs` —
+  deliberately skipped in the site-wide readability bump because they're fixed-canvas 320×568 PNG
+  downloads and bumping overflows the frame. A future pass must redesign the layout to enlarge the text. 🙅
+- neo-3d shadow bevel follow-ups: purple variants in `small_button.html` / `small_link_button.html` were
+  skipped (they use `hover:bg-opacity-90` instead of the standard shadow-shrink chain); cards/modals/inputs
+  not evaluated (would need a stateless `neo-3d-static` utility — YAGNI for now); consider `@property`
+  transitions for the bevel.
+- Add a show/reveal-password button; the "forgot password" link sits too close to the input.
+- Fix the button hover animation (shadow-shrink timing).
+- Long author/genre names get cut off (with counts) when hovering on charts — truncate + tooltip or widen
+  the legend. 🙅
+- Let users delete their profile from the settings panel.
+
+### Testing / QA ❓
+- Verify integration tests (`test_integration.py`, `test_storygraph_integration.py`) reflect the
+  post-PR#125 reader-type model and don't rely on stale assumptions.
+- Wire StoryGraph `Moods` / `Pace` into DNA scoring + vibe generation (Read Count for reread detection is
+  done; Moods/Pace wiring unclear). ❓
+
+### Cleanup / legacy debt (low priority)
+- `EXCLUDED_GENRES` dedup refactor (~1000 duplicate lines) in `dna_constants.py` — mechanical, low value.
+- `Classic Collector → History Hound` compat mapping in `dna_constants.py`.
+- Legacy recommendation shape support (pre-nested `rec['book']`).
+- Existing-book title-update policy: `update_or_create` ISBN match keeps the oldest row's title — decide
+  update-on-match vs document keep-oldest as the invariant (likely intentional).
+- US-033 removed the legacy DNA-stats backfill — no synthetic stats for missing fields (intended).
+
+### Recently shipped (reference, not TODO)
+- ✅ Comparative Analytics → colour-poster swipe deck; Most Controversial Ratings → podium bars;
+  number-line legend cleanup (sorted, always 3 lines, World Avg = source link); site-wide small-text
+  readability bump; 50/50 profile + Update box row (PRs #140/#141).
+- ✅ Settings modal redesign + security hardening (rate limits, throttled endpoints, cache invalidation);
+  in-app email change removed.
+- ✅ Reader-type overhaul (PR #125); similar-readers stat + uniqueness badge; neo-3d shadow bevels;
+  StoryGraph CSV upload (PR #98); live-enrichment reader-type recompute (PR #127/#131).
 
 ##  Getting Started (Docker & Poetry)
 
