@@ -56,6 +56,78 @@ todo
 - ~sign up form validate password and all on blur (done)~
 - long author names and genre names cutting of count when hovering on chart 🙅 (not done)
 
+## Backlog / Known Undone Work
+
+Compiled from `docs/handoffs/`, the reader-type & live-enrichment plans in `docs/plans/`,
+`docs/GENRES.md`, and recent sessions. **The freeform list above is partly stale** — the
+settings modal, reader-type colours/pixel banners, the methodology page, StoryGraph support,
+password toggles, and the `x-if` enrichment-banner lifecycle have all since shipped.
+
+### Reader types
+- **Type-retirement decision is deferred — all 20 types are still kept.** Over a 200-library
+  synthetic corpus only 11/20 ever won; these never did: History Hound, Nature Nut Case, Social
+  Savant, Comfort Rereader, Series Slayer, Modern Maverick, Rapacious Reader, Tome Tussler,
+  Novella Navigator, Eclectic Reader (all remain reachable via engineered libraries). Decide
+  whether to drop any. Decision doc: `docs/plans/2026-07-04-feat-reader-type-overhaul-plan.md`;
+  calibration histogram prints in `test_no_type_dominates_distribution`.
+- **Distribution-domination cap was relaxed 25% → 30%** (Fantasy Fanatic sits ~26.5%, largely
+  structural to the test corpus) and the Eclectic ≥1% lower bound was dropped. Tighten later if
+  you want a stricter guarantee.
+- **Reread / Series signals aren't `MIN_SIGNAL_BOOKS`-guarded** — a tiny library (<10 books) with
+  rereads can still score Comfort Rereader / Series Slayer. Possible future refinement, not a bug.
+- **No backfill** of reader types for existing users; they recompute on next upload.
+
+### Genre & fiction/non-fiction
+- **Post-deploy genre refresh not yet run on the VPS:** `manage.py enrich_books --process-all`
+  re-fetches and merges Google Books genres into existing books (also resets
+  `google_books_last_checked`). Until it runs, existing users' genres/splits only refresh on
+  re-upload. *(pending manual VPS action)*
+- **Canonical-genre mapping is still being tightened** to improve genre accuracy and the
+  fiction/non-fiction split (ongoing).
+- **Known simplification:** the Genre DB always stores the *fiction* default for ambiguous genres
+  ("classic fiction", never "classic nonfiction"); the non-fiction variant only exists as an
+  analysis-time label (`docs/GENRES.md` §8).
+- Long author/genre names truncate the count on chart hover.
+
+### Live enrichment (dashboard reactivity)
+- **Live-enrichment "part 1" appears unfinished:** the top-genres list+donut, fiction/non-fiction
+  numbers+pie, and book-extremes tiles still freeze until the completion reload — only ~3 stats
+  swap live. Spec: `docs/plans/live-enrichment-updates-plan.md` (PR1 section). *(verify current
+  behaviour — PR 12 was never in the "done" set of the 2026-07-29 handoff.)*
+- **Book covers only appear after a manual refresh** on DNA generation; they should load in place.
+- Reader-type live recompute shipped (PR 14) but hasn't been eyeballed on a genuinely fresh upload
+  post-deploy.
+- Concurrent uploads can stick at 50% — revoke the previous upload.
+- Polling is a fixed 5s; stretch to 10–15s once percent > 90% to cut DB churn on the long tail.
+
+### Comparative-analytics stats
+- **Derive the global-average constants from community data.** `avg_books_per_year` (now 4, a
+  survey median), `avg_book_length_pages` (375) and `avg_publish_year` (2009) are hand-set in
+  `GLOBAL_AVERAGES` (`core/dna_constants.py`). Once `AggregateAnalytics` holds enough readers,
+  replace them with community-derived baselines — the methodology page already promises this.
+- **`avg_publish_year` (2009) is the weakest figure** — no authoritative source measures "the
+  average publication year of books people read"; it's an explicit best-effort estimate. Strongest
+  fix: compute a median from a named dataset or from our own corpus.
+
+### AI vibe / LLM
+- **Cache LLM vibes by library-hash:** reuse the generated vibe when an identical library (same
+  dictionary hash) is uploaded instead of re-calling Gemini; cache ~1 month, refetch only when the
+  dictionary changes. Avoids redundant generations during testing.
+- Improve the generated vibe and add LLM metrics to PostHog.
+
+### Similarity
+- Multi-user similarity: a dedicated "how similar are you" page comparing 2+ (public) users.
+
+### Deploy / infra
+- **Deploy propagation lag:** `docker-compose.prod.yml`'s `web` service has both `build: .` and
+  `image:`, and the deploy runs `docker compose up` without a `git pull`, so the live site can lag
+  noticeably after a push before the container swaps (looks stale right after deploy, then
+  resolves). Consider `up --no-build` / pull-only to make deploys deterministic.
+- **US-017:** signup user-enumeration is reduced but not eliminated; a full fix needs an
+  email-verification flow (deferred user-facing work).
+- **Ripe legacy-compat cleanups:** the pre-US-002 in-flight `task_id` shim and the US-032
+  recommendations dual-shape fallback were 30-day paths and are now safe to remove.
+
 ##  Getting Started (Docker & Poetry)
 
 This is the recommended method for local development. It creates a consistent, isolated environment with a dedicated PostgreSQL database, mirroring a production setup.
