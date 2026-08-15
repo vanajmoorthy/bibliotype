@@ -2,12 +2,14 @@
 Tests for profile privacy, 404 handling, and recommendations for logged in/out users
 """
 
+from unittest.mock import patch
+
 from django.contrib.auth.models import User
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-from core.models import Book, Author, Genre, Publisher, UserBook, UserProfile, AnonymousUserSession
-from core.services.recommendation_service import get_recommendations_for_user, get_recommendations_for_anonymous
-from unittest.mock import patch
+
+from core.models import AnonymousUserSession, Author, Book, Genre, Publisher, UserBook, UserProfile
+from core.services.recommendation_service import get_recommendations_for_anonymous, get_recommendations_for_user
 
 
 @override_settings(
@@ -44,22 +46,24 @@ class ProfilePrivacyTestCase(TestCase):
         self.assertContains(response, "public_user")
         self.assertContains(response, "Test Reader")
 
-    def test_private_profile_shows_private_page_when_logged_out(self):
-        """Test that private profiles show private page when logged out"""
+    def test_private_profile_shows_generic_404_when_logged_out(self):
+        """Test that private profiles show the generic 404 page when logged out"""
         response = self.client.get(reverse("core:public_profile", kwargs={"username": "private_user"}))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Private")
-        self.assertContains(response, "This user's Bibliotype is set to private.")
-        self.assertNotContains(response, "Private Reader")
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(response, "Profile Not Available", status_code=404)
+        self.assertContains(response, "This profile doesn't exist or is private.", status_code=404)
+        self.assertNotContains(response, "Private Reader", status_code=404)
+        self.assertNotContains(response, "private_user", status_code=404)
 
-    def test_private_profile_shows_private_page_when_different_user(self):
-        """Test that private profiles show private page for different logged-in user"""
+    def test_private_profile_shows_generic_404_when_different_user(self):
+        """Test that private profiles show the generic 404 page for a different logged-in user"""
         self.client.login(username="public_user", password="testpass123")
         response = self.client.get(reverse("core:public_profile", kwargs={"username": "private_user"}))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Private")
-        self.assertContains(response, "This user's Bibliotype is set to private.")
-        self.assertNotContains(response, "Private Reader")
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(response, "Profile Not Available", status_code=404)
+        self.assertContains(response, "This profile doesn't exist or is private.", status_code=404)
+        self.assertNotContains(response, "Private Reader", status_code=404)
+        self.assertNotContains(response, "private_user", status_code=404)
 
     def test_private_profile_accessible_to_owner(self):
         """Test that private profile owner can see their own profile"""
@@ -68,7 +72,7 @@ class ProfilePrivacyTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "private_user")
         self.assertContains(response, "Private Reader")
-        self.assertNotContains(response, "This user's Bibliotype is set to private.")
+        self.assertNotContains(response, "This profile doesn't exist or is private.")
 
     def test_nonexistent_user_shows_404_page(self):
         """Test that nonexistent user shows 404 page"""
@@ -76,9 +80,20 @@ class ProfilePrivacyTestCase(TestCase):
         # The view returns 404 status but renders a template
         self.assertEqual(response.status_code, 404)
         # Check that the custom 404 template is rendered
-        self.assertContains(response, "User Not Found", status_code=404)
-        self.assertContains(response, "nonexistent_user", status_code=404)
+        self.assertContains(response, "Profile Not Available", status_code=404)
+        self.assertNotContains(response, "nonexistent_user", status_code=404)
         self.assertContains(response, "Return to Home", status_code=404)
+
+    def test_private_and_nonexistent_profiles_are_indistinguishable(self):
+        """A private profile and a nonexistent one must return the same status and generic copy"""
+        private_response = self.client.get(reverse("core:public_profile", kwargs={"username": "private_user"}))
+        missing_response = self.client.get(reverse("core:public_profile", kwargs={"username": "does_not_exist_xyz"}))
+        self.assertEqual(private_response.status_code, 404)
+        self.assertEqual(missing_response.status_code, 404)
+        for response in (private_response, missing_response):
+            self.assertContains(response, "Profile Not Available", status_code=404)
+            self.assertContains(response, "This profile doesn't exist or is private.", status_code=404)
+        self.assertEqual(private_response.content, missing_response.content)
 
 
 @override_settings(
@@ -307,8 +322,9 @@ class RecommendationsTestCase(TestCase):
         # and the full upload flow is tested in test_views_e2e.py
 
         # Create AnonymousUserSession directly (simulating what happens after DNA generation)
-        from django.utils import timezone
         from datetime import timedelta
+
+        from django.utils import timezone
 
         session_key = self.client.session.session_key or "test_session_123"
         anon_session = AnonymousUserSession.objects.create(
@@ -332,8 +348,9 @@ class RecommendationsTestCase(TestCase):
     def test_anonymous_user_recommendations_via_service(self):
         """Test anonymous recommendations service can be called (mocked to avoid hangs)"""
         # Create AnonymousUserSession
-        from django.utils import timezone
         from datetime import timedelta
+
+        from django.utils import timezone
 
         session_key = "test_session_key_123"
         anon_session = AnonymousUserSession.objects.create(
@@ -374,8 +391,9 @@ class RecommendationsTestCase(TestCase):
         self.assertEqual(field.default, dict)
 
         # Test that we can create an instance in memory (no DB save)
-        from django.utils import timezone
         from datetime import timedelta
+
+        from django.utils import timezone
 
         test_ratings = {1: 5, 2: 4}
         anon_session = AnonymousUserSession(

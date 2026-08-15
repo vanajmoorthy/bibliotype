@@ -218,14 +218,8 @@ def logout_view(request):
 def handler404(request, exception=None):
     """Custom 404 handler that renders our fun 404 page."""
     path = request.path.strip("/")
-    username = None
-    if path.startswith("u/") and len(path.split("/")) >= 2:
-        # Extract username from path like "u/username" or "u/username/"
-        parts = path.split("/")
-        if parts[0] == "u" and len(parts) > 1:
-            username = parts[1]
-
-    return render(request, "core/404.html", {"username": username}, status=404)
+    is_profile_page = path.startswith("u/") and len(path.split("/")) >= 2
+    return render(request, "core/404.html", {"profile_page": True} if is_profile_page else {}, status=404)
 
 
 class CustomPasswordResetView(PasswordResetView):

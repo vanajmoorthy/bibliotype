@@ -66,8 +66,7 @@ def display_dna_view(request):
                         logger.info(f"No stored recommendations for user {request.user.id}, triggered generation")
                     else:
                         logger.info(
-                            f"Skipped duplicate recommendations dispatch for user {request.user.id} "
-                            f"(sentinel held)"
+                            f"Skipped duplicate recommendations dispatch for user {request.user.id} " f"(sentinel held)"
                         )
                     recommendations = []
 
@@ -198,7 +197,7 @@ def display_dna_view(request):
         if "currently_reading_count" not in raw_dna:
             messages.info(
                 request,
-                'Re-upload your library to see your currently-reading books and get better recommendations! '
+                "Re-upload your library to see your currently-reading books and get better recommendations! "
                 '<a href="/" class="hover:bg-brand-yellow font-bold underline">Upload now</a>',
             )
 
@@ -222,10 +221,7 @@ def display_dna_view(request):
 
     # Flag to tell the template to poll for recommendations
     recommendations_pending = (
-        request.user.is_authenticated
-        and user_profile
-        and user_profile.dna_data
-        and not recommendations
+        request.user.is_authenticated and user_profile and user_profile.dna_data and not recommendations
     )
 
     context = {
@@ -245,6 +241,8 @@ def display_dna_view(request):
 
 def public_profile_view(request, username):
     """Displays a user's public DNA."""
+    from ..models import UserProfile
+
     try:
         profile_user = User.objects.get(username=username)
         profile = profile_user.userprofile
@@ -252,8 +250,10 @@ def public_profile_view(request, username):
         profile.refresh_from_db()
 
         # Check privacy: only show if public OR if user is viewing their own profile
+        # Render the same generic 404 as a nonexistent user so the two cases are
+        # indistinguishable — a distinct "private" response would confirm the account exists
         if not profile.is_public and (not request.user.is_authenticated or request.user != profile_user):
-            return render(request, "core/profile_private.html")
+            return render(request, "core/404.html", {"profile_page": True}, status=404)
 
         display_name = profile_user.first_name if profile_user.first_name else profile_user.username
         display_name_lower = display_name.lower()
@@ -319,6 +319,6 @@ def public_profile_view(request, username):
             ),
         }
         return render(request, "core/public_profile.html", context)
-    except User.DoesNotExist:
+    except (User.DoesNotExist, UserProfile.DoesNotExist):
         # Show a nicer 404 page instead of the default Django 404
-        return render(request, "core/404.html", {"username": username}, status=404)
+        return render(request, "core/404.html", {"profile_page": True}, status=404)
