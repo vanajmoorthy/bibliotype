@@ -1,0 +1,1578 @@
+[
+  {
+    "filename": "001__yamesyung_SoloScribe.csv",
+    "repo": "yamesyung/SoloScribe",
+    "path": "demo/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/yamesyung/SoloScribe/HEAD/demo/goodreads_library_export.csv",
+    "sha256": "947683ea41fdadfb3ea0e6c886e34f3b452c6ea2c62a62da2725ebb29c637671",
+    "rows": 26
+  },
+  {
+    "filename": "002__thundergolfer_thundergolfer.github.io.csv",
+    "repo": "thundergolfer/thundergolfer.github.io",
+    "path": "_data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/thundergolfer/thundergolfer.github.io/HEAD/_data/goodreads_library_export.csv",
+    "sha256": "c104b97333b2a678a44e7eb15fc95a6d5fbce51ec7be5b5039cb65bb417de2f4",
+    "rows": 591
+  },
+  {
+    "filename": "003__jd7h_josephine.csv",
+    "repo": "jd7h/josephine",
+    "path": "data/goodreads_library_export_example.csv",
+    "url": "https://raw.githubusercontent.com/jd7h/josephine/HEAD/data/goodreads_library_export_example.csv",
+    "sha256": "6ad5e5516369d6aa3f78beb32035d84a394a8d6f5375035f4b1a38682ee15a5c",
+    "rows": 24
+  },
+  {
+    "filename": "004__doctorfree_Obsidian-Books-Vault.csv",
+    "repo": "doctorfree/Obsidian-Books-Vault",
+    "path": "Tools/Books/data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/doctorfree/Obsidian-Books-Vault/HEAD/Tools/Books/data/goodreads_library_export.csv",
+    "sha256": "25a5dba101d995f8c65a7938fb4d1d4b9ac608f667fffd6d697726ddb99dc389",
+    "rows": 437
+  },
+  {
+    "filename": "006__mkudija_mkudija.github.io.csv",
+    "repo": "mkudija/mkudija.github.io",
+    "path": "reading/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/mkudija/mkudija.github.io/HEAD/reading/goodreads_library_export.csv",
+    "sha256": "2a1437d82c812b1a57144b8147dc348971f46cc3f02781cd49c314054ff0058d",
+    "rows": 333
+  },
+  {
+    "filename": "007__gr8monk3ys_lscaturchio.xyz.csv",
+    "repo": "gr8monk3ys/lscaturchio.xyz",
+    "path": "public/my-data/goodreads/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/gr8monk3ys/lscaturchio.xyz/HEAD/public/my-data/goodreads/goodreads_library_export.csv",
+    "sha256": "c3903a0985fd88323d3a406ba211380b622db08e12e3d8fa86d2e9cb636da7f8",
+    "rows": 450
+  },
+  {
+    "filename": "008__yathish1618_yathish1618.github.io.csv",
+    "repo": "yathish1618/yathish1618.github.io",
+    "path": "media-consumption/data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/yathish1618/yathish1618.github.io/HEAD/media-consumption/data/goodreads_library_export.csv",
+    "sha256": "57b36a5229210a9ec0fc0a57cfffaea900e11aabc5ab66a15101e262a840a83f",
+    "rows": 301
+  },
+  {
+    "filename": "009__satoshiofficial_domains.csv",
+    "repo": "satoshiofficial/domains",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/satoshiofficial/domains/HEAD/goodreads_library_export.csv",
+    "sha256": "29645335fba12e3d44186e7be7b13bd2c37ee8616ac489c211afa5eb6512361b",
+    "rows": 620
+  },
+  {
+    "filename": "010__bbondy_go-brianbondy.csv",
+    "repo": "bbondy/go-brianbondy",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/bbondy/go-brianbondy/HEAD/data/goodreads_library_export.csv",
+    "sha256": "d7a89974996a1821aa1bfe4f12eb8f3d4414cd842bec6ea247391d4cfaaf562b",
+    "rows": 241
+  },
+  {
+    "filename": "011__evilsocket_keras-goodreads.csv",
+    "repo": "evilsocket/keras-goodreads",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/evilsocket/keras-goodreads/HEAD/goodreads_library_export.csv",
+    "sha256": "3be7da048f17b90b32e463bf92eba0d86aa2fde00de8a9212cd1a7e8d3010d80",
+    "rows": 232
+  },
+  {
+    "filename": "012__ajuanijustus_ajuanijustus.com.csv",
+    "repo": "ajuanijustus/ajuanijustus.com",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/ajuanijustus/ajuanijustus.com/HEAD/goodreads_library_export.csv",
+    "sha256": "b8efe4b406fd2a2c8652762559ace1ff93a821c23610a84df485104e1ff613ac",
+    "rows": 433
+  },
+  {
+    "filename": "013__puf_puf.io.csv",
+    "repo": "puf/puf.io",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/puf/puf.io/HEAD/goodreads_library_export.csv",
+    "sha256": "52a3dfb020b241b23089b136c48e06cda5545039967c38ceea8c27d1e981ff83",
+    "rows": 628
+  },
+  {
+    "filename": "014__Psilolouben_your_next_book.csv",
+    "repo": "Psilolouben/your_next_book",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/Psilolouben/your_next_book/HEAD/goodreads_library_export.csv",
+    "sha256": "4e2f64725b9c241a572b4298a551d5eaa8b0c0288f73bc58c746c3fe9283aeb3",
+    "rows": 746
+  },
+  {
+    "filename": "015__ayyucedemirbas_ayyucedemirbas.github.io.csv",
+    "repo": "ayyucedemirbas/ayyucedemirbas.github.io",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/ayyucedemirbas/ayyucedemirbas.github.io/HEAD/goodreads_library_export.csv",
+    "sha256": "a219025df09a8c905e65285ec4ca8d088cdfb0227ec017ef8d197c0440271af0",
+    "rows": 881
+  },
+  {
+    "filename": "016__jarcos_biblioHack.csv",
+    "repo": "jarcos/biblioHack",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/jarcos/biblioHack/HEAD/goodreads_library_export.csv",
+    "sha256": "b8dcf1f09231faebb99c4828798cb89a478ea4c85311ef0e923979455ae4cc47",
+    "rows": 95
+  },
+  {
+    "filename": "017__mattmcmanus_scripts.csv",
+    "repo": "mattmcmanus/scripts",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/mattmcmanus/scripts/HEAD/goodreads_library_export.csv",
+    "sha256": "f18eabccc0389c045e26d441e4a1f22bd6fde6e2f7f0ccac2561fa79cce98525",
+    "rows": 569
+  },
+  {
+    "filename": "019__haleyk_haleyk.github.io.csv",
+    "repo": "haleyk/haleyk.github.io",
+    "path": "goodreads_library_export24.csv",
+    "url": "https://raw.githubusercontent.com/haleyk/haleyk.github.io/HEAD/goodreads_library_export24.csv",
+    "sha256": "e2d868c9cc1023dfaf06747bb68d5caa979bc8cbcbc173150e9bcef2779860c6",
+    "rows": 609
+  },
+  {
+    "filename": "020__GSDion_Goodreads-list-filter.csv",
+    "repo": "GSDion/Goodreads-list-filter",
+    "path": "old/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/GSDion/Goodreads-list-filter/HEAD/old/goodreads_library_export.csv",
+    "sha256": "f9df7721ae38b305808441d7dedf01ff459309504974536f8a3345279980bb79",
+    "rows": 274
+  },
+  {
+    "filename": "022__tylerreckart_rkrt.net.csv",
+    "repo": "tylerreckart/rkrt.net",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/tylerreckart/rkrt.net/HEAD/data/goodreads_library_export.csv",
+    "sha256": "c54118c24c159e5c7e5bd4cdc54cafc236b7dcd49875e076daf040a08d421815",
+    "rows": 319
+  },
+  {
+    "filename": "023__aaditya620321_Goodreads.csv",
+    "repo": "aaditya620321/Goodreads",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/aaditya620321/Goodreads/HEAD/data/goodreads_library_export.csv",
+    "sha256": "e688110965aef436b84a6cd0533a92c6918fe1f5c8af735e6e4c1e4edfaf53ed",
+    "rows": 200
+  },
+  {
+    "filename": "024__JZStafura-Lab_intellectual-map.csv",
+    "repo": "JZStafura-Lab/intellectual-map",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/JZStafura-Lab/intellectual-map/HEAD/data/goodreads_library_export.csv",
+    "sha256": "d0fade1aef54d2563a6a1a662310631622db9615de59b55317fa2fb67692d91f",
+    "rows": 467
+  },
+  {
+    "filename": "025__abhidesikan_madras-medley.csv",
+    "repo": "abhidesikan/madras-medley",
+    "path": "static/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/abhidesikan/madras-medley/HEAD/static/goodreads_library_export.csv",
+    "sha256": "7cd61ff1e852f7fd8c00ea620d536f05e3ac8b4bb3a8769d50217b7edce63f6e",
+    "rows": 176
+  },
+  {
+    "filename": "026__saimnaveediqbal_dustjacket.csv",
+    "repo": "saimnaveediqbal/dustjacket",
+    "path": "public/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/saimnaveediqbal/dustjacket/HEAD/public/goodreads_library_export.csv",
+    "sha256": "0ee8d9d82a30db1f14b47e1ac304fb954910ad645890776bb93f528a3adf8f94",
+    "rows": 61
+  },
+  {
+    "filename": "027__stephenreid321_stephenreid.csv",
+    "repo": "stephenreid321/stephenreid",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/stephenreid321/stephenreid/HEAD/data/goodreads_library_export.csv",
+    "sha256": "b9310e34cec804f5b3690906a3de006207fedc7166cf9f394a647914931d6745",
+    "rows": 892
+  },
+  {
+    "filename": "028__jjti_personal-site.csv",
+    "repo": "jjti/personal-site",
+    "path": "src/data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/jjti/personal-site/HEAD/src/data/goodreads_library_export.csv",
+    "sha256": "3004c373a7e2f3cbf4d6f8300fe434b8d4b9ff8d4dad3cf06d95bee3dbf1e1a9",
+    "rows": 107
+  },
+  {
+    "filename": "029__bumbot-hub_Next-Read.csv",
+    "repo": "bumbot-hub/Next-Read",
+    "path": "data/raw/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/bumbot-hub/Next-Read/HEAD/data/raw/goodreads_library_export.csv",
+    "sha256": "d25a92909da4658764bbf604139f1569fe03822a4e9a63e1dbb2fdd54848e965",
+    "rows": 94
+  },
+  {
+    "filename": "030__Fuadex_Fuad-Soudah.csv",
+    "repo": "Fuadex/Fuad-Soudah",
+    "path": "Culture_2/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/Fuadex/Fuad-Soudah/HEAD/Culture_2/goodreads_library_export.csv",
+    "sha256": "d5f0db6d95d0bfd981cc3ef23b580b092d91d4f7176b7bd776c683cb93c93eda",
+    "rows": 133
+  },
+  {
+    "filename": "031__notionparallax_bookAnalysis.csv",
+    "repo": "notionparallax/bookAnalysis",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/notionparallax/bookAnalysis/HEAD/goodreads_library_export.csv",
+    "sha256": "ad6c290638799dd7a43cf951f6349a3a0effb0a82420f2b2717a9aa6b6dc279a",
+    "rows": 966
+  },
+  {
+    "filename": "032__ItzaMi_itzami-blog.csv",
+    "repo": "ItzaMi/itzami-blog",
+    "path": "content/reading/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/ItzaMi/itzami-blog/HEAD/content/reading/goodreads_library_export.csv",
+    "sha256": "1280c8306643ea2ffbbbfdeaa14016f878ce90151d9e07b8af844bfe8558fd58",
+    "rows": 543
+  },
+  {
+    "filename": "033__chris-kremer_chris-kremer.github.io.csv",
+    "repo": "chris-kremer/chris-kremer.github.io",
+    "path": "_books/goodreads_library_export(4).csv",
+    "url": "https://raw.githubusercontent.com/chris-kremer/chris-kremer.github.io/HEAD/_books/goodreads_library_export%284%29.csv",
+    "sha256": "a9c40bb6bcdff305f1107d1393b2e05c85a06a457e2c121455c603ed9835308d",
+    "rows": 682
+  },
+  {
+    "filename": "034__doingandlearning_astro-blog.csv",
+    "repo": "doingandlearning/astro-blog",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/doingandlearning/astro-blog/HEAD/goodreads_library_export.csv",
+    "sha256": "23506e2467db8dec1e7cb929432fcaf5fcb6c3c29ae8290ed0bcf4780122ee2e",
+    "rows": 380
+  },
+  {
+    "filename": "035__miolfo_BookQuest-cmd.csv",
+    "repo": "miolfo/BookQuest-cmd",
+    "path": "resources/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/miolfo/BookQuest-cmd/HEAD/resources/goodreads_library_export.csv",
+    "sha256": "acf80929103a6569542b1305970cbb1bb3b72252ee04fc2b9761c00a548c1d57",
+    "rows": 133
+  },
+  {
+    "filename": "036__Daghif_UAS-TST-18223016.csv",
+    "repo": "Daghif/UAS-TST-18223016",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/Daghif/UAS-TST-18223016/HEAD/goodreads_library_export.csv",
+    "sha256": "c519c507b85fb6a83293acca205fbd9a8b5a621de40b46127217ab3cdf161eec",
+    "rows": 142
+  },
+  {
+    "filename": "038__sofiaguglielmini_my-goodreads.csv",
+    "repo": "sofiaguglielmini/my-goodreads",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/sofiaguglielmini/my-goodreads/HEAD/goodreads_library_export.csv",
+    "sha256": "d5cc9facc12a770f57690e73f3f14524ab3b4501958e1a00284e5af27c361000",
+    "rows": 369
+  },
+  {
+    "filename": "039__philals_reading-dashboard.csv",
+    "repo": "philals/reading-dashboard",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/philals/reading-dashboard/HEAD/goodreads_library_export.csv",
+    "sha256": "26bd02ed8358aaab39e527b06ea00d1485a5fccbaf7db8f081e71b2d6f912cf1",
+    "rows": 88
+  },
+  {
+    "filename": "040__sador23_library.csv",
+    "repo": "sador23/library",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/sador23/library/HEAD/goodreads_library_export.csv",
+    "sha256": "6ccc54a14adfd869de7595df5868ca9c33359f15da02772116376dbe5c09fe55",
+    "rows": 104
+  },
+  {
+    "filename": "041__hayyuelha_goodreads_analytics.csv",
+    "repo": "hayyuelha/goodreads_analytics",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/hayyuelha/goodreads_analytics/HEAD/goodreads_library_export.csv",
+    "sha256": "0c9aff9b9deb7d0cbeb2b9b79b4f4b4fff1bf88b97ee0df31f63ec0a6dce5af7",
+    "rows": 311
+  },
+  {
+    "filename": "042__mbarker84_database-visualisations.csv",
+    "repo": "mbarker84/database-visualisations",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/mbarker84/database-visualisations/HEAD/goodreads_library_export.csv",
+    "sha256": "8b20225c96ce733130d46b5148e00cef6ea22e9571d5d1bdca22c779d6f99437",
+    "rows": 165
+  },
+  {
+    "filename": "043__galeanojav_lecturas-jgp.csv",
+    "repo": "galeanojav/lecturas-jgp",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/galeanojav/lecturas-jgp/HEAD/goodreads_library_export.csv",
+    "sha256": "2e6152fa3b60ddd11e3ae87257a16239c7c957154cfb09b7e212077fc4ff8b83",
+    "rows": 311
+  },
+  {
+    "filename": "044__Munagala-29_goodreads__streamlit_app.csv",
+    "repo": "Munagala-29/goodreads__streamlit_app",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/Munagala-29/goodreads__streamlit_app/HEAD/goodreads_library_export.csv",
+    "sha256": "a10e8f45bfd0fee761db998ce2a7290459660bb83e24d43584f9c31b0bbdf48c",
+    "rows": 10
+  },
+  {
+    "filename": "045__milesjaffee_AuthorLocationFinder.csv",
+    "repo": "milesjaffee/AuthorLocationFinder",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/milesjaffee/AuthorLocationFinder/HEAD/goodreads_library_export.csv",
+    "sha256": "9aa2eb43fec90a076e010cba97b3b31f06ed1c9150ff9582ce0b5d6bee5b067b",
+    "rows": 128
+  },
+  {
+    "filename": "046__Aanvig2_goodreads.csv",
+    "repo": "Aanvig2/goodreads",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/Aanvig2/goodreads/HEAD/goodreads_library_export.csv",
+    "sha256": "58242b8c5a886b5fe899b41fee640b66fe167c6733f4b120861e5477d3dba65c",
+    "rows": 83
+  },
+  {
+    "filename": "047__EnsieT_My-Library.csv",
+    "repo": "EnsieT/My-Library",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/EnsieT/My-Library/HEAD/goodreads_library_export.csv",
+    "sha256": "cbf393e4d9635b9871782fe7b7d661edc0238ad430f0374b97f4c4be60b7b23c",
+    "rows": 252
+  },
+  {
+    "filename": "048__BH-BH_goodreads_export.csv",
+    "repo": "BH-BH/goodreads_export",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/BH-BH/goodreads_export/HEAD/goodreads_library_export.csv",
+    "sha256": "a3c82b80440e2cb31976743c9f7bca43eec073986dfeca652eb8c7b41c8860ad",
+    "rows": 152
+  },
+  {
+    "filename": "049__eeeurico_library.csv",
+    "repo": "eeeurico/library",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/eeeurico/library/HEAD/goodreads_library_export.csv",
+    "sha256": "1b535c31f86a9723ab87ff234ebfd4a2859285d687994f22def81193d775ef10",
+    "rows": 78
+  },
+  {
+    "filename": "050__jazracherif_narrate-serverless.csv",
+    "repo": "jazracherif/narrate-serverless",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/jazracherif/narrate-serverless/HEAD/goodreads_library_export.csv",
+    "sha256": "cd9d0351fcd4a6775be211fe02f4c02aefbf6124a614b1afa2895c6e27daf1f4",
+    "rows": 11
+  },
+  {
+    "filename": "052__chris17453_goodreads_pdf.csv",
+    "repo": "chris17453/goodreads_pdf",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/chris17453/goodreads_pdf/HEAD/goodreads_library_export.csv",
+    "sha256": "2f2b293ee4ea5868031cc9e3d95f0bb20f60eaa9b7b0866ece05934af17ee07e",
+    "rows": 715
+  },
+  {
+    "filename": "054__jannikls_book-recs.csv",
+    "repo": "jannikls/book-recs",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/jannikls/book-recs/HEAD/goodreads_library_export.csv",
+    "sha256": "3d554a12c20a6cf55cd2ac7637da2b0cab74e4d9a90bd348ae1b0136c68c720a",
+    "rows": 831
+  },
+  {
+    "filename": "055__OliverHeffernan_storystack.csv",
+    "repo": "OliverHeffernan/storystack",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/OliverHeffernan/storystack/HEAD/goodreads_library_export.csv",
+    "sha256": "02fb0fe2264aa59d18db9ec18cdb131b56e8dbfc5abdff5caaf76a567524adc8",
+    "rows": 89
+  },
+  {
+    "filename": "056__lawtonchris_BookPricesProject.csv",
+    "repo": "lawtonchris/BookPricesProject",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/lawtonchris/BookPricesProject/HEAD/goodreads_library_export.csv",
+    "sha256": "d77da70f502bf777c37cc72dbeb4b9ee22812524810af0af72158cf0ac4f390c",
+    "rows": 191
+  },
+  {
+    "filename": "057__christian-armstrong25_Book_Recomender.csv",
+    "repo": "christian-armstrong25/Book_Recomender",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/christian-armstrong25/Book_Recomender/HEAD/goodreads_library_export.csv",
+    "sha256": "f53d5d360f4076f59b53126fc283953ca7ff86011a076a344a6bddb99bc1c0f9",
+    "rows": 796
+  },
+  {
+    "filename": "058__julianaplanas_archivo.csv",
+    "repo": "julianaplanas/archivo",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/julianaplanas/archivo/HEAD/goodreads_library_export.csv",
+    "sha256": "9c6e717ce8a3fd3828859d6c82a77be7c16acde97d3312d5fe8456a2eb249c0f",
+    "rows": 116
+  },
+  {
+    "filename": "060__miolfo_BookQuest-cmd.csv",
+    "repo": "miolfo/BookQuest-cmd",
+    "path": "resources/goodreads_library_export_2.csv",
+    "url": "https://raw.githubusercontent.com/miolfo/BookQuest-cmd/HEAD/resources/goodreads_library_export_2.csv",
+    "sha256": "e65f048d32417c9deba984e30a38ed6bb02e994e49fd7dd1240b495131e84916",
+    "rows": 149
+  },
+  {
+    "filename": "061__maxhumber_talks.csv",
+    "repo": "maxhumber/talks",
+    "path": "2017-10-13_visualizing_models/_sp/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/maxhumber/talks/HEAD/2017-10-13_visualizing_models/_sp/goodreads_library_export.csv",
+    "sha256": "8748c6233bb1313d10eb87e1e7929e58e15f2f93c13a8ed8f2d6ea27855c7d5d",
+    "rows": 152
+  },
+  {
+    "filename": "062__erinversfeldcodes_thestacks.csv",
+    "repo": "erinversfeldcodes/thestacks",
+    "path": "e2e/fixtures/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/erinversfeldcodes/thestacks/HEAD/e2e/fixtures/goodreads_library_export.csv",
+    "sha256": "90b222bcb10c4a1a2c20a69286a36abfec0d8f6a11e3c0a11067e862add8f9d8",
+    "rows": 5
+  },
+  {
+    "filename": "063__aaditya620321_Goodreads.csv",
+    "repo": "aaditya620321/Goodreads",
+    "path": "data/goodreads_library_export_cleaned.csv",
+    "url": "https://raw.githubusercontent.com/aaditya620321/Goodreads/HEAD/data/goodreads_library_export_cleaned.csv",
+    "sha256": "e259cb8faa1c5730e20d65a9c256c9a0e7575693599868803f7366d6cb4f72db",
+    "rows": 179
+  },
+  {
+    "filename": "064__jonnjonnjo_jonarthurito.csv",
+    "repo": "jonnjonnjo/jonarthurito",
+    "path": "goodreads_library_export(1).csv",
+    "url": "https://raw.githubusercontent.com/jonnjonnjo/jonarthurito/HEAD/goodreads_library_export%281%29.csv",
+    "sha256": "71935c3339ad7584a6993d2e186f6e721ce6c93ada8ac76ca1c53014ecadd398",
+    "rows": 56
+  },
+  {
+    "filename": "066__Gchism94_reverie-reads.csv",
+    "repo": "Gchism94/reverie-reads",
+    "path": "data/fixtures/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/Gchism94/reverie-reads/HEAD/data/fixtures/goodreads_library_export.csv",
+    "sha256": "bb4750d8eda9dc688aebec8d911813cdb242277e66a5f852094b9272242eea80",
+    "rows": 290
+  },
+  {
+    "filename": "067__milesjaffee_AuthorLocationFinder.csv",
+    "repo": "milesjaffee/AuthorLocationFinder",
+    "path": "goodreads_library_export_old.csv",
+    "url": "https://raw.githubusercontent.com/milesjaffee/AuthorLocationFinder/HEAD/goodreads_library_export_old.csv",
+    "sha256": "bcd8724ab9bf5ea124f84c3832a97fbf7f2022805598208991c9218b610585f7",
+    "rows": 51
+  },
+  {
+    "filename": "068__duskybomb_duskybomb.github.io.csv",
+    "repo": "duskybomb/duskybomb.github.io",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/duskybomb/duskybomb.github.io/HEAD/data/goodreads_library_export.csv",
+    "sha256": "f0833c3b8e5651e0392a2f9a5513adc807f16d7953702c524590022363429f7d",
+    "rows": 40
+  },
+  {
+    "filename": "069__ryan-bert_goodreads-ai.csv",
+    "repo": "ryan-bert/goodreads-ai",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/ryan-bert/goodreads-ai/HEAD/data/goodreads_library_export.csv",
+    "sha256": "58e804f1a2accbb1bf89795c4926c441ea8a6a13c6083f3a3acd65b5e5f3c156",
+    "rows": 275
+  },
+  {
+    "filename": "070__krd2ad_LandingPage.csv",
+    "repo": "krd2ad/LandingPage",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/krd2ad/LandingPage/HEAD/data/goodreads_library_export.csv",
+    "sha256": "ee530ef41dee7ba5026f971ade4b3063851d954b0ede247af9df0304a4a01563",
+    "rows": 47
+  },
+  {
+    "filename": "071__pab-nguyen_Analysis-of-my-reading-journey.csv",
+    "repo": "pab-nguyen/Analysis-of-my-reading-journey",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/pab-nguyen/Analysis-of-my-reading-journey/HEAD/data/goodreads_library_export.csv",
+    "sha256": "191cac2f1354b750bc746d628bde16324499b8722a1848bedbe8479b97d4e038",
+    "rows": 57
+  },
+  {
+    "filename": "072__deep-sci_goodreads-viewer.csv",
+    "repo": "deep-sci/goodreads-viewer",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/deep-sci/goodreads-viewer/HEAD/data/goodreads_library_export.csv",
+    "sha256": "8d4d035667b21d42231d376de9561dfcc38b367f78588b2801959f39a192c8f1",
+    "rows": 458
+  },
+  {
+    "filename": "073__nelsonjt12_smart-reading-tracker.csv",
+    "repo": "nelsonjt12/smart-reading-tracker",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/nelsonjt12/smart-reading-tracker/HEAD/data/goodreads_library_export.csv",
+    "sha256": "422b0b621d04cf232b98d452c93b95fe2a9ed27ece314946c9a97320093e900f",
+    "rows": 1487
+  },
+  {
+    "filename": "074__jaredmdunn_operation-free-my-books.csv",
+    "repo": "jaredmdunn/operation-free-my-books",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/jaredmdunn/operation-free-my-books/HEAD/data/goodreads_library_export.csv",
+    "sha256": "85fb4580247cca5f81f685a09f6f4a5f7b30acc7ce1b000d13e212db980f160c",
+    "rows": 220
+  },
+  {
+    "filename": "075__EduardoGC21_goodreads_to_obsidian.csv",
+    "repo": "EduardoGC21/goodreads_to_obsidian",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/EduardoGC21/goodreads_to_obsidian/HEAD/data/goodreads_library_export.csv",
+    "sha256": "2b5fe12fa93eacdf23ef43760bdc335131db19869df32d68b4c4d0fc8a5cb7be",
+    "rows": 434
+  },
+  {
+    "filename": "076__Fuzzwah_books.fuzzwah.com.csv",
+    "repo": "Fuzzwah/books.fuzzwah.com",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/Fuzzwah/books.fuzzwah.com/HEAD/data/goodreads_library_export.csv",
+    "sha256": "4983708f831d3dc220d5c60b7bcfc49183e2e925960f3f62c1514992fb282796",
+    "rows": 580
+  },
+  {
+    "filename": "077__tajarvarghese-arch_book-reco.csv",
+    "repo": "tajarvarghese-arch/book-reco",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/tajarvarghese-arch/book-reco/HEAD/data/goodreads_library_export.csv",
+    "sha256": "be5cfe186656e43af8a0319e4ce387400a4c6f524448286c3ebeb6723530187e",
+    "rows": 380
+  },
+  {
+    "filename": "078__mooit-artist_Mrs-Violet-Noire.csv",
+    "repo": "mooit-artist/Mrs-Violet-Noire",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/mooit-artist/Mrs-Violet-Noire/HEAD/data/goodreads_library_export.csv",
+    "sha256": "5d435ea720f556ca08c18429dfb9677e1c38a5e7a1cf39155f5083b4a1adb224",
+    "rows": 96
+  },
+  {
+    "filename": "079__mcsiple_novelgazing.csv",
+    "repo": "mcsiple/novelgazing",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/mcsiple/novelgazing/HEAD/data/goodreads_library_export.csv",
+    "sha256": "3617de35bf606633f977be5e1db321e4697df50312be95f6730c3fbdca68f7b4",
+    "rows": 742
+  },
+  {
+    "filename": "080__yantan826_book_searching_excess.csv",
+    "repo": "yantan826/book_searching_excess",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/yantan826/book_searching_excess/HEAD/data/goodreads_library_export.csv",
+    "sha256": "d622d318735c9c55840303c3434de6e099c391b421876f9662e9f0cef59604a5",
+    "rows": 200
+  },
+  {
+    "filename": "081__EduardoGC21_library_analysis.csv",
+    "repo": "EduardoGC21/library_analysis",
+    "path": "Data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/EduardoGC21/library_analysis/HEAD/Data/goodreads_library_export.csv",
+    "sha256": "adb17365aa6ddd16eaf9c3a7da98dc4d757a08e3ae9b1af71fa219e01048f0ca",
+    "rows": 395
+  },
+  {
+    "filename": "082__aychen5_goodreads_wrapped.csv",
+    "repo": "aychen5/goodreads_wrapped",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/aychen5/goodreads_wrapped/HEAD/data/goodreads_library_export.csv",
+    "sha256": "35d032b4e7ac738b7fd609ad35ce2d42ab6ffa8edb8cb7b57f4f11a6ac15d303",
+    "rows": 761
+  },
+  {
+    "filename": "083__akisonlyforu_akisonlyforu.github.io.csv",
+    "repo": "akisonlyforu/akisonlyforu.github.io",
+    "path": "_data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/akisonlyforu/akisonlyforu.github.io/HEAD/_data/goodreads_library_export.csv",
+    "sha256": "8dae9771f7639dda972c6848014a9e12ef71a859c87cbc085227930fc0696580",
+    "rows": 35
+  },
+  {
+    "filename": "084__miolfo_BookQuest-cmd.csv",
+    "repo": "miolfo/BookQuest-cmd",
+    "path": "resources/goodreads_library_export_small.csv",
+    "url": "https://raw.githubusercontent.com/miolfo/BookQuest-cmd/HEAD/resources/goodreads_library_export_small.csv",
+    "sha256": "59a4c54241bd8d6e8b46eacf8dfe2f0749ba53098464b0cadbf9840e17aa324a",
+    "rows": 7
+  },
+  {
+    "filename": "085__keanehauck_keanehauck.github.io.csv",
+    "repo": "keanehauck/keanehauck.github.io",
+    "path": "_data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/keanehauck/keanehauck.github.io/HEAD/_data/goodreads_library_export.csv",
+    "sha256": "6181165c385c43e68e3536dceef6b5e5068c8e956730582803a9686d78e51258",
+    "rows": 99
+  },
+  {
+    "filename": "087__bastianolea_blog-personal.csv",
+    "repo": "bastianolea/blog-personal",
+    "path": "datos/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/bastianolea/blog-personal/HEAD/datos/goodreads_library_export.csv",
+    "sha256": "23b43b436509662658b5622f5c6a8be17e6d0b3c69417b19981d23df7b59a698",
+    "rows": 734
+  },
+  {
+    "filename": "089__aychen5_goodreads_wrapped.csv",
+    "repo": "aychen5/goodreads_wrapped",
+    "path": "data/goodreads_library_export2.csv",
+    "url": "https://raw.githubusercontent.com/aychen5/goodreads_wrapped/HEAD/data/goodreads_library_export2.csv",
+    "sha256": "127a11ffc99128feabebfaef10cea161bdec726483ff849c083b4de531735510",
+    "rows": 763
+  },
+  {
+    "filename": "090__mauriciomelo_mauriciomelo.csv",
+    "repo": "mauriciomelo/mauriciomelo",
+    "path": "public/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/mauriciomelo/mauriciomelo/HEAD/public/goodreads_library_export.csv",
+    "sha256": "e3bfea2e62eda482db867d74c153e4380bb2160212cc5abc06546599b8c00912",
+    "rows": 44
+  },
+  {
+    "filename": "091__dpaola2_BookTracker.csv",
+    "repo": "dpaola2/BookTracker",
+    "path": "public/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/dpaola2/BookTracker/HEAD/public/goodreads_library_export.csv",
+    "sha256": "187aa7a7a00c92cc371d6698cd48020d9fbff67a9a795a8533987dc0b7d46f87",
+    "rows": 803
+  },
+  {
+    "filename": "092__benstraw_benstrawbridge.com.csv",
+    "repo": "benstraw/benstrawbridge.com",
+    "path": "static/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/benstraw/benstrawbridge.com/HEAD/static/goodreads_library_export.csv",
+    "sha256": "bbd6362df13ea12a1a8b66d8a44951e6d64c4f0c567a660cb5cd586ce1155ff0",
+    "rows": 633
+  },
+  {
+    "filename": "093__JonSkogland_lokopu.github.io.csv",
+    "repo": "JonSkogland/lokopu.github.io",
+    "path": "posts/data/day24/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/JonSkogland/lokopu.github.io/HEAD/posts/data/day24/goodreads_library_export.csv",
+    "sha256": "8e8bc57e580dcb85767df924602ac0401bb7cc70b79236993ca8ed3b905f4734",
+    "rows": 423
+  },
+  {
+    "filename": "094__digital-gardens_Martin-Milan.csv",
+    "repo": "digital-gardens/Martin-Milan",
+    "path": "exports.publ.dir/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/digital-gardens/Martin-Milan/HEAD/exports.publ.dir/goodreads_library_export.csv",
+    "sha256": "8d190bb2c07f28218f8ca3dc45de3b4153ba0170168f377235703c588e59feec",
+    "rows": 98
+  },
+  {
+    "filename": "095__SubhajitG87_BookBuddy.csv",
+    "repo": "SubhajitG87/BookBuddy",
+    "path": "docs/screenshots/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/SubhajitG87/BookBuddy/HEAD/docs/screenshots/goodreads_library_export.csv",
+    "sha256": "7e02415a8349a9e754a4a88c41726ef0c9e021f1350f5320b7cfcee5af59efd8",
+    "rows": 260
+  },
+  {
+    "filename": "097__elise-alstad_mybook-dashboard.csv",
+    "repo": "elise-alstad/mybook-dashboard",
+    "path": "assets/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/elise-alstad/mybook-dashboard/HEAD/assets/goodreads_library_export.csv",
+    "sha256": "307d712815f1bbd13702ff251b1039299517438877e21a2067508d3c48a9bc3c",
+    "rows": 503
+  },
+  {
+    "filename": "098__phucbm_folio-2025.csv",
+    "repo": "phucbm/folio-2025",
+    "path": "public/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/phucbm/folio-2025/HEAD/public/goodreads_library_export.csv",
+    "sha256": "4d81eaea66dcc51cf3773a73ea414ee4e1dcc23d3f8031fcdff13490cbc75461",
+    "rows": 71
+  },
+  {
+    "filename": "099__Sanmaro_OP_database.csv",
+    "repo": "Sanmaro/OP_database",
+    "path": "static/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/Sanmaro/OP_database/HEAD/static/goodreads_library_export.csv",
+    "sha256": "b89926e0578fb134665c62fb51ac78509bc3eab5ec281608a294f85f57102b77",
+    "rows": 35
+  },
+  {
+    "filename": "100__arach_astro-commands.csv",
+    "repo": "arach/astro-commands",
+    "path": "inputs/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/arach/astro-commands/HEAD/inputs/goodreads_library_export.csv",
+    "sha256": "ab1bdbbe10400b9fd1a0723288975f43b232222a2b41a9e3e539739008341e3b",
+    "rows": 108
+  },
+  {
+    "filename": "103__cschuyle_datagator.csv",
+    "repo": "cschuyle/datagator",
+    "path": "sources/goodreads/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/cschuyle/datagator/HEAD/sources/goodreads/goodreads_library_export.csv",
+    "sha256": "cffc0874c622a1ccbbbbcfe70f82f38a41d7706fc120fc8857d79e7f0a7bc4a3",
+    "rows": 9
+  },
+  {
+    "filename": "104__cjhubbs_books.chrishubbs.com.csv",
+    "repo": "cjhubbs/books.chrishubbs.com",
+    "path": "scripts/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/cjhubbs/books.chrishubbs.com/HEAD/scripts/goodreads_library_export.csv",
+    "sha256": "5c65e33055fd6ac622d993cd11d8ad1c59913e65ff8cd2731fba8f8fd284d795",
+    "rows": 1143
+  },
+  {
+    "filename": "105__krd2ad_LandingPage.csv",
+    "repo": "krd2ad/LandingPage",
+    "path": "data/febgoodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/krd2ad/LandingPage/HEAD/data/febgoodreads_library_export.csv",
+    "sha256": "7d86090237f30455df5dc621e85bbc70a7c25030e5c718ba80d3b81b13d0ea97",
+    "rows": 38
+  },
+  {
+    "filename": "106__krd2ad_LandingPage.csv",
+    "repo": "krd2ad/LandingPage",
+    "path": "data/oldgoodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/krd2ad/LandingPage/HEAD/data/oldgoodreads_library_export.csv",
+    "sha256": "4414fe87dc0c18a6ac7a29dba245144c555294cf79eb9ddd8e61d76f4a3c2438",
+    "rows": 29
+  },
+  {
+    "filename": "107__maurice-florence_agent-librarian.csv",
+    "repo": "maurice-florence/agent-librarian",
+    "path": "context/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/maurice-florence/agent-librarian/HEAD/context/goodreads_library_export.csv",
+    "sha256": "a833222fecc0600821731b49993c8b310bf1c804069cc4a5d4f62b5d5a657d5e",
+    "rows": 961
+  },
+  {
+    "filename": "110__Wysalar_pa1.py.csv",
+    "repo": "Wysalar/pa1.py",
+    "path": "nussbaum_goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/Wysalar/pa1.py/HEAD/nussbaum_goodreads_library_export.csv",
+    "sha256": "d1f6abf7c3f64998e0b584c798da6f04f412073b4677b66cb3f1ff5501f37da6",
+    "rows": 917
+  },
+  {
+    "filename": "111__EduardoGC21_goodreads_to_obsidian.csv",
+    "repo": "EduardoGC21/goodreads_to_obsidian",
+    "path": "data/goodreads_library_export_ale.csv",
+    "url": "https://raw.githubusercontent.com/EduardoGC21/goodreads_to_obsidian/HEAD/data/goodreads_library_export_ale.csv",
+    "sha256": "d004504db831a1391de336cae01c480b60accd74fc8e7c716022cc830b71be2a",
+    "rows": 247
+  },
+  {
+    "filename": "112__krd2ad_LandingPage.csv",
+    "repo": "krd2ad/LandingPage",
+    "path": "data/aprilgoodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/krd2ad/LandingPage/HEAD/data/aprilgoodreads_library_export.csv",
+    "sha256": "b6c411c4423cb98d259fa43b11102245dcc6c5831bf20ae3948b89c318b5152b",
+    "rows": 42
+  },
+  {
+    "filename": "113__MalihaT111_personal-website.csv",
+    "repo": "MalihaT111/personal-website",
+    "path": "app/utils/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/MalihaT111/personal-website/HEAD/app/utils/goodreads_library_export.csv",
+    "sha256": "3295685320c9e0d4cb2f1ef8a8163e6c5aaa2e48bcddf48b32801f70e8c9249b",
+    "rows": 387
+  },
+  {
+    "filename": "116__kejadlen_junk-drawer.csv",
+    "repo": "kejadlen/junk-drawer",
+    "path": "goodreads-to-bookfeed/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/kejadlen/junk-drawer/HEAD/goodreads-to-bookfeed/goodreads_library_export.csv",
+    "sha256": "8d91681d2baa8c322a304f77a77eec0fbef7b57aef26983cbcdaba3559d1155c",
+    "rows": 643
+  },
+  {
+    "filename": "117__dpunj_blog.csv",
+    "repo": "dpunj/blog",
+    "path": "public/data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/dpunj/blog/HEAD/public/data/goodreads_library_export.csv",
+    "sha256": "9382c86ec4ea063fadb2c30f67cc168302ab298bc25884783dcac0662631f557",
+    "rows": 287
+  },
+  {
+    "filename": "118__DiDubovyk_books_project.csv",
+    "repo": "DiDubovyk/books_project",
+    "path": "src/content/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/DiDubovyk/books_project/HEAD/src/content/goodreads_library_export.csv",
+    "sha256": "650b4430b2473d6044a2c2e62f4389550456b45430c82881ceee303b270b583c",
+    "rows": 63
+  },
+  {
+    "filename": "119__michelletliu_michelle-liu.csv",
+    "repo": "michelletliu/michelle-liu",
+    "path": "src/components/library/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/michelletliu/michelle-liu/HEAD/src/components/library/goodreads_library_export.csv",
+    "sha256": "5a683bfe76e7256cbf567aa3c885f35b594ec8c435153538feaa0c67cf2887a9",
+    "rows": 622
+  },
+  {
+    "filename": "120__OwnerOfJK_leaf.csv",
+    "repo": "OwnerOfJK/leaf",
+    "path": "backend/data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/OwnerOfJK/leaf/HEAD/backend/data/goodreads_library_export.csv",
+    "sha256": "3a4411eeb2fe1b75d56a2fd00e119ab73d254ac3d5351856227b07583202e9db",
+    "rows": 90
+  },
+  {
+    "filename": "121__dalager_booktravels.csv",
+    "repo": "dalager/booktravels",
+    "path": "data/sources/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/dalager/booktravels/HEAD/data/sources/goodreads_library_export.csv",
+    "sha256": "f006f9a4774305f0772a4e8e483c5ef3018c82033462a625281e2f13a2236e29",
+    "rows": 892
+  },
+  {
+    "filename": "122__bastianolea_blog-R.csv",
+    "repo": "bastianolea/blog-R",
+    "path": "content/blog/2026-03-26/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/bastianolea/blog-R/HEAD/content/blog/2026-03-26/goodreads_library_export.csv",
+    "sha256": "707614107e11b71e35c60bb5f3dd6bdf4410fa63fc01cc5112060a1de907daa5",
+    "rows": 724
+  },
+  {
+    "filename": "123__christine-mauro_goodreads_analysis.csv",
+    "repo": "christine-mauro/goodreads_analysis",
+    "path": "data/goodreads_library_export_08_31_19.csv",
+    "url": "https://raw.githubusercontent.com/christine-mauro/goodreads_analysis/HEAD/data/goodreads_library_export_08_31_19.csv",
+    "sha256": "58ba998b171dc690339d9f0494ad13c63fa71c23c7546c431d958195ee0ed020",
+    "rows": 300
+  },
+  {
+    "filename": "124__notmahi_d3-book-timeline.csv",
+    "repo": "notmahi/d3-book-timeline",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/notmahi/d3-book-timeline/HEAD/data/goodreads_library_export.csv",
+    "sha256": "a33176e21b55237cd76b4d2fee4ec1a9ad20f15dc47ee6905373e53e5d9f2e60",
+    "rows": 549
+  },
+  {
+    "filename": "125__GustavKrowicki_gustav-krowicki-portfolio.csv",
+    "repo": "GustavKrowicki/gustav-krowicki-portfolio",
+    "path": "public/Books/goodreads_library_export-3.csv",
+    "url": "https://raw.githubusercontent.com/GustavKrowicki/gustav-krowicki-portfolio/HEAD/public/Books/goodreads_library_export-3.csv",
+    "sha256": "e8bb07526432d7814127b371afc76bce6c0b9d2c7868f0cfc45265aaad2d839c",
+    "rows": 58
+  },
+  {
+    "filename": "126__GustavKrowicki_gustav-krowicki-portfolio.csv",
+    "repo": "GustavKrowicki/gustav-krowicki-portfolio",
+    "path": "public/Books/goodreads_library_export-2.csv",
+    "url": "https://raw.githubusercontent.com/GustavKrowicki/gustav-krowicki-portfolio/HEAD/public/Books/goodreads_library_export-2.csv",
+    "sha256": "ff89cd8ccad119df0183dd92add9cf8554db82d0031418cc611208946f63320b",
+    "rows": 56
+  },
+  {
+    "filename": "127__AbhijithKumble_Bookshelf-AI.csv",
+    "repo": "AbhijithKumble/Bookshelf-AI",
+    "path": "public/uploads/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/AbhijithKumble/Bookshelf-AI/HEAD/public/uploads/goodreads_library_export.csv",
+    "sha256": "e3191a6255adaa3e277962d7967f4ee90771b768330e5b3a0539e4e51eab467d",
+    "rows": 73
+  },
+  {
+    "filename": "128__ryanbbrown_bookrank.csv",
+    "repo": "ryanbbrown/bookrank",
+    "path": "djangoapp/media/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/ryanbbrown/bookrank/HEAD/djangoapp/media/goodreads_library_export.csv",
+    "sha256": "06da90785909ef2db4a114123718c730ac231028d1b6f326fd1c7763b6ade382",
+    "rows": 130
+  },
+  {
+    "filename": "129__3uzbcqje_website.csv",
+    "repo": "3uzbcqje/website",
+    "path": "lists/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/3uzbcqje/website/HEAD/lists/goodreads_library_export.csv",
+    "sha256": "4b64358ec224523eadf43ccd4b226b07c8a0f2635cf1d0f196f61bd35f90f826",
+    "rows": 568
+  },
+  {
+    "filename": "130__angelicaferriol_minimalist-personal-website.csv",
+    "repo": "angelicaferriol/minimalist-personal-website",
+    "path": "src/app/reading/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/angelicaferriol/minimalist-personal-website/HEAD/src/app/reading/goodreads_library_export.csv",
+    "sha256": "e36eb33fd824ddc218615ae71ef76ca4d8e3c06949aec2345056538804800168",
+    "rows": 149
+  },
+  {
+    "filename": "131__Impression-Editions_impression_editions.csv",
+    "repo": "Impression-Editions/impression_editions",
+    "path": "book_selections/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/Impression-Editions/impression_editions/HEAD/book_selections/goodreads_library_export.csv",
+    "sha256": "caac1cad6a53f88108bbec75ccb852c39de112e1bc73e4705d4c9fb449607a8a",
+    "rows": 628
+  },
+  {
+    "filename": "132__huilensolis_portfolio-v3.csv",
+    "repo": "huilensolis/portfolio-v3",
+    "path": "src/data/library/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/huilensolis/portfolio-v3/HEAD/src/data/library/goodreads_library_export.csv",
+    "sha256": "0ed4db7a5c2197b47c6f88ebfcd7bc424ebf5a572012b93611743f2e1152116e",
+    "rows": 24
+  },
+  {
+    "filename": "133__bastianolea_blog-personal.csv",
+    "repo": "bastianolea/blog-personal",
+    "path": "datos/goodreads_library_export_2026-03-20.csv",
+    "url": "https://raw.githubusercontent.com/bastianolea/blog-personal/HEAD/datos/goodreads_library_export_2026-03-20.csv",
+    "sha256": "c66e43292977868a5c6915b850ae9c0e9c7b6f7bddac65a9eba9edb6df1f9bd1",
+    "rows": 723
+  },
+  {
+    "filename": "134__AlishbaChohan2_Book-Review-Project.csv",
+    "repo": "AlishbaChohan2/Book-Review-Project",
+    "path": "goodreads_dataset/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/AlishbaChohan2/Book-Review-Project/HEAD/goodreads_dataset/goodreads_library_export.csv",
+    "sha256": "e3050661702b47b18eb298675e2c9bcc6531f6e5cc3566b00be2eab0167a8abe",
+    "rows": 777
+  },
+  {
+    "filename": "135__Ernir_ernir-books-quarkus.csv",
+    "repo": "Ernir/ernir-books-quarkus",
+    "path": "src/main/resources/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/Ernir/ernir-books-quarkus/HEAD/src/main/resources/goodreads_library_export.csv",
+    "sha256": "d3f7536d7016774f74b096ef20a9c1db00d6779f012411e5e29701a07657c98a",
+    "rows": 527
+  },
+  {
+    "filename": "136__akarshjg_personal_website.csv",
+    "repo": "akarshjg/personal_website",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/akarshjg/personal_website/HEAD/goodreads_library_export.csv",
+    "sha256": "c5e5efded13942edf72e5c99ec2d7f75ddc4518e6771c1871cde4c1f39b20b61",
+    "rows": 334
+  },
+  {
+    "filename": "137__kyleboon_nook-data-exploration.csv",
+    "repo": "kyleboon/nook-data-exploration",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/kyleboon/nook-data-exploration/HEAD/goodreads_library_export.csv",
+    "sha256": "ced20b1d411872df272323a8843464489ba223c9934cdabb82311f4b84b0bf51",
+    "rows": 422
+  },
+  {
+    "filename": "138__kellybearclawz_mybooks.csv",
+    "repo": "kellybearclawz/mybooks",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/kellybearclawz/mybooks/HEAD/goodreads_library_export.csv",
+    "sha256": "e00511801cb3fe1897a18fff6400888ec3c95060b1e4975138b6b6386a09a3a4",
+    "rows": 375
+  },
+  {
+    "filename": "139__ahyield_goodreads-books.csv",
+    "repo": "ahyield/goodreads-books",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/ahyield/goodreads-books/HEAD/goodreads_library_export.csv",
+    "sha256": "9d630a27fc6ab4d70655dfc7287b8dd5807f2ff60329a6dc75ac605343b02d08",
+    "rows": 481
+  },
+  {
+    "filename": "140__Literavi_Blog.csv",
+    "repo": "Literavi/Blog",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/Literavi/Blog/HEAD/goodreads_library_export.csv",
+    "sha256": "fdcd0ce0d28c664104d4d0d6920da35bff01d487b23a542abf2cf35e6e43b049",
+    "rows": 132
+  },
+  {
+    "filename": "141__kieran-gray_kgdev.me.csv",
+    "repo": "kieran-gray/kgdev.me",
+    "path": "frontend/src/content/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/kieran-gray/kgdev.me/HEAD/frontend/src/content/goodreads_library_export.csv",
+    "sha256": "d1bbd37f078b124b732d291af7cc920818148fe8bd24936eb349187c3beefc3c",
+    "rows": 384
+  },
+  {
+    "filename": "142__KaiOWhatmore_my-react-personal-portfolio-lab.csv",
+    "repo": "KaiOWhatmore/my-react-personal-portfolio-lab",
+    "path": "book-data-processing/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/KaiOWhatmore/my-react-personal-portfolio-lab/HEAD/book-data-processing/goodreads_library_export.csv",
+    "sha256": "e14b1362f0e63b8e64763be98e06a2a3824a972712adc3c75967a70ffd40a83d",
+    "rows": 531
+  },
+  {
+    "filename": "143__vonfreiren_goodreads-book-downloader.csv",
+    "repo": "vonfreiren/goodreads-book-downloader",
+    "path": "files/goodreads_files/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/vonfreiren/goodreads-book-downloader/HEAD/files/goodreads_files/goodreads_library_export.csv",
+    "sha256": "3c4ee67a0b934693a2c02aeb1086e50566ded341cac4da4a2590fe175a7c243a",
+    "rows": 219
+  },
+  {
+    "filename": "145__ervanihank_ervanihank.github.io.csv",
+    "repo": "ervanihank/ervanihank.github.io",
+    "path": "data/imports/goodreads/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/ervanihank/ervanihank.github.io/HEAD/data/imports/goodreads/goodreads_library_export.csv",
+    "sha256": "57009a46110c19462684c8d00be6d2df67392ab4de0cb981a0de485fa5798b0b",
+    "rows": 228
+  },
+  {
+    "filename": "149__nicolascrosetti_bookreadr.csv",
+    "repo": "nicolascrosetti/bookreadr",
+    "path": "media/goodreads_imports/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/nicolascrosetti/bookreadr/HEAD/media/goodreads_imports/goodreads_library_export.csv",
+    "sha256": "5170f8ed5c1beedf1fa1be366e491421122f31e2936cd47f3d8f8652b9e41f90",
+    "rows": 52
+  },
+  {
+    "filename": "156__sampsonc_chs.us.v4.csv",
+    "repo": "sampsonc/chs.us.v4",
+    "path": "csv/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/sampsonc/chs.us.v4/HEAD/csv/goodreads_library_export.csv",
+    "sha256": "cc7471dac9501c91d523f6d0e9595cc45254360c0eaa5974a3a0fc0add026a6f",
+    "rows": 430
+  },
+  {
+    "filename": "157__thms317_scifi-boekenclub.csv",
+    "repo": "thms317/scifi-boekenclub",
+    "path": "data/goodreads/clean/koen_goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/thms317/scifi-boekenclub/HEAD/data/goodreads/clean/koen_goodreads_library_export.csv",
+    "sha256": "1ac6b4047bdf8bc38efde892a702118db97e2cb3b194567b14323c2135361022",
+    "rows": 168
+  },
+  {
+    "filename": "158__nussisthebaum_DATA119-Labs.csv",
+    "repo": "nussisthebaum/DATA119-Labs",
+    "path": "styleguidelab/www/nussbaum_goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/nussisthebaum/DATA119-Labs/HEAD/styleguidelab/www/nussbaum_goodreads_library_export.csv",
+    "sha256": "1b4ecdf5d14dc2bcfad16a5ae555f73b16f171f55570d48c57669ee44bd80cc2",
+    "rows": 557
+  },
+  {
+    "filename": "159__akshaychugh-xyz_ai-goodreads.csv",
+    "repo": "akshaychugh-xyz/ai-goodreads",
+    "path": "data/2/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/akshaychugh-xyz/ai-goodreads/HEAD/data/2/goodreads_library_export.csv",
+    "sha256": "d4cc818b711cf1fbfadb206ff0bddb70603ba88fc02ebf6231afbaa24b6000dd",
+    "rows": 1115
+  },
+  {
+    "filename": "160__akshaychugh-xyz_ai-goodreads.csv",
+    "repo": "akshaychugh-xyz/ai-goodreads",
+    "path": "data/1/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/akshaychugh-xyz/ai-goodreads/HEAD/data/1/goodreads_library_export.csv",
+    "sha256": "b21e227f9479cd340d105723a5f644f433614664cb6ef3371f83f077b26b21c2",
+    "rows": 166
+  },
+  {
+    "filename": "161__nussisthebaum_DATA119-Labs.csv",
+    "repo": "nussisthebaum/DATA119-Labs",
+    "path": "styleguidelab/data/nussbaum_goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/nussisthebaum/DATA119-Labs/HEAD/styleguidelab/data/nussbaum_goodreads_library_export.csv",
+    "sha256": "a4c702f36d41a113fc956ef7568cf6ee422b25ed532d5eefb9f3bcb70927aa64",
+    "rows": 556
+  },
+  {
+    "filename": "162__benoit-stripe_stripe-api-experiments.csv",
+    "repo": "benoit-stripe/stripe-api-experiments",
+    "path": "src/com/benfle/stripe/books/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/benoit-stripe/stripe-api-experiments/HEAD/src/com/benfle/stripe/books/goodreads_library_export.csv",
+    "sha256": "d51ec12ea31cfb4c778b5e95e5ebbb544c50d9c83144677e4e8e5a56bc647cca",
+    "rows": 1175
+  },
+  {
+    "filename": "163__huongta-fr_huongta-fr.github.io.csv",
+    "repo": "huongta-fr/huongta-fr.github.io",
+    "path": "literary_world_map/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/huongta-fr/huongta-fr.github.io/HEAD/literary_world_map/goodreads_library_export.csv",
+    "sha256": "50219182f11566b12e4710e1cfbd1e6712ed6c7fb69dbd738fb4caf77dcdf815",
+    "rows": 764
+  },
+  {
+    "filename": "164__isabelabarros-o_goodreads-recommender.csv",
+    "repo": "isabelabarros-o/goodreads-recommender",
+    "path": "data/raw/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/isabelabarros-o/goodreads-recommender/HEAD/data/raw/goodreads_library_export.csv",
+    "sha256": "a93b1c18008105bb4e39fbffaa951196e12b120844c1e072a2628b4ba8c31d72",
+    "rows": 780
+  },
+  {
+    "filename": "166__mikkelhartmann_mikmik19.github.io.csv",
+    "repo": "mikkelhartmann/mikmik19.github.io",
+    "path": "data/books/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/mikkelhartmann/mikmik19.github.io/HEAD/data/books/goodreads_library_export.csv",
+    "sha256": "5e6aa4835c962291cd4abb7e8b256d2b708bd85129c761f539d8dcb4343868d1",
+    "rows": 721
+  },
+  {
+    "filename": "167__thms317_scifi-boekenclub.csv",
+    "repo": "thms317/scifi-boekenclub",
+    "path": "data/goodreads/clean/goodreads_library_export-PHT_clean.csv",
+    "url": "https://raw.githubusercontent.com/thms317/scifi-boekenclub/HEAD/data/goodreads/clean/goodreads_library_export-PHT_clean.csv",
+    "sha256": "8969a0a125a0980185f681065eac58275a72d6f441199251e1950e7ee764d40d",
+    "rows": 172
+  },
+  {
+    "filename": "168__mjk9913_reading-unwrapped.csv",
+    "repo": "mjk9913/reading-unwrapped",
+    "path": "book-files/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/mjk9913/reading-unwrapped/HEAD/book-files/goodreads_library_export.csv",
+    "sha256": "4c4767fac7a2863370006c39277bb4eb01490f5ce69ea0936b29b178e8b2a1e5",
+    "rows": 194
+  },
+  {
+    "filename": "171__franqsbepop_franqsbepop.github.io.csv",
+    "repo": "franqsbepop/franqsbepop.github.io",
+    "path": "book_reviews/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/franqsbepop/franqsbepop.github.io/HEAD/book_reviews/goodreads_library_export.csv",
+    "sha256": "7ca26e894556ee28aa29b870e682c5d964a6db4680da7975f7961b10c058ee62",
+    "rows": 184
+  },
+  {
+    "filename": "172__bens4lsu_theskinny-publish.csv",
+    "repo": "bens4lsu/theskinny-publish",
+    "path": "Content-custom/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/bens4lsu/theskinny-publish/HEAD/Content-custom/goodreads_library_export.csv",
+    "sha256": "989f45437d394ded27315e3e4d3783e915ded505e3a9f5dbd0af8c3684a86eef",
+    "rows": 735
+  },
+  {
+    "filename": "173__Wacken_bins.csv",
+    "repo": "Wacken/bins",
+    "path": "org_to_obsidian/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/Wacken/bins/HEAD/org_to_obsidian/goodreads_library_export.csv",
+    "sha256": "a824c1bd3a6effedfd39adf4d410a250a87477bfb00a1d2e6e295e81b6dd2f59",
+    "rows": 431
+  },
+  {
+    "filename": "175__camillabakelmun_goodreads_dashboard.csv",
+    "repo": "camillabakelmun/goodreads_dashboard",
+    "path": "goodreads_data_cleaned_for_tableau - goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/camillabakelmun/goodreads_dashboard/HEAD/goodreads_data_cleaned_for_tableau%20-%20goodreads_library_export.csv",
+    "sha256": "def7be948a99c3d8064d94740f7a80acd5ce1a25ec6f8ac056fca88b977c9969",
+    "rows": 213
+  },
+  {
+    "filename": "177__nayana1729_readmatch.csv",
+    "repo": "nayana1729/readmatch",
+    "path": "readmatch-backend/users/management/commands/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/nayana1729/readmatch/HEAD/readmatch-backend/users/management/commands/goodreads_library_export.csv",
+    "sha256": "13ae8bfc04997c7adddf5a020292a5f61d6b139747ccc9cb00589e3b11da572d",
+    "rows": 253
+  },
+  {
+    "filename": "178__nayana1729_readmatch.csv",
+    "repo": "nayana1729/readmatch",
+    "path": "readmatch-backend/users/management/commands/goodreads_library_export_2.csv",
+    "url": "https://raw.githubusercontent.com/nayana1729/readmatch/HEAD/readmatch-backend/users/management/commands/goodreads_library_export_2.csv",
+    "sha256": "9a0c52b3bb80036f7d29684a01d710dab653f31799ece2a0671d77220e757d1e",
+    "rows": 449
+  },
+  {
+    "filename": "179__tigejw_tigesite.csv",
+    "repo": "tigejw/tigesite",
+    "path": "utils/booksFormatting/_data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/tigejw/tigesite/HEAD/utils/booksFormatting/_data/goodreads_library_export.csv",
+    "sha256": "60939a7ecb3d081b9519e2b002d31cb70957ab33b026e6ded959f5a96933f36b",
+    "rows": 256
+  },
+  {
+    "filename": "183__andgineer_goodreads-export.csv",
+    "repo": "andgineer/goodreads-export",
+    "path": "tests/resources/create/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/andgineer/goodreads-export/HEAD/tests/resources/create/goodreads_library_export.csv",
+    "sha256": "07b2d5988272a83bf8ba9387a4a7da725f49aca0a96406964fdfdbb899ed62f0",
+    "rows": 7
+  },
+  {
+    "filename": "185__lairdstewart_armchair.csv",
+    "repo": "lairdstewart/armchair",
+    "path": "src/test/resources/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/lairdstewart/armchair/HEAD/src/test/resources/goodreads_library_export.csv",
+    "sha256": "e32ea33e0799eebeb51600f24052ce7713748da7aca0a16fc167b9b1835c1360",
+    "rows": 25
+  },
+  {
+    "filename": "191__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export test_reader2.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20test_reader2.csv",
+    "sha256": "bde66ce904ce902a51046a18bf4e68a81d70d0a4ae57a993208326d252c47622",
+    "rows": 40
+  },
+  {
+    "filename": "192__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_sf_fan3.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_sf_fan3.csv",
+    "sha256": "ba6873edbdb70cf60fe311f52d12d741e6e750ecc576c0ac479b8f086d50965d",
+    "rows": 32
+  },
+  {
+    "filename": "193__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_sf_fan1.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_sf_fan1.csv",
+    "sha256": "82dd82a4562aeade96a5767abf12a106f59e6703d6a211b29ca3ba06897f1190",
+    "rows": 35
+  },
+  {
+    "filename": "194__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_eclectic2.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_eclectic2.csv",
+    "sha256": "895707abb1b57cf41f9bbec0051087792b1affe6833acfd2664b5671e68c8c52",
+    "rows": 38
+  },
+  {
+    "filename": "195__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_harsh_rater.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_harsh_rater.csv",
+    "sha256": "fabd36b4b24044e0f3e3b9fa314cd02bb05fe6a0cfa2fdebc3b75d4ef3be20d7",
+    "rows": 30
+  },
+  {
+    "filename": "196__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_lit_fiction2.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_lit_fiction2.csv",
+    "sha256": "3be6492b252c9b73f4f51543fd78f7229b396d164f4fa1f382667260cce9bc5e",
+    "rows": 42
+  },
+  {
+    "filename": "197__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_high_overlap.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_high_overlap.csv",
+    "sha256": "1ce49c6820d387fe3320b14c1d3584e558a38f959440dbf201514f64a179032b",
+    "rows": 35
+  },
+  {
+    "filename": "198__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_contemporary1.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_contemporary1.csv",
+    "sha256": "e777bfc8836228b790dd6b635172af55a4ddaa0b19003e0a0b0b686d54d5d621",
+    "rows": 28
+  },
+  {
+    "filename": "199__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_eclectic2_modified.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_eclectic2_modified.csv",
+    "sha256": "f0c2240793f65f00e33ada0e3d3a4478612d3b53adad924d598fca6a4e4d1a96",
+    "rows": 200
+  },
+  {
+    "filename": "200__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_eclectic4_modified.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_eclectic4_modified.csv",
+    "sha256": "fea4317424386212be7e064e5161db1e2f6dbfbcedd1fedd1fb9c3e3b2113757",
+    "rows": 200
+  },
+  {
+    "filename": "202__GustavKrowicki_gustav-krowicki-portfolio.csv",
+    "repo": "GustavKrowicki/gustav-krowicki-portfolio",
+    "path": "public/Books/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/GustavKrowicki/gustav-krowicki-portfolio/HEAD/public/Books/goodreads_library_export.csv",
+    "sha256": "e920ad2117efff18289bdd92f7b9976875f4d95620547587b2386452cdf7d899",
+    "rows": 55
+  },
+  {
+    "filename": "203__OwnerOfJK_leaf.csv",
+    "repo": "OwnerOfJK/leaf",
+    "path": "backend/data/goodreads_library_export2.csv",
+    "url": "https://raw.githubusercontent.com/OwnerOfJK/leaf/HEAD/backend/data/goodreads_library_export2.csv",
+    "sha256": "56ce2ded2fe529021f0d397ad089270e8dd0799d9f90ded81a636783e4132594",
+    "rows": 114
+  },
+  {
+    "filename": "205__asadisaghar_mybooks.csv",
+    "repo": "asadisaghar/mybooks",
+    "path": "goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/asadisaghar/mybooks/HEAD/goodreads_library_export.csv",
+    "sha256": "1b9a46fbd00cb2f0af579640e229ecc934976095ded0c2ab78c8e591b7316a8e",
+    "rows": 266
+  },
+  {
+    "filename": "207__shelbycopeland_learning-to-read.csv",
+    "repo": "shelbycopeland/learning-to-read",
+    "path": "goodreads_library_export (1).csv",
+    "url": "https://raw.githubusercontent.com/shelbycopeland/learning-to-read/HEAD/goodreads_library_export%20%281%29.csv",
+    "sha256": "1d921728119a10830a96dab77abadf750ba887047e7c7ecfbbef8eecfd1fd7a6",
+    "rows": 286
+  },
+  {
+    "filename": "209__vonfreiren_goodreads-book-downloader.csv",
+    "repo": "vonfreiren/goodreads-book-downloader",
+    "path": "files/goodreads_files/goodreads_library_export_pa.csv",
+    "url": "https://raw.githubusercontent.com/vonfreiren/goodreads-book-downloader/HEAD/files/goodreads_files/goodreads_library_export_pa.csv",
+    "sha256": "058660afea75644a6c8d8a2a6ec458a480454fcc137c8eb3deb2506699d501d8",
+    "rows": 17
+  },
+  {
+    "filename": "211__4dahalibut_library-checker.csv",
+    "repo": "4dahalibut/library-checker",
+    "path": "data/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/4dahalibut/library-checker/HEAD/data/goodreads_library_export.csv",
+    "sha256": "6e7e9f2306b1589f378ccff5ef4bf1c6e66816b7bd90ee5531035b326bd9d9db",
+    "rows": 829
+  },
+  {
+    "filename": "212__thms317_scifi-boekenclub.csv",
+    "repo": "thms317/scifi-boekenclub",
+    "path": "data/goodreads/clean/dion_goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/thms317/scifi-boekenclub/HEAD/data/goodreads/clean/dion_goodreads_library_export.csv",
+    "sha256": "ff22bdb1ad1f77c779e62a27a04f5dbf0c77c5d6a7d1e28e499ecbb3bc778ec6",
+    "rows": 399
+  },
+  {
+    "filename": "213__thms317_scifi-boekenclub.csv",
+    "repo": "thms317/scifi-boekenclub",
+    "path": "data/goodreads/clean/thomas_goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/thms317/scifi-boekenclub/HEAD/data/goodreads/clean/thomas_goodreads_library_export.csv",
+    "sha256": "cdf4f153caca4f84559567076bc641e3daa33913dac3f78213fa2eed9eae9727",
+    "rows": 350
+  },
+  {
+    "filename": "214__thms317_scifi-boekenclub.csv",
+    "repo": "thms317/scifi-boekenclub",
+    "path": "data/goodreads/clean/goodreads_library_export-thirsa.csv",
+    "url": "https://raw.githubusercontent.com/thms317/scifi-boekenclub/HEAD/data/goodreads/clean/goodreads_library_export-thirsa.csv",
+    "sha256": "23be49476b884391a1dba97f84cb8dc137ae83ba62bbeaae18f194487923a93e",
+    "rows": 323
+  },
+  {
+    "filename": "217__getkam_whereismybook.csv",
+    "repo": "getkam/whereismybook",
+    "path": "uploads/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/getkam/whereismybook/HEAD/uploads/goodreads_library_export.csv",
+    "sha256": "003dc4e9ed86b7657284f27410c57ad2b8649a93b6fbc472a85d1d38877cc8d9",
+    "rows": 588
+  },
+  {
+    "filename": "218__adrianjunus_Notion.csv",
+    "repo": "adrianjunus/Notion",
+    "path": "extract/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/adrianjunus/Notion/HEAD/extract/goodreads_library_export.csv",
+    "sha256": "981c41d2e561e75e81be29baa7ce5c961050e2f0a89cc1c8341a2c3d5bd96cfc",
+    "rows": 101
+  },
+  {
+    "filename": "219__matiasandina_Webpage.csv",
+    "repo": "matiasandina/Webpage",
+    "path": "posts/2023-06-10-goodreads/mla_goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/matiasandina/Webpage/HEAD/posts/2023-06-10-goodreads/mla_goodreads_library_export.csv",
+    "sha256": "aaebdbbb90804ff2ef1ad4f1746a54739457025b5426de72240f77df1e155f1c",
+    "rows": 271
+  },
+  {
+    "filename": "224__crisnavarrete_navarrete.csv",
+    "repo": "crisnavarrete/navarrete",
+    "path": "data/reading/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/crisnavarrete/navarrete/HEAD/data/reading/goodreads_library_export.csv",
+    "sha256": "5760a68866bf91c6906e43e5d5b6ad3b16427549e8e3780b2b55cb7aa1b3637c",
+    "rows": 54
+  },
+  {
+    "filename": "225__mbellabah_mbellabah.github.io.csv",
+    "repo": "mbellabah/mbellabah.github.io",
+    "path": "src/data/books/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/mbellabah/mbellabah.github.io/HEAD/src/data/books/goodreads_library_export.csv",
+    "sha256": "7626917901da6dfba487c2a6f3695e3f40e4b696534d14fa0aea7814b4231d79",
+    "rows": 88
+  },
+  {
+    "filename": "226__vishvAsa_kAvyam.csv",
+    "repo": "vishvAsa/kAvyam",
+    "path": "AsvAdaH/goodreads/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/vishvAsa/kAvyam/HEAD/AsvAdaH/goodreads/goodreads_library_export.csv",
+    "sha256": "13b7af0c68439c0b9fafcb1fe66057bb40bc13e877ea9442488c8f777eeab833",
+    "rows": 378
+  },
+  {
+    "filename": "227__Olshansk_olshansk.github.io.csv",
+    "repo": "Olshansk/olshansk.github.io",
+    "path": "goodreads_to_hugo/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/Olshansk/olshansk.github.io/HEAD/goodreads_to_hugo/goodreads_library_export.csv",
+    "sha256": "1a554e5e1cff0d2cbecf4087629f591224d53940ba16ca23abaf320afcf2ea4f",
+    "rows": 299
+  },
+  {
+    "filename": "229__WynterAC_Global-Inbox-Git.csv",
+    "repo": "WynterAC/Global-Inbox-Git",
+    "path": "Global Inbox/10. Library/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/WynterAC/Global-Inbox-Git/HEAD/Global%20Inbox/10.%20Library/goodreads_library_export.csv",
+    "sha256": "adeb0536e276930550d2a84093a2fefc165d3b10f808d84d4c1c53e937e603b9",
+    "rows": 357
+  },
+  {
+    "filename": "231__WynterAC_Global-Inbox-Git.csv",
+    "repo": "WynterAC/Global-Inbox-Git",
+    "path": "Global Inbox/10. Library/goodreads_library_export 1.csv",
+    "url": "https://raw.githubusercontent.com/WynterAC/Global-Inbox-Git/HEAD/Global%20Inbox/10.%20Library/goodreads_library_export%201.csv",
+    "sha256": "b4b974df61dd615b88ac045ebd6e6d84af642973db8b825240d54349b32e208b",
+    "rows": 357
+  },
+  {
+    "filename": "232__dwillitzer_claude-ops.csv",
+    "repo": "dwillitzer/claude-ops",
+    "path": "archive/2026-01/shelfdragon-research/3rd party exports/Goodreads/goodreads_library_export-aimee-keser.csv",
+    "url": "https://raw.githubusercontent.com/dwillitzer/claude-ops/HEAD/archive/2026-01/shelfdragon-research/3rd%20party%20exports/Goodreads/goodreads_library_export-aimee-keser.csv",
+    "sha256": "2597f66ce9391f629c708ebaf0811b497899d94c94672e0791477fa9fcb1adc9",
+    "rows": 579
+  },
+  {
+    "filename": "233__bayang_jelu.csv",
+    "repo": "bayang/jelu",
+    "path": "src/test/resources/csv-import/goodreads_library_export-2022.csv",
+    "url": "https://raw.githubusercontent.com/bayang/jelu/HEAD/src/test/resources/csv-import/goodreads_library_export-2022.csv",
+    "sha256": "80e30c7b9907c232eb1441a468fa50e9f547eb9137dcfc4c074c4bd20b45d8c5",
+    "rows": 10
+  },
+  {
+    "filename": "235__bayang_jelu.csv",
+    "repo": "bayang/jelu",
+    "path": "src/test/resources/csv-import/goodreads_library_export_one_line_modified_review.csv",
+    "url": "https://raw.githubusercontent.com/bayang/jelu/HEAD/src/test/resources/csv-import/goodreads_library_export_one_line_modified_review.csv",
+    "sha256": "d0f219fc65e9c986f99a20488a63c14b62e7ff2b10c1a32b0a04f278508e2efc",
+    "rows": 5
+  },
+  {
+    "filename": "236__andgineer_goodreads-export.csv",
+    "repo": "andgineer/goodreads-export",
+    "path": "tests/resources/update/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/andgineer/goodreads-export/HEAD/tests/resources/update/goodreads_library_export.csv",
+    "sha256": "e1efde7c4c48bdcf628468436950e41d78162e86aa01a9c82ba194c79dbb731b",
+    "rows": 6
+  },
+  {
+    "filename": "237__gregusio_readstat.csv",
+    "repo": "gregusio/readstat",
+    "path": "Backend.test/TestFiles/goodreads_library_export.csv",
+    "url": "https://raw.githubusercontent.com/gregusio/readstat/HEAD/Backend.test/TestFiles/goodreads_library_export.csv",
+    "sha256": "49acb387b5e095a068bc75c66686653e28a82d4b3f0d325a992fb67be569a84c",
+    "rows": 10
+  },
+  {
+    "filename": "238__tas09009_Wrec-API.csv",
+    "repo": "tas09009/Wrec-API",
+    "path": "tests/unit/data/goodreads_library_export_sample.csv",
+    "url": "https://raw.githubusercontent.com/tas09009/Wrec-API/HEAD/tests/unit/data/goodreads_library_export_sample.csv",
+    "sha256": "5eb96db3bdd9ec345f4ed48ad2acfafd5c40a775cfcb3d2e8e7f2c304ebf4302",
+    "rows": 17
+  },
+  {
+    "filename": "242__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export test_reader1.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20test_reader1.csv",
+    "sha256": "bff79c445e7fa1b1b3c57cc4af88af8b7f283c8bd651308e80179186103b365d",
+    "rows": 40
+  },
+  {
+    "filename": "243__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export test_reader3.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20test_reader3.csv",
+    "sha256": "12beba4a16bc99c465063f25d4ad21cbc2f93e97eb65156cb11b88bd8b7ee837",
+    "rows": 40
+  },
+  {
+    "filename": "244__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export test_reader5.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20test_reader5.csv",
+    "sha256": "8500fc03d217dc7edc4363707a669b1b889050c262bc41067da3e6a31a277351",
+    "rows": 40
+  },
+  {
+    "filename": "245__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export test_reader4.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20test_reader4.csv",
+    "sha256": "0b25207f8b9f167fc030b44f41f4f440cd55e10cfbd07e0056f66357ab6177d4",
+    "rows": 40
+  },
+  {
+    "filename": "246__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_sf_fan2.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_sf_fan2.csv",
+    "sha256": "f1fc962884cc6596dfab690eceaf17f467e4c620ecf15230e87f81f3b0b3539c",
+    "rows": 40
+  },
+  {
+    "filename": "247__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_eclectic1.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_eclectic1.csv",
+    "sha256": "8a134e79c3f908938e422451d2a22b48d96bec45e705ca0161934ab99b5d8f9f",
+    "rows": 45
+  },
+  {
+    "filename": "248__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_eclectic3.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_eclectic3.csv",
+    "sha256": "3259350eb7b28aad8bc9d6b831e32f3904c703c0bc5ebd9f23f26a36ac08c80a",
+    "rows": 42
+  },
+  {
+    "filename": "249__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_lit_fiction1.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_lit_fiction1.csv",
+    "sha256": "d002dce7f6a4036e658c0aea67aaed99e0ffd8b03f5213e604e3409d4126e97f",
+    "rows": 38
+  },
+  {
+    "filename": "250__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_lit_fiction3.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_lit_fiction3.csv",
+    "sha256": "008af111627c5399534ca8e2654304841cf960ef55aad79e96979d040e3f7c30",
+    "rows": 35
+  },
+  {
+    "filename": "251__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_recent_reader.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_recent_reader.csv",
+    "sha256": "2d727a82dc6bb26233457552b6b7d36cfbe5d344735678065acd0cb8255ae813",
+    "rows": 32
+  },
+  {
+    "filename": "252__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_contemporary2.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_contemporary2.csv",
+    "sha256": "2b6e3512be7a3c74effa0d3c36857beee3dc8f235034faca545953f296d4473f",
+    "rows": 31
+  },
+  {
+    "filename": "253__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_eclectic5_modified.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_eclectic5_modified.csv",
+    "sha256": "ecf07eac096843d3f1b23a036e0f5ba1990b423dff6df932543446c863541090",
+    "rows": 200
+  },
+  {
+    "filename": "254__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_eclectic1_modified.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_eclectic1_modified.csv",
+    "sha256": "4660d126714a1a92ec1e63e5509b2c18f58dda04122e8892bc8b6898faad80e2",
+    "rows": 200
+  },
+  {
+    "filename": "255__vanajmoorthy_bibliotype.csv",
+    "repo": "vanajmoorthy/bibliotype",
+    "path": "core/tests/fixtures/csv/goodreads_library_export synthetic_eclectic3_modified.csv",
+    "url": "https://raw.githubusercontent.com/vanajmoorthy/bibliotype/HEAD/core/tests/fixtures/csv/goodreads_library_export%20synthetic_eclectic3_modified.csv",
+    "sha256": "01ab6765d812fded26492ed4f032cdb7ac3b253ff563b2efb31c47b36aa8e336",
+    "rows": 200
+  }
+]
