@@ -27,6 +27,13 @@ MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024  # 10MB CSV upload limit
 MAX_UPLOAD_ROWS = 50000
 MAX_UPLOAD_COLUMNS = 100
 
+# Upper bound on how long a DNA task is treated as "in flight" for the
+# reject-while-pending guard. Real DNA calculations finish in well under this;
+# the TTL exists so that a worker which dies mid-task (leaving a stale
+# pending_dna_task_id that Celery still reports as PENDING) can't lock the user
+# out of uploading forever — the marker simply expires.
+DNA_TASK_INFLIGHT_TTL = 900  # 15 minutes
+
 
 @require_POST
 def upload_view(request):
@@ -84,30 +91,45 @@ def upload_view(request):
             csv_content = df_head.to_csv(index=False)
 
         if request.user.is_authenticated:
+            # Reject a new upload while a previous one is still processing, rather
+            # than revoking it mid-flight. A SIGTERM revoke can leave the old task
+            # holding Book/Author row locks in Postgres just long enough for the
+            # new task to contend and stall ("stuck at 50%"); refusing to start a
+            # second task removes that race entirely.
+            #
+            # The block is gated on a TTL'd in-flight marker (set at dispatch) AND
+            # Celery reporting the task unfinished. The marker bounds the block: if
+            # a worker died mid-task without clearing pending_dna_task_id, the
+            # marker expires (<= DNA_TASK_INFLIGHT_TTL) so the user is never
+            # permanently locked out. If the cache evicts the marker early we
+            # simply fall back to allowing the upload (the pre-existing rare-race
+            # behaviour), never a lockout.
+            prior_task_id = request.user.userprofile.pending_dna_task_id
+            if prior_task_id and safe_cache_get(f"dna_task_inflight_{request.user.id}") == prior_task_id:
+                prior_running = False
+                try:
+                    prior_running = not AsyncResult(prior_task_id).ready()
+                except Exception as e:
+                    # Can't determine state (e.g. result backend hiccup) — fail
+                    # open and let the upload through rather than locking the user
+                    # out. The upload_nonce below still protects enrichment tasks.
+                    logger.warning(
+                        f"Could not check prior DNA task {prior_task_id} for user {request.user.id}: {e}"
+                    )
+                if prior_running:
+                    logger.info(
+                        f"Rejected new upload for user {request.user.id}; prior DNA task "
+                        f"{prior_task_id} still processing"
+                    )
+                    messages.info(
+                        request,
+                        "Your previous upload is still processing — hang tight, your dashboard will "
+                        "update automatically. Please wait for it to finish before uploading again.",
+                    )
+                    return redirect(reverse("core:display_dna") + "?processing=true")
+
             # Clear old session data so the view will use the updated profile data
             request.session.pop("dna_data", None)
-
-            # If a previous upload is still running, revoke it before dispatching
-            # the new one. Without this, both tasks contend on the same Book/Author
-            # row locks in Postgres and the new task's progress bar stalls until
-            # the old task releases its locks ("stuck at 50%").
-            prior_task_id = request.user.userprofile.pending_dna_task_id
-            if prior_task_id:
-                try:
-                    prior_result = AsyncResult(prior_task_id)
-                    if not prior_result.ready():
-                        prior_result.revoke(terminate=True, signal="SIGTERM")
-                        logger.info(
-                            f"Revoked pending DNA task {prior_task_id} for user {request.user.id} "
-                            f"because a new upload superseded it"
-                        )
-                except Exception as e:
-                    # Best-effort: a failed revoke shouldn't block the new upload.
-                    # The nonce mechanism still protects enrichment tasks; the worst
-                    # case is brief lock contention until the prior task finishes.
-                    logger.warning(
-                        f"Failed to revoke prior DNA task {prior_task_id} for user {request.user.id}: {e}"
-                    )
 
             # Store upload nonce BEFORE dispatching the task so enrichment tasks
             # from previous uploads can detect they've been superseded. Using uuid
@@ -126,6 +148,9 @@ def upload_view(request):
             from ..models import UserProfile
 
             UserProfile.objects.filter(user=request.user).update(pending_dna_task_id=result.id)
+            # In-flight marker for the reject-while-pending guard above. TTL-bounded
+            # so a hard worker crash can't permanently block future uploads.
+            safe_cache_set(f"dna_task_inflight_{request.user.id}", result.id, timeout=DNA_TASK_INFLIGHT_TTL)
 
             messages.success(
                 request,
