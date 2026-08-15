@@ -43,6 +43,9 @@ def _save_dna_to_profile(profile, dna_data):
 
         safe_cache_delete(f"similar_users_{profile.user.id}")
         safe_cache_delete(f"user_recommendations_{profile.user.id}")
+        # Clear the reject-while-pending in-flight marker: this upload finished,
+        # so a follow-up upload must be allowed through (see core/views/upload.py).
+        safe_cache_delete(f"dna_task_inflight_{profile.user.id}")
 
         # Sentinel-guard the dispatch (same guard as display_dna_view) so a
         # dashboard poll landing in the window before the task picks up can't

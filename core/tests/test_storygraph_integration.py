@@ -368,6 +368,9 @@ class UploadNonceTests(TransactionTestCase):
     """Verify upload nonce is set in cache before task dispatch (prevents race condition)."""
 
     def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()  # isolate the reject-while-pending in-flight marker between tests
         self.client = Client()
         self.user = User.objects.create_user(
             username="nonce_user", email="nonce@test.com", password="testpass123"
@@ -436,14 +439,19 @@ class UploadNonceTests(TransactionTestCase):
         }
     },
 )
-class ConcurrentUploadRevokeTests(TransactionTestCase):
-    """Re-uploading while a prior DNA task is still pending revokes the prior task.
+class ConcurrentUploadRejectTests(TransactionTestCase):
+    """Re-uploading while a prior DNA task is genuinely in flight is rejected.
 
-    Without this, the prior task keeps running and contends on Postgres row locks
-    with the new task, stalling the new task's progress bar at ~50%.
+    Rather than revoking the prior task mid-flight (a SIGTERM that can leave it
+    holding Postgres row locks long enough to stall the new task at ~50%), the
+    new upload is refused while the prior task's in-flight marker is live and
+    Celery reports it unfinished.
     """
 
     def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()  # locmem persists across tests in a class; isolate the in-flight marker
         self.client = Client()
         self.user = User.objects.create_user(
             username="revoke_user", email="revoke@test.com", password="testpass123"
@@ -467,59 +475,34 @@ class ConcurrentUploadRevokeTests(TransactionTestCase):
         csv_file = SimpleUploadedFile("g.csv", csv_content, content_type="text/csv")
         return self.client.post(reverse("core:upload"), {"csv_file": csv_file})
 
-    @patch("core.views.upload.AsyncResult")
+    def _mark_inflight(self):
+        from core.cache_utils import safe_cache_set
+
+        safe_cache_set(f"dna_task_inflight_{self.user.id}", "1", timeout=900)
+
+    @patch("core.views.upload.generate_reading_dna_task.delay")
     @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_upload_revokes_prior_pending_task(self, mock_enrich, mock_vibe, mock_async_result):
-        """If a prior DNA task is still pending, the new upload revokes it."""
-        prior_id = "prior-task-id-123"
-        self.user.userprofile.pending_dna_task_id = prior_id
-        self.user.userprofile.save()
-
-        prior_result = mock_async_result.return_value
-        prior_result.ready.return_value = False
-
-        self._upload()
-
-        mock_async_result.assert_any_call(prior_id)
-        prior_result.revoke.assert_called_once_with(terminate=True, signal="SIGTERM")
-
-    @patch("core.views.upload.AsyncResult")
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_upload_does_not_revoke_completed_task(self, mock_enrich, mock_vibe, mock_async_result):
-        """If the prior task has already finished, no revoke is attempted."""
-        prior_id = "prior-task-id-456"
-        self.user.userprofile.pending_dna_task_id = prior_id
-        self.user.userprofile.save()
-
-        prior_result = mock_async_result.return_value
-        prior_result.ready.return_value = True
-
-        self._upload()
-
-        prior_result.revoke.assert_not_called()
-
-    @patch("core.views.upload.AsyncResult")
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_upload_succeeds_when_revoke_raises(self, mock_enrich, mock_vibe, mock_async_result):
-        """A failure to revoke the prior task must not block the new upload."""
-        prior_id = "prior-task-id-789"
-        self.user.userprofile.pending_dna_task_id = prior_id
-        self.user.userprofile.save()
-
-        prior_result = mock_async_result.return_value
-        prior_result.ready.return_value = False
-        prior_result.revoke.side_effect = RuntimeError("broker unavailable")
+    def test_upload_rejected_while_prior_task_in_flight(self, mock_enrich, mock_vibe, mock_delay):
+        """A live in-flight marker blocks the new upload — no second task dispatched."""
+        self._mark_inflight()
 
         response = self._upload()
 
-        # Upload still redirects to the dashboard processing view
         self.assertEqual(response.status_code, 302)
+        self.assertIn("processing=true", response.url)
+        mock_delay.assert_not_called()
+
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    def test_upload_allowed_when_no_marker(self, mock_enrich, mock_vibe):
+        """With no in-flight marker, a new upload proceeds and runs the DNA task."""
+        response = self._upload()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("processing=true", response.url)
         self.user.userprofile.refresh_from_db()
         self.assertIsNotNone(self.user.userprofile.pending_dna_task_id)
-        self.assertNotEqual(self.user.userprofile.pending_dna_task_id, prior_id)
 
     @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
