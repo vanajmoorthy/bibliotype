@@ -150,7 +150,7 @@ See `.env.example` for the full list including email and Turnstile CAPTCHA confi
 ## CI/CD
 
 - **Tests:** GitHub Actions on push to `main` and PRs — runs in Docker
-- **Deploy:** Push to `main` → Docker Hub image → SSH deploy to DigitalOcean VPS
+- **Deploy:** **Automatic on merge/push to `main`** — GitHub Actions builds the Docker Hub image and SSH-deploys to the DigitalOcean VPS. No manual deploy step. Merging a PR to `main` ships it. Code, migrations, and compose-file changes ride along; prod `.env` (secrets, `GEMINI_MODEL`, etc.) lives on the VPS and is edited there directly, not in the repo.
 - **Production:** Nginx (SSL/Certbot) → Gunicorn → Django + Celery worker
 - No pre-commit hooks configured
 

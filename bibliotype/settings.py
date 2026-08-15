@@ -53,7 +53,7 @@ ENABLE_PARALLEL_ENRICHMENT = _env_bool("ENABLE_PARALLEL_ENRICHMENT", False)
 # never read `os.environ` directly. Override `GEMINI_MODEL` to swap model
 # versions across the whole app (vibe generation + publisher research).
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 
 # Identified User-Agent for external book APIs. Open Library grants identified
 # traffic (app name + contact) 3 req/s instead of the anonymous 1 req/s:

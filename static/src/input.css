@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* Self-hosted VT323 (latin subset). Vendored + preloaded so the correct font is
+   ready at first paint — no fallback-then-swap layout shift. Relative url() so
+   Django's static hashing rewrites it in production. */
+@font-face {
+    font-family: "VT323";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../fonts/vt323-latin.woff2") format("woff2");
+}
+
 /*
   Then, define your custom neobrutalist theme.
   This is where all your custom styles come from.
@@ -241,4 +252,105 @@ html {
             transparent 0% 50%);
     background-size: 1.5rem 1.5rem, 0.75rem 0.75rem;
     background-position: 0 0, 0.375rem 0.375rem;
+}
+
+/* ── Home page ambient animations ───────────────────────────────────────────
+   All motion uses steps() timing (chunky/retro, not buttery) and is gated
+   behind prefers-reduced-motion. Transform/background-size only — no layout.
+   ──────────────────────────────────────────────────────────────────────────*/
+
+/* Ambient drifting books (home page). Hand-written like .pixel-banner —
+   background colors come from Tailwind bg-brand-* utilities on the element. */
+.ambient-book {
+    position: absolute;
+    left: var(--x);
+    bottom: -80px;
+    width: calc(36px * var(--s, 1));
+    height: calc(50px * var(--s, 1));
+    opacity: 0.42;
+    transform: rotate(var(--r, 0deg));
+    /* Everything is drawn as background layers so we control dash length + gap
+       exactly — CSS `border: dashed` picks its own (too-sparse) dashes. Four dashed
+       edges (4px dash, 1px gap) form the 8-bit outline; two offset checkerboards
+       form the dithered fill (same technique as .pixel-banner). */
+    --edge: calc(2px * var(--s, 1));
+    --dash-h: repeating-linear-gradient(
+        90deg,
+        var(--color-brand-text) 0 calc(4px * var(--s, 1)),
+        transparent calc(4px * var(--s, 1)) calc(5px * var(--s, 1))
+    );
+    --dash-v: repeating-linear-gradient(
+        0deg,
+        var(--color-brand-text) 0 calc(4px * var(--s, 1)),
+        transparent calc(4px * var(--s, 1)) calc(5px * var(--s, 1))
+    );
+    background-image:
+        var(--dash-h), var(--dash-h),
+        var(--dash-v), var(--dash-v),
+        repeating-conic-gradient(rgba(31, 41, 55, 0.34) 0% 25%, transparent 0% 50%),
+        repeating-conic-gradient(rgba(255, 255, 255, 0.3) 0% 25%, transparent 0% 50%);
+    background-size:
+        100% var(--edge), 100% var(--edge),
+        var(--edge) 100%, var(--edge) 100%,
+        calc(6px * var(--s, 1)) calc(6px * var(--s, 1)),
+        calc(3px * var(--s, 1)) calc(3px * var(--s, 1));
+    background-position:
+        top, bottom, left, right,
+        0 0, calc(3px * var(--s, 1)) calc(3px * var(--s, 1));
+    background-repeat:
+        no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat;
+}
+/* Spine: a vertical line inset from the left edge — scales with the book so
+   small books aren't dominated by a fat, centred line. */
+.ambient-book::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(6px * var(--s, 1));
+    width: calc(2px * var(--s, 1));
+    /* Segmented (dashed) spine — same 4px dash / 1px gap as the outer frame. */
+    background: repeating-linear-gradient(
+        to bottom,
+        var(--color-brand-text) 0 calc(4px * var(--s, 1)),
+        transparent calc(4px * var(--s, 1)) calc(5px * var(--s, 1))
+    );
+}
+/* Page block: light fore-edge strip on the right — scales with the book. */
+.ambient-book::after {
+    content: "";
+    position: absolute;
+    top: calc(4px * var(--s, 1));
+    bottom: calc(4px * var(--s, 1));
+    right: calc(3px * var(--s, 1));
+    width: calc(5px * var(--s, 1));
+    background: rgba(255, 255, 255, 0.8);
+    /* Thin solid divider between page-block and cover (too short for dashes to read). */
+    border-left: calc(1.5px * var(--s, 1)) solid var(--color-brand-text);
+}
+@media (prefers-reduced-motion: no-preference) {
+    .ambient-book {
+        animation: book-drift var(--d, 40s) linear infinite;
+        animation-delay: var(--delay, 0s);
+    }
+    @keyframes book-drift {
+        from { transform: translateY(0) rotate(var(--r, 0deg)); }
+        to   { transform: translateY(calc(-100vh - 160px)) rotate(calc(var(--r, 0deg) * -1)); }
+    }
+}
+
+/* One-time highlighter sweep on the "Reading DNA" span. */
+.highlight-sweep {
+    background-image: linear-gradient(var(--color-brand-yellow), var(--color-brand-yellow));
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .highlight-sweep {
+        animation: highlight-sweep 0.5s steps(8, jump-end) 0.4s both;
+    }
+    @keyframes highlight-sweep {
+        from { background-size: 0% 100%; }
+        to   { background-size: 100% 100%; }
+    }
 }

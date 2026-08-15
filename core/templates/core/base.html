@@ -103,20 +103,22 @@
         <link rel="manifest" href="{% static 'site.webmanifest' %}" />
 
         {# Preconnect for performance #}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
 
-        {# Stylesheets #}
+        {% comment %}
+            Self-hosted VT323: preload the font binary so the correct font is ready at
+            first paint (the @font-face lives in output.css). Prevents the FOUT layout
+            shift the previous async Google Fonts load caused.
+        {% endcomment %}
         <link
             rel="preload"
-            href="https://fonts.googleapis.com/css2?family=VT323&display=swap"
-            as="style"
-            onload="this.onload=null;this.rel='stylesheet'"
+            href="{% static 'fonts/vt323-latin.woff2' %}"
+            as="font"
+            type="font/woff2"
+            crossorigin
         />
-        <noscript>
-            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap" />
-        </noscript>
+
+        {# Stylesheets #}
         <link href="{% static 'dist/output.css' %}" rel="stylesheet" />
 
         {# Structured Data (JSON-LD) #}
