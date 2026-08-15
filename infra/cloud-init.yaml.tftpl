@@ -1,0 +1,64 @@
+#cloud-config
+# Bootstrap for the bibliotype droplet. Mirrors what the GitHub Actions deploy
+# workflow expects: user `bibliotype`, app checkout at /home/bibliotype/app,
+# docker + compose, host nginx, staticfiles shared with www-data.
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - nginx
+  - git
+  - ca-certificates
+  - curl
+  - unattended-upgrades
+  - fail2ban
+
+users:
+  - name: bibliotype
+    shell: /bin/bash
+    groups: [docker, www-data]
+    # Deploy workflow runs `sudo chown/chmod` on staticfiles — grant exactly that.
+    sudo:
+      - "ALL=(ALL) NOPASSWD: /usr/bin/chown -R bibliotype\\:www-data /home/bibliotype/app/staticfiles/"
+      - "ALL=(ALL) NOPASSWD: /usr/bin/chmod -R 775 /home/bibliotype/app/staticfiles/"
+    ssh_authorized_keys:
+      - ${deploy_ssh_public_key}
+
+write_files:
+  # SSH hardening. Root keeps key-only access (DO installs account keys on root);
+  # tighten to PermitRootLogin no once the bibliotype user is verified working.
+  - path: /etc/ssh/sshd_config.d/99-hardening.conf
+    content: |
+      PasswordAuthentication no
+      PermitRootLogin prohibit-password
+  - path: /etc/sysctl.d/99-swappiness.conf
+    content: |
+      vm.swappiness=10
+
+swap:
+  filename: /swapfile
+  size: 2G
+  maxsize: 2G
+
+runcmd:
+  # Docker Engine + compose plugin from Docker's apt repo (the `docker` group in
+  # `users:` is created by this install; cloud-init orders users after groups
+  # exist because the docker package pre-creates the group on install — if the
+  # group was missing at user-creation time, the usermod below repairs it).
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
+  - apt-get update
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+  - usermod -aG docker bibliotype
+  # App checkout where the deploy workflow expects it (.env is copied in by hand
+  # during migration — it is never in the repo).
+  - sudo -u bibliotype git clone ${repo_url} /home/bibliotype/app
+  - mkdir -p /home/bibliotype/app/staticfiles
+  - chown -R bibliotype:www-data /home/bibliotype/app/staticfiles
+  # Certbot via snap (the standard install path on Ubuntu 24.04)
+  - snap install --classic certbot
+  - ln -sf /snap/bin/certbot /usr/bin/certbot
+  - sysctl --system
+  - systemctl restart ssh

@@ -1,0 +1,18 @@
+# Copy to terraform.tfvars (gitignored) and fill in.
+
+# Match the old droplet's region — check the DO console or:
+#   doctl compute droplet list --format Name,Region
+region = "lon1"
+
+# SSH key names as listed in DO -> Settings -> Security
+ssh_key_names = ["your-laptop-key"]
+
+# Public counterpart of the DO_SSH_KEY GitHub Actions secret (one line, "ssh-ed25519 AAAA... comment")
+deploy_ssh_public_key = "ssh-ed25519 AAAA..."
+
+# droplet_size defaults to s-1vcpu-1gb ($6). Launch week: uncomment, apply, revert after.
+# droplet_size = "s-2vcpu-2gb"
+
+# Only if the domain's nameservers are DigitalOcean's:
+# manage_dns = true
+# domain     = "yourdomain.tld"
