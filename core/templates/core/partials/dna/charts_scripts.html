@@ -64,6 +64,7 @@
         let lastTopGenresJSON = null;
         let lastExtremesJSON = null;
         let lastReaderTypeRendered = null;
+        let lastComparativeJSON = null;
 
         // --- Helper to parse data (Array of tuples vs Object) ---
         function parseChartData(data) {
@@ -474,12 +475,91 @@
             }
         }
 
+        // Capitalize first letter (matches Django's |capfirst on the server text).
+        function capfirst(value) {
+            const s = value == null ? "" : String(value);
+            return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+
+        function updateComparative(stats) {
+            const ct = stats.comparative_text;
+            if (!ct) return;
+
+            // Anti-flicker: skip the whole comparative refresh when nothing that
+            // feeds it changed since the last poll (mirrors PR #138's guards).
+            const key = JSON.stringify([
+                ct,
+                stats.avg_book_length,
+                stats.avg_publish_year,
+                stats.avg_books_per_year,
+                stats.number_line_ranges,
+                stats.community_averages,
+                stats.global_averages,
+            ]);
+            if (key === lastComparativeJSON) return;
+            lastComparativeJSON = key;
+
+            // --- Poster numbers + comparative sentences ---
+            const lenVal = document.getElementById("comp-length-value");
+            if (lenVal && stats.avg_book_length != null) lenVal.textContent = stats.avg_book_length;
+            const lenText = document.getElementById("comp-length-text");
+            if (lenText && ct.length_direction != null) {
+                lenText.innerHTML =
+                    `${capfirst(ct.length_direction)} than <strong>${escapeHtml(ct.length_pct)}%</strong> ` +
+                    "of Bibliotype readers";
+            }
+
+            const ageVal = document.getElementById("comp-age-value");
+            if (ageVal && stats.avg_publish_year != null) ageVal.textContent = Math.round(stats.avg_publish_year);
+            const ageText = document.getElementById("comp-age-text");
+            if (ageText && ct.age_direction != null) {
+                ageText.innerHTML =
+                    `${capfirst(ct.age_direction)} than <strong>${escapeHtml(ct.age_pct)}%</strong> ` +
+                    "of Bibliotype readers";
+            }
+
+            // --- Number-line markers ---
+            // The number lines are Alpine components: positions derive reactively
+            // from userVal/compVal/thirdVal/min/max, so we just push fresh values
+            // into each component's scope and Alpine repositions the markers +
+            // legend. Guarded on Alpine.$data being available; if not, the poster
+            // text above still updated and the lines settle on the next reload.
+            if (!(window.Alpine && typeof Alpine.$data === "function")) return;
+            const ranges = stats.number_line_ranges || {};
+            const comm = stats.community_averages || {};
+            const glob = stats.global_averages || {};
+            const metricValues = {
+                pages: { user: stats.avg_book_length, comp: comm.avg_book_length, third: glob.avg_book_length_pages },
+                year: { user: stats.avg_publish_year, comp: comm.avg_publish_year, third: glob.avg_publish_year },
+                bpy: { user: stats.avg_books_per_year, comp: comm.avg_books_per_year, third: glob.avg_books_per_year },
+            };
+            document.querySelectorAll("[data-nl-metric]").forEach((el) => {
+                const metric = el.dataset.nlMetric;
+                const vals = metricValues[metric];
+                const range = ranges[metric];
+                if (!vals) return;
+                let scope;
+                try {
+                    scope = Alpine.$data(el);
+                } catch (e) {
+                    return;
+                }
+                if (!scope) return;
+                if (range && range.min != null) scope.min = range.min;
+                if (range && range.max != null) scope.max = range.max;
+                if (vals.user != null) scope.userVal = vals.user;
+                if (vals.comp != null) scope.compVal = vals.comp;
+                if (vals.third != null) scope.thirdVal = vals.third;
+            });
+        }
+
         function applyEnrichmentUpdate(stats) {
             if (!stats) return;
             updateTopGenres(stats.top_genres, stats.unique_genres_count);
             updateFictionNonfiction(stats.fiction_nonfiction_split);
             updateBookExtremes(stats);
             updateReaderType(stats);
+            updateComparative(stats);
         }
 
         window.addEventListener("enrichment:update", (event) => applyEnrichmentUpdate(event.detail));

@@ -15,6 +15,7 @@
 {# djlint:off #}
 <div
     class="number-line-wrap mt-2 mb-1"
+    {% if nl_metric %}data-nl-metric="{{ nl_metric }}"{% endif %}
     x-data="{
          min: {{ nl_min }},
          max: {{ nl_max }},
