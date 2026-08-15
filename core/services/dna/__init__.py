@@ -797,6 +797,13 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 else None
             ),
             "shelf_signals": shelf_signals_map,
+            # Book ids belonging to THIS upload cohort. Enrichment-progress
+            # scoping (core/views/_helpers.py:_compute_enrichment_progress) uses
+            # this so a re-upload that only adds a few new books doesn't read as
+            # "complete" just because the user's previously-enriched books
+            # already have google_books_last_checked set. Legacy profiles without
+            # this key fall back to counting all of the user's books.
+            "enrichment_cohort_ids": [b.id for b in user_book_objects],
             "longest_book": longest_book,
             "shortest_book": shortest_book,
             "page_difference": page_difference,
