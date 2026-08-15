@@ -514,9 +514,9 @@
                     <!-- CTA overlay -->
                     <div class="absolute inset-0 flex items-center justify-center p-4">
                         <div class="border-brand-text shadow-neo w-full max-w-lg border-2 bg-white p-8 text-center">
-                            <h2 class="mb-3 text-3xl font-bold uppercase">Your Bibliotype is waiting</h2>
+                            <h2 class="mb-3 text-3xl font-bold uppercase">No Bibliotype yet</h2>
                             <p class="text-lg text-gray-700">
-                                Upload your Goodreads or StoryGraph export and we'll turn it into your Reading DNA.
+                                Upload your Goodreads or StoryGraph export to see your generated Reading DNA.
                             </p>
                             {% url 'core:home' as home_url %}
                             {% include 'core/partials/buttons/small_link_button.html' with href=home_url text="Upload Your Library" color="green" extra_classes="mt-6 inline-block" %}
