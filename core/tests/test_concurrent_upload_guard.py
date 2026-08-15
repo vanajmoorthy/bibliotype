@@ -1,9 +1,13 @@
 """Tests for the reject-while-pending concurrent-upload guard (PR C).
 
-When an authenticated user's previous DNA task is still processing, a new
-upload is rejected (rather than revoking the old task mid-flight and racing on
-Postgres row locks). A finished/failed task clears pending_dna_task_id as part
-of its own completion, so this only blocks genuinely in-flight uploads.
+While an authenticated user's DNA upload is in flight, a TTL'd in-flight marker
+(dna_task_inflight_{user_id}) is live and a new upload is rejected — no second
+task, no Postgres row-lock race. The task deletes the marker on completion; the
+TTL bounds it so a hard worker crash can't lock the user out.
+
+The guard consults only the marker (not AsyncResult): eager tasks report their
+Celery state inconsistently across environments depending on whether a result
+backend is configured, so a state-based guard would be flaky.
 """
 
 from unittest.mock import MagicMock, patch
@@ -13,7 +17,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TransactionTestCase, override_settings
 from django.urls import reverse
 
-from core.cache_utils import safe_cache_set
+from core.cache_utils import safe_cache_get, safe_cache_set
 
 
 def _csv_file():
@@ -31,9 +35,13 @@ def _csv_file():
 )
 class ConcurrentUploadGuardTests(TransactionTestCase):
     def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()  # locmem persists across tests in a class; isolate the marker
         self.client = Client()
         self.user = User.objects.create_user(username="guard", password="x", email="guard@example.com")
         self.client.force_login(self.user)
+        self.marker_key = f"dna_task_inflight_{self.user.id}"
 
     def tearDown(self):
         from django.db import connections
@@ -43,51 +51,18 @@ class ConcurrentUploadGuardTests(TransactionTestCase):
                 conn.close()
         connections.close_all()
 
-    def _set_pending(self, task_id, *, inflight=True):
-        self.user.userprofile.pending_dna_task_id = task_id
-        self.user.userprofile.save(update_fields=["pending_dna_task_id"])
-        if inflight:
-            # Mirror what upload_view sets at dispatch — the guard only blocks
-            # while this TTL'd marker is live.
-            safe_cache_set(f"dna_task_inflight_{self.user.id}", task_id, timeout=900)
-
     @patch("core.views.upload.generate_reading_dna_task.delay")
-    @patch("core.views.upload.AsyncResult")
-    def test_rejects_upload_while_prior_task_running(self, mock_async_result, mock_delay):
-        self._set_pending("running-task-id")
-        mock_async_result.return_value.ready.return_value = False  # still processing
+    def test_rejects_upload_while_marker_present(self, mock_delay):
+        safe_cache_set(self.marker_key, "1", timeout=900)  # prior upload in flight
 
         response = self.client.post(reverse("core:upload"), {"csv_file": _csv_file()})
 
-        # Redirected back to the processing dashboard, no new task dispatched.
         self.assertEqual(response.status_code, 302)
         self.assertIn("processing=true", response.url)
-        mock_delay.assert_not_called()
-        # Pending id is unchanged — the old task keeps running.
-        self.user.userprofile.refresh_from_db()
-        self.assertEqual(self.user.userprofile.pending_dna_task_id, "running-task-id")
+        mock_delay.assert_not_called()  # no second task dispatched
 
     @patch("core.views.upload.generate_reading_dna_task.delay")
-    @patch("core.views.upload.AsyncResult")
-    def test_allows_upload_when_prior_task_finished(self, mock_async_result, mock_delay):
-        self._set_pending("finished-task-id")
-        mock_async_result.return_value.ready.return_value = True  # done
-        mock_delay.return_value = MagicMock(id="new-task-id")
-
-        response = self.client.post(reverse("core:upload"), {"csv_file": _csv_file()})
-
-        self.assertEqual(response.status_code, 302)
-        mock_delay.assert_called_once()
-        self.user.userprofile.refresh_from_db()
-        self.assertEqual(self.user.userprofile.pending_dna_task_id, "new-task-id")
-
-    @patch("core.views.upload.generate_reading_dna_task.delay")
-    @patch("core.views.upload.AsyncResult")
-    def test_fails_open_when_task_state_unknown(self, mock_async_result, mock_delay):
-        """If AsyncResult errors (result backend hiccup), let the upload through
-        rather than locking the user out."""
-        self._set_pending("unknowable-task-id")
-        mock_async_result.side_effect = Exception("backend down")
+    def test_allows_upload_when_marker_absent(self, mock_delay):
         mock_delay.return_value = MagicMock(id="new-task-id")
 
         response = self.client.post(reverse("core:upload"), {"csv_file": _csv_file()})
@@ -96,13 +71,23 @@ class ConcurrentUploadGuardTests(TransactionTestCase):
         mock_delay.assert_called_once()
 
     @patch("core.views.upload.generate_reading_dna_task.delay")
-    @patch("core.views.upload.AsyncResult")
-    def test_self_heals_when_inflight_marker_expired(self, mock_async_result, mock_delay):
-        """A stale pending_dna_task_id (worker died mid-task) whose in-flight
-        marker has expired must NOT lock the user out — the upload proceeds even
-        though Celery still reports the phantom task as not-ready."""
-        self._set_pending("phantom-task-id", inflight=False)  # no marker
-        mock_async_result.return_value.ready.return_value = False  # phantom PENDING
+    def test_dispatch_sets_inflight_marker(self, mock_delay):
+        """A fresh upload sets the marker so a concurrent one would be blocked.
+        delay is mocked so the (would-be eager) task can't clear it here."""
+        mock_delay.return_value = MagicMock(id="new-task-id")
+
+        self.client.post(reverse("core:upload"), {"csv_file": _csv_file()})
+
+        self.assertEqual(safe_cache_get(self.marker_key), "1")
+
+    @patch("core.views.upload.generate_reading_dna_task.delay")
+    def test_stale_pending_without_marker_not_locked_out(self, mock_delay):
+        """A leftover pending_dna_task_id whose marker has expired (worker died
+        mid-task) must NOT block: the marker is the sole gate, so the upload
+        proceeds and the user is never permanently locked out."""
+        self.user.userprofile.pending_dna_task_id = "phantom-task-id"
+        self.user.userprofile.save(update_fields=["pending_dna_task_id"])
+        # No marker in cache (expired).
         mock_delay.return_value = MagicMock(id="new-task-id")
 
         response = self.client.post(reverse("core:upload"), {"csv_file": _csv_file()})
@@ -110,14 +95,14 @@ class ConcurrentUploadGuardTests(TransactionTestCase):
         self.assertEqual(response.status_code, 302)
         mock_delay.assert_called_once()
 
-    @patch("core.views.upload.generate_reading_dna_task.delay")
-    @patch("core.views.upload.AsyncResult")
-    def test_allows_upload_when_no_prior_task(self, mock_async_result, mock_delay):
-        # pending_dna_task_id is None by default.
-        mock_delay.return_value = MagicMock(id="first-task-id")
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    def test_completed_upload_clears_marker(self, mock_enrich, mock_vibe):
+        """A real (eager) upload clears the marker on completion, so a follow-up
+        upload is allowed."""
+        mock_enrich.return_value = (None, 0, 0)
 
-        response = self.client.post(reverse("core:upload"), {"csv_file": _csv_file()})
+        self.client.post(reverse("core:upload"), {"csv_file": _csv_file()})
 
-        self.assertEqual(response.status_code, 302)
-        mock_delay.assert_called_once()
-        mock_async_result.assert_not_called()  # no prior id → never checked
+        # Task ran inline and deleted the marker as part of saving the DNA.
+        self.assertIsNone(safe_cache_get(self.marker_key))

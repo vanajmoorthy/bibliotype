@@ -97,36 +97,24 @@ def upload_view(request):
             # new task to contend and stall ("stuck at 50%"); refusing to start a
             # second task removes that race entirely.
             #
-            # The block is gated on a TTL'd in-flight marker (set at dispatch) AND
-            # Celery reporting the task unfinished. The marker bounds the block: if
-            # a worker died mid-task without clearing pending_dna_task_id, the
-            # marker expires (<= DNA_TASK_INFLIGHT_TTL) so the user is never
-            # permanently locked out. If the cache evicts the marker early we
-            # simply fall back to allowing the upload (the pre-existing rare-race
-            # behaviour), never a lockout.
-            prior_task_id = request.user.userprofile.pending_dna_task_id
-            if prior_task_id and safe_cache_get(f"dna_task_inflight_{request.user.id}") == prior_task_id:
-                prior_running = False
-                try:
-                    prior_running = not AsyncResult(prior_task_id).ready()
-                except Exception as e:
-                    # Can't determine state (e.g. result backend hiccup) — fail
-                    # open and let the upload through rather than locking the user
-                    # out. The upload_nonce below still protects enrichment tasks.
-                    logger.warning(
-                        f"Could not check prior DNA task {prior_task_id} for user {request.user.id}: {e}"
-                    )
-                if prior_running:
-                    logger.info(
-                        f"Rejected new upload for user {request.user.id}; prior DNA task "
-                        f"{prior_task_id} still processing"
-                    )
-                    messages.info(
-                        request,
-                        "Your previous upload is still processing — hang tight, your dashboard will "
-                        "update automatically. Please wait for it to finish before uploading again.",
-                    )
-                    return redirect(reverse("core:display_dna") + "?processing=true")
+            # The signal is a TTL'd in-flight marker: set just before dispatch
+            # (below) and deleted by the task itself on completion
+            # (core/services/dna/persistence.py), so a finished upload leaves no
+            # marker. The TTL bounds the block — if a worker dies mid-task without
+            # clearing it, the marker simply expires (<= DNA_TASK_INFLIGHT_TTL) so
+            # the user is never permanently locked out. If the cache is down /
+            # evicts the marker we fall back to allowing the upload (a rare race,
+            # not a lockout). Deliberately does NOT consult AsyncResult: eager
+            # tasks report their state inconsistently across environments
+            # depending on whether a result backend is configured.
+            if safe_cache_get(f"dna_task_inflight_{request.user.id}"):
+                logger.info(f"Rejected new upload for user {request.user.id}; a prior upload is still processing")
+                messages.info(
+                    request,
+                    "Your previous upload is still processing — hang tight, your dashboard will "
+                    "update automatically. Please wait for it to finish before uploading again.",
+                )
+                return redirect(reverse("core:display_dna") + "?processing=true")
 
             # Clear old session data so the view will use the updated profile data
             request.session.pop("dna_data", None)
@@ -138,6 +126,9 @@ def upload_view(request):
 
             upload_nonce = str(uuid.uuid4())
             safe_cache_set(f"upload_nonce_{request.user.id}", upload_nonce, timeout=DNA_CACHE_TTL)
+            # In-flight marker for the reject-while-pending guard above. Set BEFORE
+            # dispatch so the (possibly eager) task can clear it on completion.
+            safe_cache_set(f"dna_task_inflight_{request.user.id}", "1", timeout=DNA_TASK_INFLIGHT_TTL)
 
             result = generate_reading_dna_task.delay(csv_content, request.user.id)
 
@@ -148,9 +139,6 @@ def upload_view(request):
             from ..models import UserProfile
 
             UserProfile.objects.filter(user=request.user).update(pending_dna_task_id=result.id)
-            # In-flight marker for the reject-while-pending guard above. TTL-bounded
-            # so a hard worker crash can't permanently block future uploads.
-            safe_cache_set(f"dna_task_inflight_{request.user.id}", result.id, timeout=DNA_TASK_INFLIGHT_TTL)
 
             messages.success(
                 request,
