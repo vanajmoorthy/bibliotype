@@ -3,12 +3,13 @@ import os
 import time
 
 import requests
-from django.db.models import Q
+from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 
-from core.services.book_enrichment_service import _clean_title_for_api, _redact_api_key
 from core.models import Book
 from core.services._book_urls import cover_url_from_isbn, cover_url_from_olid
+from core.services.book_enrichment_service import _clean_title_for_api, _redact_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +104,7 @@ class Command(BaseCommand):
         not_found = 0
 
         with requests.Session() as session:
-            session.headers.update({"User-Agent": "BibliotypeApp/1.0"})
+            session.headers.update({"User-Agent": settings.EXTERNAL_API_USER_AGENT})
 
             for book in api_qs.iterator():
                 if limit and (found + not_found) >= limit:

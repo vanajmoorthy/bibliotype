@@ -13,6 +13,7 @@ from io import StringIO
 
 import pandas as pd
 import requests
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django.db.models import F
@@ -166,7 +167,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         # lock-guarded so the start is exactly-once under concurrency.
         enrichment_budget = _EnrichmentBudget()
         with requests.Session() as session:
-            session.headers.update({"User-Agent": "BibliotypeApp/1.0"})
+            session.headers.update({"User-Agent": settings.EXTERNAL_API_USER_AGENT})
 
             def process_book_row(original_row):
                 author_name_from_csv = original_row.get("Author", "").strip()

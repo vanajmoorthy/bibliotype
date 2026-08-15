@@ -3,6 +3,7 @@ import time
 from datetime import timedelta
 
 import requests
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import models
 from django.utils import timezone
@@ -58,7 +59,7 @@ class Command(BaseCommand):
         updated_count = 0
 
         with requests.Session() as session:
-            session.headers.update({"User-Agent": "BibliotypeApp/1.0 (contact@yourdomain.com)"})
+            session.headers.update({"User-Agent": settings.EXTERNAL_API_USER_AGENT})
             for i, author in enumerate(authors_to_check):
                 self._log(f"  ({i+1}/{total_authors}) Checking: {author.name}...")
 

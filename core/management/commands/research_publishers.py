@@ -2,6 +2,7 @@ import logging
 import time
 
 import requests
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Q
@@ -49,7 +50,7 @@ class Command(BaseCommand):
         updated_count = 0
 
         with requests.Session() as session:
-            session.headers.update({"User-Agent": "BibliotypeApp/1.0 (contact@yourdomain.com)"})
+            session.headers.update({"User-Agent": settings.EXTERNAL_API_USER_AGENT})
 
             for publisher in publishers_to_check:
                 self._log(f"  -> Researching: {publisher.name}...")
