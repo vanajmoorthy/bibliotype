@@ -1658,11 +1658,13 @@ GLOBAL_AVERAGES = {
 # Every entry documents where its number really comes from and links live
 # context, and no entry links a dead URL.
 #
-# Schema per key: {url, archived_url, accessed, note}
+# Schema per key: {url, archived_url, accessed, note, citations}
 #   url          live page for the source / further reading, or None if none exists
 #   archived_url Wayback snapshot, or None
 #   accessed     ISO date the url was last checked (see git history for the audit)
 #   note         plain-language explanation of where the number comes from
+#   citations    list of named studies the note refers to, each {label, url};
+#                may be empty when the note has no specific studies to name
 # Every GLOBAL_AVERAGES key must have an entry here (enforced by test).
 GLOBAL_AVERAGES_SOURCES = {
     "avg_book_length_pages": {
@@ -1671,10 +1673,11 @@ GLOBAL_AVERAGES_SOURCES = {
         "accessed": "2026-07-29",
         "note": (
             "This is a working average, not a hard fact. Most adult novels land "
-            "somewhere between 250 and 400 pages, and I picked a round number in "
+            "somewhere between 250 and 400 pages, and we picked a round number in "
             "that range. ProWritingAid has a good rundown of typical novel length "
-            "if you want to check my working."
+            "if you want to check our working."
         ),
+        "citations": [],
     },
     "avg_publish_year": {
         "url": "https://ammar-alyousfi.com/2024/exploring-goodreads-data-an-analysis-of-10-million-books",
@@ -1684,10 +1687,11 @@ GLOBAL_AVERAGES_SOURCES = {
             "No survey actually measures the average publication year of the books "
             "people read, so this is a best-effort estimate rather than a sourced "
             "figure. Reading leans heavily toward recent decades with a long tail of "
-            "older titles, and I use this as a rough midpoint. For a sense of how "
+            "older titles, and we use this as a rough midpoint. For a sense of how "
             "books spread across time, this analysis of 10 million Goodreads books "
             "breaks the catalogue down decade by decade."
         ),
+        "citations": [],
     },
     "avg_books_per_year": {
         "url": "https://www.pewresearch.org/internet/2016/09/01/book-reading-2016/",
@@ -1699,8 +1703,22 @@ GLOBAL_AVERAGES_SOURCES = {
             "a mean of 12.6 books and Pew 12 to 14. But the mean is dragged up by a "
             "small group of heavy readers while roughly half of adults read no books "
             "at all, so the medians tell the real story. Pew lands at 4 to 5, YouGov "
-            "at 2 in the US and 3 in the UK, and I take the middle of those."
+            "at 2 in the US and 3 in the UK, and we take the middle of those."
         ),
+        "citations": [
+            {
+                "label": "Gallup (2021 mean)",
+                "url": "https://news.gallup.com/poll/388541/americans-reading-fewer-books-past.aspx",
+            },
+            {
+                "label": "Pew (2016 mean & median)",
+                "url": "https://www.pewresearch.org/internet/2016/09/01/book-reading-2016/",
+            },
+            {
+                "label": "YouGov (2025 median)",
+                "url": "https://today.yougov.com/entertainment/articles/48239-54-percent-of-americans-read-a-book-this-year",
+            },
+        ],
     },
 }
 

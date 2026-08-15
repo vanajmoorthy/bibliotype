@@ -1,30 +1,31 @@
-{# Comparative Analytics methodology page #}
+{# Methodology page — how every number on the dashboard is calculated. Each section is a collapsible <details> box. #}
 {% extends 'core/base.html' %}
 
-{% block seo_title %}How Bibliotype's Comparative Analytics Work{% endblock %}
+{% block seo_title %}How Bibliotype Works: Methodology{% endblock %}
 
 {% block seo_description %}
-    Learn how Bibliotype calculates each Comparative Analytics stat — average book length, average book age, and books
-    per year — including the data sources, assumptions, and community percentile methodology behind each figure.
+    How Bibliotype turns your Goodreads or StoryGraph export into a Reading DNA — comparative analytics, genre fetching
+    and classification, your mainstream score, most positive and negative reviews, and personalised recommendations —
+    with the data sources and assumptions behind each one.
 {% endblock %}
 
 {% block seo_keywords %}
-    Bibliotype methodology, comparative analytics, reading statistics methodology, book length average, books per year
-    average, reading data sources
+    Bibliotype methodology, reading statistics methodology, book genre classification, mainstream score, book
+    recommendations cosine similarity, reading data sources
 {% endblock %}
 
-{% block og_title %}How Bibliotype's Comparative Analytics Work{% endblock %}
+{% block og_title %}How Bibliotype Works: Methodology{% endblock %}
 
 {% block og_description %}
-    Learn how Bibliotype derives each Comparative Analytics stat and how your reading compares to the global average and
-    the Bibliotype community.
+    How Bibliotype derives every stat on your dashboard — comparative analytics, genres, mainstream score, reviews, and
+    recommendations — plus the data sources and honest caveats behind each.
 {% endblock %}
 
-{% block twitter_title %}How Bibliotype's Comparative Analytics Work{% endblock %}
+{% block twitter_title %}How Bibliotype Works: Methodology{% endblock %}
 
 {% block twitter_description %}
-    How Bibliotype calculates average book length, book age, and books per year — data sources, assumptions, and
-    community percentile method explained.
+    How Bibliotype calculates comparative analytics, genres, your mainstream score, reviews, and recommendations — data
+    sources, assumptions, and caveats explained plainly.
 {% endblock %}
 
 {% block structured_data %}
@@ -32,8 +33,8 @@
         {
             "@context": "https://schema.org",
             "@type": "FAQPage",
-            "name": "How Bibliotype's Comparative Analytics Work",
-            "description": "An explanation of how each Comparative Analytics stat is derived, including data sources and assumptions.",
+            "name": "How Bibliotype Works: Methodology",
+            "description": "An explanation of how each Bibliotype stat is derived, including data sources and assumptions.",
             "url": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}",
             "breadcrumb": {
                 "@type": "BreadcrumbList",
@@ -76,6 +77,30 @@
                         "@type": "Answer",
                         "text": "Bibliotype counts only books with a recorded finish date. It then divides that count by the number of distinct calendar years in which you finished at least one book. Your figure is compared against all other Bibliotype readers to produce a community percentile."
                     }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Where do the genres come from?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Goodreads exports carry no genres and StoryGraph carries only a few tags, so Bibliotype looks each book up in Open Library and Google Books, reads their subject and category labels, then maps those messy labels onto around 56 tidy canonical genres and keeps the most specific ones per book."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "What is the Mainstream Score?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "The share of your books whose author or publisher is flagged as mainstream — one of the major publishing houses and their imprints, or a widely-published author. A high score means you mostly read well-known names; a low score means you reach for more independent writers."
+                    }
+                },
+                {
+                    "@type": "Question",
+                    "name": "How does Bibliotype recommend books?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Bibliotype finds readers whose taste resembles yours by comparing libraries across seven dimensions — including cosine similarity of genre and author mixes and Jaccard similarity of shared books — then suggests the highly-rated books those readers loved that you have not read yet, scored and diversified before ranking."
+                    }
                 }
             ]
         }
@@ -86,43 +111,89 @@
     <div class="mx-auto max-w-3xl space-y-6 p-2 md:p-4">
         <h1 class="text-center text-4xl font-bold tracking-widest uppercase md:text-5xl">Methodology</h1>
 
-        {# Intro card #}
-        <div class="border-brand-text shadow-neo space-y-4 border-2 bg-white p-6 text-lg md:p-8">
-            <h2 class="text-2xl font-bold tracking-wider uppercase">
-                <span class="bg-brand-cyan px-1">How Comparative Analytics Work</span>
-            </h2>
-            <p>
-                The <span class="bg-brand-yellow px-1 font-bold">Comparative Analytics</span> card on your dashboard
-                shows three stats, and for each one it gives you two things to compare against: a
-                <span class="bg-brand-green px-1">global average</span> and your
-                <span class="bg-brand-pink px-1">community percentile</span>. This page covers what each stat measures,
-                how it's built from your data, and how much to trust each number.
-            </p>
-            <p>One distinction matters more than anything else here, so I want to be upfront about it.</p>
-            <ul class="list-outside list-disc space-y-2 pl-6">
-                <li>
-                    <span class="bg-brand-pink px-1 font-bold">Community percentiles are real data.</span>
-                    They come straight from every Bibliotype library. When the card says you read longer books than 70%
-                    of readers, that number is measured from actual uploaded shelves, and it shifts as more people join.
-                </li>
-                <li>
-                    <span class="bg-brand-green px-1 font-bold">Global averages are rough estimates.</span>
-                    The books-per-year figure is a median pulled from the big reading surveys, so it's on firm ground.
-                    The other two are rougher working estimates, since nobody actually measures them well. They're
-                    honest reference points rather than precise truths, and I've shown my working for each one below.
-                    Lean on your community percentile; treat the global average as a backdrop. Once enough readers have
-                    joined, I'd like to derive all of these from the community's own libraries instead.
-                </li>
-            </ul>
-        </div>
+        <p class="mx-auto max-w-2xl text-center text-lg text-gray-600">
+            Everything on your dashboard is built from your reading export plus a couple of free book databases. Here's
+            how each part is worked out — tap any section to open it.
+        </p>
 
-        {# Book Length section #}
-        <div id="book-length" class="border-brand-text shadow-neo space-y-4 border-2 bg-white p-6 text-lg md:p-8">
-            <h2 class="text-2xl font-bold tracking-wider uppercase">
-                <span class="bg-brand-green px-1">Average Book Length</span>
-            </h2>
+        {# ── Comparative Analytics: intro (open by default) ── #}
+        <details
+            open
+            class="border-brand-text shadow-neo group border-2 bg-white [&_summary::-webkit-details-marker]:hidden"
+        >
+            <summary
+                class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
+                aria-label="Toggle section: How Comparative Analytics Work"
+            >
+                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                    <span class="bg-brand-cyan px-1">How Comparative Analytics Work</span>
+                </h2>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 flex-shrink-0 transition-transform duration-200 group-open:rotate-180"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    aria-hidden="true"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
+            <div class="space-y-4 px-6 pb-6 text-lg md:px-8 md:pb-8">
+                <p>
+                    The <span class="bg-brand-yellow px-1 font-bold">Comparative Analytics</span> card on your dashboard
+                    shows three stats, and for each one it gives you two things to compare against: a
+                    <span class="bg-brand-green px-1">global average</span> and your
+                    <span class="bg-brand-pink px-1">community percentile</span>. This section covers what each stat
+                    measures, how it's built from your data, and how much to trust each number.
+                </p>
+                <p>One distinction matters more than anything else here, so we want to be upfront about it.</p>
+                <ul class="list-outside list-disc space-y-2 pl-6">
+                    <li>
+                        <span class="bg-brand-pink px-1 font-bold">Community percentiles are real data.</span>
+                        They come straight from every Bibliotype library. When the card says you read longer books than
+                        70% of readers, that number is measured from actual uploaded shelves, and it shifts as more
+                        people join.
+                    </li>
+                    <li>
+                        <span class="bg-brand-green px-1 font-bold">Global averages are rough estimates.</span>
+                        The books-per-year figure is a median pulled from the big reading surveys, so it's on firm
+                        ground. The other two are rougher working estimates, since nobody actually measures them well.
+                        They're honest reference points rather than precise truths, and we've shown our working for each
+                        one below. Lean on your community percentile; treat the global average as a backdrop. Once
+                        enough readers have joined, we'd like to derive all of these from the community's own libraries
+                        instead.
+                    </li>
+                </ul>
+            </div>
+        </details>
 
-            <div class="space-y-3">
+        {# ── Book Length ── #}
+        <details
+            id="book-length"
+            class="border-brand-text shadow-neo group border-2 bg-white [&_summary::-webkit-details-marker]:hidden"
+        >
+            <summary
+                class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
+                aria-label="Toggle section: Average Book Length"
+            >
+                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                    <span class="bg-brand-green px-1">Average Book Length</span>
+                </h2>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 flex-shrink-0 transition-transform duration-200 group-open:rotate-180"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    aria-hidden="true"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
+            <div class="space-y-3 px-6 pb-6 text-lg md:px-8 md:pb-8">
                 <div>
                     <h3 class="font-bold uppercase">What it measures</h3>
                     <p>
@@ -169,8 +240,8 @@
 
                 <div class="border-brand-text border-l-4 bg-gray-50 p-3 text-base">
                     <p>
-                        <span class="font-bold">Global benchmark:</span> I compare your average against a working figure
-                        of {{ global_averages.avg_book_length_pages }} pages.
+                        <span class="font-bold">Global benchmark:</span> we compare your average against a working
+                        figure of {{ global_averages.avg_book_length_pages }} pages.
                         {{ global_averages_sources.avg_book_length_pages.note }}
                         {% if global_averages_sources.avg_book_length_pages.url %}
                             <a
@@ -189,18 +260,50 @@
                                 >Archived copy</a
                             >.
                         {% endif %}
+                        {% if global_averages_sources.avg_book_length_pages.citations %}
+                            <span class="mt-1 block">
+                                <span class="font-bold">Sources:</span>
+                                {% for citation in global_averages_sources.avg_book_length_pages.citations %}
+                                    <a
+                                        href="{{ citation.url }}"
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="hover:bg-brand-yellow underline"
+                                        >{{ citation.label }}</a
+                                    >{% if not forloop.last %},{% else %}.{% endif %}
+                                {% endfor %}
+                            </span>
+                        {% endif %}
                     </p>
                 </div>
             </div>
-        </div>
+        </details>
 
-        {# Book Age section #}
-        <div id="book-age" class="border-brand-text shadow-neo space-y-4 border-2 bg-white p-6 text-lg md:p-8">
-            <h2 class="text-2xl font-bold tracking-wider uppercase">
-                <span class="bg-brand-orange px-1">Average Book Age</span>
-            </h2>
-
-            <div class="space-y-3">
+        {# ── Book Age ── #}
+        <details
+            id="book-age"
+            class="border-brand-text shadow-neo group border-2 bg-white [&_summary::-webkit-details-marker]:hidden"
+        >
+            <summary
+                class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
+                aria-label="Toggle section: Average Book Age"
+            >
+                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                    <span class="bg-brand-orange px-1">Average Book Age</span>
+                </h2>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 flex-shrink-0 transition-transform duration-200 group-open:rotate-180"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    aria-hidden="true"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
+            <div class="space-y-3 px-6 pb-6 text-lg md:px-8 md:pb-8">
                 <div>
                     <h3 class="font-bold uppercase">What it measures</h3>
                     <p>
@@ -248,7 +351,7 @@
 
                 <div class="border-brand-text border-l-4 bg-gray-50 p-3 text-base">
                     <p>
-                        <span class="font-bold">Global benchmark:</span> the baseline I compare against is a publish
+                        <span class="font-bold">Global benchmark:</span> the baseline we compare against is a publish
                         year of {{ global_averages.avg_publish_year }}.
                         {{ global_averages_sources.avg_publish_year.note }}
                         {% if global_averages_sources.avg_publish_year.url %}
@@ -268,18 +371,50 @@
                                 >Archived copy</a
                             >.
                         {% endif %}
+                        {% if global_averages_sources.avg_publish_year.citations %}
+                            <span class="mt-1 block">
+                                <span class="font-bold">Sources:</span>
+                                {% for citation in global_averages_sources.avg_publish_year.citations %}
+                                    <a
+                                        href="{{ citation.url }}"
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="hover:bg-brand-yellow underline"
+                                        >{{ citation.label }}</a
+                                    >{% if not forloop.last %},{% else %}.{% endif %}
+                                {% endfor %}
+                            </span>
+                        {% endif %}
                     </p>
                 </div>
             </div>
-        </div>
+        </details>
 
-        {# Books Per Year section #}
-        <div id="books-per-year" class="border-brand-text shadow-neo space-y-4 border-2 bg-white p-6 text-lg md:p-8">
-            <h2 class="text-2xl font-bold tracking-wider uppercase">
-                <span class="bg-brand-purple px-1">Books Per Year</span>
-            </h2>
-
-            <div class="space-y-3">
+        {# ── Books Per Year ── #}
+        <details
+            id="books-per-year"
+            class="border-brand-text shadow-neo group border-2 bg-white [&_summary::-webkit-details-marker]:hidden"
+        >
+            <summary
+                class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
+                aria-label="Toggle section: Books Per Year"
+            >
+                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                    <span class="bg-brand-purple px-1">Books Per Year</span>
+                </h2>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 flex-shrink-0 transition-transform duration-200 group-open:rotate-180"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    aria-hidden="true"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
+            <div class="space-y-3 px-6 pb-6 text-lg md:px-8 md:pb-8">
                 <div>
                     <h3 class="font-bold uppercase">What it measures</h3>
                     <p>
@@ -326,7 +461,7 @@
 
                 <div class="border-brand-text border-l-4 bg-gray-50 p-3 text-base">
                     <p>
-                        <span class="font-bold">Global benchmark:</span> I compare against a typical pace of about
+                        <span class="font-bold">Global benchmark:</span> we compare against a typical pace of about
                         {{ global_averages.avg_books_per_year }} books a year.
                         {{ global_averages_sources.avg_books_per_year.note }}
                         {% if global_averages_sources.avg_books_per_year.url %}
@@ -346,10 +481,418 @@
                                 >Archived copy</a
                             >.
                         {% endif %}
+                        {% if global_averages_sources.avg_books_per_year.citations %}
+                            <span class="mt-1 block">
+                                <span class="font-bold">Sources:</span>
+                                {% for citation in global_averages_sources.avg_books_per_year.citations %}
+                                    <a
+                                        href="{{ citation.url }}"
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="hover:bg-brand-yellow underline"
+                                        >{{ citation.label }}</a
+                                    >{% if not forloop.last %},{% else %}.{% endif %}
+                                {% endfor %}
+                            </span>
+                        {% endif %}
                     </p>
                 </div>
             </div>
-        </div>
+        </details>
+
+        {# ── Fetching genres ── #}
+        <details
+            id="genres-fetch"
+            class="border-brand-text shadow-neo group border-2 bg-white [&_summary::-webkit-details-marker]:hidden"
+        >
+            <summary
+                class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
+                aria-label="Toggle section: How We Fetch Genres"
+            >
+                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                    <span class="bg-brand-pink px-1">How We Fetch Genres</span>
+                </h2>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 flex-shrink-0 transition-transform duration-200 group-open:rotate-180"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    aria-hidden="true"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
+            <div class="space-y-3 px-6 pb-6 text-lg md:px-8 md:pb-8">
+                <div>
+                    <h3 class="font-bold uppercase">What it does</h3>
+                    <p>
+                        Your export barely comes with genres — Goodreads gives none at all, and StoryGraph only gives a
+                        few tags — so for every book we go and look them up.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold uppercase">How it works</h3>
+                    <p>
+                        We search two free, public book databases:
+                        <a
+                            href="https://openlibrary.org"
+                            target="_blank"
+                            rel="noopener"
+                            class="hover:bg-brand-yellow underline"
+                            >Open Library</a
+                        >
+                        first, then
+                        <a
+                            href="https://www.google.com/books"
+                            target="_blank"
+                            rel="noopener"
+                            class="hover:bg-brand-yellow underline"
+                            >Google Books</a
+                        >. Open Library gives us a book's "subjects" (things like <em>space opera</em>,
+                        <em>British fiction</em>, or <em>grief</em>); Google Books gives us its categories. If your
+                        StoryGraph export already has tags, we use those too. We match a book by its ISBN where we have
+                        one, and otherwise by title and author.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold uppercase">Assumptions and caveats</h3>
+                    <ul class="list-outside list-disc space-y-1 pl-6">
+                        <li>
+                            Matching isn't perfect. An obscure edition, an unusual title, or a book missing an ISBN can
+                            match the wrong record or nothing at all.
+                        </li>
+                        <li>
+                            Enrichment happens in the background, so genres can keep filling in for a minute or two
+                            after your dashboard first appears.
+                        </li>
+                        <li>
+                            The labels reflect how these databases and their communities catalogued a book, not a single
+                            official truth — two databases can disagree.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </details>
+
+        {# ── Flattening & classifying genres ── #}
+        <details
+            id="genres-classify"
+            class="border-brand-text shadow-neo group border-2 bg-white [&_summary::-webkit-details-marker]:hidden"
+        >
+            <summary
+                class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
+                aria-label="Toggle section: How We Simplify and Classify Genres"
+            >
+                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                    <span class="bg-brand-yellow px-1">How We Simplify &amp; Classify Genres</span>
+                </h2>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 flex-shrink-0 transition-transform duration-200 group-open:rotate-180"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    aria-hidden="true"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
+            <div class="space-y-3 px-6 pb-6 text-lg md:px-8 md:pb-8">
+                <div>
+                    <h3 class="font-bold uppercase">The problem</h3>
+                    <p>
+                        Raw genre labels are messy and inconsistent. "Fiction, Fantasy, General", "epic fantasy", and
+                        "sword &amp; sorcery" all mean roughly the same thing, and a single book can arrive tagged a
+                        dozen different ways.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold uppercase">How it works</h3>
+                    <p>
+                        We map every raw label onto one of about 56 tidy canonical genres — fantasy, history, romance,
+                        memoir, and so on — using a large dictionary of aliases. Then we keep the five most specific
+                        genres per book (six if the fifth is a very specific fiction genre like fantasy or thriller), so
+                        a book is described by what makes it distinctive rather than a generic "Fiction".
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold uppercase">Fiction vs non-fiction</h3>
+                    <p>
+                        Some labels are genuinely ambiguous — "classic", "young adult", and "children's" can be either.
+                        We only flip those to non-fiction when the book also carries a clear non-fiction marker such as
+                        <em>history</em> or <em>biography</em>. A clear signal from the databases always beats a shelf
+                        name you (or another reader) typed.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold uppercase">Assumptions and caveats</h3>
+                    <ul class="list-outside list-disc space-y-1 pl-6">
+                        <li>
+                            It's rule-based, so it isn't flawless. Poetry, for instance, we file under fiction as a
+                            deliberate simplification.
+                        </li>
+                        <li>
+                            A book only gets reclassified when the evidence is clear — we'd rather leave an ambiguous
+                            book where it is than flip it on a weak signal.
+                        </li>
+                        <li>
+                            Genre is inherently fuzzy. Two thoughtful readers will disagree about where a book belongs,
+                            and so will two databases.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </details>
+
+        {# ── Mainstream score ── #}
+        <details
+            id="mainstream"
+            class="border-brand-text shadow-neo group border-2 bg-white [&_summary::-webkit-details-marker]:hidden"
+        >
+            <summary
+                class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
+                aria-label="Toggle section: Mainstream Score"
+            >
+                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                    <span class="bg-brand-cyan px-1">Mainstream Score</span>
+                </h2>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 flex-shrink-0 transition-transform duration-200 group-open:rotate-180"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    aria-hidden="true"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
+            <div class="space-y-3 px-6 pb-6 text-lg md:px-8 md:pb-8">
+                <div>
+                    <h3 class="font-bold uppercase">What it measures</h3>
+                    <p>
+                        The share of your books that come from a big-name author or one of the major publishing houses
+                        and their many imprints — Penguin Random House, Hachette, HarperCollins, Macmillan, and Simon
+                        &amp; Schuster.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold uppercase">How it works</h3>
+                    <p>
+                        For every book we check whether its author <em>or</em> its publisher is flagged as mainstream,
+                        then divide by your total number of books. A high score means you mostly read widely-published,
+                        well-known names; a low score means you reach for more independent or under-the-radar writers.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold uppercase">Assumptions and caveats</h3>
+                    <ul class="list-outside list-disc space-y-1 pl-6">
+                        <li>
+                            "Mainstream" is a rough flag, not a value judgement. Niche isn't better or worse than
+                            popular — it's just a different way to read.
+                        </li>
+                        <li>A book with no known publisher only counts as mainstream if its author does.</li>
+                        <li>
+                            Publishing imprints are tangled in the real world (big houses own dozens of smaller labels),
+                            so matching a book to a major publisher is approximate.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </details>
+
+        {# ── Most positive & negative review ── #}
+        <details
+            id="reviews"
+            class="border-brand-text shadow-neo group border-2 bg-white [&_summary::-webkit-details-marker]:hidden"
+        >
+            <summary
+                class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
+                aria-label="Toggle section: Most Positive and Most Negative Review"
+            >
+                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                    <span class="bg-brand-green px-1">Most Positive &amp; Negative Review</span>
+                </h2>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 flex-shrink-0 transition-transform duration-200 group-open:rotate-180"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    aria-hidden="true"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
+            <div class="space-y-3 px-6 pb-6 text-lg md:px-8 md:pb-8">
+                <div>
+                    <h3 class="font-bold uppercase">What it does</h3>
+                    <p>
+                        If you write reviews in Goodreads or StoryGraph, we surface your most glowing one and your most
+                        scathing one.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold uppercase">How it works</h3>
+                    <p>
+                        We look at every review you wrote that's more than a few words long and score its tone with
+                        <a
+                            href="https://github.com/cjhutto/vaderSentiment"
+                            target="_blank"
+                            rel="noopener"
+                            class="hover:bg-brand-yellow underline"
+                            >VADER</a
+                        >, a well-known open-source
+                        <a
+                            href="https://en.wikipedia.org/wiki/Sentiment_analysis"
+                            target="_blank"
+                            rel="noopener"
+                            class="hover:bg-brand-yellow underline"
+                            >sentiment analysis</a
+                        >
+                        tool — it reads a piece of text and rates how positive or negative it sounds. For the positive
+                        pick we prefer your 5-star reviews and choose the warmest-toned one; for the negative pick we
+                        prefer your 1-star reviews and choose the harshest. If you have no 5- or 1-star reviews, we fall
+                        back to the most positive and most negative tone across everything you wrote.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold uppercase">Assumptions and caveats</h3>
+                    <ul class="list-outside list-disc space-y-1 pl-6">
+                        <li>
+                            Tone-scoring is blunt. Sarcasm, mixed feelings, and quoting someone else can all fool it.
+                        </li>
+                        <li>Very short reviews are skipped, since there isn't enough text to read a tone from.</li>
+                        <li>If you don't write reviews, this part of your dashboard simply doesn't appear.</li>
+                    </ul>
+                </div>
+            </div>
+        </details>
+
+        {# ── Recommendations ── #}
+        <details
+            id="recommendations"
+            class="border-brand-text shadow-neo group border-2 bg-white [&_summary::-webkit-details-marker]:hidden"
+        >
+            <summary
+                class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
+                aria-label="Toggle section: How We Recommend Books"
+            >
+                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                    <span class="bg-brand-orange px-1">How We Recommend Books</span>
+                </h2>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-6 w-6 flex-shrink-0 transition-transform duration-200 group-open:rotate-180"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    aria-hidden="true"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </summary>
+            <div class="space-y-3 px-6 pb-6 text-lg md:px-8 md:pb-8">
+                <p>
+                    This is the most involved one, so bear with us. The core idea is simple: find readers whose taste
+                    looks like yours, then suggest the books they loved that you haven't read yet.
+                </p>
+
+                <div>
+                    <h3 class="font-bold uppercase">Step 1 — measure how similar two readers are</h3>
+                    <p>
+                        We compare any two libraries across seven angles and blend them into a single similarity score.
+                        Two of those angles use standard maths worth naming:
+                    </p>
+                    <ul class="mt-2 list-outside list-disc space-y-1 pl-6">
+                        <li>
+                            <a
+                                href="https://en.wikipedia.org/wiki/Cosine_similarity"
+                                target="_blank"
+                                rel="noopener"
+                                class="hover:bg-brand-yellow underline"
+                                >Cosine similarity</a
+                            >
+                            — measures how closely two lists of preferences point in the same direction, regardless of
+                            how much each person has read. We use it to compare your genre mix and your favourite
+                            authors against someone else's.
+                        </li>
+                        <li>
+                            <a
+                                href="https://en.wikipedia.org/wiki/Jaccard_index"
+                                target="_blank"
+                                rel="noopener"
+                                class="hover:bg-brand-yellow underline"
+                                >Jaccard similarity</a
+                            >
+                            — the share of books two readers have in common out of all the distinct books they've read
+                            between them. It rewards genuinely overlapping shelves.
+                        </li>
+                    </ul>
+                    <p class="mt-2">
+                        The other five angles look at how you both rated the same books, your shared top books, how
+                        harsh or generous your ratings tend to be, and which decades you read from.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold uppercase">Step 2 — gather candidates</h3>
+                    <p>
+                        From the readers most similar to you (plus a sample of anonymised community libraries), we
+                        collect the books they rated highly and strip out anything you've already read or rated poorly.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold uppercase">Step 3 — score and rank</h3>
+                    <p>
+                        Each candidate earns points for how many similar readers loved it, how highly it's rated
+                        overall, how well it fits your favourite genres, and whether it matches what you're currently
+                        reading.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold uppercase">Step 4 — keep it varied</h3>
+                    <p>
+                        Finally we stop any one author or series from dominating, so you get a spread rather than ten
+                        books from the same trilogy.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold uppercase">Assumptions and caveats</h3>
+                    <ul class="list-outside list-disc space-y-1 pl-6">
+                        <li>
+                            Recommendations get better as more people upload their libraries, and they need a reasonable
+                            reading history of your own to work well.
+                        </li>
+                        <li>
+                            Anonymous uploads can only be matched against readers who have chosen to share their data.
+                        </li>
+                        <li>
+                            We only ever suggest real books that other readers actually rated highly — nothing is
+                            invented from thin air.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </details>
 
         {# CTA #}
         <div class="text-center">
@@ -361,4 +904,21 @@
             </a>
         </div>
     </div>
+
+    {# Open the section a dashboard link points at (e.g. …/methodology/#book-length) and scroll to it. #}
+    <script>
+        (function () {
+            function openTargetSection() {
+                var id = window.location.hash.slice(1);
+                if (!id) return;
+                var el = document.getElementById(id);
+                if (el && el.tagName.toLowerCase() === "details") {
+                    el.open = true;
+                    el.scrollIntoView();
+                }
+            }
+            openTargetSection();
+            window.addEventListener("hashchange", openTargetSection);
+        })();
+    </script>
 {% endblock %}
