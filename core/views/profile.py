@@ -72,7 +72,7 @@ def update_privacy_view(request):
     else:
         if _wants_json(request):
             return JsonResponse({"status": "success", "is_public": False})
-        messages.success(request, "Your profile is now private.")
+        messages.success(request, "Your profile is now private.", extra_tags="ephemeral")
 
     if "dna_data" in request.session:
         request.session.pop("dna_data", None)
@@ -87,7 +87,7 @@ def update_display_name_view(request):
     if form.is_valid():
         form.save()
         track_settings_updated(request.user.id, setting_type="display_name")
-        messages.success(request, "Your display name has been updated!")
+        messages.success(request, "Your display name has been updated!", extra_tags="ephemeral")
     else:
         for error in form.errors.values():
             messages.error(request, error)
@@ -108,7 +108,7 @@ def _update_username_api_throttled(request):
 
         if form.is_valid():
             form.save()
-            messages.success(request, "Display name updated successfully!")
+            messages.success(request, "Display name updated successfully!", extra_tags="ephemeral")
 
             return JsonResponse({"status": "success", "new_username": new_username})
         else:
@@ -164,9 +164,13 @@ def update_recommendation_visibility(request):
         return JsonResponse({"status": "success", "visible_in_recommendations": is_visible, "message": msg})
 
     if is_visible:
-        messages.success(request, "You are now visible as a recommendation source to similar readers!")
+        messages.success(
+            request, "You are now visible as a recommendation source to similar readers!", extra_tags="ephemeral"
+        )
     else:
-        messages.success(request, "You've opted out of being shown as a recommendation source.")
+        messages.success(
+            request, "You've opted out of being shown as a recommendation source.", extra_tags="ephemeral"
+        )
 
     return redirect("core:display_dna")
 
@@ -185,7 +189,7 @@ def _change_password_view_throttled(request):
         if _wants_json(request):
             return JsonResponse({"status": "success", "message": "Password changed successfully."})
 
-        messages.success(request, "Your password has been changed.")
+        messages.success(request, "Your password has been changed.", extra_tags="ephemeral")
         return redirect("core:display_dna")
 
     if _wants_json(request):
@@ -236,7 +240,7 @@ def _delete_account_view_throttled(request):
     if _wants_json(request):
         return JsonResponse({"status": "success", "redirect": reverse("core:home")})
 
-    messages.success(request, "Your account has been permanently deleted.")
+    messages.success(request, "Your account has been permanently deleted.", extra_tags="ephemeral")
     return redirect("core:home")
 
 
