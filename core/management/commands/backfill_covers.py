@@ -6,7 +6,7 @@ import requests
 from django.db.models import Q
 from django.core.management.base import BaseCommand
 
-from core.services.book_enrichment_service import _clean_title_for_api
+from core.services.book_enrichment_service import _clean_title_for_api, _redact_api_key
 from core.models import Book
 from core.services._book_urls import cover_url_from_isbn, cover_url_from_olid
 
@@ -165,7 +165,7 @@ class Command(BaseCommand):
             res.raise_for_status()
             data = res.json()
         except requests.RequestException as e:
-            self._warn(f"  GB API error for '{book.title}': {e}")
+            self._warn(f"  GB API error for '{book.title}': {_redact_api_key(e)}")
             return None
 
         if data.get("totalItems", 0) == 0:
