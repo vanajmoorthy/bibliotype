@@ -366,6 +366,43 @@ class EnrichmentStatusReaderTypePayloadTests(TestCase):
         color = data["updated_stats"].get("reader_type_color")
         self.assertIn(color, valid_colors)
 
+    def test_comparative_fields_present_in_payload(self):
+        """Poll response carries the comparative-analytics keys so charts_scripts
+        can reposition the posters + number-line markers live (PR D)."""
+        for i in range(5):
+            self._add_enriched_book(f"Comp E{i}", genres=["fiction"])
+        self._add_pending_book("Comp Pending")
+
+        self.profile.dna_data = {
+            "user_stats": {
+                "avg_book_length": 320,
+                "avg_publish_year": 2005,
+                "avg_books_per_year": 24,
+                "total_books_read": 60,
+            },
+        }
+        self.profile.save()
+
+        response = self.client.get("/api/enrichment-status/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertTrue(data.get("pending"))
+        updated = data["updated_stats"]
+        for key in (
+            "comparative_text",
+            "number_line_ranges",
+            "community_averages",
+            "global_averages",
+            "avg_publish_year",
+            "avg_books_per_year",
+        ):
+            self.assertIn(key, updated, f"updated_stats missing {key}")
+        # number_line_ranges should carry the three metric scales.
+        self.assertIn("pages", updated["number_line_ranges"])
+        self.assertIn("year", updated["number_line_ranges"])
+        self.assertIn("bpy", updated["number_line_ranges"])
+
 
 # ---------------------------------------------------------------------------
 # Integration: finalize persists profile.reader_type column

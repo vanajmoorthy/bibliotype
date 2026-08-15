@@ -415,12 +415,10 @@
                                         // Update mainstream score
                                         const msEl = document.getElementById('mainstream-score');
                                         if (msEl) msEl.textContent = s.mainstream_score_percent + '%';
-                                        // Update avg book length in comparative analytics
-                                        const avgEl = document.getElementById('stat-avg-length');
-                                        if (avgEl && s.avg_book_length != null) avgEl.textContent = s.avg_book_length;
                                         // Broadcast to charts_scripts.html: updates the genres
-                                        // list+donut, fiction/nonfiction numbers+pie, and book
-                                        // extremes in place (no teardown).
+                                        // list+donut, fiction/nonfiction numbers+pie, book
+                                        // extremes, and comparative posters/number-lines in
+                                        // place (no teardown).
                                         window.dispatchEvent(new CustomEvent('enrichment:update', { detail: s }));
                                     }
                                 } catch (e) {

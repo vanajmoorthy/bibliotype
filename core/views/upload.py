@@ -15,7 +15,7 @@ from django.views.decorators.http import require_POST
 from ..analytics.events import track_file_upload_started
 from ..cache_utils import DNA_CACHE_TTL, safe_cache_get, safe_cache_set
 from ..tasks import generate_reading_dna_task
-from ._helpers import _compute_enrichment_progress
+from ._helpers import _compute_enrichment_progress, _enrich_dna_for_display
 
 logger = logging.getLogger(__name__)
 
@@ -237,10 +237,18 @@ def enrichment_status_view(request):
 
     from ..dna_constants import READER_TYPE_COLORS
 
+    # Refresh the comparative-analytics payload (percentiles, community/global
+    # averages, comparative_text, number_line_ranges) from the just-recomputed
+    # user_stats so the live poll can move the comparative posters + number-line
+    # markers, not just the genre/fiction/extremes tiles.
+    _enrich_dna_for_display(dna_data)
+
     user_stats = dna_data.get("user_stats", {})
     updated_stats = {
         "total_pages_read": user_stats.get("total_pages_read", 0),
         "avg_book_length": user_stats.get("avg_book_length", 0),
+        "avg_publish_year": user_stats.get("avg_publish_year"),
+        "avg_books_per_year": user_stats.get("avg_books_per_year"),
         "top_genres": dna_data.get("top_genres", []),
         "unique_genres_count": dna_data.get("unique_genres_count", 0),
         "mainstream_score_percent": dna_data.get("mainstream_score_percent", 0),
@@ -248,6 +256,12 @@ def enrichment_status_view(request):
         "longest_book": dna_data.get("longest_book"),
         "shortest_book": dna_data.get("shortest_book"),
         "page_difference": dna_data.get("page_difference"),
+        # Comparative-analytics fields (consumed by updateComparative in
+        # charts_scripts.html to reposition posters + number-line markers).
+        "comparative_text": dna_data.get("comparative_text"),
+        "number_line_ranges": dna_data.get("number_line_ranges"),
+        "community_averages": dna_data.get("community_averages"),
+        "global_averages": dna_data.get("global_averages"),
     }
     # Include live reader-type data only for users who have csv_context persisted.
     # Older users (pre-PR2) lack this key and will get the type from the page-reload on completion.
