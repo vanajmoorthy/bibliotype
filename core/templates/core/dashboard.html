@@ -483,15 +483,44 @@
                         <span class="relative z-10"> {% include 'core/partials/username_editor.html' %} </span>
                     </h1>
                 </div>
-                <div class="flex flex-grow items-center justify-center">
-                    <div class="w-full text-center">
-                        <h2 class="mb-4 text-4xl font-bold uppercase">uh oh</h2>
-                        <p class="text-brand-text text-xl italic">
-                            Your account is ready but you haven't uploaded your data yet! To generate your Bibliotype,
-                            please go to the homepage and upload your library export.
-                        </p>
-                        {% url 'core:home' as home_url %}
-                        {% include 'core/partials/buttons/small_link_button.html' with href=home_url text="Upload Your Library File" color="green" extra_classes="mt-8 inline-block" %}
+                <div class="relative">
+                    <!-- Ghost layer: dashed, flat, low-opacity preview of the real dashboard -->
+                    <div aria-hidden="true" class="pointer-events-none select-none space-y-6 opacity-40">
+                        <div class="border-brand-text/40 border-2 border-dashed bg-white/60 p-6">
+                            <div class="mx-auto mb-6 h-10 w-2/3 bg-gray-200 md:w-1/2"></div>
+                            <div class="mx-auto mb-3 h-4 w-5/6 bg-gray-200"></div>
+                            <div class="mx-auto h-4 w-3/4 bg-gray-200"></div>
+                        </div>
+                        <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                            <div class="border-brand-text/40 border-2 border-dashed bg-white/60 p-6">
+                                <div class="mb-4 h-6 w-1/2 bg-gray-200"></div>
+                                <div class="cover-crosshatch mx-auto h-40 w-40"></div>
+                            </div>
+                            <div class="border-brand-text/40 border-2 border-dashed bg-white/60 p-6">
+                                <div class="mb-4 h-6 w-1/2 bg-gray-200"></div>
+                                <div class="mb-3 h-8 bg-gray-200"></div>
+                                <div class="mb-3 h-8 bg-gray-200"></div>
+                                <div class="h-8 bg-gray-200"></div>
+                            </div>
+                        </div>
+                        <div class="border-brand-text/40 hidden border-2 border-dashed bg-white/60 p-6 md:block">
+                            <div class="mb-4 h-6 w-1/3 bg-gray-200"></div>
+                            <div class="bg-brand-pink/30 mb-3 h-8 w-full"></div>
+                            <div class="bg-brand-cyan/30 mb-3 h-8 w-4/5"></div>
+                            <div class="bg-brand-green/30 mb-3 h-8 w-3/5"></div>
+                            <div class="bg-brand-yellow/30 h-8 w-2/5"></div>
+                        </div>
+                    </div>
+                    <!-- CTA overlay -->
+                    <div class="absolute inset-0 flex items-center justify-center p-4">
+                        <div class="border-brand-text shadow-neo w-full max-w-lg border-2 bg-white p-8 text-center">
+                            <h2 class="mb-3 text-3xl font-bold uppercase">Your Bibliotype is waiting</h2>
+                            <p class="text-lg text-gray-700">
+                                Upload your Goodreads or StoryGraph export and we'll turn it into your Reading DNA.
+                            </p>
+                            {% url 'core:home' as home_url %}
+                            {% include 'core/partials/buttons/small_link_button.html' with href=home_url text="Upload Your Library" color="green" extra_classes="mt-6 inline-block" %}
+                        </div>
                     </div>
                 </div>
             </div>

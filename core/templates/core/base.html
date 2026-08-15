@@ -34,7 +34,11 @@
             rel="canonical"
             href="{% block seo_canonical %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}"
         />
-        <link rel="alternate" hreflang="en" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}" />
+        <link
+            rel="alternate"
+            hreflang="en"
+            href="{% block hreflang_url %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}"
+        />
 
         {# Open Graph / Facebook #}
         <meta property="og:type" content="{% block og_type %}website{% endblock %}" />
@@ -157,6 +161,8 @@
 
         {# JavaScript #}
         {% block extra_head_js %}{% endblock %}
+        {# Collapse plugin must load before Alpine core #}
+        <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.15.8/dist/cdn.min.js"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.8/dist/cdn.min.js"></script>
 
         {# PostHog client-side analytics - cookieless mode, no consent banner needed #}
@@ -222,18 +228,27 @@
                 {% for message in messages %}
                     <div
                         x-data="{ show: true }"
+                        x-init="{% if message.tags != 'error' %}setTimeout(() => show = false, 5000){% endif %}"
                         x-show="show"
-                        class="border-brand-text shadow-neo {% if message.tags == 'error' %}
-                            bg-red-500 text-white
-                        {% elif message.tags == 'success' %}
-                            bg-brand-green text-brand-text
-                        {% else %}
-                            bg-brand-cyan text-brand-text
-                        {% endif %} relative mb-6 border-2 p-4 text-lg font-bold"
-                        role="alert"
+                        x-collapse.duration.250ms
+                        x-transition:leave="transition-opacity ease-in duration-200"
+                        x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0"
+                        class="overflow-hidden"
                     >
-                        <span>{{ message|safe }}</span>
-                        {% include 'core/partials/buttons/close_button.html' with extra_classes="absolute top-2 right-3 cursor-pointer" extra_attrs='@click="show = false"' %}
+                        <div
+                            class="toast-in border-brand-text shadow-neo {% if message.tags == 'error' %}
+                                bg-red-500 text-white
+                            {% elif message.tags == 'success' %}
+                                bg-brand-green text-brand-text
+                            {% else %}
+                                bg-brand-cyan text-brand-text
+                            {% endif %} relative mb-6 border-2 p-4 text-lg font-bold"
+                            role="alert"
+                        >
+                            <span>{{ message|safe }}</span>
+                            {% include 'core/partials/buttons/close_button.html' with extra_classes="absolute top-2 right-3 cursor-pointer" extra_attrs='@click="show = false"' %}
+                        </div>
                     </div>
                 {% endfor %}
             {% endif %}
