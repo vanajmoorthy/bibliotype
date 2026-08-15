@@ -6,7 +6,7 @@ from django.urls import reverse
 from core.dna_constants import GLOBAL_AVERAGES, GLOBAL_AVERAGES_SOURCES
 
 # The documented schema for each GLOBAL_AVERAGES_SOURCES entry.
-SOURCE_SCHEMA_KEYS = {"url", "archived_url", "accessed", "note"}
+SOURCE_SCHEMA_KEYS = {"url", "archived_url", "accessed", "note", "citations"}
 
 
 class MethodologyPageTests(TestCase):
@@ -97,6 +97,24 @@ class GlobalAveragesSourcesConsistencyTests(TestCase):
                         value.startswith(("https://", "http://")),
                         msg=f"{field} for '{key}' is not a URL: {value!r}",
                     )
+
+    def test_citations_are_a_list_of_labelled_urls(self):
+        """Each citation must be a {label, url} pair with a live URL, so the page
+        can name and link every study a note refers to."""
+        for key, source in GLOBAL_AVERAGES_SOURCES.items():
+            citations = source["citations"]
+            self.assertIsInstance(citations, list, msg=f"'{key}' citations must be a list.")
+            for citation in citations:
+                self.assertEqual(
+                    set(citation.keys()),
+                    {"label", "url"},
+                    msg=f"A citation for '{key}' does not match the {{label, url}} schema.",
+                )
+                self.assertTrue(str(citation["label"]).strip(), msg=f"A citation for '{key}' has no label.")
+                self.assertTrue(
+                    citation["url"].startswith(("https://", "http://")),
+                    msg=f"A citation for '{key}' is not a URL: {citation['url']!r}",
+                )
 
     def test_books_per_year_is_a_survey_median_not_a_skewed_mean(self):
         """avg_books_per_year is the median across reading surveys (which cluster at 2-5),
