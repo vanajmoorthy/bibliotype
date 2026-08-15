@@ -18,18 +18,29 @@ logger = logging.getLogger(__name__)
 GOOGLE_BOOKS_API_KEY = os.getenv("GOOGLE_BOOKS_API_KEY")
 
 
+# Matches a `key=<value>` query parameter (Google API keys are AIza… but keep
+# this permissive so a rotated/old key still gets scrubbed). Stops at the next
+# `&`, whitespace, or quote so we only redact the key value itself.
+_API_KEY_QUERY_RE = re.compile(r"([?&]key=)[^&\s\"']+", re.IGNORECASE)
+
+
 def _redact_api_key(text):
     """Strip the Google Books API key from anything we log or persist.
 
     requests embeds the full request URL (including `&key=...`) in its
     exception string, so error logs and analytics error_messages would
     otherwise leak the key in plaintext.
+
+    Two layers: replace the exact current key (covers keys that appear without
+    the `key=` prefix), then regex-scrub any `key=<value>` query param — the
+    latter catches an old/rotated key that no longer matches the env var.
     """
     if not text:
         return text
     text = str(text)
     if GOOGLE_BOOKS_API_KEY:
         text = text.replace(GOOGLE_BOOKS_API_KEY, "***REDACTED***")
+    text = _API_KEY_QUERY_RE.sub(r"\1***REDACTED***", text)
     return text
 
 # US-027b: Precompile alias regexes at import time so we don't re-run

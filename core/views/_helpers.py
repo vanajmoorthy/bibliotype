@@ -233,7 +233,18 @@ def _compute_enrichment_progress(user, profile, dna_data):
     """
     from ..models import Book
 
-    counts = Book.objects.filter(readers__user=user).aggregate(
+    # Scope progress to the current upload cohort when it was persisted at
+    # generation. On a re-upload the user's previously-enriched books already
+    # have google_books_last_checked set, so counting all of their books would
+    # make attempted == total almost immediately and flip the dashboard to
+    # "complete" before the newly-added books finish enriching. Legacy profiles
+    # generated before enrichment_cohort_ids existed fall back to all-books.
+    cohort = dna_data.get("enrichment_cohort_ids")
+    qs = Book.objects.filter(readers__user=user)
+    if cohort:
+        qs = qs.filter(id__in=cohort)
+
+    counts = qs.aggregate(
         total=Count("id", distinct=True),
         genres_done=Count("id", filter=Q(genres__isnull=False), distinct=True),
         pages_done=Count("id", filter=Q(page_count__isnull=False), distinct=True),

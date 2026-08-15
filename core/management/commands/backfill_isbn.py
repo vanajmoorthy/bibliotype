@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand
 from django.db import IntegrityError
 
 from core.models import Book
+from core.services.book_enrichment_service import _redact_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +128,7 @@ class Command(BaseCommand):
             res.raise_for_status()
             data = res.json()
         except requests.RequestException as e:
-            self._warn(f"  GB API error for '{title}': {e}")
+            self._warn(f"  GB API error for '{title}': {_redact_api_key(e)}")
             return None
 
         if data.get("totalItems", 0) == 0:
