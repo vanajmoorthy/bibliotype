@@ -12,6 +12,11 @@ git worktree add .claude/worktrees/<slug> -b <type>/<slug> origin/main
 
 Work, commit, and push from inside the worktree, then merge via PR. To run tests against a worktree while the shared Docker stack is up, use `docker run` with the worktree mounted over `/app` (with anonymous volumes for `/app/.venv` and `/app/node_modules`) on the `bibliotype_default` network — `docker compose run -v` will not override the compose bind mount. Remove the worktree after the PR merges.
 
+**Branches and PRs:**
+- Name branches `<type>/<slug>` where `<type>` is a Conventional Commit type (`feat`, `fix`, `chore`, `refactor`, `docs`, `test`, etc.) — e.g. `feat/ambient-books`, `fix/gemini-model-config`.
+- **PRs are squash-merged**, so each PR collapses to one commit. Write the PR title as a single sensible Conventional Commit message (`feat: …`, `fix: …`, `chore: …`) that describes all the contained changes as one coherent unit.
+- **Keep PRs small and self-contained.** Since we squash, a PR should be one logical change. If I keep asking for more changes, don't pile them onto the same branch — open a new smaller PR for each self-contained unit rather than growing one PR indefinitely.
+
 ## Quick Start (Docker — recommended)
 
 Local development uses `docker-compose.local.yml`, which runs all 4 services (PostgreSQL, Redis, Django, Celery worker) and mounts source code for live reload.
