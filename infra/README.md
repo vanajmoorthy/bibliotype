@@ -42,8 +42,10 @@ to Terraform Cloud (free) or a DO Spaces backend before anyone else runs this.
    docker exec -i app-db-1 pg_restore -U $POSTGRES_USER -d $POSTGRES_DB --clean --if-exists < bibliotype.dump
    ```
    Sanity-check: row counts, log in, load a dashboard.
-7. Cutover: point DNS A record at the reserved IP (or if DNS already targets it,
-   nothing to do). Old box keeps running as fallback.
+7. Cutover (DNS on Cloudflare): flip the A record to the reserved IP. If the
+   record is proxied (orange cloud), grey-cloud it while issuing the Let's
+   Encrypt cert on the new box (`certbot --nginx`), then re-enable the proxy —
+   HTTP-01 through the proxy can be flaky. Old box keeps running as fallback.
 8. After a quiet day or two: snapshot the old droplet, then destroy it.
 
 ## Launch-week resize

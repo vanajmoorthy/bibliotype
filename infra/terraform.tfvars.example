@@ -1,5 +1,12 @@
 # Copy to terraform.tfvars (gitignored) and fill in.
 
+# DO API token (write scope): cloud.digitalocean.com -> API -> Generate New Token.
+# Alternatively omit and `export DIGITALOCEAN_TOKEN=...` instead.
+do_token = "dop_v1_..."
+
+# Existing DO project to file the new droplet + reserved IP under (organizational only)
+project_name = "bibliotype"
+
 # Match the old droplet's region — check the DO console or:
 #   doctl compute droplet list --format Name,Region
 region = "lon1"

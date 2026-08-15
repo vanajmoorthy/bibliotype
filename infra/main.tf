@@ -4,7 +4,7 @@ terraform {
   required_providers {
     digitalocean = {
       source  = "digitalocean/digitalocean"
-      version = "~> 2.40"
+      version = "~> 2.99" # latest 2.99.1 (2026-08-06) at time of writing
     }
   }
 
@@ -13,8 +13,11 @@ terraform {
   # State files are gitignored — they can contain sensitive values.
 }
 
-# Auth: export DIGITALOCEAN_TOKEN=... (never put the token in .tf/.tfvars files)
-provider "digitalocean" {}
+# Auth: export DIGITALOCEAN_TOKEN=..., or set do_token in terraform.tfvars
+# (terraform.tfvars is gitignored; never put the token in committed files).
+provider "digitalocean" {
+  token = var.do_token
+}
 
 # Existing SSH keys already uploaded to the DO account (personal + deploy).
 data "digitalocean_ssh_key" "keys" {
@@ -23,7 +26,10 @@ data "digitalocean_ssh_key" "keys" {
 }
 
 resource "digitalocean_droplet" "bibliotype" {
-  name       = "bibliotype-prod"
+  name = "bibliotype-prod"
+  # 24.04 LTS deliberately (supported to 2029, Docker's apt repo is mature on
+  # it). 26.04 LTS shipped 2026-04 but DO droplet availability was still
+  # unconfirmed as of 2026-08; revisit at the next rebuild.
   image      = "ubuntu-24-04-x64"
   size       = var.droplet_size
   region     = var.region
@@ -91,6 +97,22 @@ resource "digitalocean_firewall" "bibliotype" {
     protocol              = "icmp"
     destination_addresses = ["0.0.0.0/0", "::/0"]
   }
+}
+
+# File the new resources into an existing DO project (purely organizational —
+# nothing breaks if this is skipped; resources land in the default project).
+data "digitalocean_project" "existing" {
+  count = var.project_name != "" ? 1 : 0
+  name  = var.project_name
+}
+
+resource "digitalocean_project_resources" "bibliotype" {
+  count   = var.project_name != "" ? 1 : 0
+  project = data.digitalocean_project.existing[0].id
+  resources = [
+    digitalocean_droplet.bibliotype.urn,
+    digitalocean_reserved_ip.bibliotype.urn,
+  ]
 }
 
 # DNS — only if the domain's nameservers point at DigitalOcean. If DNS lives at

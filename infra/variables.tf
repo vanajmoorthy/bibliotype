@@ -1,3 +1,16 @@
+variable "do_token" {
+  description = "DO API token (write scope). Prefer the DIGITALOCEAN_TOKEN env var; set here (terraform.tfvars, gitignored) only for convenience."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "project_name" {
+  description = "Existing DO project to file the droplet + reserved IP under (e.g. \"bibliotype\"). Empty = default project."
+  type        = string
+  default     = ""
+}
+
 variable "droplet_size" {
   description = "Droplet slug. $6 = s-1vcpu-1gb. Launch week: s-2vcpu-2gb ($18), then revert. CPU/RAM resizes are reversible because main.tf sets resize_disk = false."
   type        = string
