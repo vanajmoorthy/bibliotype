@@ -177,7 +177,7 @@ def _login_view_throttled(request):
                 dna_to_save = request.session.pop("dna_data")
                 if not user.userprofile.dna_data:
                     _save_dna_to_profile(user.userprofile, dna_to_save)
-                messages.success(request, "Logged in successfully!")
+                messages.success(request, "Logged in successfully!", extra_tags="ephemeral")
 
                 # Track login
                 track_user_logged_in(user.id, had_dna_in_session=True)
@@ -211,7 +211,7 @@ def logout_view(request):
     if "dna_data" in request.session:
         request.session.pop("dna_data", None)
     logout(request)
-    messages.info(request, "You have been logged out.")
+    messages.info(request, "You have been logged out.", extra_tags="ephemeral")
     return redirect("core:home")
 
 

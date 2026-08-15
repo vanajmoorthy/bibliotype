@@ -230,18 +230,19 @@
                 {% for message in messages %}
                     <div
                         x-data="{ show: true }"
-                        x-init="{% if message.tags != 'error' %}setTimeout(() => show = false, 5000){% endif %}"
+                        x-init="{% if 'ephemeral' in message.tags %}setTimeout(() => show = false, 5000){% endif %}"
                         x-show="show"
                         x-collapse.duration.250ms
                         x-transition:leave="transition-opacity ease-in duration-200"
                         x-transition:leave-start="opacity-100"
                         x-transition:leave-end="opacity-0"
-                        class="overflow-hidden"
+                        {# pr-1.5 keeps the offset shadow's right edge from being clipped by overflow-hidden (needed for x-collapse) #}
+                        class="overflow-hidden pr-1.5"
                     >
                         <div
-                            class="toast-in border-brand-text shadow-neo {% if message.tags == 'error' %}
+                            class="toast-in border-brand-text shadow-neo {% if 'error' in message.tags %}
                                 bg-red-500 text-white
-                            {% elif message.tags == 'success' %}
+                            {% elif 'success' in message.tags %}
                                 bg-brand-green text-brand-text
                             {% else %}
                                 bg-brand-cyan text-brand-text
