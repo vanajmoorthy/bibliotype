@@ -42,6 +42,7 @@ services:
             - SECRET_KEY=${SECRET_KEY}
             - POSTHOG_API_KEY=${POSTHOG_API_KEY}
             - GEMINI_API_KEY=${GEMINI_API_KEY}
+            - GEMINI_MODEL=${GEMINI_MODEL:-gemini-flash-lite-latest}
             - GOOGLE_BOOKS_API_KEY=${GOOGLE_BOOKS_API_KEY}
             - DEBUG=${DEBUG}
             - ALLOWED_HOSTS=${ALLOWED_HOSTS}
@@ -75,6 +76,7 @@ services:
             - SECRET_KEY=${SECRET_KEY}
             - POSTHOG_API_KEY=${POSTHOG_API_KEY}
             - GEMINI_API_KEY=${GEMINI_API_KEY}
+            - GEMINI_MODEL=${GEMINI_MODEL:-gemini-flash-lite-latest}
             - GOOGLE_BOOKS_API_KEY=${GOOGLE_BOOKS_API_KEY}
             - DEBUG=${DEBUG}
             - ALLOWED_HOSTS=${ALLOWED_HOSTS}

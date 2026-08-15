@@ -107,10 +107,21 @@
     <div x-data="{ isUploading: false, instructionsOpen: false }"
          @keydown.escape.window="instructionsOpen = false"
          class="flex h-full flex-col justify-center">
-        <div class="mx-auto w-full max-w-2xl p-2 text-center">
+        <div aria-hidden="true" class="ambient-books pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+            <div class="ambient-book bg-brand-pink" style="--x: 8%;  --d: 34s; --delay: 0s;   --r: -8deg; --s: 1;"></div>
+            <div class="ambient-book bg-brand-cyan" style="--x: 22%; --d: 46s; --delay: -12s; --r: 6deg;  --s: 0.7;"></div>
+            <div class="ambient-book bg-brand-yellow" style="--x: 35%; --d: 38s; --delay: -30s; --r: -4deg; --s: 1.2;"></div>
+            <div class="ambient-book bg-brand-green" style="--x: 55%; --d: 52s; --delay: -8s;  --r: 10deg; --s: 0.8;"></div>
+            <div class="ambient-book bg-brand-purple" style="--x: 68%; --d: 40s; --delay: -22s; --r: -6deg; --s: 1;"></div>
+            <div class="ambient-book bg-brand-orange" style="--x: 82%; --d: 44s; --delay: -4s;  --r: 4deg;  --s: 0.9;"></div>
+            <div class="ambient-book bg-brand-pink hidden md:block" style="--x: 15%; --d: 58s; --delay: -40s; --r: 7deg;  --s: 0.6;"></div>
+            <div class="ambient-book bg-brand-cyan hidden md:block" style="--x: 47%; --d: 62s; --delay: -18s; --r: -9deg; --s: 0.65;"></div>
+            <div class="ambient-book bg-brand-yellow hidden md:block" style="--x: 90%; --d: 50s; --delay: -35s; --r: 5deg;  --s: 0.75;"></div>
+        </div>
+        <div class="relative z-10 mx-auto w-full max-w-2xl p-2 text-center">
             <h1 class="flex flex-wrap justify-center gap-2 text-4xl font-bold tracking-widest uppercase md:text-5xl">
                 Discover Your
-                <span class="bg-[var(--color-brand-yellow)] px-2">Reading DNA</span>
+                <span class="highlight-sweep px-2">Reading DNA</span>
             </h1>
             <p class="mt-4 text-xl text-[var(--color-brand-text)]">
                 Upload your Goodreads or StoryGraph data to learn your literary personality type.
@@ -153,7 +164,7 @@
                                 <span class="border-brand-text bg-brand-cyan border-2 px-2">Browse</span> or drag your
                                 .csv file here
                             </p>
-                            <div x-show="fileName" x-transition class="relative  max-w-md">
+                            <div x-show="fileName" x-cloak x-transition class="relative  max-w-md">
                                 <div class="shadow-neo border-brand-text border-2 bg-brand-yellow text-sm md:text-md px-6 py-2">
                                     <p class="text-brand-text truncate text-xl font-bold" x-text="fileName"></p>
                                 </div>
@@ -161,8 +172,8 @@
                             </div>
                         </label>
                     </div>
-                    {% with button_text='<span x-show="isUploading">Loading...</span><span x-show="!isUploading">Generate My Bibliotype</span>'|safe %}
-                        {% include 'core/partials/buttons/primary_button.html' with text=button_text disabled_attr=':disabled="!fileName" :class="{ \'opacity-50 !shadow-none cursor-not-allowed\': !fileName, \'cursor-pointer\': fileName }"' %}
+                    {% with button_text='<span x-cloak x-show="isUploading">Loading...</span><span x-show="!isUploading && !fileName">Upload Your Bibliotype</span><span x-cloak x-show="!isUploading && fileName">Generate My Bibliotype</span>'|safe %}
+                        {% include 'core/partials/buttons/primary_button.html' with text=button_text disabled_attr='@click="if (!fileName) { $event.preventDefault(); $refs.fileInput.click(); }"' %}
                     {% endwith %}
                 </form>
             </div>

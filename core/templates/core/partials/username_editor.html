@@ -14,7 +14,7 @@
                 <span
                     class="bg-brand-yellow group-hover:border-brand-text absolute inset-0 z-10 border-2 border-transparent transition-colors"
                 ></span>
-                <span class="relative z-20 px-2" x-text="originalName"></span>
+                <span class="relative z-20 px-2" x-text="originalName">{{ user.username }}</span>
                 <div class="text-brand-text absolute -right-2 -bottom-2 z-30">
                     <svg
                         class="h-7 w-7"
@@ -28,7 +28,7 @@
                     </svg>
                 </div>
             </div>
-            <span x-text="originalName.toLowerCase().endsWith('s') ? `'` : `'s`"></span>
+            <span x-text="originalName.toLowerCase().endsWith('s') ? `'` : `'s`">{% if user.username|lower|slice:"-1:" == "s" %}'{% else %}'s{% endif %}</span>
         </div>
         <span>Bibliotype</span>
     </div>
@@ -48,11 +48,12 @@
             {% include 'core/partials/buttons/small_button.html' with text="Save" color="green" type="submit" extra_classes="text-xl" extra_attrs=':disabled="!isNewNameValid" :class="{ \'opacity-50 cursor-not-allowed\': !isNewNameValid }"' %}
         </form>
     </div>
-    <div x-show="editing && newName.length > 15" class="mt-2 text-lg font-bold text-red-600">
+    <div x-show="editing && newName.length > 15" x-cloak class="mt-2 text-lg font-bold text-red-600">
         Display name cannot be more than 15 characters.
     </div>
     <div
         x-show="editing && errorMessage"
+        x-cloak
         x-text="errorMessage"
         class="mt-2 text-lg font-bold text-red-600"
     ></div>
