@@ -65,14 +65,19 @@ def check_author_mainstream_status_task(author_id: int, user_id: int = None, upl
 
 # name pinned: wire name must survive the package split (queued msgs + beat)
 @shared_task(bind=True, max_retries=3, rate_limit="30/m", name="core.tasks.enrich_book_task")
-def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str = None):
+def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str = None, force: bool = False):
     """Enrich a single book with data from Open Library and Google Books APIs.
 
     If upload_nonce is provided, checks that it still matches the current upload
     for this user. If a newer upload has started, this task exits early to avoid
     wasting API calls on stale enrichment work.
+
+    Respects the ENRICHMENT_RETRY_AFTER window: a book attempted within the
+    window is skipped so the async path agrees with the inline path in
+    dna_analyser. force=True bypasses the window (operator re-runs).
     """
     from ..cache_utils import safe_cache_get
+    from ..dna_constants import ENRICHMENT_RETRY_AFTER
 
     def _is_superseded():
         if not (user_id and upload_nonce):
@@ -98,6 +103,14 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
         logger.info(f"Enrich task for book {book_id} skipped before API call — superseded by newer upload")
         return
 
+    # Honour the retry window unless forced: a book attempted within
+    # ENRICHMENT_RETRY_AFTER is skipped (it already carries a timestamp, so
+    # completion detection still counts it as attempted).
+    if not force and book.google_books_last_checked is not None:
+        if timezone.now() - book.google_books_last_checked < ENRICHMENT_RETRY_AFTER:
+            logger.info(f"Enrich task for book {book_id} skipped — attempted within retry window")
+            return
+
     logger.info(f"Enriching book '{book.title}' (id={book_id}) via background task")
 
     try:
@@ -118,8 +131,6 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
             # Mark book as attempted so polling completion detection can finish.
             # Without this, books that consistently fail enrichment leave the
             # dashboard banner stuck at the same percent forever.
-            from django.utils import timezone
-
             Book.objects.filter(pk=book_id).update(google_books_last_checked=timezone.now())
             logger.warning(f"Max retries exhausted for book '{book.title}' (id={book_id}); marking as attempted")
 
