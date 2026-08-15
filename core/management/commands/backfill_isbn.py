@@ -4,6 +4,7 @@ import re
 import time
 
 import requests
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import IntegrityError
 
@@ -184,7 +185,7 @@ class Command(BaseCommand):
         conflicts = 0
 
         with requests.Session() as session:
-            session.headers.update({"User-Agent": "BibliotypeApp/1.0"})
+            session.headers.update({"User-Agent": settings.EXTERNAL_API_USER_AGENT})
 
             for book in queryset.iterator():
                 # Try Open Library first

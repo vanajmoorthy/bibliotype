@@ -1,11 +1,12 @@
 import logging
 
 import requests
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 
-from core.services.book_enrichment_service import enrich_book_from_apis
 from core.models import Book
+from core.services.book_enrichment_service import enrich_book_from_apis
 from core.tasks import enrich_book_task
 
 logger = logging.getLogger(__name__)
@@ -100,7 +101,7 @@ class Command(BaseCommand):
 
     def _sync_enrich(self, queryset, gb_limit, reset_gb=False):
         session = requests.Session()
-        session.headers.update({"User-Agent": "BibliotypeApp/1.0"})
+        session.headers.update({"User-Agent": settings.EXTERNAL_API_USER_AGENT})
         gb_calls = 0
         ol_calls = 0
         processed = 0

@@ -55,6 +55,11 @@ ENABLE_PARALLEL_ENRICHMENT = _env_bool("ENABLE_PARALLEL_ENRICHMENT", False)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
+# Identified User-Agent for external book APIs. Open Library grants identified
+# traffic (app name + contact) 3 req/s instead of the anonymous 1 req/s:
+# https://openlibrary.org/developers/api
+EXTERNAL_API_USER_AGENT = "BibliotypeApp/1.0 (contact: vanajmoorthy@gmail.com)"
+
 allowed_hosts_str = os.environ.get("ALLOWED_HOSTS", "")
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(",") if host.strip()]
 
@@ -318,18 +323,18 @@ LOGGING = {
 from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {
-    'anonymize-expired-sessions': {
-        'task': 'core.tasks.anonymize_expired_sessions_task',
-        'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
+    "anonymize-expired-sessions": {
+        "task": "core.tasks.anonymize_expired_sessions_task",
+        "schedule": crontab(hour=2, minute=0),  # Daily at 2 AM
     },
-    'research-publisher-mainstream': {
-        'task': 'core.tasks.research_publisher_mainstream_task',
-        'schedule': crontab(hour=3, minute=0, day_of_week='sunday'),  # Weekly on Sundays at 3 AM
+    "research-publisher-mainstream": {
+        "task": "core.tasks.research_publisher_mainstream_task",
+        "schedule": crontab(hour=3, minute=0, day_of_week="sunday"),  # Weekly on Sundays at 3 AM
     },
 }
 
 # Custom 404 handler
-handler404 = 'core.views.handler404'
+handler404 = "core.views.handler404"
 
 # Django Silk configuration - opt-in via ENABLE_SILK=True (local development only)
 if ENABLE_SILK:

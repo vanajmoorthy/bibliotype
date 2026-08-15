@@ -5,6 +5,7 @@ import time
 
 import requests
 from celery import shared_task
+from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
 
@@ -38,7 +39,7 @@ def check_author_mainstream_status_task(author_id: int, user_id: int = None, upl
         logger.info(f"Running mainstream status check for new author: {author.name}")
 
         with requests.Session() as session:
-            headers = {"User-Agent": "BibliotypeApp/1.0 (contact@yourdomain.com)"}
+            headers = {"User-Agent": settings.EXTERNAL_API_USER_AGENT}
             session.headers.update(headers)
             status_data = check_author_mainstream_status(author.name, session)
 
@@ -117,7 +118,7 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
         from ..services.book_enrichment_service import enrich_book_from_apis
 
         with requests.Session() as session:
-            session.headers.update({"User-Agent": "BibliotypeApp/1.0"})
+            session.headers.update({"User-Agent": settings.EXTERNAL_API_USER_AGENT})
             enrich_book_from_apis(book, session, slow_down=True)
 
         logger.info(f"Successfully enriched '{book.title}'")
@@ -139,7 +140,7 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
 @shared_task(name="core.tasks.research_publisher_mainstream_task")
 def research_publisher_mainstream_task():
     """Periodic task to check unchecked publishers for mainstream status via AI research."""
-    from ..models import Publisher, Author
+    from ..models import Author, Publisher
     from ..services.publisher_service import research_publisher_identity
 
     cutoff = timezone.now() - timezone.timedelta(days=PUBLISHER_CHECK_AGE_THRESHOLD_DAYS)
@@ -158,7 +159,7 @@ def research_publisher_mainstream_task():
     updated_count = 0
 
     with requests.Session() as session:
-        session.headers.update({"User-Agent": "BibliotypeApp/1.0"})
+        session.headers.update({"User-Agent": settings.EXTERNAL_API_USER_AGENT})
 
         for publisher in publishers_to_check:
             try:
