@@ -31,12 +31,12 @@ from ...dna_constants import (
     compute_contrariness,
 )
 from ...models import Author, Book, Genre
-from ..genre_classification import canonicalize_genre_names, count_fiction_nonfiction, parse_shelf_signals
 from ...percentile_engine import (
     calculate_community_means,
     calculate_percentiles_from_aggregates,
     update_analytics_from_stats,
 )
+from ..genre_classification import canonicalize_genre_names, count_fiction_nonfiction, parse_shelf_signals
 from ..top_books_service import calculate_and_store_top_books
 from .csv_parser import (  # noqa: F401 — re-exported for stable import paths
     STORYGRAPH_TO_GOODREADS,
@@ -50,7 +50,11 @@ from .persistence import (  # noqa: F401 — re-exported for stable import paths
     _save_dna_to_profile,
     save_anonymous_session_data,
 )
-from .reader_type import assign_reader_type, compute_books_per_year, compute_reread_count  # noqa: F401 — re-exported for stable import paths
+from .reader_type import (  # noqa: F401 — re-exported for stable import paths
+    assign_reader_type,
+    compute_books_per_year,
+    compute_reread_count,
+)
 from .utils import (  # noqa: F401 — re-exported for stable import paths
     _build_cover_url,
     _cover_initial,
@@ -220,9 +224,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     # for fields that haven't changed. Only fill columns that
                     # are currently NULL on the existing row.
                     fields_to_fill = {
-                        k: v
-                        for k, v in book_defaults.items()
-                        if v is not None and getattr(book, k, None) is None
+                        k: v for k, v in book_defaults.items() if v is not None and getattr(book, k, None) is None
                     }
                     if fields_to_fill:
                         try:
@@ -230,9 +232,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                             for k, v in fields_to_fill.items():
                                 setattr(book, k, v)
                         except IntegrityError:
-                            logger.warning(
-                                f"IntegrityError updating ISBN-matched book {isbn13_value}, skipping update"
-                            )
+                            logger.warning(f"IntegrityError updating ISBN-matched book {isbn13_value}, skipping update")
                 else:
                     try:
                         book, created = Book.objects.update_or_create(
@@ -265,12 +265,16 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     raw_tags_str = original_row.get("Tags")
                     if raw_tags_str and pd.notna(raw_tags_str):
                         raw_tags = [t.strip().lower() for t in str(raw_tags_str).split(",") if t.strip()]
-                        tag_genres = list({STORYGRAPH_TAG_TO_GENRE[t] for t in raw_tags if t in STORYGRAPH_TAG_TO_GENRE})
+                        tag_genres = list(
+                            {STORYGRAPH_TAG_TO_GENRE[t] for t in raw_tags if t in STORYGRAPH_TAG_TO_GENRE}
+                        )
                         if tag_genres:
                             genre_objs = [Genre.objects.get_or_create(name=g)[0] for g in tag_genres]
                             book.genres.add(*genre_objs)
                             has_genres = True
-                            logger.debug(f"Applied {len(tag_genres)} tag-derived genres for '{book.title}': {tag_genres}")
+                            logger.debug(
+                                f"Applied {len(tag_genres)} tag-derived genres for '{book.title}': {tag_genres}"
+                            )
 
                 # Inline-first enrichment: while the 90s budget lasts, enrich
                 # synchronously with quick_mode timeouts so genres land in THIS
@@ -371,9 +375,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         # Context-dependent fiction/nonfiction classification. Books with no
         # classifiable genres are tracked in defaulted_count — never fiction.
         # Shelf signals only decide when API genres give no clear signal.
-        fiction_count, nonfiction_count, defaulted_count = count_fiction_nonfiction(
-            book_genre_sets, shelf_signal_list
-        )
+        fiction_count, nonfiction_count, defaulted_count = count_fiction_nonfiction(book_genre_sets, shelf_signal_list)
 
         # Persist sparse per-book shelf signals (keyed by Book id) so the
         # poll-time recompute in core/views/_helpers.py can reproduce this
@@ -836,8 +838,11 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             logger.info("Anonymous user. Generating a new vibe with LLM...")
             reading_vibe = generate_vibe_with_llm(dna)
 
-        dna["reading_vibe"] = reading_vibe
-        dna["vibe_data_hash"] = new_data_hash
+        # A failed LLM call returns None. Persist an empty vibe but leave the
+        # hash unset, so the next DNA run regenerates instead of caching the
+        # failure forever (the cached-vibe branch above requires a hash match).
+        dna["reading_vibe"] = reading_vibe or []
+        dna["vibe_data_hash"] = new_data_hash if reading_vibe else None
 
         def clean_dict(d):
             if not isinstance(d, dict):

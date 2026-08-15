@@ -9,6 +9,7 @@ from django.db import IntegrityError
 from django.utils import timezone
 
 from ..analytics.events import track_external_api_call
+from ..cache_utils import safe_cache_get, safe_cache_set
 from ..dna_constants import CANONICAL_GENRE_MAP, ENRICHMENT_RETRY_AFTER, EXCLUDED_GENRES, GENRE_PRIORITY
 from ..models import Author, Book, Genre, Publisher
 from ._book_urls import cover_url_from_isbn, cover_url_from_olid
@@ -16,6 +17,20 @@ from ._book_urls import cover_url_from_isbn, cover_url_from_olid
 logger = logging.getLogger(__name__)
 
 GOOGLE_BOOKS_API_KEY = os.getenv("GOOGLE_BOOKS_API_KEY")
+
+# Shared (Redis-backed) circuit breaker: trips on a Google Books quota error
+# (HTTP 429, or 403 with a quota reason) so every process — inline web
+# enrichment and Celery workers alike — backs off together instead of burning
+# the daily quota on requests that are doomed to fail. Books skipped or failed
+# during the cooldown are NOT stamped google_books_last_checked, so they become
+# eligible again as soon as the cooldown lifts rather than waiting out
+# ENRICHMENT_RETRY_AFTER.
+GOOGLE_BOOKS_COOLDOWN_KEY = "google_books_quota_cooldown"
+GOOGLE_BOOKS_COOLDOWN_SECONDS = 3600
+
+# Google reports 403 for both quota exhaustion and authorization problems; the
+# body's error reason distinguishes them so we can log config errors loudly.
+_GB_QUOTA_REASONS = {"rateLimitExceeded", "userRateLimitExceeded", "dailyLimitExceeded", "quotaExceeded"}
 
 
 # Matches a `key=<value>` query parameter (Google API keys are AIza… but keep
@@ -42,6 +57,7 @@ def _redact_api_key(text):
         text = text.replace(GOOGLE_BOOKS_API_KEY, "***REDACTED***")
     text = _API_KEY_QUERY_RE.sub(r"\1***REDACTED***", text)
     return text
+
 
 # US-027b: Precompile alias regexes at import time so we don't re-run
 # `re.compile(r"\b" + re.escape(alias) + r"\b")` once per book per alias.
@@ -287,7 +303,9 @@ def _fetch_from_open_library(book, session, slow_down=False, quick_mode=False):
     except requests.RequestException as e:
         logger.error(f"Open Library API Error for '{book.title}': {e}")
         status_code = getattr(e.response, "status_code", None) if hasattr(e, "response") else None
-        track_external_api_call("open_library", book.pk, book.title, "error", status_code=status_code, error_message=str(e))
+        track_external_api_call(
+            "open_library", book.pk, book.title, "error", status_code=status_code, error_message=str(e)
+        )
         return {}, api_calls or 1
 
 
@@ -296,11 +314,17 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
     Fetches ratings AND categories (genres) from Google Books.
     Google Books categories are often more accurate than Open Library subjects.
     Returns a dictionary of data and the number of API calls made (always 1 or 0).
+    Returns None instead of a dict when the attempt failed (quota cooldown or
+    request error) — callers must treat that as "retry later", not "no data".
 
     quick_mode=True uses a reduced 5s HTTP timeout for inline enrichment.
     """
     if not GOOGLE_BOOKS_API_KEY:
         return {}, 0  # No API key, so no call is made
+
+    if safe_cache_get(GOOGLE_BOOKS_COOLDOWN_KEY):
+        logger.debug(f"Google Books quota cooldown active; skipping fetch for '{book.title}'")
+        return None, 0
 
     logger.debug(f"Querying Google Books for ratings and categories for '{book.title}'")
     if book.isbn13:
@@ -364,7 +388,25 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
         track_external_api_call(
             "google_books", book.pk, book.title, "error", status_code=status_code, error_message=safe_error
         )
-        return {}, 1
+        if status_code in (429, 403):
+            reason = None
+            try:
+                reason = e.response.json()["error"]["errors"][0]["reason"]
+            except Exception:  # noqa: BLE001 — error body shape varies; the reason is best-effort
+                pass
+            if status_code == 403 and reason not in _GB_QUOTA_REASONS:
+                logger.error(
+                    f"Google Books returned HTTP 403 ({reason or 'no reason in body'}) — this looks like an "
+                    f"API key or API-enablement problem, not quota. Check GOOGLE_BOOKS_API_KEY. "
+                    f"Backing off for {GOOGLE_BOOKS_COOLDOWN_SECONDS}s anyway."
+                )
+            else:
+                logger.warning(
+                    f"Google Books quota exhausted (HTTP {status_code}); "
+                    f"backing off for {GOOGLE_BOOKS_COOLDOWN_SECONDS}s"
+                )
+            safe_cache_set(GOOGLE_BOOKS_COOLDOWN_KEY, 1, timeout=GOOGLE_BOOKS_COOLDOWN_SECONDS)
+        return None, 1
 
 
 def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
@@ -424,7 +466,12 @@ def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
         )
         gb_api_calls += calls_made
 
-        if gb_data:
+        if gb_data is None:
+            # Attempt failed (quota cooldown, transport error). Leave the book
+            # unstamped so it's retried as soon as conditions recover, instead
+            # of waiting out the full ENRICHMENT_RETRY_AFTER window.
+            pass
+        else:
             if gb_data.get("ratings_count") is not None:
                 book.google_books_ratings_count = gb_data["ratings_count"]
                 is_updated = True
@@ -435,9 +482,10 @@ def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
             if google_genres := gb_data.get("categories"):
                 gb_genres = set(_canonicalize_google_books_categories(google_genres))
 
-        # Mark as checked *after* the API call is attempted.
-        book.google_books_last_checked = timezone.now()
-        is_updated = True  # Always true if we ran the check
+            # Mark as checked only after a *completed* API exchange (including
+            # a clean "not found") — never after a failed one.
+            book.google_books_last_checked = timezone.now()
+            is_updated = True
 
     # Merge both sources: Google Books canonical genres first (higher
     # confidence), Open Library supplements. The combined set is priority-sorted

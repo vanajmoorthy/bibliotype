@@ -92,7 +92,7 @@ def generate_vibe_with_llm(dna: dict) -> list:
     model = _gemini.client()
     if model is None:
         logger.warning("Vibe generation skipped because API key is not configured")
-        return ["vibe generation disabled", "please configure api key"]
+        return None
 
     prompt = create_vibe_prompt(dna)
 
@@ -106,11 +106,12 @@ def generate_vibe_with_llm(dna: dict) -> list:
         if isinstance(vibe_phrases, list) and all(isinstance(p, str) for p in vibe_phrases):
             return vibe_phrases
         else:
-            return ["error parsing vibe", "unexpected format received"]
+            logger.error(f"Vibe response had unexpected format: {response_json}")
+            return None
 
-    except json.JSONDecodeError as e:
+    except json.JSONDecodeError:
         logger.error(f"Failed to decode JSON from response: {response.text}", exc_info=True)
-        return ["error generating vibe", "invalid json response"]
+        return None
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}", exc_info=True)
-        return ["error generating vibe", "api call failed"]
+        return None

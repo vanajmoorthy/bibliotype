@@ -2,6 +2,16 @@
 
 Bibliotype is a Django app that analyzes Goodreads/StoryGraph CSV exports to generate "Reading DNA" dashboards with AI insights. Neobrutalist design (bold borders, offset shadows, VT323 font).
 
+## Git Workflow (IMPORTANT)
+
+**Always do new work in a fresh git worktree on its own branch — never edit the main checkout directly, and never commit to `main`.** Multiple Claude sessions share this checkout concurrently; editing it directly mixes unrelated changes together.
+
+```bash
+git worktree add .claude/worktrees/<slug> -b <type>/<slug> origin/main
+```
+
+Work, commit, and push from inside the worktree, then merge via PR. To run tests against a worktree while the shared Docker stack is up, use `docker run` with the worktree mounted over `/app` (with anonymous volumes for `/app/.venv` and `/app/node_modules`) on the `bibliotype_default` network — `docker compose run -v` will not override the compose bind mount. Remove the worktree after the PR merges.
+
 ## Quick Start (Docker — recommended)
 
 Local development uses `docker-compose.local.yml`, which runs all 4 services (PostgreSQL, Redis, Django, Celery worker) and mounts source code for live reload.
