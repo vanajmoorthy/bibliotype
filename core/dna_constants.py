@@ -429,6 +429,9 @@ GENRE_ALIASES = {
         "teenage fiction",
         "high school students",
         "coming of age",
+        # Bildungsroman = coming-of-age novel; mirror the "coming of age" alias.
+        "bildungsroman",
+        "bildungsromans",
         "adolescence",
         "runaway teenagers",
         "teenage boys",
@@ -1637,6 +1640,34 @@ EXCLUDED_GENRES = {
     "físicos",
     "photographers",
     "guards troops",
+    # --- ENRICHMENT LOG CLEANUP (2026-08): non-genre subjects that recur as
+    # "Could not match" noise. These are topics/generic-filler, not genres —
+    # mapping them to a canonical genre would introduce false positives, so we
+    # exclude them outright to quiet the logs. See PR notes for rationale.
+    # Generic-fiction filler (cf. "fiction, general" above):
+    "general fiction",
+    "fiction and literature",
+    "fiction, women",
+    "fiction, city life",
+    # Topic/subject tags (what a book is about, not what it is):
+    "duchies",
+    "shipwrecks",
+    "mutiny",
+    "single mothers",
+    "motherhood",
+    "children of alcoholics",
+    "working class families",
+    "gay teenagers",
+    "violence against gay teenagers",
+    "violence against",
+    "television actors and actresses",
+    "child actors",
+    "singers",
+    "african american",
+    "chinese american women",
+    "health & fitness",
+    # Open Library collection ID tag (pure metadata, never a genre):
+    "collectionid:jpsat",
 }
 
 

@@ -86,6 +86,10 @@ class NewCanonicalGenreMappingTests(TestCase):
         """'autobiographical fiction' is fiction and must NOT map to memoir."""
         self.assertNotEqual(CANONICAL_GENRE_MAP.get("autobiographical fiction"), "memoir")
 
+    def test_bildungsroman(self):
+        """Bildungsroman is the coming-of-age novel; mirrors the 'coming of age' alias."""
+        self._assert_maps("young adult fiction", ["bildungsroman", "bildungsromans"])
+
 
 class BackwardCompatAliasTests(TestCase):
     """Old canonical names must resolve to their fiction sub-categories — no data migration."""
@@ -127,6 +131,21 @@ class ExcludedGenresRegressionTests(TestCase):
         """'literary' and 'fiction' must stay excluded to prevent API false positives."""
         self.assertIn("literary", EXCLUDED_GENRES)
         self.assertIn("fiction", EXCLUDED_GENRES)
+
+    def test_enrichment_log_cleanup_terms_excluded(self):
+        """Non-genre subjects from enrichment logs are excluded so they don't become genres."""
+        for term in [
+            "general fiction",
+            "fiction and literature",
+            "fiction, women",
+            "duchies",
+            "shipwrecks",
+            "single mothers",
+            "motherhood",
+            "child actors",
+            "collectionid:jpsat",
+        ]:
+            self.assertIn(term, EXCLUDED_GENRES)
 
     def test_genre_priority_covers_all_canonical_genres(self):
         """Nothing may sort to the 999 fallback in enrichment priority sorting."""
