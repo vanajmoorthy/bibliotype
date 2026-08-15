@@ -16,12 +16,14 @@ import requests
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from django.db.models import F
+from django.utils import timezone
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from core.services.llm_service import generate_vibe_with_llm
 
 from ...dna_constants import (
     CANONICAL_GENRE_MAP,
+    ENRICHMENT_RETRY_AFTER,
     GLOBAL_AVERAGES,
     NICHE_THRESHOLD,
     READER_TYPE_DESCRIPTIONS,
@@ -274,10 +276,18 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 # synchronously with quick_mode timeouts so genres land in THIS
                 # DNA calculation (no async race). On failure or once the budget
                 # is exhausted, fall back to the async task exactly as before.
-                # Skip if the full pipeline already ran (google_books_last_checked set).
-                already_attempted = not created and book.google_books_last_checked is not None
+                # Skip only if the full pipeline ran *recently*. google_books_last_
+                # checked is the last-attempt marker; a book attempted within the
+                # retry window is trusted and skipped, but once the attempt is older
+                # than ENRICHMENT_RETRY_AFTER it becomes eligible again so a book that
+                # got zero genres can pick up data the APIs may have added since.
+                recently_attempted = (
+                    not created
+                    and book.google_books_last_checked is not None
+                    and timezone.now() - book.google_books_last_checked < ENRICHMENT_RETRY_AFTER
+                )
                 needs_page_data = not book.page_count or not book.publish_year
-                if not already_attempted and (created or not has_genres or needs_page_data):
+                if not recently_attempted and (created or not has_genres or needs_page_data):
                     enriched_inline = False
                     if enrichment_budget.has_remaining():
                         try:
@@ -299,7 +309,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                         )
                         enrich_book_task.delay(book.pk, user_id=upload_user_id, upload_nonce=upload_nonce)
                 else:
-                    logger.debug(f"Book '{book.title}' already enriched. Skipping.")
+                    logger.debug(f"Book '{book.title}' recently enriched or complete. Skipping.")
 
                 Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
 

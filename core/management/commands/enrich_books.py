@@ -22,6 +22,11 @@ class Command(BaseCommand):
         parser.add_argument("--sync", action="store_true", help="Run synchronously via APIs instead of Celery")
         parser.add_argument("--process-all", action="store_true", help="Re-check all books, not just unenriched")
         parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Bypass the 24h enrichment retry window (re-attempt books even if recently checked)",
+        )
+        parser.add_argument(
             "--google-books-limit",
             type=int,
             default=self.GOOGLE_BOOKS_API_LIMIT,
@@ -71,9 +76,10 @@ class Command(BaseCommand):
             return
 
         # Re-enrichment must re-fetch Google Books data so OL + GB genres get
-        # merged; enrich_book_from_apis skips the GB call for books whose
-        # google_books_last_checked is already set.
-        reset_gb = options["process_all"]
+        # merged; enrich_book_from_apis skips the GB call for books checked within
+        # the retry window. Both --process-all and --force bypass that window by
+        # resetting the timestamp so the next check re-fetches immediately.
+        reset_gb = options["process_all"] or options["force"]
 
         if options["sync"]:
             self._sync_enrich(queryset, options["google_books_limit"], reset_gb)
@@ -86,7 +92,9 @@ class Command(BaseCommand):
             if reset_gb and book.google_books_last_checked is not None:
                 # The Celery task reloads the book from the DB, so the reset must be persisted.
                 Book.objects.filter(pk=book.pk).update(google_books_last_checked=None)
-            enrich_book_task.delay(book.pk)
+            # force mirrors reset_gb so the task's retry-window guard doesn't
+            # re-skip a book if its timestamp gets re-set between reset and run.
+            enrich_book_task.delay(book.pk, force=reset_gb)
             dispatched += 1
         self._log(f"Dispatched {dispatched} enrichment tasks to Celery.")
 

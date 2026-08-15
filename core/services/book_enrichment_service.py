@@ -9,7 +9,7 @@ from django.db import IntegrityError
 from django.utils import timezone
 
 from ..analytics.events import track_external_api_call
-from ..dna_constants import CANONICAL_GENRE_MAP, EXCLUDED_GENRES, GENRE_PRIORITY
+from ..dna_constants import CANONICAL_GENRE_MAP, ENRICHMENT_RETRY_AFTER, EXCLUDED_GENRES, GENRE_PRIORITY
 from ..models import Author, Book, Genre, Publisher
 from ._book_urls import cover_url_from_isbn, cover_url_from_olid
 
@@ -409,11 +409,16 @@ def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
     # neither source replaces the other any more.
     ol_genres = set(ol_data.get("genres") or []) if ol_data else set()
 
-    # Google Books: fetched once per book (guarded by google_books_last_checked)
-    # for ratings + categories. Its categories carry higher confidence than OL
-    # subjects, so they lead the merge below.
+    # Google Books: fetched for ratings + categories (its categories carry
+    # higher confidence than OL subjects, so they lead the merge below). Fetched
+    # once per book, then not again until the attempt is older than
+    # ENRICHMENT_RETRY_AFTER — so a book that got zero genres retries later when
+    # the APIs may have data, but a freshly-checked book isn't re-hit every upload.
     gb_genres = set()
-    if book.google_books_last_checked is None:
+    gb_check_due = book.google_books_last_checked is None or (
+        timezone.now() - book.google_books_last_checked >= ENRICHMENT_RETRY_AFTER
+    )
+    if gb_check_due:
         gb_data, calls_made = _fetch_ratings_and_categories_from_google_books(
             book, session, slow_down, quick_mode=quick_mode
         )

@@ -5,6 +5,16 @@ This file stores the constant data used by the Reading DNA generator.
 This is the final, comprehensive version incorporating extensive user feedback.
 """
 
+from datetime import timedelta
+
+# How long a book's enrichment attempt is trusted before it's eligible for a
+# retry. A book attempted within this window is skipped (its google_books_last_
+# checked timestamp is the "last attempt" marker); once the attempt is older, it
+# gets a fresh pass so books that got zero genres can pick up data the APIs may
+# have added since. Explicit operator re-runs (`enrich_books --process-all` /
+# `--force`) bypass this window.
+ENRICHMENT_RETRY_AFTER = timedelta(hours=24)
+
 READER_TYPE_DESCRIPTIONS = {
     "Fantasy Fanatic": [
         "You have a deep love for worlds of magic, myth, and epic quests. Your reading history is filled with fantasy and science fiction.",
