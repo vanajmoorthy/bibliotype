@@ -480,6 +480,10 @@ def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
         elif book.isbn13:
             new_cover_url = cover_url_from_isbn(book.isbn13)
 
+        # Defensive: gb_data is a dict on every path today, but guard anyway so a
+        # future refactor can't reintroduce the `NoneType has no attribute 'get'`
+        # crash seen in stale-worker enrichment runs.
+        gb_data = gb_data or {}
         if not new_cover_url and gb_data.get("thumbnail_url"):
             new_cover_url = gb_data["thumbnail_url"]
 
