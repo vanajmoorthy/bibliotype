@@ -38,6 +38,7 @@ All three catch bare `Exception`, log a warning, and track via `track_redis_cach
 | `recommendations_pool_count` | 1hr | user_similarity_service | views/_helpers.py |
 | `community_means` | 10min | views.py | views.py |
 | `fresh_pct_{bl}_{br}_{bpy}_{py}` | 10min | views.py | views.py |
+| `google_books_quota_cooldown` | 1hr | book_enrichment_service (on GB 429/403) | book_enrichment_service |
 
 ## Invalidation Strategy
 

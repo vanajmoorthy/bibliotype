@@ -72,7 +72,8 @@ class GoogleBooksErrorRedactionTests(TestCase):
         with patch.object(svc, "GOOGLE_BOOKS_API_KEY", "SECRET_KEY_123"):
             result, calls = svc._fetch_ratings_and_categories_from_google_books(book, session, quick_mode=True)
 
-        self.assertEqual(result, {})
+        # Failed attempts now return None (retryable) rather than {} (no data).
+        self.assertIsNone(result)
         self.assertEqual(calls, 1)
         _, kwargs = mock_track.call_args
         self.assertNotIn("SECRET_KEY_123", kwargs["error_message"])
