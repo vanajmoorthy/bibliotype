@@ -11,8 +11,10 @@ project_name = "bibliotype"
 #   doctl compute droplet list --format Name,Region
 region = "lon1"
 
-# SSH key names as listed in DO -> Settings -> Security
-ssh_key_names = ["your-laptop-key"]
+# Your laptop's public key (contents of ~/.ssh/<key>.pub) — Terraform uploads it
+# to the DO account and it lands on root; cloud-init also authorizes it for the
+# bibliotype user.
+personal_ssh_public_key = "ssh-ed25519 AAAA..."
 
 # Public counterpart of the DO_SSH_KEY GitHub Actions secret (one line, "ssh-ed25519 AAAA... comment")
 deploy_ssh_public_key = "ssh-ed25519 AAAA..."

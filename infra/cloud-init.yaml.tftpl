@@ -24,6 +24,7 @@ users:
       - "ALL=(ALL) NOPASSWD: /usr/bin/chmod -R 775 /home/bibliotype/app/staticfiles/"
     ssh_authorized_keys:
       - ${deploy_ssh_public_key}
+      - ${personal_ssh_public_key}
 
 write_files:
   # SSH hardening. Root keeps key-only access (DO installs account keys on root);

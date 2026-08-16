@@ -19,10 +19,12 @@ provider "digitalocean" {
   token = var.do_token
 }
 
-# Existing SSH keys already uploaded to the DO account (personal + deploy).
-data "digitalocean_ssh_key" "keys" {
-  for_each = toset(var.ssh_key_names)
-  name     = each.value
+# The DO account has no uploaded SSH keys (the old droplet's keys were added to
+# authorized_keys by hand), so Terraform creates and owns the account key.
+# DO injects it into root's authorized_keys at droplet creation.
+resource "digitalocean_ssh_key" "personal" {
+  name       = "vanaj-laptop"
+  public_key = var.personal_ssh_public_key
 }
 
 resource "digitalocean_droplet" "bibliotype" {
@@ -34,15 +36,16 @@ resource "digitalocean_droplet" "bibliotype" {
   size       = var.droplet_size
   region     = var.region
   monitoring = true
-  ssh_keys   = [for k in data.digitalocean_ssh_key.keys : k.id]
+  ssh_keys   = [digitalocean_ssh_key.personal.id]
 
   # CPU/RAM-only resizes (resize_disk = false) are reversible: $6 -> $18 for
   # launch week, then back. Growing the disk would be one-way.
   resize_disk = false
 
   user_data = templatefile("${path.module}/cloud-init.yaml.tftpl", {
-    deploy_ssh_public_key = var.deploy_ssh_public_key
-    repo_url              = var.repo_url
+    deploy_ssh_public_key   = var.deploy_ssh_public_key
+    personal_ssh_public_key = var.personal_ssh_public_key
+    repo_url                = var.repo_url
   })
 }
 

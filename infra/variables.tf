@@ -22,9 +22,9 @@ variable "region" {
   type        = string
 }
 
-variable "ssh_key_names" {
-  description = "Names of SSH keys already uploaded to the DO account (as shown in Settings -> Security). These land on root via the DO image mechanism."
-  type        = list(string)
+variable "personal_ssh_public_key" {
+  description = "Your laptop's public key (contents of ~/.ssh/id_ed25519_do.pub). Terraform uploads it to the DO account; DO puts it on root, cloud-init also authorizes it for the bibliotype user."
+  type        = string
 }
 
 variable "deploy_ssh_public_key" {
