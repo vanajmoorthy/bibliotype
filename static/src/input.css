@@ -290,7 +290,9 @@ html {
     bottom: calc(-80px + var(--yo, 0px));
     width: calc(36px * var(--s, 1));
     height: calc(50px * var(--s, 1));
-    opacity: 0.42;
+    /* Slightly higher than the old 2D books' 0.42 — the mosaic filter dilutes
+       the dark outlines, so the boxes need a touch more presence. */
+    opacity: 0.55;
     /* Per-book screen-space tilt, applied on top of the composited 3D body. */
     transform: rotate(var(--r, 0deg));
     --t: calc(11px * var(--s, 1)); /* book thickness / extrusion depth */

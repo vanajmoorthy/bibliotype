@@ -115,11 +115,11 @@
             comes from the #pixelate-8bit SVG filter below. See .ambient-book in static/src/input.css. {% endcomment %}
             <svg width="0" height="0" style="position: absolute" aria-hidden="true">
                 <filter id="pixelate-8bit" x="-2%" y="-2%" width="104%" height="104%">
-                    <feFlood x="2" y="2" width="1" height="1" />
-                    <feComposite width="4" height="4" />
+                    <feFlood x="1" y="1" width="1" height="1" />
+                    <feComposite width="2" height="2" />
                     <feTile result="tiles" />
                     <feComposite in="SourceGraphic" in2="tiles" operator="in" />
-                    <feMorphology operator="dilate" radius="2" />
+                    <feMorphology operator="dilate" radius="1" />
                 </filter>
             </svg>
             {# pile of 3 #}
