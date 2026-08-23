@@ -290,9 +290,7 @@ html {
     bottom: calc(-80px + var(--yo, 0px));
     width: calc(36px * var(--s, 1));
     height: calc(50px * var(--s, 1));
-    /* Slightly higher than the old 2D books' 0.42 — the mosaic filter dilutes
-       the dark outlines, so the boxes need a touch more presence. */
-    opacity: 0.55;
+    opacity: 1;
     /* Per-book screen-space tilt, applied on top of the composited 3D body. */
     transform: rotate(var(--r, 0deg));
     --t: calc(11px * var(--s, 1)); /* book thickness / extrusion depth */
@@ -430,8 +428,10 @@ html {
 .ambient-book--flat .ambient-book__iso {
     /* Innermost rotateZ spins the book in its own plane (spine → near/lower
        edge); the outer rotateX tips it down into an isometric table view. Cover
-       faces up, spine points down to the surface, fore-edge pages along the top. */
-    transform: rotateX(58deg) rotateZ(-62deg);
+       faces up, spine points down to the surface, fore-edge pages along the top.
+       --rz is a small per-book jitter so books in a pile sit slightly askew,
+       like a real stack. */
+    transform: rotateX(58deg) rotateZ(calc(-62deg + var(--rz, 0deg)));
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -440,8 +440,8 @@ html {
         animation-delay: var(--delay, 0s);
     }
     @keyframes iso-tumble-flat {
-        0%, 100% { transform: rotateX(58deg) rotateZ(-66deg); }
-        50%      { transform: rotateX(58deg) rotateZ(-58deg); }
+        0%, 100% { transform: rotateX(58deg) rotateZ(calc(-66deg + var(--rz, 0deg))); }
+        50%      { transform: rotateX(58deg) rotateZ(calc(-58deg + var(--rz, 0deg))); }
     }
 }
 @media (prefers-reduced-motion: no-preference) {
