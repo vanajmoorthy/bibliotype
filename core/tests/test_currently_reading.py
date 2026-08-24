@@ -71,8 +71,8 @@ class CurrentlyReadingExtractionTests(TransactionTestCase):
         self.addCleanup(inline_patcher.stop)
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.check_author_mainstream_status_task.delay")
-    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
     @patch("core.services.dna.generate_vibe_with_llm")
     def test_currently_reading_books_extracted(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """Currently-reading books should be extracted with correct fields."""
@@ -109,8 +109,8 @@ class CurrentlyReadingExtractionTests(TransactionTestCase):
             self.assertIn("page_count", book)
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.check_author_mainstream_status_task.delay")
-    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
     @patch("core.services.dna.generate_vibe_with_llm")
     def test_custom_shelf_count(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """Custom shelf count should exclude standard shelves (read, currently-reading, to-read)."""
@@ -135,8 +135,8 @@ class CurrentlyReadingExtractionTests(TransactionTestCase):
         self.assertEqual(dna["custom_shelf_count"], 1)
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.check_author_mainstream_status_task.delay")
-    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
     @patch("core.services.dna.generate_vibe_with_llm")
     def test_no_currently_reading_books(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """When no currently-reading books exist, fields should be empty/zero."""
@@ -159,8 +159,8 @@ class CurrentlyReadingExtractionTests(TransactionTestCase):
         self.assertEqual(dna["custom_shelf_count"], 0)
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.check_author_mainstream_status_task.delay")
-    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
     @patch("core.services.dna.generate_vibe_with_llm")
     def test_niche_book_has_cover_url(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """The most_niche_book dict should include a cover_url field."""
@@ -349,8 +349,8 @@ class CurrentlyReadingCoverUpgradeTests(TransactionTestCase):
         self.addCleanup(inline_patcher.stop)
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.check_author_mainstream_status_task.delay")
-    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
     @patch("core.services.dna.generate_vibe_with_llm")
     def test_currently_reading_cover_upgraded_from_db(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """Currently-reading book in DB with cover_url → gets the DB cover URL."""
@@ -385,8 +385,8 @@ class CurrentlyReadingCoverUpgradeTests(TransactionTestCase):
         self.assertEqual(cr_books[0]["cover_url"], "https://covers.openlibrary.org/b/id/999-M.jpg")
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.check_author_mainstream_status_task.delay")
-    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
     @patch("core.services.dna.generate_vibe_with_llm")
     def test_currently_reading_cover_keeps_csv_isbn_when_no_db_cover(
         self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task

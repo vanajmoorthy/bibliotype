@@ -20,7 +20,9 @@ PUBLISHER_CHECK_AGE_THRESHOLD_DAYS = 90
 
 
 # name pinned: wire name must survive the package split (queued msgs + beat)
-@shared_task(name="core.tasks.check_author_mainstream_status_task")
+# ignore_result: nothing reads the return value, and bulk runs would otherwise
+# write tens of thousands of 24h-TTL result keys into the shared Redis.
+@shared_task(name="core.tasks.check_author_mainstream_status_task", ignore_result=True)
 def check_author_mainstream_status_task(author_id: int, user_id: int = None, upload_nonce: str = None):
     # If the upload that spawned this task has been superseded by a newer one,
     # exit immediately. Without this, hundreds of leftover author-check tasks
@@ -64,8 +66,13 @@ def check_author_mainstream_status_task(author_id: int, user_id: int = None, upl
         raise
 
 
-# name pinned: wire name must survive the package split (queued msgs + beat)
-@shared_task(bind=True, max_retries=3, rate_limit="30/m", name="core.tasks.enrich_book_task")
+# name pinned: wire name must survive the package split (queued msgs + beat).
+# It must ALSO stay the single name for both interactive and bulk dispatch:
+# rate_limit is per task NAME per worker, so a separately named bulk task would
+# silently double our Open Library/Google Books throughput.
+# ignore_result: progress is computed from google_books_last_checked counts,
+# not task results; bulk runs would otherwise flood Redis with result keys.
+@shared_task(bind=True, max_retries=3, rate_limit="60/m", name="core.tasks.enrich_book_task", ignore_result=True)
 def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str = None, force: bool = False):
     """Enrich a single book with data from Open Library and Google Books APIs.
 
@@ -76,6 +83,11 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
     Respects the ENRICHMENT_RETRY_AFTER window: a book attempted within the
     window is skipped so the async path agrees with the inline path in
     dna_analyser. force=True bypasses the window (operator re-runs).
+
+    Queue routing: interactive uploads dispatch to the default queue; bulk runs
+    (seed_from_exports, enrich_books) dispatch to ENRICHMENT_BULK_QUEUE.
+    self.retry() re-publishes with the original delivery info, so retries stay
+    on whichever queue the task arrived on — bulk retries never jump the line.
     """
     from ..cache_utils import safe_cache_get
     from ..dna_constants import ENRICHMENT_RETRY_AFTER

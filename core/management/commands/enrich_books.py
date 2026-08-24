@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 
+from core.dna_constants import ENRICHMENT_BULK_QUEUE
 from core.models import Book
 from core.services.book_enrichment_service import enrich_book_from_apis
 from core.tasks import enrich_book_task
@@ -95,7 +96,7 @@ class Command(BaseCommand):
                 Book.objects.filter(pk=book.pk).update(google_books_last_checked=None)
             # force mirrors reset_gb so the task's retry-window guard doesn't
             # re-skip a book if its timestamp gets re-set between reset and run.
-            enrich_book_task.delay(book.pk, force=reset_gb)
+            enrich_book_task.apply_async(args=(book.pk,), kwargs={"force": reset_gb}, queue=ENRICHMENT_BULK_QUEUE)
             dispatched += 1
         self._log(f"Dispatched {dispatched} enrichment tasks to Celery.")
 

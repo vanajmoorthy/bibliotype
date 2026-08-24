@@ -116,7 +116,10 @@ class Command(BaseCommand):
             try:
                 csv_content = path.read_text(encoding="utf-8-sig", errors="replace")
                 self._validate(csv_content, path)
-                dna = calculate_full_dna(csv_content, user)
+                # bulk_enrichment: route all enrichment through the rate-limited
+                # bulk queue instead of enriching inline or crowding the
+                # interactive queue (a full corpus run enqueues thousands).
+                dna = calculate_full_dna(csv_content, user, bulk_enrichment=True)
                 processed += 1
                 self.stdout.write(
                     self.style.SUCCESS(

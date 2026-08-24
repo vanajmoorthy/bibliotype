@@ -266,6 +266,15 @@ CELERY_TIMEZONE = "UTC"
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = False
 CELERY_BROKER_CONNECTION_RETRY = False
 CELERY_BROKER_CONNECTION_TIMEOUT = 5
+# "sorted" (NOT "priority" — celery/celery#8673: with the Redis transport,
+# "priority" derives queue order from a set comprehension, so it's hash-
+# randomized per worker start and can silently invert). Sorted = deterministic
+# alphabetical order, and "celery" < "enrichment_bulk", so interactive tasks
+# drain before bulk work on every fetch.
+CELERY_BROKER_TRANSPORT_OPTIONS = {"queue_order_strategy": "sorted"}
+# Reserve only 1 message ahead of execution so at most ~1 already-reserved bulk
+# task runs before a newly arrived interactive task.
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
 # Logging configuration
 # Create logs directory if it doesn't exist
