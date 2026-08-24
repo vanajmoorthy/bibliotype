@@ -48,13 +48,8 @@ correctly); each pile has its own `--s` (0.5–0.7) with `--yo` recomputed per p
 evenly (odd pile → random side), places at most one middle pile on ~25% of loads, and
 skips `display: none` piles so mobile always gets 2 left / 2 right.
 
-6. **Bring back the 1px pixelate filter as a preview.** User wants to see the subtle
-   variant again before final call. Re-add the SVG filter (cell 1: `feFlood x=0 y=0
-   w=1 h=1; feComposite w=1 h=1; feTile; feComposite in=SourceGraphic operator=in;
-   feMorphology dilate radius=0.5`) plus the temporary bottom-left toggle from git
-   history (`git show 9ba9ffd~4:core/templates/core/home.html` has the toggle pattern —
-   it was removed in `770f5e7`). Let the user click between none/1px live, then strip
-   the toggle and keep the winner.
+6. **DONE — "filter: none" won.** The 1px pixelate filter was re-added behind a temp
+   toggle, the user compared live and chose no filter; the toggle block was stripped.
 
 7. **Logo: 3-book stack + DNA strand, replacing the 🧬 emoji.** Emoji lives in
    `core/templates/core/base.html` line 97 (SVG favicon data-URI) and line 203 (navbar
