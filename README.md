@@ -13,7 +13,8 @@ A living backlog of everything known to be unfinished, deferred, or in-progress 
 `docs/plans/`, `docs/handoffs/`, `docs/GENRES.md`, `docs/SCALING.md`,
 `docs/scaling-implementation-plan.md`, `docs/ARCHITECTURE.md`, code, and in-flight worktrees.
 Legend: 🙅 not started · 🚧 partial/in-progress · ❓ needs verification · ✅ shipped (kept briefly
-for reference). See the linked docs for full detail.
+for reference) · ~~struck through~~ = verified done against `main` as of 2026-08-24.
+See the linked docs for full detail.
 
 ### Ops / deploy — do first
 - ~~**Google Books API key** — rotate/replace it and set its restriction to "none" or an IP allowlist~~
@@ -61,13 +62,13 @@ for reference). See the linked docs for full detail.
 - No fleet `regenerate_dna` on prod and no backfill of `reader_type_csv_context` — existing profiles keep
   their old vocabulary/scoring until users re-upload (intentional). `AnonymizedReadingProfile.reader_type`
   keeps the old vocabulary permanently (no migration).
-- Out of scope / future: per-type share-card palettes + pixel-art mascots/banners; percentile-based
-  community-relative scoring ("you're in the top X% of rereaders"); different colour / animated banner
-  per type. 🙅
+- Out of scope / future: per-type share-card palettes + pixel-art mascots; percentile-based
+  community-relative scoring ("you're in the top X% of rereaders"); animated banner per type. 🙅
+  (Per-type *coloured pixel banners* ✅ shipped — dithered texture + colour token per reader type.)
 - See `docs/plans/2026-07-04-feat-reader-type-overhaul-plan.md`, `core/services/dna/reader_type.py`,
   `core/tests/test_reader_type_distribution.py`.
 
-### Live enrichment 🚧 (PR #127 landed reader-type recompute; stat/chart updates incomplete)
+### Live enrichment ✅ mostly done (reader-type recompute PR #127; stat/chart/comparative wiring PRs #131/#151)
 - ~~Live stat updates only touch 3 text nodes (`#stat-pages`, `#mainstream-score`, `#stat-avg-length`).~~
   ~~Still stale during enrichment: top-genres list, top-genres donut (Chart.js instance never updated),~~
   ~~fiction/nonfiction split (numbers + chart), book extremes, and most comparative-analytics body text.~~
@@ -100,7 +101,7 @@ for reference). See the linked docs for full detail.
   comparative-analytics tile.
 - See `docs/plans/enrichment-ux-improvements.md`, `docs/plans/2026-04-06-feat-enrichment-ux-and-performance-plan.md`.
 
-### Scaling, performance & infra 🙅 (none of `docs/scaling-implementation-plan.md` applied yet)
+### Scaling, performance & infra 🚧 (most of `docs/scaling-implementation-plan.md` unapplied; gunicorn gthread tuning landed PR #158)
 - **Phase 1 (app):** ~~Gunicorn threaded workers~~; DB `conn_max_age` + health checks; Celery task time
   limits + worker recycling; ~~frontend polling backoff (3s→10s / 5s→15s)~~.
 - **Phase 2 (VPS):** 1 GB swap + swappiness tuning; nginx tuning (`client_max_body_size`, gzip, static
@@ -142,12 +143,12 @@ for reference). See the linked docs for full detail.
   must degrade to count-only copy until users regenerate.
 - See `docs/plans/2026-07-10-feat-similar-readers-stat-and-uniqueness-badge-plan.md`.
 
-### Book covers 🚧
+### Book covers ✅
 - ~~Covers are fetched + stored during enrichment but **only appear after a page refresh** — the initial~~
   ~~dashboard render shows crosshatch placeholders. Verify lazy-load / re-query after enrichment completes~~
   ~~(`core/services/_book_urls.py`, `cover_url`).~~
 
-### AI vibe / LLM 🙅
+### AI vibe / LLM 🚧 (vibe caching ✅ shipped; metrics + quality work remain)
 - ~~Cache the AI vibe against a DNA-dictionary hash (~1-month TTL, refetch only if the dict changed) so an~~
   ~~identical library reuses a vibe instead of re-hitting Gemini — also avoids generating many vibes during~~
   ~~testing.~~
@@ -200,9 +201,8 @@ for reference). See the linked docs for full detail.
 ## Backlog / Known Undone Work
 
 Compiled from `docs/handoffs/`, the reader-type & live-enrichment plans in `docs/plans/`,
-`docs/GENRES.md`, and recent sessions. **The freeform list above is partly stale** — the
-settings modal, reader-type colours/pixel banners, the methodology page, StoryGraph support,
-password toggles, and the `x-if` enrichment-banner lifecycle have all since shipped.
+`docs/GENRES.md`, and recent sessions. Overlaps with the list above; kept for its extra
+detail. ~~Struck-through~~ items were verified done against `main` as of 2026-08-24.
 
 ### Reader types
 - **Type-retirement decision is deferred — all 20 types are still kept.** Over a 200-library
