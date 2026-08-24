@@ -1,0 +1,27 @@
+# Copy to terraform.tfvars (gitignored) and fill in.
+
+# DO API token (write scope): cloud.digitalocean.com -> API -> Generate New Token.
+# Alternatively omit and `export DIGITALOCEAN_TOKEN=...` instead.
+do_token = "dop_v1_..."
+
+# Existing DO project to file the new droplet + reserved IP under (organizational only)
+project_name = "bibliotype"
+
+# Match the old droplet's region — check the DO console or:
+#   doctl compute droplet list --format Name,Region
+region = "lon1"
+
+# Your laptop's public key (contents of ~/.ssh/<key>.pub) — Terraform uploads it
+# to the DO account and it lands on root; cloud-init also authorizes it for the
+# bibliotype user.
+personal_ssh_public_key = "ssh-ed25519 AAAA..."
+
+# Public counterpart of the DO_SSH_KEY GitHub Actions secret (one line, "ssh-ed25519 AAAA... comment")
+deploy_ssh_public_key = "ssh-ed25519 AAAA..."
+
+# droplet_size defaults to s-1vcpu-1gb ($6). Launch week: uncomment, apply, revert after.
+# droplet_size = "s-2vcpu-2gb"
+
+# Only if the domain's nameservers are DigitalOcean's:
+# manage_dns = true
+# domain     = "yourdomain.tld"

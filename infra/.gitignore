@@ -1,0 +1,6 @@
+# Terraform state can contain the DO token and droplet secrets — never commit.
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfvars
+crash.log
