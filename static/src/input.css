@@ -284,7 +284,7 @@ html {
     bottom: calc(-80px + var(--yo, 0px));
     width: calc(36px * var(--s, 1));
     height: calc(50px * var(--s, 1));
-    opacity: 1;
+    opacity: 0.9;
     /* Per-book screen-space tilt, applied on top of the composited 3D body. */
     transform: rotate(var(--r, 0deg));
     /* Book thickness / extrusion depth. --tk varies it per book (0.7 thin,
@@ -426,7 +426,10 @@ html {
        edge); the outer rotateX tips it down into an isometric table view. Cover
        faces up, spine points down to the surface, fore-edge pages along the top.
        --rz is a small per-book jitter so books in a pile sit slightly askew,
-       like a real stack. */
+       like a real stack. The origin sits half a thickness behind the cover —
+       the volume's centre — so the jitter pivots the book about its middle
+       rather than a corner. */
+    transform-origin: 50% 50% calc(var(--t) / -2);
     transform: rotateX(58deg) rotateZ(calc(-62deg + var(--rz, 0deg)));
 }
 
