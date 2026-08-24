@@ -28,7 +28,28 @@ services:
     web:
         build: .
         image: ${DOCKERHUB_USERNAME}/bibliotype:${IMAGE_TAG:-latest}
-        command: ["poetry", "run", "gunicorn", "bibliotype.wsgi:application", "--bind", "0.0.0.0:8000"]
+        # gthread threads over extra workers: a second sync worker would duplicate
+        # the ~250MB Django+pandas process on a 1GB box; 4 threads share one
+        # process for ~4x request concurrency (views are I/O-bound: DB + progress
+        # polling). --timeout 60 covers slow views under CPU contention while a
+        # DNA task holds the core.
+        command:
+            [
+                "poetry",
+                "run",
+                "gunicorn",
+                "bibliotype.wsgi:application",
+                "--bind",
+                "0.0.0.0:8000",
+                "--workers",
+                "1",
+                "--threads",
+                "4",
+                "--worker-class",
+                "gthread",
+                "--timeout",
+                "60",
+            ]
         volumes:
             - ./staticfiles:/app/staticfiles
         ports:
