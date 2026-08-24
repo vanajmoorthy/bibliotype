@@ -16,10 +16,10 @@ Legend: 🙅 not started · 🚧 partial/in-progress · ❓ needs verification �
 for reference). See the linked docs for full detail.
 
 ### Ops / deploy — do first
-- **Google Books API key** — rotate/replace it and set its restriction to "none" or an IP allowlist
-  (NOT "HTTP referrers") so server-side enrichment stops 403ing; make sure the Books API is enabled
-  on the project; update prod `.env`;
-  `docker compose -f docker-compose.prod.yml up -d --force-recreate web worker`; delete the old key.
+- ~~**Google Books API key** — rotate/replace it and set its restriction to "none" or an IP allowlist~~
+  ~~(NOT "HTTP referrers") so server-side enrichment stops 403ing; make sure the Books API is enabled~~
+  ~~on the project; update prod `.env`;~~
+  ~~`docker compose -f docker-compose.prod.yml up -d --force-recreate web worker`; delete the old key.~~
 - **Re-enrich existing books on the VPS** — run `enrich_books --process-all` to re-fetch/merge Google
   Books genres into books already in the DB. Until this runs, existing users' genres + fiction/nonfiction
   splits only refresh when they re-upload. (Pending in both the 2026-07-22 and 2026-07-29 handoffs.)
@@ -68,41 +68,41 @@ for reference). See the linked docs for full detail.
   `core/tests/test_reader_type_distribution.py`.
 
 ### Live enrichment 🚧 (PR #127 landed reader-type recompute; stat/chart updates incomplete)
-- Live stat updates only touch 3 text nodes (`#stat-pages`, `#mainstream-score`, `#stat-avg-length`).
-  Still stale during enrichment: top-genres list, top-genres donut (Chart.js instance never updated),
-  fiction/nonfiction split (numbers + chart), book extremes, and most comparative-analytics body text.
-  Extend `_compute_enrichment_stats` + `enrichment_status_view` and wire `Alpine.store('enrichment')` to
-  drive chart updates.
+- ~~Live stat updates only touch 3 text nodes (`#stat-pages`, `#mainstream-score`, `#stat-avg-length`).~~
+  ~~Still stale during enrichment: top-genres list, top-genres donut (Chart.js instance never updated),~~
+  ~~fiction/nonfiction split (numbers + chart), book extremes, and most comparative-analytics body text.~~
+  ~~Extend `_compute_enrichment_stats` + `enrichment_status_view` and wire `Alpine.store('enrichment')` to~~
+  ~~drive chart updates.~~
 - Reader type doesn't update live for users who were mid-enrichment when PR #127 shipped (no
   `reader_type_csv_context` in stored `dna_data`) — only new uploads get it.
 - Live reader-type *movement* (PR 14) was never browser-verified — hard to stage in-progress enrichment
   locally; eyeball on a genuinely fresh upload post-deploy. ❓
-- Polling backoff: fixed 5s today. Stretch to 10–15s once percent > 90% to cut DB churn during the long tail.
-- Banner lifecycle (x-show → x-if): PR #131 landed; verify the banner DOM unmounts cleanly and dead
-  `$store.enrichment` refs are gone. ❓
+- ~~Polling backoff: fixed 5s today. Stretch to 10–15s once percent > 90% to cut DB churn during the long tail.~~
+- ~~Banner lifecycle (x-show → x-if): PR #131 landed; verify the banner DOM unmounts cleanly and dead~~
+  ~~`$store.enrichment` refs are gone.~~
 - See `docs/plans/live-enrichment-updates-plan.md`.
 
 ### Enrichment performance & robustness 🚧
-- Re-upload re-enriches already-attempted books that got zero genres; add a `last_enrichment_attempt`
-  timestamp + 24h skip. Re-upload can also *show complete prematurely* when old books dominate
-  `all_attempted` — scope the completion check to the current upload session.
+- ~~Re-upload re-enriches already-attempted books that got zero genres; add a `last_enrichment_attempt`~~
+  ~~timestamp + 24h skip. Re-upload can also *show complete prematurely* when old books dominate~~
+  ~~`all_attempted` — scope the completion check to the current upload session.~~
 - **Verify the enrichment cache doesn't expire** — `SCALING.md` Phase A leans on caching enrichment
   indefinitely; confirm current behaviour in `book_enrichment_service.py`. ❓
-- Speed ~5–13s/book. Direct ISBN lookup for StoryGraph books (skip the search call) unclear if landed.
+- Speed ~5–13s/book. ~~Direct ISBN lookup for StoryGraph books (skip the search call) unclear if landed.~~
   `ENABLE_PARALLEL_ENRICHMENT` exists (default off); book-sync uses a single-threaded executor as a
   deliberate placeholder for future parallelism.
-- Concurrent uploads from the same user can hang at 50% — need a reject-while-pending or
-  revoke-previous-upload guard.
-- Banner overlap on small cards (key stats, comparative sub-tiles) — add `pt-8` / thinner banner.
-- Skeleton cohesion pass: the three skeleton templates work but have inconsistent copy ("Still figuring
-  out…" / "Still discovering…" / "Still fetching…") and incoherent design.
+- ~~Concurrent uploads from the same user can hang at 50% — need a reject-while-pending or~~
+  ~~revoke-previous-upload guard.~~
+- ~~Banner overlap on small cards (key stats, comparative sub-tiles) — add `pt-8` / thinner banner.~~
+- ~~Skeleton cohesion pass: the three skeleton templates work but have inconsistent copy ("Still figuring~~
+  ~~out…" / "Still discovering…" / "Still fetching…") and incoherent design.~~
 - Cover-art probe `<img>` absolute-positioning needs a designer pass to coordinate with the
   comparative-analytics tile.
 - See `docs/plans/enrichment-ux-improvements.md`, `docs/plans/2026-04-06-feat-enrichment-ux-and-performance-plan.md`.
 
 ### Scaling, performance & infra 🙅 (none of `docs/scaling-implementation-plan.md` applied yet)
-- **Phase 1 (app):** Gunicorn threaded workers; DB `conn_max_age` + health checks; Celery task time
-  limits + worker recycling; frontend polling backoff (3s→10s / 5s→15s).
+- **Phase 1 (app):** ~~Gunicorn threaded workers~~; DB `conn_max_age` + health checks; Celery task time
+  limits + worker recycling; ~~frontend polling backoff (3s→10s / 5s→15s)~~.
 - **Phase 2 (VPS):** 1 GB swap + swappiness tuning; nginx tuning (`client_max_body_size`, gzip, static
   caching, rate limiting); Redis `maxmemory` cap; small-RAM Postgres tuning; per-container `mem_limit`s.
 - **Phase 3 (ops):** Silk `.prof` disk cleanup; Docker + Django log rotation; daily Postgres backup cron;
@@ -111,8 +111,8 @@ for reference). See the linked docs for full detail.
   (unbuilt): lean on Open Library + cache enrichment indefinitely → paid GB tier → pre-enrich popular
   books from a curated NYT/Goodreads-top-1000 list so cold uploads hit cache.
 - **Single Celery worker** serializes uploads until a 2nd worker is added (needs the $12+ tier).
-- **Deploy migration race:** web + worker both run `migrate`; the worker can die on a duplicate-index
-  error with no restart policy. Gate migrations to web only, or add `restart: unless-stopped` on the worker.
+- ~~**Deploy migration race:** web + worker both run `migrate`; the worker can die on a duplicate-index~~
+  ~~error with no restart policy. Gate migrations to web only, or add `restart: unless-stopped` on the worker.~~
 - Deferred to higher tiers: PgBouncer / managed Postgres, WhiteNoise, Cloudflare CDN, Sentry/APM,
   splitting web + Celery onto separate droplets.
 - See `docs/SCALING.md`, `docs/scaling-implementation-plan.md`.
@@ -120,9 +120,9 @@ for reference). See the linked docs for full detail.
 ### Security & auth follow-ups 🚧
 - **US-017 email enumeration** not fully closed — signup redirects still differ by whether the email
   exists; the real fix is an email-verification flow (deferred as feature work).
-- **US-024 double-dispatch window** — `_save_dna_to_profile` doesn't set the dispatch sentinel before
-  `.delay()`; a poll in the millisecond window can double-dispatch the recommendations task (bounded to
-  2, idempotent). Worth a follow-up story.
+- ~~**US-024 double-dispatch window** — `_save_dna_to_profile` doesn't set the dispatch sentinel before~~
+  ~~`.delay()`; a poll in the millisecond window can double-dispatch the recommendations task (bounded to~~
+  ~~2, idempotent). Worth a follow-up story.~~
 - **`is_public` now defaults to `True`** for new signups — confirm that's the intended launch posture.
 - Settings-modal cache lag: other users' `similar_users_{id}` / `user_recommendations_{id}` caches may
   hold a now-private user until TTL expiry — accepted as low-severity, not fixed.
@@ -135,28 +135,28 @@ for reference). See the linked docs for full detail.
   still present at `core/tasks/recommendations.py:103` ("kept one release for stale templates/meta").
 - Tune the 0.40 "weak match" uniqueness threshold once real `max_similarity_pct` distributions are
   visible (a PostHog bucket can inform it).
-- Verify the `uniqueness-badge` django-waffle switch is deployed (badge shows "One of a kind" /
-  "Pretty unique"), and the eligible-pool-count display ("out of over X readers", magnitude-aware
-  flooring — `recommendations_pool_size()` + `friendly_floor()`). ❓
+- ~~Verify the `uniqueness-badge` django-waffle switch is deployed (badge shows "One of a kind" /~~
+  ~~"Pretty unique"), and the eligible-pool-count display ("out of over X readers", magnitude-aware~~
+  ~~flooring — `recommendations_pool_size()` + `friendly_floor()`).~~
 - Backwards-compat: old `recommendations_meta` lacks `max_similarity_pct`/uniqueness fields; the template
   must degrade to count-only copy until users regenerate.
 - See `docs/plans/2026-07-10-feat-similar-readers-stat-and-uniqueness-badge-plan.md`.
 
 ### Book covers 🚧
-- Covers are fetched + stored during enrichment but **only appear after a page refresh** — the initial
-  dashboard render shows crosshatch placeholders. Verify lazy-load / re-query after enrichment completes
-  (`core/services/_book_urls.py`, `cover_url`).
+- ~~Covers are fetched + stored during enrichment but **only appear after a page refresh** — the initial~~
+  ~~dashboard render shows crosshatch placeholders. Verify lazy-load / re-query after enrichment completes~~
+  ~~(`core/services/_book_urls.py`, `cover_url`).~~
 
 ### AI vibe / LLM 🙅
-- Cache the AI vibe against a DNA-dictionary hash (~1-month TTL, refetch only if the dict changed) so an
-  identical library reuses a vibe instead of re-hitting Gemini — also avoids generating many vibes during
-  testing.
+- ~~Cache the AI vibe against a DNA-dictionary hash (~1-month TTL, refetch only if the dict changed) so an~~
+  ~~identical library reuses a vibe instead of re-hitting Gemini — also avoids generating many vibes during~~
+  ~~testing.~~
 - Add PostHog metrics for LLM vibe quality/usage; improve the generated vibe itself.
 
 ### Comparative analytics — residual (redesign ✅ shipped, PRs #140/#141)
 - **Recompute the "global averages" from community aggregates** once N is large enough — they're
-  literature-derived constants today (`GLOBAL_AVERAGES_SOURCES`). Note it as "future work" on the
-  methodology page.
+  literature-derived constants today (`GLOBAL_AVERAGES_SOURCES`). ~~Note it as "future work" on the~~
+  ~~methodology page.~~
 - (Redesign done: colour-poster swipe deck + podium bars, 50/50 profile row, always-3-line legend with
   the World Avg item as the methodology source link, finish-date caveat moved to the methodology page.)
 
@@ -168,11 +168,11 @@ for reference). See the linked docs for full detail.
   skipped (they use `hover:bg-opacity-90` instead of the standard shadow-shrink chain); cards/modals/inputs
   not evaluated (would need a stateless `neo-3d-static` utility — YAGNI for now); consider `@property`
   transitions for the bevel.
-- Add a show/reveal-password button; the "forgot password" link sits too close to the input.
-- Fix the button hover animation (shadow-shrink timing).
+- ~~Add a show/reveal-password button; the "forgot password" link sits too close to the input.~~
+- ~~Fix the button hover animation (shadow-shrink timing).~~
 - Long author/genre names get cut off (with counts) when hovering on charts — truncate + tooltip or widen
   the legend. 🙅
-- Let users delete their profile from the settings panel.
+- ~~Let users delete their profile from the settings panel.~~
 
 ### Testing / QA ❓
 - Verify integration tests (`test_integration.py`, `test_storygraph_integration.py`) reflect the
@@ -231,15 +231,15 @@ password toggles, and the `x-if` enrichment-banner lifecycle have all since ship
 - Long author/genre names truncate the count on chart hover.
 
 ### Live enrichment (dashboard reactivity)
-- **Live-enrichment "part 1" appears unfinished:** the top-genres list+donut, fiction/non-fiction
-  numbers+pie, and book-extremes tiles still freeze until the completion reload — only ~3 stats
-  swap live. Spec: `docs/plans/live-enrichment-updates-plan.md` (PR1 section). *(verify current
-  behaviour — PR 12 was never in the "done" set of the 2026-07-29 handoff.)*
-- **Book covers only appear after a manual refresh** on DNA generation; they should load in place.
+- ~~**Live-enrichment "part 1" appears unfinished:** the top-genres list+donut, fiction/non-fiction~~
+  ~~numbers+pie, and book-extremes tiles still freeze until the completion reload — only ~3 stats~~
+  ~~swap live. Spec: `docs/plans/live-enrichment-updates-plan.md` (PR1 section). *(verify current~~
+  ~~behaviour — PR 12 was never in the "done" set of the 2026-07-29 handoff.)*~~
+- ~~**Book covers only appear after a manual refresh** on DNA generation; they should load in place.~~
 - Reader-type live recompute shipped (PR 14) but hasn't been eyeballed on a genuinely fresh upload
   post-deploy.
-- Concurrent uploads can stick at 50% — revoke the previous upload.
-- Polling is a fixed 5s; stretch to 10–15s once percent > 90% to cut DB churn on the long tail.
+- ~~Concurrent uploads can stick at 50% — revoke the previous upload.~~
+- ~~Polling is a fixed 5s; stretch to 10–15s once percent > 90% to cut DB churn on the long tail.~~
 
 ### Comparative-analytics stats
 - **Derive the global-average constants from community data.** `avg_books_per_year` (now 4, a
@@ -251,9 +251,9 @@ password toggles, and the `x-if` enrichment-banner lifecycle have all since ship
   fix: compute a median from a named dataset or from our own corpus.
 
 ### AI vibe / LLM
-- **Cache LLM vibes by library-hash:** reuse the generated vibe when an identical library (same
-  dictionary hash) is uploaded instead of re-calling Gemini; cache ~1 month, refetch only when the
-  dictionary changes. Avoids redundant generations during testing.
+- ~~**Cache LLM vibes by library-hash:** reuse the generated vibe when an identical library (same~~
+  ~~dictionary hash) is uploaded instead of re-calling Gemini; cache ~1 month, refetch only when the~~
+  ~~dictionary changes. Avoids redundant generations during testing.~~
 - Improve the generated vibe and add LLM metrics to PostHog.
 
 ### Similarity
