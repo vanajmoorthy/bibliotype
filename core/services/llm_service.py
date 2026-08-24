@@ -9,7 +9,8 @@ logger = logging.getLogger(__name__)
 
 # Brand highlight colours for the vibe banner. One is chosen at generation time
 # and persisted in dna_data so the vibe keeps its colour on every load.
-VIBE_COLORS = ["#40e7aa", "#ffb4dd", "#ffa75e", "#8bbfff"]
+# No pink — the share button next to the vibe is already pink.
+VIBE_COLORS = ["#40e7aa", "#ffa75e", "#8bbfff"]
 
 
 def create_vibe_prompt(dna: dict) -> str:
