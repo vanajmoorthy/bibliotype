@@ -259,83 +259,224 @@ html {
    behind prefers-reduced-motion. Transform/background-size only — no layout.
    ──────────────────────────────────────────────────────────────────────────*/
 
-/* Ambient drifting books (home page). Hand-written like .pixel-banner —
-   background colors come from Tailwind bg-brand-* utilities on the element. */
-.ambient-book {
+/* Ambient drifting books (home page) — pseudo-3D isometric extrusion.
+   Each book is a closed preserve-3d box whose six faces carry real book
+   anatomy, so the two orientations are just different rotations of the same
+   correct object:
+     __cover  front cover   — dithered colour + dashed 8-bit frame
+     __back   back cover    — colour, in shadow
+     __spine  binding edge  — colour, horizontal bands  (kept to the BACK)
+     __side   fore-edge     — off-white PAGES, vertical page lines (faces us)
+     __top    head edge     — off-white page edges
+     __bottom tail edge     — off-white page edges
+   A single --book colour drives the covers/spine; --page drives the paper.
+
+   Layering so animation never fights the 3D transform:
+     .ambient-pile      → absolute position, the vertical drift (2D transform),
+                          the screen-space tilt and the pile's shared opacity
+     .ambient-book      → a book's resting slot within the pile (--yo lift)
+     .ambient-book__iso → the static isometric tilt + a slow tumble
+                          (this is the only preserve-3d element)
+     .ambient-book__*   → the faces, hinged off the front plane. */
+.ambient-pile {
     position: absolute;
     left: var(--x);
     bottom: -80px;
     width: calc(36px * var(--s, 1));
     height: calc(50px * var(--s, 1));
-    opacity: 0.42;
+    /* Opacity lives on the pile, not the books: the pile composites as one
+       unit first, so stacked books occlude each other at full strength and
+       only the finished pile fades against the page. */
+    opacity: 0.7;
+    /* Tilt about the pile's *visual* centre, not the box centre: the flat
+       book's silhouette sits ~0.42·t lower (thickness projects downward after
+       the rotateX(58°) tip; 4.6px = 0.42 × 11px unit thickness) while the
+       stacked books sit --py (the mean of the pile's --yo lifts) higher. */
+    transform-origin: 50% calc(50% + 4.6px * var(--s, 1) - var(--py, 0px));
     transform: rotate(var(--r, 0deg));
-    /* Everything is drawn as background layers so we control dash length + gap
-       exactly — CSS `border: dashed` picks its own (too-sparse) dashes. Four dashed
-       edges (4px dash, 1px gap) form the 8-bit outline; two offset checkerboards
-       form the dithered fill (same technique as .pixel-banner). */
+}
+.ambient-book {
+    position: absolute;
+    left: 0;
+    /* --yo lifts a book to its resting height in the pile: the running sum of
+       the projected thicknesses of the books below it. */
+    bottom: var(--yo, 0px);
+    width: 100%;
+    height: 100%;
+    /* Book thickness / extrusion depth. --tk varies it per book (0.7 thin,
+       1 regular, 1.4 chunky) so piles mix thick and thin volumes. */
+    --t: calc(11px * var(--s, 1) * var(--tk, 1));
+    --pi: calc(1px * var(--s, 1)); /* page inset — covers overhang the page block */
     --edge: calc(2px * var(--s, 1));
-    --dash-h: repeating-linear-gradient(
-        90deg,
-        var(--color-brand-text) 0 calc(4px * var(--s, 1)),
-        transparent calc(4px * var(--s, 1)) calc(5px * var(--s, 1))
+    --book: var(--book-color, var(--color-brand-purple));
+    --page: color-mix(in srgb, var(--book) 12%, white); /* paper, faintly tinted */
+    --page-line: repeating-linear-gradient(
+        to right,
+        rgba(31, 41, 55, 0.32) 0 1px,
+        transparent 1px calc(3px * var(--s, 1))
     );
-    --dash-v: repeating-linear-gradient(
-        0deg,
-        var(--color-brand-text) 0 calc(4px * var(--s, 1)),
-        transparent calc(4px * var(--s, 1)) calc(5px * var(--s, 1))
+    /* Head/tail faces: sheets stack along the book's depth, so their edges run
+       parallel to the face's long axis. */
+    --page-line-h: repeating-linear-gradient(
+        to bottom,
+        rgba(31, 41, 55, 0.32) 0 1px,
+        transparent 1px calc(3px * var(--s, 1))
     );
+}
+/* Isometric tilt wrapper — the consistent angle shared by every upright book.
+   Only this element establishes a 3D context; the drift on .ambient-book is 2D.
+   rotateY(-26deg) turns the fore-edge toward us and the spine to the back. */
+.ambient-book__iso {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    transform: rotateX(14deg) rotateY(-26deg);
+}
+.ambient-book__face {
+    position: absolute;
+    box-sizing: border-box;
+    /* Backfaces stay visible so the recessed-page gap shows the box interior
+       (a dark shadow line) rather than punching through to the background. */
+    border: max(1px, calc(1.5px * var(--s, 1))) solid var(--color-brand-text);
+}
+/* Front cover — dithered 8-bit rect at z=0. Solid dark outline over the fill;
+   two offset checkerboards form the dithered interior. */
+.ambient-book__cover {
+    inset: 0;
+    border-width: var(--edge);
+    background-color: var(--book);
     background-image:
-        var(--dash-h), var(--dash-h),
-        var(--dash-v), var(--dash-v),
         repeating-conic-gradient(rgba(31, 41, 55, 0.34) 0% 25%, transparent 0% 50%),
         repeating-conic-gradient(rgba(255, 255, 255, 0.3) 0% 25%, transparent 0% 50%);
     background-size:
-        100% var(--edge), 100% var(--edge),
-        var(--edge) 100%, var(--edge) 100%,
         calc(6px * var(--s, 1)) calc(6px * var(--s, 1)),
         calc(3px * var(--s, 1)) calc(3px * var(--s, 1));
-    background-position:
-        top, bottom, left, right,
-        0 0, calc(3px * var(--s, 1)) calc(3px * var(--s, 1));
-    background-repeat:
-        no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat;
+    background-position: 0 0, calc(3px * var(--s, 1)) calc(3px * var(--s, 1));
 }
-/* Spine: a vertical line inset from the left edge — scales with the book so
-   small books aren't dominated by a fat, centred line. */
-.ambient-book::before {
+/* Spine hint — a short solid line inset from the cover's right edge, sitting
+   between the front cover and the fore-edge pages so the binding reads. */
+.ambient-book__cover::before {
     content: "";
     position: absolute;
+    top: calc(3px * var(--s, 1));
+    bottom: calc(3px * var(--s, 1));
+    right: calc(3px * var(--s, 1));
+    width: max(1px, calc(1.5px * var(--s, 1)));
+    background: var(--color-brand-text);
+}
+/* Fore-edge (pages) — the right long face that faces the viewer when upright.
+   Off-white paper with vertical page lines. Hinged on the cover's right edge. */
+.ambient-book__side {
+    top: var(--pi);
+    left: 100%;
+    width: calc(var(--t) - 2 * var(--pi));
+    height: calc(100% - 2 * var(--pi));
+    transform-origin: left center;
+    transform: translateX(calc(-1 * var(--pi))) translateZ(calc(-1 * var(--pi))) rotateY(90deg);
+    background-color: color-mix(in srgb, var(--page) 90%, var(--color-brand-text));
+    background-image: var(--page-line);
+}
+/* Head edge (top page edges) — off-white paper. Spans y=0, z ∈ [-t, 0]:
+   rotated up out of the cover plane, then pushed back so it bridges the front
+   and back covers. Normal points up (outward). */
+.ambient-book__top {
     top: 0;
-    bottom: 0;
-    left: calc(6px * var(--s, 1));
-    width: calc(2px * var(--s, 1));
-    /* Segmented (dashed) spine — same 4px dash / 1px gap as the outer frame. */
-    background: repeating-linear-gradient(
+    left: 0;
+    width: calc(100% - var(--pi)); /* flush at the spine, inset at the fore-edge */
+    height: calc(var(--t) - 2 * var(--pi));
+    transform-origin: center top;
+    transform: translateY(var(--pi)) translateZ(calc(var(--pi) - var(--t))) rotateX(90deg);
+    border-width: max(1px, calc(0.75px * var(--s, 1)));
+    background-color: var(--page);
+    background-image: var(--page-line-h);
+}
+/* Tail edge (bottom page edges) — off-white paper. Hinged on the cover's
+   bottom edge and folded BACK (z ∈ [0, -t]); normal points down (outward). */
+.ambient-book__bottom {
+    left: 0;
+    top: 100%;
+    width: calc(100% - var(--pi)); /* flush at the spine, inset at the fore-edge */
+    height: calc(var(--t) - 2 * var(--pi));
+    transform-origin: center top;
+    transform: translateY(calc(-1 * var(--pi))) translateZ(calc(-1 * var(--pi))) rotateX(-90deg);
+    border-width: max(1px, calc(0.75px * var(--s, 1)));
+    background-color: color-mix(in srgb, var(--page) 82%, var(--color-brand-text));
+    background-image: var(--page-line-h);
+}
+/* Spine (binding) — the left long face, kept to the BACK when upright.
+   Spans x=0, z ∈ [-t, 0]: rotated out of the cover plane, then pushed back so
+   it bridges the front and back covers (normal points left, outward).
+   Cover colour with horizontal binding bands. */
+.ambient-book__spine {
+    left: 0;
+    top: 0;
+    width: var(--t);
+    height: 100%;
+    transform-origin: left center;
+    transform: translateZ(calc(-1 * var(--t))) rotateY(-90deg);
+    background-color: color-mix(in srgb, var(--book) 82%, var(--color-brand-text));
+    background-image: repeating-linear-gradient(
         to bottom,
-        var(--color-brand-text) 0 calc(4px * var(--s, 1)),
-        transparent calc(4px * var(--s, 1)) calc(5px * var(--s, 1))
+        rgba(31, 41, 55, 0.22) 0 calc(2px * var(--s, 1)),
+        transparent calc(2px * var(--s, 1)) calc(6px * var(--s, 1))
     );
 }
-/* Page block: light fore-edge strip on the right — scales with the book. */
-.ambient-book::after {
-    content: "";
-    position: absolute;
-    top: calc(4px * var(--s, 1));
-    bottom: calc(4px * var(--s, 1));
-    right: calc(3px * var(--s, 1));
-    width: calc(5px * var(--s, 1));
-    background: rgba(255, 255, 255, 0.8);
-    /* Thin solid divider between page-block and cover (too short for dashes to read). */
-    border-left: calc(1.5px * var(--s, 1)) solid var(--color-brand-text);
+/* Back cover — rear face one depth behind the front, in shadow. Flipped 180°
+   so its normal faces away from the viewer (outward) — the box reads solid
+   from behind during the tumble. */
+.ambient-book__back {
+    inset: 0;
+    transform: translateZ(calc(-1 * var(--t))) rotateY(180deg);
+    /* Hairline — a full-weight outline here stacks behind the tail face's
+       border and reads as one heavy smear across the bottom corner. */
+    border-width: max(1px, calc(0.75px * var(--s, 1)));
+    background-color: color-mix(in srgb, var(--book) 60%, var(--color-brand-text));
 }
+
+/* ── Orientation B: books lying flat on an (undrawn) surface ─────────────────
+   Same closed box, tipped onto the surface: the cover faces up, the spine
+   points down toward the surface and the fore-edge pages read along the top.
+   rotateZ swings the spine from the left edge down to the front-bottom. */
+.ambient-book--flat .ambient-book__iso {
+    /* Innermost rotateZ spins the book in its own plane (spine → near/lower
+       edge); the outer rotateX tips it down into an isometric table view. Cover
+       faces up, spine points down to the surface, fore-edge pages along the top.
+       --rz is a small per-book jitter so books in a pile sit slightly askew,
+       like a real stack. The origin sits half a thickness behind the cover —
+       the volume's centre — so the jitter pivots the book about its middle
+       rather than a corner. */
+    transform-origin: 50% 50% calc(var(--t) / -2);
+    transform: rotateX(58deg) rotateZ(calc(-62deg + var(--rz, 0deg)));
+}
+
 @media (prefers-reduced-motion: no-preference) {
-    .ambient-book {
-        animation: book-drift var(--d, 40s) linear infinite;
+    .ambient-book--flat .ambient-book__iso {
+        animation: iso-tumble-flat var(--tumble, 26s) ease-in-out infinite;
         animation-delay: var(--delay, 0s);
     }
-    @keyframes book-drift {
+    @keyframes iso-tumble-flat {
+        0%, 100% { transform: rotateX(58deg) rotateZ(calc(-66deg + var(--rz, 0deg))); }
+        50%      { transform: rotateX(58deg) rotateZ(calc(-58deg + var(--rz, 0deg))); }
+    }
+}
+@media (prefers-reduced-motion: no-preference) {
+    .ambient-pile {
+        animation: pile-drift var(--d, 40s) linear infinite;
+        animation-delay: var(--delay, 0s);
+    }
+    @keyframes pile-drift {
         from { transform: translateY(0) rotate(var(--r, 0deg)); }
         to   { transform: translateY(calc(-100vh - 160px)) rotate(calc(var(--r, 0deg) * -1)); }
+    }
+    /* Bonus: a very slow isometric tumble — the spine opens and closes a few
+       degrees. Smooth (not steps()) so the 3D read stays fluid, transform-only. */
+    .ambient-book__iso {
+        animation: iso-tumble var(--tumble, 26s) ease-in-out infinite;
+        animation-delay: var(--delay, 0s);
+    }
+    @keyframes iso-tumble {
+        0%, 100% { transform: rotateX(14deg) rotateY(-32deg); }
+        50%      { transform: rotateX(14deg) rotateY(-19deg); }
     }
 }
 

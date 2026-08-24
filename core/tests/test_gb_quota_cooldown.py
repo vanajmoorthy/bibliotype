@@ -147,9 +147,10 @@ class VibeFailureTests(TestCase):
         self.assertIsNone(generate_vibe_with_llm({"reader_type": "x"}))
 
     @patch("core.services._gemini.client")
-    def test_valid_response_returns_phrases(self, mock_client):
+    def test_valid_response_returns_single_phrase(self, mock_client):
+        # The dashboard shows one sentence; extra phrases from the model are dropped.
         mock_client.return_value.generate_content.return_value = Mock(text='{"vibe_phrases": ["a", "b"]}')
-        self.assertEqual(generate_vibe_with_llm({"reader_type": "x"}), ["a", "b"])
+        self.assertEqual(generate_vibe_with_llm({"reader_type": "x"}), ["a"])
 
 
 GOODREADS_CSV = (

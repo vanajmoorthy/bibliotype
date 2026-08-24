@@ -7,6 +7,11 @@ from . import _gemini
 
 logger = logging.getLogger(__name__)
 
+# Brand highlight colours for the vibe banner. One is chosen at generation time
+# and persisted in dna_data so the vibe keeps its colour on every load.
+# No pink — the share button next to the vibe is already pink.
+VIBE_COLORS = ["#40e7aa", "#ffa75e", "#8bbfff"]
+
 
 def create_vibe_prompt(dna: dict) -> str:
     """
@@ -31,16 +36,16 @@ def create_vibe_prompt(dna: dict) -> str:
     prompt = f"""
 You are a witty, self-aware observer who writes funny, specific one-liner descriptions of a person based on their reading habits. Think: a friend affectionately roasting your taste in books — wry, literary, a little self-deprecating, with unexpected juxtapositions.
 
-Your task is to generate 2 vivid, character-sketch-style sentences that capture this person's reading personality.
+Your task is to generate 1 vivid, character-sketch-style sentence that captures this person's reading personality.
 
 **RULES:**
-- Each sentence should be 8-18 words. Not short phrases — full, punchy sentences or descriptions.
+- The sentence should be 8-18 words. Not a short phrase — a full, punchy sentence or description.
 - All lowercase.
 - No punctuation at the end.
 - Be specific and visual — paint a scene or describe a character, don't just list genres.
 - Be funny but not cringey. Wry and self-aware, not try-hard quirky.
 - Do NOT mention specific book titles, author names, or genre names directly.
-- Output ONLY a valid JSON object with a single key "vibe_phrases" which is a list of 2 strings.
+- Output ONLY a valid JSON object with a single key "vibe_phrases" which is a list of exactly 1 string.
 
 **User's Reading DNA:**
 - Primary Reader Type: "{reader_type}"
@@ -51,7 +56,6 @@ Your task is to generate 2 vivid, character-sketch-style sentences that capture 
 **Example of GOOD output for a Fantasy/Sci-Fi reader:**
 {{
   "vibe_phrases": [
-    "accidentally falling asleep in someone else's imaginary world again",
     "the one who brings a 600-page paperback to the beach"
   ]
 }}
@@ -59,23 +63,20 @@ Your task is to generate 2 vivid, character-sketch-style sentences that capture 
 **Example of GOOD output for a Literary Fiction reader:**
 {{
   "vibe_phrases": [
-    "staring out of train windows like a protagonist between chapters",
-    "collecting existential crises from other people's novels"
+    "staring out of train windows like a protagonist between chapters"
   ]
 }}
 
 **Example of GOOD output for a Nonfiction/History reader:**
 {{
   "vibe_phrases": [
-    "explaining the roman empire at dinner and losing the table",
-    "quietly judging everyone who hasn't read the footnotes"
+    "explaining the roman empire at dinner and losing the table"
   ]
 }}
 
 **Example of BAD output (Do NOT do this):**
 {{
   "vibe_phrases": [
-    "dusty maps and forgotten prophecies",
     "you enjoy reading fantasy books"
   ]
 }}
@@ -104,7 +105,9 @@ def generate_vibe_with_llm(dna: dict) -> list:
         vibe_phrases = response_json.get("vibe_phrases", [])
 
         if isinstance(vibe_phrases, list) and all(isinstance(p, str) for p in vibe_phrases):
-            return vibe_phrases
+            # The dashboard shows a single sentence; keep only the first even if
+            # the model over-delivers.
+            return vibe_phrases[:1]
         else:
             logger.error(f"Vibe response had unexpected format: {response_json}")
             return None
