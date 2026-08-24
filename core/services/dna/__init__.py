@@ -20,7 +20,7 @@ from django.db.models import F
 from django.utils import timezone
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-from core.services.llm_service import generate_vibe_with_llm
+from core.services.llm_service import VIBE_COLORS, generate_vibe_with_llm
 
 from ...dna_constants import (
     CANONICAL_GENRE_MAP,
@@ -827,11 +827,13 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         logger.debug(f"DNA data generated")
 
         reading_vibe = []
+        vibe_color = None
         if user:
             profile = user.userprofile
             if profile.vibe_data_hash == new_data_hash and profile.reading_vibe:
                 logger.debug("Vibe data is unchanged. Using cached vibe from database")
                 reading_vibe = profile.reading_vibe
+                vibe_color = (profile.dna_data or {}).get("reading_vibe_color")
             else:
                 logger.info("Vibe data has changed. Generating a new vibe with LLM...")
                 reading_vibe = generate_vibe_with_llm(dna)
@@ -844,6 +846,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         # failure forever (the cached-vibe branch above requires a hash match).
         dna["reading_vibe"] = reading_vibe or []
         dna["vibe_data_hash"] = new_data_hash if reading_vibe else None
+        # The banner colour is minted once, alongside the vibe, and rides in
+        # dna_data so every later page load shows the same highlight.
+        dna["reading_vibe_color"] = vibe_color or random.choice(VIBE_COLORS)
 
         def clean_dict(d):
             if not isinstance(d, dict):
