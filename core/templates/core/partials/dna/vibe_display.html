@@ -1,6 +1,9 @@
 {% if dna.reading_vibe %}
-    <div id="vibe-container" class="mb-6 flex flex-wrap items-center justify-center text-center text-xl italic md:mb-8">
-        <span class="vibe-item box-decoration-clone px-2 py-0 text-gray-700"
-              style="background-color: {{ dna.reading_vibe_color|default:'#8bbfff' }}">{{ dna.reading_vibe|first }}</span>
+    <div id="vibe-container" class="mb-6 text-center text-xl leading-9 italic md:mb-8">
+        <span
+            class="vibe-item box-decoration-clone px-2 py-0.5 text-gray-700"
+            style="background-color: {{ dna.reading_vibe_color|default:'#8bbfff' }}"
+            >{{ dna.reading_vibe|first }}</span
+        >
     </div>
 {% endif %}
