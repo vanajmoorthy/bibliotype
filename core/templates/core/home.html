@@ -192,6 +192,30 @@
                 });
             })();
         </script>
+        {% comment %} TEMP pixel-filter A/B preview — strip this whole block (svg + style +
+        button) once the user picks a winner; if the 1px filter wins, move the .ambient-book
+        filter rule into static/src/input.css and delete the toggle. {% endcomment %}
+        <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+            <filter id="pixelate-1px" x="-2%" y="-2%" width="104%" height="104%">
+                <feFlood x="0" y="0" width="1" height="1" />
+                <feComposite width="1" height="1" />
+                <feTile result="tiles" />
+                <feComposite in="SourceGraphic" in2="tiles" operator="in" />
+                <feMorphology operator="dilate" radius="0.5" />
+            </filter>
+        </svg>
+        <style>
+            .ambient-books--pixel .ambient-book {
+                filter: url(#pixelate-1px);
+            }
+        </style>
+        <button
+            id="pixel-toggle"
+            type="button"
+            style="position: fixed; bottom: 8px; left: 8px; z-index: 60; border: 2px solid #1f2937; background: #fff; padding: 2px 10px; box-shadow: 2px 2px 0 #1f2937; cursor: pointer; font-family: inherit; font-size: 16px;"
+            onclick="const c = document.querySelector('.ambient-books').classList; c.toggle('ambient-books--pixel'); this.textContent = c.contains('ambient-books--pixel') ? 'filter: 1px' : 'filter: none';">
+            filter: none
+        </button>
         <div class="relative z-10 mx-auto w-full max-w-2xl p-2 text-center">
             <h1 class="flex flex-wrap justify-center gap-2 text-4xl font-bold tracking-widest uppercase md:text-5xl">
                 Discover Your
