@@ -272,21 +272,37 @@ html {
    A single --book colour drives the covers/spine; --page drives the paper.
 
    Layering so animation never fights the 3D transform:
-     .ambient-book      → absolute position + the vertical drift (2D transform)
+     .ambient-pile      → absolute position, the vertical drift (2D transform),
+                          the screen-space tilt and the pile's shared opacity
+     .ambient-book      → a book's resting slot within the pile (--yo lift)
      .ambient-book__iso → the static isometric tilt + a slow tumble
                           (this is the only preserve-3d element)
      .ambient-book__*   → the faces, hinged off the front plane. */
-.ambient-book {
+.ambient-pile {
     position: absolute;
     left: var(--x);
-    /* --yo lifts a book within a pile: books sharing --x/--d/--delay/--r drift
-       in lockstep, so staggered --yo values read as one stacked unit. */
-    bottom: calc(-80px + var(--yo, 0px));
+    bottom: -80px;
     width: calc(36px * var(--s, 1));
     height: calc(50px * var(--s, 1));
-    opacity: 0.9;
-    /* Per-book screen-space tilt, applied on top of the composited 3D body. */
+    /* Opacity lives on the pile, not the books: the pile composites as one
+       unit first, so stacked books occlude each other at full strength and
+       only the finished pile fades against the page. */
+    opacity: 0.7;
+    /* Tilt about the pile's *visual* centre, not the box centre: the flat
+       book's silhouette sits ~0.42·t lower (thickness projects downward after
+       the rotateX(58°) tip; 4.6px = 0.42 × 11px unit thickness) while the
+       stacked books sit --py (the mean of the pile's --yo lifts) higher. */
+    transform-origin: 50% calc(50% + 4.6px * var(--s, 1) - var(--py, 0px));
     transform: rotate(var(--r, 0deg));
+}
+.ambient-book {
+    position: absolute;
+    left: 0;
+    /* --yo lifts a book to its resting height in the pile: the running sum of
+       the projected thicknesses of the books below it. */
+    bottom: var(--yo, 0px);
+    width: 100%;
+    height: 100%;
     /* Book thickness / extrusion depth. --tk varies it per book (0.7 thin,
        1 regular, 1.4 chunky) so piles mix thick and thin volumes. */
     --t: calc(11px * var(--s, 1) * var(--tk, 1));
@@ -444,11 +460,11 @@ html {
     }
 }
 @media (prefers-reduced-motion: no-preference) {
-    .ambient-book {
-        animation: book-drift var(--d, 40s) linear infinite;
+    .ambient-pile {
+        animation: pile-drift var(--d, 40s) linear infinite;
         animation-delay: var(--delay, 0s);
     }
-    @keyframes book-drift {
+    @keyframes pile-drift {
         from { transform: translateY(0) rotate(var(--r, 0deg)); }
         to   { transform: translateY(calc(-100vh - 160px)) rotate(calc(var(--r, 0deg) * -1)); }
     }

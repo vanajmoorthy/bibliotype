@@ -38,35 +38,15 @@ Pile math: projected thickness step u = 9.33·s·tk px; `--yo` of book i = runni
 
 ## Remaining work (user-requested, in priority order)
 
-1. **Verify the current uncommitted-era changes on :8000** — `9ba9ffd` (7 piles of 2-3,
-   18 books, edge-weighted + phase-stratified randomizer) was never screenshotted.
-
-2. **Group transparency, not per-book.** User wants slight transparency on the books,
-   BUT per-book `opacity` lets the book underneath show through the one on top
-   (currently `opacity: 0.9` per book, in `.ambient-book`). Fix: restructure each pile
-   into a wrapper element (e.g. `.ambient-pile`) that owns the drift animation,
-   position (`--x`), and `opacity: ~0.9`; books inside keep `--yo/--rz` only. CSS
-   `opacity` on a common ancestor composites the pile first, then fades it as one unit —
-   books occlude each other correctly. This wrapper refactor also simplifies the
-   randomizer (no more grouping siblings by `--x` string) and the lockstep-drift hack.
-   Set per-book opacity back to 1 when doing this.
-
-3. **Same width within a stack; widths vary between stacks.** All books are `--s: 0.6`
-   today. Give each pile its own `--s` (say 0.5–0.7); all books in a pile share it.
-   Recompute each pile's `--yo` sums with its own u = 9.33·s.
-
-4. **Rotation pivot "a tiny bit off"** (user screenshot of a 2-pile). The in-plane
-   `--rz` spin pivots via `transform-origin: 50% 50% calc(var(--t)/-2)` on
-   `.ambient-book--flat .ambient-book__iso` — that centres it in the volume. Remaining
-   suspect: the screen-space `--r` rotate on `.ambient-book` uses the default origin =
-   container centre, but the box's *visual* centre sits ~0.42·t lower (thickness
-   projects downward after rotateX(58°)). Try `transform-origin: 50% calc(50% + 0.42 * var(--t))`
-   on `.ambient-book`, or move `--rz` onto a dedicated wrapper and measure. Verify by
-   toggling `--rz` on a big harness book and watching which point stays fixed.
-
-5. **Randomizer: equal pile count left and right.** Current split is ceil/floor over
-   the edge groups (can be 3/2). Choose `centerN` so the remaining edge count is even
-   (e.g. `centerN = list.length % 2 === 0 ? 2 : 1`), then split evenly.
+Items 1–5 are DONE (2026-08-24 session): the `9ba9ffd` state was verified on :8000;
+piles are now `.ambient-pile` wrapper divs owning `--x/--d/--delay/--r/--s`, the drift
+animation (`pile-drift`), the `--r` pivot origin and a group `opacity: 0.7` (user asked
+for more transparency than 0.9; books themselves back to opacity 1 so they occlude
+correctly); each pile has its own `--s` (0.5–0.7) with `--yo` recomputed per pile and a
+`--py` var (mean of the pile's `--yo`s) used in the pivot correction
+`transform-origin: 50% calc(50% + 4.6px·--s − --py)`; the randomizer splits edges
+evenly (odd pile → random side), places at most one middle pile on ~25% of loads, and
+skips `display: none` piles so mobile always gets 2 left / 2 right.
 
 6. **Bring back the 1px pixelate filter as a preview.** User wants to see the subtle
    variant again before final call. Re-add the SVG filter (cell 1: `feFlood x=0 y=0
@@ -106,10 +86,8 @@ Pile math: projected thickness step u = 9.33·s·tk px; `--yo` of book i = runni
 
 - When the user is happy: push `feat/ambient-iso-books`, open PR to `main`. Merging
   auto-deploys to prod.
-- Stray commit `c5c4af3` ("chore: block reading .env via Claude Code permission deny…")
-  sits unpushed on `feat/home-ambient-books-and-gemini-model-fix` (the already-merged
-  PR #154 branch). Not throwaway — cherry-pick onto a fresh branch and open a tiny
-  separate PR.
+- Stray commit `c5c4af3` (.env-guard settings): DONE — cherry-picked onto
+  `chore/env-guard-permissions`, merged as PR #159.
 - `.testing-screenshots/` is untracked scratch; leave it.
 
 ## Vibe changes already shipped on this branch (context)
