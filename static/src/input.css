@@ -276,12 +276,6 @@ html {
      .ambient-book__iso → the static isometric tilt + a slow tumble
                           (this is the only preserve-3d element)
      .ambient-book__*   → the faces, hinged off the front plane. */
-/* 8-bit mosaic pass — #pixelate-8bit is an inline SVG filter defined in
-   home.html next to the books; scoped to the wrapper so the reference always
-   resolves on the page that applies it. */
-.ambient-books .ambient-book {
-    filter: url(#pixelate-8bit);
-}
 .ambient-book {
     position: absolute;
     left: var(--x);
@@ -293,7 +287,9 @@ html {
     opacity: 1;
     /* Per-book screen-space tilt, applied on top of the composited 3D body. */
     transform: rotate(var(--r, 0deg));
-    --t: calc(11px * var(--s, 1)); /* book thickness / extrusion depth */
+    /* Book thickness / extrusion depth. --tk varies it per book (0.7 thin,
+       1 regular, 1.4 chunky) so piles mix thick and thin volumes. */
+    --t: calc(11px * var(--s, 1) * var(--tk, 1));
     --pi: calc(1px * var(--s, 1)); /* page inset — covers overhang the page block */
     --edge: calc(2px * var(--s, 1));
     --book: var(--book-color, var(--color-brand-purple));
