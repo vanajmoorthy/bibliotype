@@ -63,6 +63,9 @@ runcmd:
   - sudo -u bibliotype git clone ${repo_url} /home/bibliotype/app
   - mkdir -p /home/bibliotype/app/staticfiles
   - chown -R bibliotype:www-data /home/bibliotype/app/staticfiles
+  # Ubuntu 24.04 creates homes 750; nginx (www-data) must traverse to
+  # app/staticfiles or every static asset 403s (bit us at first cutover).
+  - chmod 755 /home/bibliotype
   # Certbot via snap (the standard install path on Ubuntu 24.04)
   - snap install --classic certbot
   - ln -sf /snap/bin/certbot /usr/bin/certbot
