@@ -23,7 +23,7 @@ paths:
 | `claim_anonymous_dna_task` | Yes | 5 | None | Fixed 10s | No |
 | `generate_recommendations_task` | Yes | 3 | None | `60 * 2^retries` | No |
 | `enrich_book_task` | Yes | 3 | 60/min | `60 * 2^retries` | Yes |
-| `check_author_mainstream_status_task` | No | None | None | — | Yes |
+| `check_author_mainstream_status_task` | No | None | 30/min | — | Yes |
 | `research_publisher_mainstream_task` | No | None | None | 2s sleep between | No |
 | `anonymize_expired_sessions_task` | No | None | None | — | No |
 | `run_management_command_task` | No | None | None | — | No |

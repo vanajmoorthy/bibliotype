@@ -32,9 +32,11 @@ def _assert_bulk_queue_consumed(sender, instance, **kwargs):
     # Imported here: this module loads before django.setup() finishes.
     from core.dna_constants import ENRICHMENT_BULK_QUEUE
 
+    default_queue = instance.app.conf.task_default_queue  # "celery" unless overridden
+    required = {default_queue, ENRICHMENT_BULK_QUEUE}
     names = {q.name for q in instance.app.amqp.queues.consume_from.values()}
-    if ENRICHMENT_BULK_QUEUE not in names:
+    if not required <= names:
         raise SystemExit(
-            f"Worker is not consuming the '{ENRICHMENT_BULK_QUEUE}' queue (got: {sorted(names)}). "
-            f"Fix the -Q flag: celery -A bibliotype worker -Q celery,{ENRICHMENT_BULK_QUEUE}"
+            f"Worker is not consuming {sorted(required - names)} (got: {sorted(names)}). "
+            f"Fix the -Q flag: celery -A bibliotype worker -Q {default_queue},{ENRICHMENT_BULK_QUEUE}"
         )

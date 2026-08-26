@@ -60,6 +60,7 @@ class QueueConfigTests(SimpleTestCase):
         # Single shared task name for bulk + interactive: rate_limit is per
         # task NAME, so the 60/m cap covers total external API throughput.
         self.assertEqual(enrich_book_task.rate_limit, "60/m")
+        self.assertEqual(check_author_mainstream_status_task.rate_limit, "30/m")
         self.assertTrue(enrich_book_task.ignore_result)
         self.assertTrue(check_author_mainstream_status_task.ignore_result)
 

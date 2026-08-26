@@ -17,6 +17,13 @@ Typical usage:
 
 Seeded users are identified by the `seed_` username prefix and the
 `@seed.bibliotype.invalid` email domain — there is no model flag.
+
+Seeding runs with bulk_enrichment=True: enrichment is deferred to the
+rate-limited `enrichment_bulk` queue, so DNA is initially computed from
+unenriched books (sparse genres, no fiction/nonfiction split for new titles).
+After the bulk queue drains, run `manage.py regenerate_dna` (and
+`rebuild_analytics` if aggregate distributions matter) to fold the enriched
+data back into the seeded profiles.
 """
 
 import hashlib

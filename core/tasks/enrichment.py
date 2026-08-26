@@ -22,7 +22,11 @@ PUBLISHER_CHECK_AGE_THRESHOLD_DAYS = 90
 # name pinned: wire name must survive the package split (queued msgs + beat)
 # ignore_result: nothing reads the return value, and bulk runs would otherwise
 # write tens of thousands of 24h-TTL result keys into the shared Redis.
-@shared_task(name="core.tasks.check_author_mainstream_status_task", ignore_result=True)
+# rate_limit: the task makes up to 2 unthrottled HTTP calls (Open Library
+# author search + Wikipedia pageviews); a bulk seed dispatches one per new
+# author, so without a cap those requests stack on top of enrich_book_task's
+# 60/m to the same Open Library host.
+@shared_task(name="core.tasks.check_author_mainstream_status_task", rate_limit="30/m", ignore_result=True)
 def check_author_mainstream_status_task(author_id: int, user_id: int = None, upload_nonce: str = None):
     # If the upload that spawned this task has been superseded by a newer one,
     # exit immediately. Without this, hundreds of leftover author-check tasks
