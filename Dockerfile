@@ -11,8 +11,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
     node --version && npm --version
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm — pinned to a major: an unpinned install broke CI when pnpm 11
+# started hard-failing on build scripts not approved in pnpm-workspace.yaml.
+RUN npm install -g pnpm@11
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -28,8 +29,10 @@ COPY pyproject.toml poetry.lock ./
 RUN pip install poetry
 RUN poetry install --no-root --no-interaction
 
-# Copy Node.js files and static directory for building
-COPY package.json pnpm-lock.yaml ./
+# Copy Node.js files and static directory for building.
+# pnpm-workspace.yaml carries the build-script approvals (ignoredBuiltDependencies);
+# without it in the image, pnpm >= 11 fails install with ERR_PNPM_IGNORED_BUILDS.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY static/ ./static/
 COPY tailwind.config.js ./
 

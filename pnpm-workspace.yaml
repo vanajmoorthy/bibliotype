@@ -1,3 +1,14 @@
+# pnpm settings file (not an actual multi-package workspace).
+# Neither package runs its build script — @tailwindcss/oxide ships prebuilt
+# bindings and @parcel/watcher is only needed for watch mode. Recording the
+# decision explicitly is required since pnpm 11 (ERR_PNPM_IGNORED_BUILDS).
+
+# pnpm >= 11
+allowBuilds:
+  "@parcel/watcher": false
+  "@tailwindcss/oxide": false
+
+# pnpm 10 equivalent (ignored by pnpm 11, kept for local installs on 10.x)
 ignoredBuiltDependencies:
   - '@parcel/watcher'
   - '@tailwindcss/oxide'
