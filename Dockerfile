@@ -4,10 +4,9 @@ FROM python:3.13-slim-bookworm
 
 RUN apt-get update && apt-get install -y postgresql-client dos2unix curl gnupg ca-certificates
 
-# Install Node.js + npm via NodeSource (Node 20).
+# Install Node.js + npm via NodeSource (Node 22 LTS — pnpm 11 needs node:sqlite, absent in Node 20).
 # NodeSource setup needs gnupg/ca-certificates (installed above) to verify and add its apt key.
 # Verify both binaries are present so build fails loudly if NodeSource didn't take.
-# Node 22 (LTS): pnpm 11 requires node:sqlite, which Node 20 lacks
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs && \
     node --version && npm --version
