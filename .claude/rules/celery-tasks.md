@@ -17,16 +17,33 @@ paths:
 
 ## Task Registry
 
-| Task | Bind | Max Retries | Rate Limit | Countdown |
-|------|------|-------------|------------|-----------|
-| `generate_reading_dna_task` | Yes | None | None | — |
-| `claim_anonymous_dna_task` | Yes | 5 | None | Fixed 10s |
-| `generate_recommendations_task` | Yes | 3 | None | `60 * 2^retries` |
-| `enrich_book_task` | Yes | 3 | 30/min | `60 * 2^retries` |
-| `check_author_mainstream_status_task` | No | None | None | — |
-| `research_publisher_mainstream_task` | No | None | None | 2s sleep between |
-| `anonymize_expired_sessions_task` | No | None | None | — |
-| `run_management_command_task` | No | None | None | — |
+| Task | Bind | Max Retries | Rate Limit | Countdown | ignore_result |
+|------|------|-------------|------------|-----------|---------------|
+| `generate_reading_dna_task` | Yes | None | None | — | No |
+| `claim_anonymous_dna_task` | Yes | 5 | None | Fixed 10s | No |
+| `generate_recommendations_task` | Yes | 3 | None | `60 * 2^retries` | No |
+| `enrich_book_task` | Yes | 3 | 60/min | `60 * 2^retries` | Yes |
+| `check_author_mainstream_status_task` | No | None | 30/min | — | Yes |
+| `research_publisher_mainstream_task` | No | None | None | 2s sleep between | No |
+| `anonymize_expired_sessions_task` | No | None | None | — | No |
+| `run_management_command_task` | No | None | None | — | No |
+
+## Queues (bulk vs interactive)
+
+Two queues, one worker, deterministic priority:
+
+- **`celery`** (default) — interactive work: uploads, DNA generation, recommendations, inline-fallback enrichment.
+- **`enrichment_bulk`** (`ENRICHMENT_BULK_QUEUE` in `core/dna_constants.py`) — bulk enrichment: `seed_from_exports` (via `calculate_full_dna(..., bulk_enrichment=True)`, which also skips inline enrichment) and `enrich_books` backfills.
+
+Rules that keep this working:
+
+- Priority comes from `CELERY_BROKER_TRANSPORT_OPTIONS = {"queue_order_strategy": "sorted"}` — alphabetical by queue NAME, so `celery` drains before `enrichment_bulk`. **Never switch to `"priority"`** (celery/celery#8673: hash-randomized order per worker start). Renaming the bulk queue must keep it sorting after `"celery"` (test-enforced in `test_enrichment_queue_routing.py`).
+- `CELERY_WORKER_PREFETCH_MULTIPLIER = 1` — at most ~1 reserved bulk task runs ahead of a new interactive task. SLA: interactive enrichment starts within ~1–2 bulk task durations, not instantly.
+- Worker commands need `-Q celery,enrichment_bulk` (selection only — order in `-Q` is irrelevant). A `celeryd_after_setup` guard in `bibliotype/celery.py` hard-exits any worker not consuming the bulk queue, so a bad `-Q` shows up as a crash loop instead of silently stranded messages.
+- `enrich_book_task` keeps ONE name for both queues — `rate_limit` is per task name, so a second name would double external API throughput.
+- `self.retry()` re-publishes with the original delivery info: bulk retries stay on the bulk queue.
+- Do NOT use ETA-spread dispatch for bulk fan-outs: ETA tasks bypass prefetch and sit in worker RAM; ETAs past the 1h visibility timeout get redelivered as duplicates.
+- Reverting the split strands anything still in `enrichment_bulk` — drain first, or `redis-cli -n 0 DEL enrichment_bulk` and re-run `enrich_books`.
 
 ## Celery Beat Schedule
 

@@ -532,8 +532,8 @@ class InlineEnrichmentDuringDnaTests(TransactionTestCase):
         return calculate_full_dna(self.CSV, user=user)
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.check_author_mainstream_status_task.delay")
-    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
     @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_inline_enrichment_provides_genres(self, mock_inline, mock_vibe, mock_delay, mock_author, mock_recs):
@@ -566,8 +566,8 @@ class InlineEnrichmentDuringDnaTests(TransactionTestCase):
         )
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.check_author_mainstream_status_task.delay")
-    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
     @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_async_fallback_on_inline_exception(self, mock_inline, mock_vibe, mock_delay, mock_author, mock_recs):
@@ -580,14 +580,17 @@ class InlineEnrichmentDuringDnaTests(TransactionTestCase):
         self.assertEqual(mock_inline.call_count, 2)
         self.assertEqual(mock_delay.call_count, 2)
         for call in mock_delay.call_args_list:
-            self.assertEqual(call.kwargs["user_id"], user.id)
-            self.assertIn("upload_nonce", call.kwargs)
+            task_kwargs = call.kwargs["kwargs"]
+            self.assertEqual(task_kwargs["user_id"], user.id)
+            self.assertIn("upload_nonce", task_kwargs)
+            # Interactive upload — default queue, not the bulk queue
+            self.assertNotIn("queue", call.kwargs)
         # No genres → both books tracked as defaulted, split is None
         self.assertIsNone(dna["fiction_nonfiction_split"])
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.check_author_mainstream_status_task.delay")
-    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
     @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_goodreads_bookshelves_break_ties_in_split(
@@ -615,8 +618,8 @@ class InlineEnrichmentDuringDnaTests(TransactionTestCase):
         )
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.check_author_mainstream_status_task.delay")
-    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
     @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     @patch("core.services.dna.enrichment_budget._EnrichmentBudget.has_remaining", return_value=False)
@@ -632,7 +635,7 @@ class InlineEnrichmentDuringDnaTests(TransactionTestCase):
         mock_inline.assert_not_called()
         self.assertEqual(mock_delay.call_count, 2)
         for call in mock_delay.call_args_list:
-            self.assertEqual(call.kwargs["user_id"], user.id)
+            self.assertEqual(call.kwargs["kwargs"]["user_id"], user.id)
 
 
 # ──────────────────────────────────────────────
@@ -1121,7 +1124,7 @@ class ManagementCommandIntegrationTests(TestCase):
         output = out.getvalue()
 
         self.assertIn("missing", output.lower())
-        mock_task.delay.assert_not_called()
+        mock_task.apply_async.assert_not_called()
 
     @patch("core.management.commands.enrich_books.enrich_book_task")
     def test_enrich_books_async_with_limit(self, mock_task):
@@ -1131,7 +1134,7 @@ class ManagementCommandIntegrationTests(TestCase):
         out = StringIO()
         call_command("enrich_books", "--limit", "1", stdout=out)
 
-        self.assertEqual(mock_task.delay.call_count, 1)
+        self.assertEqual(mock_task.apply_async.call_count, 1)
 
     def test_regenerate_dna_updates_genres_and_reader_type(self):
         """After enrichment, regenerate_dna updates dna_data fields."""

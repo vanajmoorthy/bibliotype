@@ -115,7 +115,7 @@ class EnrichBooksCommandWindowTests(TestCase):
         UserBook.objects.create(user=user, book=book)
         return book
 
-    @patch("core.management.commands.enrich_books.enrich_book_task.delay")
+    @patch("core.management.commands.enrich_books.enrich_book_task.apply_async")
     def test_plain_run_does_not_reset_timestamp_or_force(self, mock_delay):
         # A recently-checked book still matches the default queryset only if it's
         # missing something; give it no genres/pages so it qualifies.
@@ -124,23 +124,23 @@ class EnrichBooksCommandWindowTests(TestCase):
         book.refresh_from_db()
         self.assertIsNotNone(book.google_books_last_checked)  # not reset
         # Dispatched with force=False so the task's window guard applies.
-        _, kwargs = mock_delay.call_args
-        self.assertFalse(kwargs.get("force", False))
+        task_kwargs = mock_delay.call_args.kwargs["kwargs"]
+        self.assertFalse(task_kwargs.get("force", False))
 
-    @patch("core.management.commands.enrich_books.enrich_book_task.delay")
+    @patch("core.management.commands.enrich_books.enrich_book_task.apply_async")
     def test_force_resets_timestamp_and_forces(self, mock_delay):
         book = self._book_with_user(timedelta(hours=1))
         call_command("enrich_books", "--force")
         book.refresh_from_db()
         self.assertIsNone(book.google_books_last_checked)  # reset to force re-fetch
-        _, kwargs = mock_delay.call_args
-        self.assertTrue(kwargs.get("force"))
+        task_kwargs = mock_delay.call_args.kwargs["kwargs"]
+        self.assertTrue(task_kwargs.get("force"))
 
-    @patch("core.management.commands.enrich_books.enrich_book_task.delay")
+    @patch("core.management.commands.enrich_books.enrich_book_task.apply_async")
     def test_process_all_resets_timestamp_and_forces(self, mock_delay):
         book = self._book_with_user(timedelta(hours=1))
         call_command("enrich_books", "--process-all")
         book.refresh_from_db()
         self.assertIsNone(book.google_books_last_checked)
-        _, kwargs = mock_delay.call_args
-        self.assertTrue(kwargs.get("force"))
+        task_kwargs = mock_delay.call_args.kwargs["kwargs"]
+        self.assertTrue(task_kwargs.get("force"))

@@ -15,6 +15,14 @@ from datetime import timedelta
 # `--force`) bypass this window.
 ENRICHMENT_RETRY_AFTER = timedelta(hours=24)
 
+# Queue for bulk enrichment work (seeding runs, enrich_books backfills) so it
+# drains behind interactive users' tasks on the default "celery" queue. With
+# queue_order_strategy="sorted", priority is alphabetical by queue NAME — this
+# name must sort after "celery" (test-enforced in test_enrichment_queue_routing).
+# Lives here rather than core.tasks because core.services.dna needs it too and
+# core.tasks imports from core.services (circular otherwise).
+ENRICHMENT_BULK_QUEUE = "enrichment_bulk"
+
 READER_TYPE_DESCRIPTIONS = {
     "Fantasy Fanatic": [
         "You have a deep love for worlds of magic, myth, and epic quests. Your reading history is filled with fantasy and science fiction.",

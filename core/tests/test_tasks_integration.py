@@ -36,8 +36,8 @@ class TaskIntegrationTests(TransactionTestCase):
 
     # Mock the slow, external network calls
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.check_author_mainstream_status_task.delay")
-    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
     @patch("core.services.dna.generate_vibe_with_llm")
     def test_generate_dna_for_authenticated_user(self, mock_generate_vibe, mock_enrich_delay, mock_author_check, mock_rec_task):
         """
@@ -65,8 +65,8 @@ class TaskIntegrationTests(TransactionTestCase):
             {"Novella Navigator", "Eclectic Reader", "Comfort Rereader", "Series Slayer"},
         )
 
-    @patch("core.tasks.check_author_mainstream_status_task.delay")
-    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
     @patch("core.services.dna.generate_vibe_with_llm")
     def test_generate_dna_for_anonymous_user(self, mock_generate_vibe, mock_enrich_delay, mock_author_check):
         """
@@ -212,8 +212,8 @@ class TaskIntegrationTests(TransactionTestCase):
         mock_async_result.assert_not_called()
 
     @patch("core.tasks.generate_recommendations_task.delay")
-    @patch("core.tasks.check_author_mainstream_status_task.delay")
-    @patch("core.tasks.enrich_book_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
     @patch("core.services.dna.generate_vibe_with_llm")
     def test_process_book_row_query_count_regression(
         self, mock_generate_vibe, mock_enrich_delay, mock_author_check, mock_rec_task

@@ -72,7 +72,7 @@ def _throttle():
     """US-027: per-call sleep between external API hits.
 
     Skipped when `settings.ENABLE_PARALLEL_ENRICHMENT` is True; the Celery
-    `rate_limit="30/m"` on `enrich_book_task` is the unconditional safety net.
+    `rate_limit="60/m"` on `enrich_book_task` is the unconditional safety net.
     """
     if not settings.ENABLE_PARALLEL_ENRICHMENT:
         time.sleep(1.2)

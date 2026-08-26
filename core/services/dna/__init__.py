@@ -24,6 +24,7 @@ from core.services.llm_service import VIBE_COLORS, generate_vibe_with_llm
 
 from ...dna_constants import (
     CANONICAL_GENRE_MAP,
+    ENRICHMENT_BULK_QUEUE,
     ENRICHMENT_RETRY_AFTER,
     GLOBAL_AVERAGES,
     NICHE_THRESHOLD,
@@ -66,7 +67,17 @@ from .utils import (  # noqa: F401 — re-exported for stable import paths
 logger = logging.getLogger(__name__)
 
 
-def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progress_cb=None):
+def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progress_cb=None, bulk_enrichment=False):
+    """Run the full DNA pipeline for one CSV.
+
+    bulk_enrichment=True (seeding runs, backfills) routes every enrichment
+    dispatch to ENRICHMENT_BULK_QUEUE *and* skips inline enrichment entirely,
+    so all external API traffic from bulk runs flows through the rate-limited
+    Celery task instead of hammering Open Library/Google Books in-process.
+    """
+    # Routing for the three async enrichment dispatch sites below. Empty opts
+    # = Celery default queue ("celery"), which sorts before the bulk queue.
+    dispatch_opts = {"queue": ENRICHMENT_BULK_QUEUE} if bulk_enrichment else {}
     try:
         df = pd.read_csv(StringIO(csv_file_content))
         df, csv_source = _detect_and_normalize_csv(df)
@@ -185,8 +196,10 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     from ...tasks import check_author_mainstream_status_task
 
                     logger.info(f"New author found: '{author.name}'. Dispatching background check.")
-                    check_author_mainstream_status_task.delay(
-                        author.id, user_id=upload_user_id, upload_nonce=upload_nonce
+                    check_author_mainstream_status_task.apply_async(
+                        args=(author.id,),
+                        kwargs={"user_id": upload_user_id, "upload_nonce": upload_nonce},
+                        **dispatch_opts,
                     )
 
                 normalized_book_title = Book._normalize_title(title_from_csv)
@@ -294,7 +307,10 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 needs_page_data = not book.page_count or not book.publish_year
                 if not recently_attempted and (created or not has_genres or needs_page_data):
                     enriched_inline = False
-                    if enrichment_budget.has_remaining():
+                    # Bulk runs never enrich inline — the whole point of the
+                    # bulk queue is that their API traffic obeys the Celery
+                    # rate limit, which in-process enrichment bypasses.
+                    if not bulk_enrichment and enrichment_budget.has_remaining():
                         try:
                             from ..book_enrichment_service import enrich_book_from_apis
 
@@ -312,7 +328,11 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                         logger.debug(
                             f"Dispatching async enrichment for '{book.title}' (budget exhausted or inline failed)"
                         )
-                        enrich_book_task.delay(book.pk, user_id=upload_user_id, upload_nonce=upload_nonce)
+                        enrich_book_task.apply_async(
+                            args=(book.pk,),
+                            kwargs={"user_id": upload_user_id, "upload_nonce": upload_nonce},
+                            **dispatch_opts,
+                        )
                 else:
                     logger.debug(f"Book '{book.title}' recently enriched or complete. Skipping.")
 
@@ -402,8 +422,10 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 if created:
                     from ...tasks import check_author_mainstream_status_task
 
-                    check_author_mainstream_status_task.delay(
-                        author.id, user_id=upload_user_id, upload_nonce=upload_nonce
+                    check_author_mainstream_status_task.apply_async(
+                        args=(author.id,),
+                        kwargs={"user_id": upload_user_id, "upload_nonce": upload_nonce},
+                        **dispatch_opts,
                     )
 
                 normalized_title = Book._normalize_title(cr_title)
