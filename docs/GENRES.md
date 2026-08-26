@@ -74,7 +74,7 @@ The stored shape in `dna_data`:
 
 - **Top genres** — a `Counter` over each book's canonicalized genres, top 10, stored in `dna_data["top_genres"]`, rendered in `top_genres_authors_row.html` + the donut chart in `charts_scripts.html`.
 - **Reader types** — `assign_reader_type` (`core/services/dna/reader_type.py:16`) counts canonical genres into type scores (fantasy/sci-fi/dystopian/adventure → Fantasy Fanatic; non-fiction/memoir/true crime/essays/classic nonfiction → Non-Fiction Ninja; etc.). Genre *diversity* (≥10 unique canonical genres) feeds Versatile Valedictorian.
-- **Similarity & recommendations** — genre distributions are one component of user-similarity cosine scoring (`user_similarity_service.py`) and of recommendation genre-alignment (`recommendation_service.py`), both canonicalized.
+- **Similarity & recommendations** — genre distributions are one component of user-similarity cosine scoring (`user_similarity_service.py`) and of recommendation genre-alignment (`recommendation_service.py`). Similarity canonicalizes names; recommendations use raw `genre.name`. **Neither calls `classify_genres`** — see §8.
 
 ## 6. Keeping existing data fresh
 
@@ -95,5 +95,8 @@ docker compose -f docker-compose.prod.yml exec web poetry run python manage.py e
 ## 8. Known simplifications
 
 - `poetry` is classified as fiction (some poetry is neither, in the traditional sense).
-- The Genre DB always stores the *fiction default* for ambiguous genres ("classic fiction", never "classic nonfiction") — the nonfiction variant exists only as a classification label at analysis time.
+- The Genre DB always stores the *fiction default* for ambiguous genres ("classic fiction", never "classic nonfiction") — the nonfiction variant exists only as a classification label at analysis time. `AMBIGUOUS_TO_NONFICTION` (`core/dna_constants.py:1909`) is referenced only from tests; no write path produces it.
+- **That default leaks into similarity and recommendations.** `classify_genres` corrects the axis only for callers that go through it — the two counting paths in §4. `recommendation_service.py` (`:156`, `:206`, `:318`, `:688`, `:732`, `:754`, `:817`) and `user_similarity_service.py` (`:80`, `:313`) read `genre.name` straight off `Book.genres`, so a nonfiction classic enters similarity vectors and genre-alignment matching as fiction while the dashboard split calls it nonfiction. Same leak, smaller blast radius, in `reader_type.py:181` ("classic fiction" → Literary Luminary) and `regenerate_dna.py:113` (raw, uncanonicalized genre sets). Not fixed.
+- **Rule 5 in §4 returns `fiction`, not `None`, for an ambiguous-only genre set with no other signal**, so those books reach `fiction_count` rather than `defaulted_count` — a narrow contradiction of the "never counted as fiction" contract above. Fixing it will move the reader-type distribution, since genre shares feed `assign_reader_type`.
+- `AMBIGUOUS_FICTION_GENRES` holds only 3 entries, two of which ("young adult fiction", "children's fiction") are age categories rather than genres. Needs an audit alongside `poetry`.
 - StoryGraph's `Tags` column isn't parsed for shelf-style signals (format unverified); only the tag→genre map applies.
