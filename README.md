@@ -25,7 +25,10 @@ See the linked docs for full detail.
   Books genres into books already in the DB. Until this runs, existing users' genres + fiction/nonfiction
   splits only refresh when they re-upload. (Pending in both the 2026-07-22 and 2026-07-29 handoffs.)
 - Re-test a Goodreads upload end to end: enrichment should finish instead of hanging around ~93%, with
-  far fewer Open Library timeouts and no Google Books 403s.
+  far fewer Open Library timeouts and no Google Books 403s. ❓ Still unverified — the key rotation above
+  is done, but nobody has watched a real Goodreads export run to 100% since. Needs one upload on prod
+  (or local with live API keys) confirming enrichment completes and checking `worker` logs for OL
+  timeouts / GB 403s.
 - Post-deploy monitoring gap: no synthetic user tests, error-rate dashboards, or enrichment-uptime
   tracking exist in-repo. 🙅
 - ✅ Prod is on the latest `main` (settings-modal redesign + hardening, comparative/controversial
@@ -40,11 +43,46 @@ See the linked docs for full detail.
   is higher (~80%+ via tag extraction). Confirm how much the #120/#121 overhaul actually closed this. ❓
 - `STORYGRAPH_TAG_TO_GENRE` mappings are lossy (e.g. memoir→biography, mystery→thriller) — may need
   refinement.
-- Known classification simplifications (`docs/GENRES.md` §8): `poetry` is always classified as fiction;
-  ambiguous genres are always stored as the *fiction* default in the Genre DB (the nonfiction variant
-  exists only as an analysis-time label, e.g. "classic fiction" never "classic nonfiction"); the
-  StoryGraph `Tags` column is not parsed for shelf-style signals (format unverified — only the tag→genre
-  map applies).
+- Known classification simplifications (`docs/GENRES.md` §8): `poetry` is unconditionally a member of
+  `FICTION_GENRES`; the StoryGraph `Tags` column is not parsed for shelf-style signals (format
+  unverified — only the tag→genre map applies).
+- **The fiction/nonfiction axis is encoded in genre *identity*, not as a field.** The canonical set
+  carries "classic fiction" and "classic nonfiction" as two separate names, and the import-time
+  `assert _classified == _all_canonical` (`core/dna_constants.py:1917`) forces every canonical genre
+  onto exactly one side. No `Genre` row can represent "undetermined".
+- ✅ **The DNA path resolves this correctly — it is not buggy.** `classify_genres`
+  (`core/services/genre_classification.py:58`) re-decides the axis at analysis time from a book's
+  co-occurring genres plus Goodreads shelf signals, and `count_fiction_nonfiction` (`:92`) keeps a real
+  third `defaulted_count` bucket that is never folded into fiction. Both counting paths
+  (`calculate_full_dna`, `_compute_enrichment_stats`) go through it.
+- 🚧 **The actual defect: similarity and recommendations bypass `classify_genres` entirely.**
+  `core/services/recommendation_service.py` (lines 156, 206, 318, 688, 732, 754, 817) and
+  `core/services/user_similarity_service.py` (lines 80, 313) read `genre.name` straight off the M2M —
+  the latter canonicalizes names but still never classifies. A nonfiction classic is stored as
+  "classic fiction" and enters similarity vectors and recommendation genre-alignment as fiction, so
+  both subsystems disagree with the dashboard about the same book.
+- Other raw `genre.name` consumers found by grep (same axis leak, smaller blast radius):
+  `core/services/dna/reader_type.py:181` counts "classic fiction" toward Literary Luminary while `:185`
+  counts "classic nonfiction" toward Non-Fiction Ninja — but no write path ever stores the nonfiction
+  variant, so that term is effectively dead; `core/management/commands/regenerate_dna.py:113` builds
+  reader-type genre sets from raw `{g.name}` without `canonicalize_genre_names`;
+  `AMBIGUOUS_TO_NONFICTION` (`core/dna_constants.py:1909`) is referenced only from tests. Templates
+  render `dna.top_genres` verbatim, so a nonfiction classic is also *labelled* "classic fiction" in the
+  top-genres list and donut.
+- 🚧 **`classify_genres` rule 5 contradicts `count_fiction_nonfiction`'s docstring.**
+  `if shelf_fiction or ambiguous_fiction: return "fiction"` makes an ambiguous-only genre set with no
+  other signal return fiction rather than `None`, so those books land in `fiction_count` instead of
+  `defaulted_count` — the one narrow case where "never folded into fiction" isn't true. Fixing it will
+  shift the reader-type distribution (genre shares feed `assign_reader_type` scoring), so
+  `test_no_type_dominates_distribution` needs re-calibrating alongside.
+- ❓ **`AMBIGUOUS_FICTION_GENRES` needs an audit.** It holds only 3 entries
+  (`core/dna_constants.py:1906`), two of which — "young adult fiction", "children's fiction" — are age
+  categories rather than genres, and `poetry` sits unconditionally in `FICTION_GENRES`. Both the
+  membership and the age-category/genre conflation want review; no replacement list proposed here.
+- 🙅 **Possible structural fix — NOT DONE, NOT DECIDED.** Move the axis off `Genre.name` and onto an
+  explicit through-model on `Book.genres` (`core/models.py:67`) carrying a nullable `axis` plus
+  `axis_source` / `axis_confidence`. That gives "undetermined" a real representation and lets every
+  consumer read one resolved value instead of re-deriving or ignoring it.
 - Genre-split round-trip tests: fixtures for both Goodreads + StoryGraph asserting split counts sum
   correctly. ❓
 - See `docs/plans/2026-03-02-feat-genre-accuracy-and-fiction-nonfiction-split-plan.md`, `docs/GENRES.md`.
@@ -225,9 +263,23 @@ detail. ~~Struck-through~~ items were verified done against `main` as of 2026-08
   re-upload. *(pending manual VPS action)*
 - **Canonical-genre mapping is still being tightened** to improve genre accuracy and the
   fiction/non-fiction split (ongoing).
-- **Known simplification:** the Genre DB always stores the *fiction* default for ambiguous genres
-  ("classic fiction", never "classic nonfiction"); the non-fiction variant only exists as an
-  analysis-time label (`docs/GENRES.md` §8).
+- **The fiction/non-fiction axis lives in the genre *name*.** The Genre DB stores the fiction default
+  for ambiguous genres ("classic fiction", never "classic nonfiction"), and the import-time assert in
+  `core/dna_constants.py` forces every canonical genre onto one side — there is no "undetermined".
+- **The DNA path corrects this at analysis time and is not buggy:** `classify_genres` re-decides from
+  co-occurring genres + shelf signals, and `count_fiction_nonfiction` keeps a real `defaulted_count`
+  bucket that never folds into fiction.
+- **But similarity and recommendations never call it.** `recommendation_service.py` and
+  `user_similarity_service.py` read `genre.name` straight off the M2M, so a nonfiction classic enters
+  similarity vectors and genre-alignment matching as fiction — those two subsystems disagree with the
+  dashboard about the same book. Line numbers in the upper TODO section. 🚧
+- **`classify_genres` rule 5 returns fiction for an ambiguous-only set** with no other signal, rather
+  than `None` — a narrow contradiction of `count_fiction_nonfiction`'s contract. Fixing it shifts the
+  reader-type distribution, since genre shares feed scoring. 🚧
+- **`AMBIGUOUS_FICTION_GENRES` holds only 3 entries**, two of them age categories ("young adult
+  fiction", "children's fiction"); `poetry` is unconditionally fiction. Both want an audit. ❓
+- 🙅 Possible structural fix (not done, not decided): an explicit through-model on `Book.genres` with a
+  nullable axis + `axis_source`/`axis_confidence`, so "undetermined" has a real representation.
 - Long author/genre names truncate the count on chart hover.
 
 ### Live enrichment (dashboard reactivity)
