@@ -8,11 +8,11 @@ from celery.result import AsyncResult
 from django.contrib.auth.models import User
 
 from ..analytics.events import (
-    track_dna_generation_started,
-    track_dna_generation_completed,
-    track_anonymous_dna_generated,
-    track_dna_generation_failed,
     track_anonymous_dna_claimed,
+    track_anonymous_dna_generated,
+    track_dna_generation_completed,
+    track_dna_generation_failed,
+    track_dna_generation_started,
 )
 from ..services.dna import _save_dna_to_profile, calculate_full_dna
 
@@ -134,7 +134,7 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str)
 
 def _create_userbooks_from_anonymous_session(user, session_key):
     """Create UserBook records from AnonymousUserSession when claiming anonymous DNA"""
-    from ..models import AnonymousUserSession, UserBook, Book
+    from ..models import AnonymousUserSession, Book, UserBook
     from ..services.top_books_service import calculate_and_store_top_books
 
     try:
@@ -226,6 +226,7 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
         raise
 
     try:
+
         def progress_cb(current: int, total: int, stage: str):
             try:
                 self.update_state(state="PROGRESS", meta={"current": current, "total": total, "stage": stage})
@@ -241,6 +242,7 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
         # Extract books count from result_data (always a dict)
         user_stats = result_data.get("user_stats", {})
         books_count = user_stats.get("total_books_read")
+        reader_type = result_data.get("reader_type")
 
         if not user:
             # Track anonymous DNA generated
@@ -249,6 +251,7 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
                 session_key=session_key,
                 books_count=books_count,
                 processing_time=processing_time,
+                reader_type=reader_type,
             )
 
             if self.request.id:
@@ -268,6 +271,7 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
                 is_anonymous=True,
                 books_count=books_count,
                 processing_time=processing_time,
+                reader_type=reader_type,
             )
 
             return result_data
@@ -280,6 +284,7 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
                 is_anonymous=False,
                 books_count=books_count,
                 processing_time=processing_time,
+                reader_type=reader_type,
             )
 
             return result_data
