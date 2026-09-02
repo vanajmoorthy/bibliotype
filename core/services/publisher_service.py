@@ -1,10 +1,9 @@
-import json
 import logging
 from urllib.parse import quote
 
 import requests
 
-from . import _gemini
+from . import _llm
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +20,8 @@ def research_publisher_identity(publisher_name: str, session: requests.Session) 
     """Uses Wikipedia and an LLM to determine a publisher's parent company and mainstream status."""
     findings = {"is_mainstream": False, "parent_company_name": None, "reasoning": None, "error": None}
 
-    model = _gemini.client()
-    if model is None:
-        findings["error"] = "GEMINI_API_KEY not configured."
+    if not _llm.is_configured():
+        findings["error"] = "No LLM provider API key configured."
         return findings
 
     try:
@@ -78,11 +76,10 @@ def research_publisher_identity(publisher_name: str, session: requests.Session) 
         JSON Response:
         """
 
-        response = model.generate_content(prompt)
-
-        # Clean up the response to extract only the JSON part
-        json_text = response.text.strip().replace("```json", "").replace("```", "").strip()
-        ai_findings = json.loads(json_text)
+        ai_findings = _llm.generate_json(prompt)
+        if ai_findings is None:
+            findings["error"] = "LLM returned no parseable response."
+            return findings
 
         if "is_mainstream" in ai_findings:
             findings["is_mainstream"] = ai_findings["is_mainstream"]
