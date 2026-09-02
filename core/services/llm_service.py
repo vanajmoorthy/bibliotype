@@ -1,12 +1,7 @@
-import json
 import logging
-import time
-
-import google.generativeai as genai
-from django.conf import settings
 
 from ..analytics.events import track_vibe_generation_completed, track_vibe_generation_failed
-from . import _gemini
+from . import _llm
 
 logger = logging.getLogger(__name__)
 
@@ -92,64 +87,43 @@ Now, generate the JSON for the provided User's Reading DNA.
 
 def generate_vibe_with_llm(dna: dict) -> list:
     """
-    Uses the Gemini API to generate a creative "vibe" for the user's DNA.
+    Generates a creative "vibe" for the user's DNA via the LLM provider chain.
     """
-    model = _gemini.client()
-    if model is None:
-        logger.warning("Vibe generation skipped because API key is not configured")
-        return None
-
     prompt = create_vibe_prompt(dna)
-    start = time.monotonic()
+    result = _llm.complete_json(prompt)
 
-    def _latency_ms():
-        return int((time.monotonic() - start) * 1000)
+    if result.error_type == "NotConfigured":
+        return None
 
-    try:
-        generation_config = genai.GenerationConfig(response_mime_type="application/json")
-        response = model.generate_content(
-            prompt, generation_config=generation_config, request_options={"timeout": _gemini.GEMINI_TIMEOUT_SECONDS}
-        )
-
-        response_json = json.loads(response.text)
-        vibe_phrases = response_json.get("vibe_phrases", [])
-
-        if isinstance(vibe_phrases, list) and all(isinstance(p, str) for p in vibe_phrases):
-            track_vibe_generation_completed(
-                model=settings.GEMINI_MODEL,
-                latency_ms=_latency_ms(),
-                prompt_chars=len(prompt),
-                response_chars=len(response.text),
-            )
-            # The dashboard shows a single sentence; keep only the first even if
-            # the model over-delivers.
-            return vibe_phrases[:1]
-        else:
-            logger.error(f"Vibe response had unexpected format: {response_json}")
-            track_vibe_generation_failed(
-                model=settings.GEMINI_MODEL,
-                error_type="UnexpectedFormat",
-                error_message=f"vibe_phrases missing or not a list of strings ({len(response.text)} chars)",
-                latency_ms=_latency_ms(),
-            )
-            return None
-
-    except json.JSONDecodeError:
-        logger.error(f"Failed to decode JSON from response: {response.text}", exc_info=True)
-        # Only the length goes to analytics - the raw text is vibe content.
+    if result.data is None:
         track_vibe_generation_failed(
-            model=settings.GEMINI_MODEL,
-            error_type="JSONDecodeError",
-            error_message=f"invalid JSON in response ({len(response.text)} chars)",
-            latency_ms=_latency_ms(),
+            model=result.model,
+            provider=result.provider,
+            error_type=result.error_type,
+            error_message=result.error_message,
+            latency_ms=result.latency_ms,
         )
         return None
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}", exc_info=True)
-        track_vibe_generation_failed(
-            model=settings.GEMINI_MODEL,
-            error_type=type(e).__name__,
-            error_message=str(e),
-            latency_ms=_latency_ms(),
+
+    vibe_phrases = result.data.get("vibe_phrases", []) if isinstance(result.data, dict) else None
+    if isinstance(vibe_phrases, list) and vibe_phrases and all(isinstance(p, str) for p in vibe_phrases):
+        track_vibe_generation_completed(
+            model=result.model,
+            provider=result.provider,
+            latency_ms=result.latency_ms,
+            prompt_chars=len(prompt),
+            response_chars=result.response_chars,
         )
-        return None
+        # The dashboard shows a single sentence; keep only the first even if
+        # the model over-delivers.
+        return vibe_phrases[:1]
+
+    logger.error(f"Vibe response had unexpected format ({result.response_chars} chars from {result.model})")
+    track_vibe_generation_failed(
+        model=result.model,
+        provider=result.provider,
+        error_type="UnexpectedFormat",
+        error_message=f"vibe_phrases missing or not a list of strings ({result.response_chars} chars)",
+        latency_ms=result.latency_ms,
+    )
+    return None

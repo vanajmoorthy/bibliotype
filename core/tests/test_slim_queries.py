@@ -108,29 +108,32 @@ class SitemapTests(TestCase):
         self.assertIn((timezone.now() - timedelta(days=2)).strftime("%Y-%m-%d"), body)
 
 
-@override_settings(GEMINI_API_KEY="test-key")
-class GeminiTimeoutTests(TestCase):
-    @patch("core.services._gemini.client")
-    def test_vibe_call_has_timeout(self, mock_client):
+@override_settings(LLM_MODELS="groq/openai/gpt-oss-120b", GROQ_API_KEY="test-key", LLM_TIMEOUT_SECONDS=30)
+class LLMTimeoutTests(TestCase):
+    """Both LLM calls carry a request timeout, so a hung provider can't stall a worker."""
+
+    def _response(self, content):
+        return MagicMock(choices=[MagicMock(message=MagicMock(content=content))])
+
+    @patch("core.services._llm.completion")
+    def test_vibe_call_has_timeout(self, mock_completion):
         from core.services.llm_service import generate_vibe_with_llm
 
-        mock_client.return_value.generate_content.return_value = MagicMock(text='{"vibe_phrases": ["a", "b"]}')
+        mock_completion.return_value = self._response('{"vibe_phrases": ["a", "b"]}')
         generate_vibe_with_llm({"top_genres": [], "top_authors": []})
-        kwargs = mock_client.return_value.generate_content.call_args.kwargs
-        self.assertEqual(kwargs["request_options"], {"timeout": 30})
+        self.assertEqual(mock_completion.call_args.kwargs["timeout"], 30)
 
-    @patch("core.services._gemini.client")
-    def test_publisher_call_has_timeout(self, mock_client):
+    @patch("core.services._llm.completion")
+    def test_publisher_call_has_timeout(self, mock_completion):
         from core.services.publisher_service import research_publisher_identity
 
-        mock_client.return_value.generate_content.return_value = MagicMock(text='{"is_mainstream": true}')
+        mock_completion.return_value = self._response('{"is_mainstream": true}')
         session = MagicMock()
         session.get.return_value = MagicMock(
             status_code=200, json=lambda: {"extract": "An imprint.", "title": "Viking"}
         )
         research_publisher_identity("Viking Press", session)
-        kwargs = mock_client.return_value.generate_content.call_args.kwargs
-        self.assertEqual(kwargs["request_options"], {"timeout": 30})
+        self.assertEqual(mock_completion.call_args.kwargs["timeout"], 30)
 
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True, CACHES=LOCMEM)
