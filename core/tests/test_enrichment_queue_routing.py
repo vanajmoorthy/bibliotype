@@ -54,6 +54,13 @@ class QueueConfigTests(SimpleTestCase):
             content = (Path(settings.BASE_DIR) / compose).read_text()
             self.assertIn(f"-Q celery,{ENRICHMENT_BULK_QUEUE}", content, f"{compose} worker command")
 
+    def test_prod_worker_embeds_beat(self):
+        # CELERY_BEAT_SCHEDULE only fires if something runs beat; prod embeds
+        # it in the single worker. Guards against a compose edit silently
+        # dropping -B and the scheduled tasks never running again.
+        content = (Path(settings.BASE_DIR) / "docker-compose.prod.yml").read_text()
+        self.assertIn(" -B ", content, "prod worker must embed Celery beat (-B)")
+
     def test_enrichment_tasks_rate_limit_and_ignore_result(self):
         from core.tasks import check_author_mainstream_status_task, enrich_book_task
 

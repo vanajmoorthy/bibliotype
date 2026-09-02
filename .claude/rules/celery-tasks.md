@@ -50,6 +50,12 @@ Rules that keep this working:
 - `anonymize_expired_sessions_task`: Daily at 2:00 AM UTC
 - `research_publisher_mainstream_task`: Weekly on Sundays at 3:00 AM UTC
 
+Beat runs **embedded in the prod worker** (`-B` in docker-compose.prod.yml) —
+there is no separate beat container. This is only correct with exactly one
+worker; if a second worker is ever added, move beat to its own container
+(two `-B` workers fire every scheduled task twice). Local compose runs no
+beat on purpose.
+
 ## Task Chain: Upload → DNA → Recommendations
 
 ```
