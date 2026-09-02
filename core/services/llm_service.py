@@ -1,9 +1,6 @@
-import json
 import logging
 
-import google.generativeai as genai
-
-from . import _gemini
+from . import _llm
 
 logger = logging.getLogger(__name__)
 
@@ -88,33 +85,17 @@ Now, generate the JSON for the provided User's Reading DNA.
 
 def generate_vibe_with_llm(dna: dict) -> list:
     """
-    Uses the Gemini API to generate a creative "vibe" for the user's DNA.
+    Generates a creative "vibe" for the user's DNA via the LLM provider chain.
     """
-    model = _gemini.client()
-    if model is None:
-        logger.warning("Vibe generation skipped because API key is not configured")
+    response_json = _llm.generate_json(create_vibe_prompt(dna))
+    if not response_json:
         return None
 
-    prompt = create_vibe_prompt(dna)
+    vibe_phrases = response_json.get("vibe_phrases", [])
+    if isinstance(vibe_phrases, list) and all(isinstance(p, str) for p in vibe_phrases):
+        # The dashboard shows a single sentence; keep only the first even if
+        # the model over-delivers.
+        return vibe_phrases[:1]
 
-    try:
-        generation_config = genai.GenerationConfig(response_mime_type="application/json")
-        response = model.generate_content(prompt, generation_config=generation_config)
-
-        response_json = json.loads(response.text)
-        vibe_phrases = response_json.get("vibe_phrases", [])
-
-        if isinstance(vibe_phrases, list) and all(isinstance(p, str) for p in vibe_phrases):
-            # The dashboard shows a single sentence; keep only the first even if
-            # the model over-delivers.
-            return vibe_phrases[:1]
-        else:
-            logger.error(f"Vibe response had unexpected format: {response_json}")
-            return None
-
-    except json.JSONDecodeError:
-        logger.error(f"Failed to decode JSON from response: {response.text}", exc_info=True)
-        return None
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}", exc_info=True)
-        return None
+    logger.error(f"Vibe response had unexpected format: {response_json}")
+    return None

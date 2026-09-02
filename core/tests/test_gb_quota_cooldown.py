@@ -136,20 +136,23 @@ class FailedFetchStampingTests(TestCase):
         self.assertIsNotNone(self.book.google_books_last_checked)
 
 
+@override_settings(GROQ_API_KEY="test-groq-key", CEREBRAS_API_KEY="", GEMINI_API_KEY="")
 class VibeFailureTests(TestCase):
-    @patch("core.services._gemini.client")
-    def test_api_exception_returns_none(self, mock_client):
-        mock_client.return_value.generate_content.side_effect = Exception("404 model gone")
+    @patch("core.services._llm.completion")
+    def test_api_exception_returns_none(self, mock_completion):
+        mock_completion.side_effect = Exception("all providers exhausted")
         self.assertIsNone(generate_vibe_with_llm({"reader_type": "x"}))
 
-    @patch("core.services._gemini.client", return_value=None)
-    def test_unconfigured_key_returns_none(self, mock_client):
+    @override_settings(GROQ_API_KEY="", CEREBRAS_API_KEY="", GEMINI_API_KEY="")
+    def test_unconfigured_key_returns_none(self):
         self.assertIsNone(generate_vibe_with_llm({"reader_type": "x"}))
 
-    @patch("core.services._gemini.client")
-    def test_valid_response_returns_single_phrase(self, mock_client):
+    @patch("core.services._llm.completion")
+    def test_valid_response_returns_single_phrase(self, mock_completion):
         # The dashboard shows one sentence; extra phrases from the model are dropped.
-        mock_client.return_value.generate_content.return_value = Mock(text='{"vibe_phrases": ["a", "b"]}')
+        message = Mock()
+        message.content = '{"vibe_phrases": ["a", "b"]}'
+        mock_completion.return_value = Mock(choices=[Mock(message=message)])
         self.assertEqual(generate_vibe_with_llm({"reader_type": "x"}), ["a"])
 
 

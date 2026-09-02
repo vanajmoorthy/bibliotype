@@ -55,6 +55,27 @@ ENABLE_PARALLEL_ENRICHMENT = _env_bool("ENABLE_PARALLEL_ENRICHMENT", False)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 
+# --- Multi-provider LLM chain (LiteLLM) --------------------------------------
+# Ordered, comma-separated LiteLLM model chain: first entry is the primary, the
+# rest are fallbacks. LiteLLM handles per-model failover/retries/cooldowns so one
+# provider being rate-limited doesn't take vibe generation or publisher research
+# down. All routed through `core/services/_llm.py:generate_json()`. Env-tuned so a
+# delisted free model (the :free rosters rotate) is a prod .env edit, not a
+# redeploy. Default chain is all-free: Groq (14.4k req/day) -> Cerebras
+# (~1M tok/day) -> Gemini flash-lite (1k/day, the reliable floor).
+LLM_MODELS = os.environ.get(
+    "LLM_MODELS",
+    "groq/llama-3.3-70b-versatile,cerebras/llama-3.3-70b,gemini/gemini-flash-lite-latest",
+)
+LLM_TIMEOUT_SECONDS = float(os.environ.get("LLM_TIMEOUT_SECONDS", "20"))
+LLM_NUM_RETRIES = int(os.environ.get("LLM_NUM_RETRIES", "1"))
+
+# Provider API keys. LiteLLM reads these from the environment by convention
+# (GROQ_API_KEY / CEREBRAS_API_KEY / GEMINI_API_KEY); GEMINI_API_KEY declared
+# above doubles as the chain's Gemini key. At least one must be set.
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+CEREBRAS_API_KEY = os.environ.get("CEREBRAS_API_KEY", "")
+
 # Identified User-Agent for external book APIs. Open Library grants identified
 # traffic (app name + contact) 3 req/s instead of the anonymous 1 req/s:
 # https://openlibrary.org/developers/api
