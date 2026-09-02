@@ -750,7 +750,7 @@ There are no separate JavaScript files. All JS is inline in templates or script 
 
 Running `honcho start` launches two processes from the Procfile:
 - `web`: Django development server (`python manage.py runserver`)
-- `tailwind`: CSS watcher (`pnpm run dev`) that compiles `static/src/input.css` to `static/dist/output.css`
+- `tailwind`: CSS watcher (`pnpm run dev`) that compiles `tailwind/input.css` to `static/dist/output.css`
 
 The Tailwind source file defines the custom `@theme` block with all brand colours, shadow definitions, and the VT323 font. The compiled output is committed to the repo so deployment doesn't need Node.js in production.
 

@@ -78,7 +78,7 @@ Key patterns:
 For local development, rebuild it yourself when Tailwind/CSS or template classes change:
 
 ```bash
-pnpm run build          # Compiles static/src/input.css → static/dist/output.css (minified)
+pnpm run build          # Compiles tailwind/input.css → static/dist/output.css (minified)
 pnpm run dev            # Watch mode
 ```
 
@@ -140,7 +140,7 @@ These load automatically when you work on matching files:
 ## Tech Stack
 
 - **Backend:** Django 5.2, Python 3.13+, Celery 5.5, Redis 7, PostgreSQL 15
-- **Frontend:** Tailwind CSS 4 (custom @theme in `static/src/input.css`), Alpine.js 3, Chart.js (both CDN)
+- **Frontend:** Tailwind CSS 4 (custom @theme in `tailwind/input.css`), Alpine.js 3, Chart.js (both CDN)
 - **AI:** Gemini 2.5 Flash via `google-generativeai`
 - **Analytics:** PostHog (EU instance)
 

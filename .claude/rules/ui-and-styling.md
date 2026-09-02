@@ -10,7 +10,7 @@ paths:
 
 Hard 2px borders, heavy offset shadows, bright saturated colors, VT323 retro monospace font, no rounded corners.
 
-## Tailwind @theme Variables (`static/src/input.css`)
+## Tailwind @theme Variables (`tailwind/input.css`)
 
 **Colors:**
 - `brand-background` (#f5f5f5), `brand-text` (#1f2937)
@@ -88,7 +88,7 @@ const chartColors = [
 - `.cover-crosshatch`: diagonal stripe pattern for book cover placeholders
 - `.scroll-fade-left` / `.scroll-fade-up`: scroll-triggered fade animations (0.6s ease-out)
 - `.enrichPulse`: opacity 1→0.5→1 infinite animation for enrichment banners
-- `.pixel-banner` + `.reader-banner--{color}`: per-reader-type banner texture. Combine both classes. The color variant (yellow/orange/pink/cyan/green/purple) sets `--banner-color`; `.pixel-banner` renders two offset checkerboards over it for a dithered pixel texture. Use the `reader_color` template filter to map a reader type name to the token: `{% load dna_extras %}` then `class="pixel-banner reader-banner--{{ dna.reader_type|reader_color }}"`. All six tokens are hand-written in `static/src/input.css` (not Tailwind-scanned). Unknown type names fall back to `purple` via the filter.
+- `.pixel-banner` + `.reader-banner--{color}`: per-reader-type banner texture. Combine both classes. The color variant (yellow/orange/pink/cyan/green/purple) sets `--banner-color`; `.pixel-banner` renders two offset checkerboards over it for a dithered pixel texture. Use the `reader_color` template filter to map a reader type name to the token: `{% load dna_extras %}` then `class="pixel-banner reader-banner--{{ dna.reader_type|reader_color }}"`. All six tokens are hand-written in `tailwind/input.css` (not Tailwind-scanned). Unknown type names fall back to `purple` via the filter.
 
 ## Responsive
 
