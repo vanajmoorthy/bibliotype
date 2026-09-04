@@ -4,6 +4,14 @@ on:
         branches:
             - main
 
+# Serialize deploys: two quick merges used to run `docker compose up
+# --force-recreate` on the droplet concurrently, colliding and leaving every
+# container wedged in "Created" (prod 502'd on 2026-09-02). Queue instead —
+# and never cancel an in-flight deploy mid-recreate.
+concurrency:
+    group: production-deploy
+    cancel-in-progress: false
+
 jobs:
     deploy:
         runs-on: ubuntu-latest
