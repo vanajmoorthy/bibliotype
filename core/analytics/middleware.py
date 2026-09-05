@@ -6,8 +6,10 @@ Middleware for tracking pageviews and catching unhandled exceptions.
 
 import logging
 import socket
+
 from django.utils.deprecation import MiddlewareMixin
-from .posthog_client import get_environment, get_distinct_id, capture_exception
+
+from .posthog_client import capture_exception, get_distinct_id, get_environment
 
 logger = logging.getLogger(__name__)
 

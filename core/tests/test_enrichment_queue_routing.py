@@ -65,8 +65,12 @@ class QueueConfigTests(SimpleTestCase):
         self.assertTrue(check_author_mainstream_status_task.ignore_result)
 
 
+@override_settings(CACHES=LOCMEM_CACHE)
 class EnrichBooksCommandRoutingTests(TestCase):
     """enrich_books backfills are bulk work — they must not crowd the default queue."""
+
+    def setUp(self):
+        cache.clear()
 
     @patch("core.management.commands.enrich_books.enrich_book_task.apply_async")
     def test_async_enrich_dispatches_to_bulk_queue(self, mock_apply):
@@ -83,6 +87,25 @@ class EnrichBooksCommandRoutingTests(TestCase):
         self.assertEqual(calls_by_pk[book.pk].kwargs["kwargs"], {"force": False})
         for call in mock_apply.call_args_list:
             self.assertEqual(call.kwargs["queue"], ENRICHMENT_BULK_QUEUE)
+
+    @patch("core.management.commands.enrich_books.enrich_book_task.apply_async")
+    def test_repeat_dispatch_suppressed_until_force(self, mock_apply):
+        """A book already queued (dispatch sentinel set) isn't re-dispatched;
+        --force bypasses the sentinel for explicit operator re-runs."""
+        author = Author.objects.create(name="Sentinel Author")
+        book = Book.objects.create(title="Sentinel Book", author=author)
+
+        call_command("enrich_books")
+        first_count = sum(1 for c in mock_apply.call_args_list if c.kwargs["args"][0] == book.pk)
+        self.assertEqual(first_count, 1)
+
+        call_command("enrich_books")
+        second_count = sum(1 for c in mock_apply.call_args_list if c.kwargs["args"][0] == book.pk)
+        self.assertEqual(second_count, 1, "second plain run must not re-dispatch a queued book")
+
+        call_command("enrich_books", "--force")
+        third_count = sum(1 for c in mock_apply.call_args_list if c.kwargs["args"][0] == book.pk)
+        self.assertEqual(third_count, 2, "--force must dispatch despite the sentinel")
 
 
 GOODREADS_HEADER = (
@@ -179,6 +202,41 @@ class CalculateFullDnaRoutingTests(TransactionTestCase):
         )
         self.assertEqual(dispatched_author_ids, expected_author_ids)
 
+        # Bulk runs never dispatch recommendations: seeded users are candidates,
+        # not consumers, and the task would land on the interactive queue.
+        mock_recs.assert_not_called()
+
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
+    def test_bulk_duplicate_dispatch_suppressed_across_runs(
+        self, mock_enrich, mock_author, mock_recs, mock_vibe, mock_inline
+    ):
+        """Overlapping seed CSVs share books; only the first bulk run may
+        dispatch enrichment for a given book (the sentinel suppresses the rest
+        until the queued task runs and stamps the retry window)."""
+        user_a = User.objects.create_user(username="bulk_a", password="pw")
+        user_b = User.objects.create_user(username="bulk_b", password="pw")
+
+        self._run(user_a, bulk_enrichment=True)
+        self.assertEqual(mock_enrich.call_count, 1)
+
+        self._run(user_b, bulk_enrichment=True)
+        self.assertEqual(
+            mock_enrich.call_count, 1, "second bulk run must not re-dispatch the still-queued book"
+        )
+
+        # An interactive upload of the same book is NOT suppressed — the
+        # sentinel is bulk-only (interactive supersede semantics own that path).
+        with patch(
+            "core.services.dna.enrichment_budget._EnrichmentBudget.has_remaining", return_value=False
+        ):
+            user_c = User.objects.create_user(username="interactive_c", password="pw")
+            self._run(user_c)
+        self.assertEqual(mock_enrich.call_count, 2, "interactive dispatch must ignore the bulk sentinel")
+
     @patch("core.services.dna.enrichment_budget._EnrichmentBudget.has_remaining", return_value=False)
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
@@ -208,3 +266,6 @@ class CalculateFullDnaRoutingTests(TransactionTestCase):
         # the default "celery" queue.
         for call in [mock_enrich.call_args] + mock_author.call_args_list:
             self.assertNotIn("queue", call.kwargs)
+
+        # Interactive saves DO dispatch recommendations (bulk is the exception).
+        mock_recs.assert_called_once()

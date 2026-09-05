@@ -1,12 +1,13 @@
-import random
 import logging
+import random
 from collections import Counter
 
-from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
+from django.core.management.base import BaseCommand
 
-from core.models import UserProfile, UserBook
 from core.dna_constants import CANONICAL_GENRE_MAP, NICHE_THRESHOLD, READER_TYPE_DESCRIPTIONS, compute_contrariness
+from core.models import UserBook, UserProfile
+from core.services.genre_classification import canonicalize_genre_names
 
 logger = logging.getLogger(__name__)
 
@@ -97,24 +98,27 @@ class Command(BaseCommand):
             # stored reader_type_scores since their signals require the original CSV.
             # Full accuracy restores on the user's next re-upload.
             import pandas as _pd
+
+            from core.dna_constants import MIN_WINNING_SCORE as _MIN_WIN
+            from core.dna_constants import READER_TYPE_TIEBREAK_ORDER as _TIEBREAK
             from core.services.dna.reader_type import assign_reader_type as _assign_reader_type
-            from core.services.genre_classification import canonicalize_genre_names as _canonicalize
-            from core.dna_constants import MIN_WINNING_SCORE as _MIN_WIN, READER_TYPE_TIEBREAK_ORDER as _TIEBREAK
 
             rows = []
             book_genre_sets_regen = []
             enriched_data_regen = {}
             for ub in user_books:
                 b = ub.book
-                rows.append({
-                    "Title": b.title or "",
-                    "Number of Pages": b.page_count,
-                    "Date Read": ub.date_read,
-                    "Author": b.author.name if b.author_id else None,
-                })
-                # Canonicalize like recompute_reader_type_from_db does — stored Genre
-                # names are raw and genre_share only matches canonical tokens.
-                book_genre_sets_regen.append(_canonicalize([g.name for g in b.genres.all()]))
+                rows.append(
+                    {
+                        "Title": b.title or "",
+                        "Number of Pages": b.page_count,
+                        "Date Read": ub.date_read,
+                        "Author": b.author.name if b.author_id else None,
+                    }
+                )
+                # Canonicalize so old pre-rename Genre rows (e.g. "classics")
+                # still intersect the canonical sets reader-type scoring uses
+                book_genre_sets_regen.append(canonicalize_genre_names(g.name for g in b.genres.all()))
                 if b.title:
                     enriched_data_regen[b.title] = {
                         "publish_year": b.publish_year,
@@ -125,7 +129,9 @@ class Command(BaseCommand):
             if not regen_df.empty and "Date Read" in regen_df.columns:
                 regen_df["Date Read"] = _pd.to_datetime(regen_df["Date Read"], errors="coerce")
 
-            new_reader_type, new_scores_counter = _assign_reader_type(regen_df, enriched_data_regen, book_genre_sets_regen)
+            new_reader_type, new_scores_counter = _assign_reader_type(
+                regen_df, enriched_data_regen, book_genre_sets_regen
+            )
 
             # Carry forward CSV-only signals from stored scores
             old_scores = profile.dna_data.get("reader_type_scores", {})
@@ -144,6 +150,7 @@ class Command(BaseCommand):
                         return _TIEBREAK.index(t)
                     except ValueError:
                         return len(_TIEBREAK)
+
                 new_reader_type = min(tied, key=_tiebreak_key)
             else:
                 new_reader_type = "Eclectic Reader"
@@ -172,7 +179,9 @@ class Command(BaseCommand):
                 if ub.user_rating and ub.user_rating > 0 and ub.book.average_rating:
                     controversial_books_count += 1
                     total_diff += abs(ub.user_rating - ub.book.average_rating)
-            new_avg_rating_diff = round(total_diff / controversial_books_count, 2) if controversial_books_count > 0 else 0.0
+            new_avg_rating_diff = (
+                round(total_diff / controversial_books_count, 2) if controversial_books_count > 0 else 0.0
+            )
             new_contrariness_label, new_contrariness_color = compute_contrariness(new_avg_rating_diff)
 
             total_reviews_count = 0

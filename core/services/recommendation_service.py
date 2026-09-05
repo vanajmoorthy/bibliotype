@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from ..cache_utils import safe_cache_delete, safe_cache_get, safe_cache_set
 from ..models import AnonymizedReadingProfile, AnonymousUserSession, Author, Book, Genre, User, UserBook
+from .genre_classification import resolve_genre_names
 from .user_similarity_service import (
     _build_user_context_for_similarity,
     _bulk_build_user_contexts,
@@ -152,9 +153,10 @@ def _build_user_context(user):
         if ub.is_top_book:
             weight = 5  # Treat a "top book" like a 5-star rating
 
-        # Genre preferences (weighted by rating)
-        for genre in ub.book.genres.all():
-            genre_weights[genre.name] += weight
+        # Genre preferences (weighted by rating; axis-resolved so nonfiction
+        # classics don't register as "classic fiction" preference)
+        for genre_name in resolve_genre_names(g.name for g in ub.book.genres.all()):
+            genre_weights[genre_name] += weight
 
         # Author preferences (weighted by rating)
         author_id = ub.book.author.id
@@ -202,8 +204,7 @@ def _build_user_context(user):
                     book_obj = Book.objects.get(
                         normalized_title=normalized_title, author__normalized_name=normalized_author
                     )
-                    for genre in book_obj.genres.all():
-                        currently_reading_genres.add(genre.name)
+                    currently_reading_genres.update(resolve_genre_names(g.name for g in book_obj.genres.all()))
                 except Book.DoesNotExist:
                     pass
 
@@ -271,8 +272,7 @@ def _build_anonymous_context(anon_session):
             read_books_with_authors = {book.id: book.author_id for book in read_books}
         else:
             read_books_with_authors = {
-                book.id: book.author_id
-                for book in Book.objects.filter(id__in=read_book_ids).select_related("author")
+                book.id: book.author_id for book in Book.objects.filter(id__in=read_book_ids).select_related("author")
             }
     else:
         read_books_with_authors = {}
@@ -282,9 +282,7 @@ def _build_anonymous_context(anon_session):
         if not author:
             continue
         # If we have ratings, weight by average rating for this author
-        author_book_ids = [
-            book_id for book_id, author_id in read_books_with_authors.items() if author_id == author.id
-        ]
+        author_book_ids = [book_id for book_id, author_id in read_books_with_authors.items() if author_id == author.id]
         if author_book_ids and book_ratings:
             author_ratings = [book_ratings.get(bid, 3) for bid in author_book_ids if bid in book_ratings]
             if author_ratings:
@@ -314,8 +312,7 @@ def _build_anonymous_context(anon_session):
                     book_obj = Book.objects.get(
                         normalized_title=normalized_title, author__normalized_name=normalized_author
                     )
-                    for genre in book_obj.genres.all():
-                        currently_reading_genres.add(genre.name)
+                    currently_reading_genres.update(resolve_genre_names(g.name for g in book_obj.genres.all()))
                 except Book.DoesNotExist:
                     pass
 
@@ -450,9 +447,7 @@ def _collect_candidates_from_anonymized_profiles(matching_profiles, read_book_id
 
     books_dict = {
         book.id: book
-        for book in Book.objects.filter(id__in=candidate_book_ids)
-        .select_related("author")
-        .prefetch_related("genres")
+        for book in Book.objects.filter(id__in=candidate_book_ids).select_related("author").prefetch_related("genres")
     }
 
     for anon_profile, similarity_data in matching_profiles:
@@ -685,7 +680,7 @@ def _calculate_genre_alignment(book, context):
         return 0.5  # Neutral if no preferences known
 
     # Use prefetched genres - this should not trigger a query if prefetch_related was used
-    book_genres = set(genre.name for genre in book.genres.all())
+    book_genres = set(resolve_genre_names(g.name for g in book.genres.all()))
 
     if not book_genres:
         return 0.3  # Slight penalty for books without genre data
@@ -729,7 +724,7 @@ def _calculate_currently_reading_boost(book, context):
     if book.author.id in cr_authors:
         boost += 0.10
 
-    book_genres = {genre.name for genre in book.genres.all()}
+    book_genres = set(resolve_genre_names(g.name for g in book.genres.all()))
     matching_genres = book_genres & cr_genres
     if matching_genres:
         boost += min(len(matching_genres) * 0.05, 0.10)
@@ -751,7 +746,7 @@ def _apply_diversity_filter(ranked_candidates, context, limit):
 
         book = candidate["book"]
         # Use prefetched genres - should not trigger query if prefetch_related was used
-        book_genres = set(genre.name for genre in book.genres.all())
+        book_genres = set(resolve_genre_names(g.name for g in book.genres.all()))
 
         # Check diversity constraints
         # Don't recommend more than 3 books from same primary genre
@@ -813,8 +808,9 @@ def _add_explanations(recommendations, context):
 
         # --- Component 2: Genre Match ---
         if rec.get("genre_alignment", 0) > 0.6:
-            # Use prefetched genres - should not trigger query
-            book_genres = [genre.name for genre in rec["book"].genres.all()[:2]]
+            # Use prefetched genres - should not trigger query. Resolve BEFORE
+            # slicing so the axis decision sees the book's full genre set.
+            book_genres = resolve_genre_names(g.name for g in rec["book"].genres.all())[:2]
             if book_genres:
                 genre_str = ", ".join(book_genres)
                 rec["explanation_components"]["genre"] = f"matches your interest in {genre_str}"

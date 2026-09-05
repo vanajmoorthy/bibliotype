@@ -1,8 +1,11 @@
 import json
 import logging
+import time
 
 import google.generativeai as genai
+from django.conf import settings
 
+from ..analytics.events import track_vibe_generation_completed, track_vibe_generation_failed
 from . import _gemini
 
 logger = logging.getLogger(__name__)
@@ -96,6 +99,10 @@ def generate_vibe_with_llm(dna: dict) -> list:
         return None
 
     prompt = create_vibe_prompt(dna)
+    start = time.monotonic()
+
+    def _latency_ms():
+        return int((time.monotonic() - start) * 1000)
 
     try:
         generation_config = genai.GenerationConfig(response_mime_type="application/json")
@@ -105,16 +112,41 @@ def generate_vibe_with_llm(dna: dict) -> list:
         vibe_phrases = response_json.get("vibe_phrases", [])
 
         if isinstance(vibe_phrases, list) and all(isinstance(p, str) for p in vibe_phrases):
+            track_vibe_generation_completed(
+                model=settings.GEMINI_MODEL,
+                latency_ms=_latency_ms(),
+                prompt_chars=len(prompt),
+                response_chars=len(response.text),
+            )
             # The dashboard shows a single sentence; keep only the first even if
             # the model over-delivers.
             return vibe_phrases[:1]
         else:
             logger.error(f"Vibe response had unexpected format: {response_json}")
+            track_vibe_generation_failed(
+                model=settings.GEMINI_MODEL,
+                error_type="UnexpectedFormat",
+                error_message=f"vibe_phrases missing or not a list of strings ({len(response.text)} chars)",
+                latency_ms=_latency_ms(),
+            )
             return None
 
     except json.JSONDecodeError:
         logger.error(f"Failed to decode JSON from response: {response.text}", exc_info=True)
+        # Only the length goes to analytics - the raw text is vibe content.
+        track_vibe_generation_failed(
+            model=settings.GEMINI_MODEL,
+            error_type="JSONDecodeError",
+            error_message=f"invalid JSON in response ({len(response.text)} chars)",
+            latency_ms=_latency_ms(),
+        )
         return None
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}", exc_info=True)
+        track_vibe_generation_failed(
+            model=settings.GEMINI_MODEL,
+            error_type=type(e).__name__,
+            error_message=str(e),
+            latency_ms=_latency_ms(),
+        )
         return None

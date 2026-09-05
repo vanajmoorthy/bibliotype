@@ -129,7 +129,15 @@ WSGI_APPLICATION = "bibliotype.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {"default": dj_database_url.config(default=f'sqlite:///{os.path.join(BASE_DIR, "db.sqlite3")}')}
+# conn_max_age reuses Postgres connections for 10 minutes instead of opening a
+# new one per request; health checks evict dead connections after restarts.
+DATABASES = {
+    "default": dj_database_url.config(
+        default=f'sqlite:///{os.path.join(BASE_DIR, "db.sqlite3")}',
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+}
 
 # Cache configuration
 # Uses localhost:6379 by default, which works for:
@@ -272,6 +280,16 @@ CELERY_BROKER_CONNECTION_TIMEOUT = 5
 # alphabetical order, and "celery" < "enrichment_bulk", so interactive tasks
 # drain before bulk work on every fetch.
 CELERY_BROKER_TRANSPORT_OPTIONS = {"queue_order_strategy": "sorted"}
+# A runaway task (e.g. a huge CSV stuck in an API timeout loop) must not hold
+# the single worker forever. Soft limit raises SoftTimeLimitExceeded in-task;
+# hard limit kills the worker process. Sized for the slowest legit task
+# (research_publisher_mainstream_task: 20 publishers x LLM research).
+CELERY_TASK_SOFT_TIME_LIMIT = 600
+CELERY_TASK_TIME_LIMIT = 900
+# Don't hoard tasks (fairness across users on one worker); recycle the child
+# process every 50 tasks to cap pandas/enrichment memory creep.
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 50
 # Reserve only 1 message ahead of execution so at most ~1 already-reserved bulk
 # task runs before a newly arrived interactive task.
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1

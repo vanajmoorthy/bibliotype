@@ -106,8 +106,23 @@ class EnrichBookTaskWindowTests(TransactionTestCase):
         self.mock_enrich.assert_called_once()
 
 
+@override_settings(
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "enrich-books-window-tests",
+        }
+    }
+)
 class EnrichBooksCommandWindowTests(TestCase):
     """The management command bypasses the window on --process-all / --force."""
+
+    def setUp(self):
+        # The command sets enrich_dispatched_{pk} sentinels; isolate them so
+        # keys from another test (or a real Redis) can't suppress dispatches.
+        from django.core.cache import cache
+
+        cache.clear()
 
     def _book_with_user(self, checked_ago):
         book = _make_book(checked_ago=checked_ago)

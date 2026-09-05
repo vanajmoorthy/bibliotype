@@ -1,6 +1,22 @@
 services:
     db:
         image: postgres:15
+        # Postgres defaults assume a much larger machine; keep it to ~150-200MB
+        # of the 1GB droplet. max_connections=50 covers 4 web threads + worker
+        # with headroom (steady state is ~6 connections).
+        command:
+            - postgres
+            - -c
+            - shared_buffers=128MB
+            - -c
+            - effective_cache_size=384MB
+            - -c
+            - work_mem=4MB
+            - -c
+            - maintenance_work_mem=32MB
+            - -c
+            - max_connections=50
+        mem_limit: 280m
         volumes:
             - postgres_data:/var/lib/postgresql/data/
         environment:
@@ -15,6 +31,13 @@ services:
         restart: unless-stopped
     redis:
         image: redis:7-alpine
+        # volatile-lru, NOT allkeys-lru: the Celery broker (db 0) shares this
+        # instance with the cache (db 1). allkeys-lru could evict queued task
+        # messages under memory pressure; volatile-lru only evicts TTL'd keys
+        # (cache entries, task results), never the queues. --save "" drops RDB
+        # snapshotting — there's no data volume, so persistence was moot anyway.
+        command: ["redis-server", "--maxmemory", "100mb", "--maxmemory-policy", "volatile-lru", "--save", ""]
+        mem_limit: 130m
         # No ports are exposed to the outside world in production.
         # The 'web' and 'worker' services can still access it via the internal Docker network.
         healthcheck:
@@ -49,7 +72,18 @@ services:
                 "gthread",
                 "--timeout",
                 "60",
+                "--graceful-timeout",
+                "30",
+                "--keep-alive",
+                "5",
+                "--max-requests",
+                "1000",
+                "--max-requests-jitter",
+                "100",
             ]
+        # web/worker deliberately get no mem_limit: pandas DNA processing has a
+        # spiky footprint and a hard cap would OOM-kill real work. db+redis are
+        # capped instead, and the droplet has 2GB swap as the safety net.
         volumes:
             - ./staticfiles:/app/staticfiles
         ports:

@@ -18,7 +18,30 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
 
-from celery.signals import celeryd_after_setup  # noqa: E402
+from celery.signals import celeryd_after_setup, task_failure  # noqa: E402
+
+
+@task_failure.connect
+def _capture_task_failure(sender=None, task_id=None, exception=None, einfo=None, **kwargs):
+    """Send unhandled Celery task exceptions to PostHog error tracking (production only).
+
+    The web tier gets this from PostHogExceptionMiddleware; workers have no
+    request cycle, so without this hook task crashes never reach PostHog.
+    """
+    # Imported here: this module loads before django.setup() finishes.
+    from core.analytics.posthog_client import capture_exception, get_environment
+
+    if get_environment() != "production":
+        return
+    try:
+        capture_exception(
+            distinct_id="system",
+            exception=exception,
+            context={"task_name": getattr(sender, "name", None), "task_id": task_id},
+        )
+    except Exception:
+        # Tracking must never mask the original task failure.
+        pass
 
 
 @celeryd_after_setup.connect
