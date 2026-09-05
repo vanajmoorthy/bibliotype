@@ -27,6 +27,7 @@ from core.services.genre_classification import (
     classify_genres,
     count_fiction_nonfiction,
     parse_shelf_signals,
+    resolve_genre_names,
 )
 
 
@@ -108,9 +109,7 @@ class BackwardCompatAliasTests(TestCase):
             self.assertNotIn(old_name, GENRE_ALIASES)
 
     def test_ambiguous_sets_are_consistent(self):
-        self.assertEqual(
-            AMBIGUOUS_FICTION_GENRES, {"classic fiction", "young adult fiction", "children's fiction"}
-        )
+        self.assertEqual(AMBIGUOUS_FICTION_GENRES, {"classic fiction", "young adult fiction", "children's fiction"})
         self.assertEqual(set(AMBIGUOUS_TO_NONFICTION.keys()), AMBIGUOUS_FICTION_GENRES)
         for nonfiction_variant in AMBIGUOUS_TO_NONFICTION.values():
             self.assertIn(nonfiction_variant, NONFICTION_GENRES)
@@ -367,3 +366,54 @@ class EnrichmentBudgetTests(TestCase):
             self.assertEqual(results.count(True), 1, "clock must start exactly once across racing threads")
             self.assertEqual(budget._started_at, 0.0)
             self.assertFalse(budget.has_remaining())
+
+
+class ResolveGenreNamesTests(TestCase):
+    """resolve_genre_names: the axis-corrected genre view for similarity/recommendations.
+
+    These consumers read stored Genre rows (fiction defaults) with no shelf
+    context, so the helper must agree with classify_genres called shelf-less.
+    """
+
+    def test_nonfiction_classic_swaps_to_nonfiction_variant(self):
+        # "A Brief History of Time": stored as classic fiction + history
+        self.assertEqual(resolve_genre_names(["classic fiction", "history"]), ["classic nonfiction", "history"])
+
+    def test_fiction_classic_keeps_fiction_name(self):
+        # Historical fantasy: unambiguous fiction genre wins, no swap
+        self.assertEqual(
+            resolve_genre_names(["classic fiction", "history", "fantasy"]),
+            ["classic fiction", "history", "fantasy"],
+        )
+
+    def test_ambiguous_only_set_defaults_to_fiction_label(self):
+        self.assertEqual(resolve_genre_names(["classic fiction"]), ["classic fiction"])
+
+    def test_aliases_canonicalize_and_dedupe_preserving_order(self):
+        # Old stored rows: two aliases of the same canonical genre collapse to one
+        self.assertEqual(
+            resolve_genre_names(["classics", "biography", "classic literature"]), ["classic nonfiction", "biography"]
+        )
+
+    def test_all_ambiguous_variants_swap_together(self):
+        self.assertEqual(
+            resolve_genre_names(["young adult fiction", "children's fiction", "memoir"]),
+            ["young adult nonfiction", "children's nonfiction", "memoir"],
+        )
+
+    def test_plain_fiction_and_nonfiction_sets_pass_through(self):
+        self.assertEqual(resolve_genre_names(["fantasy", "romance"]), ["fantasy", "romance"])
+        self.assertEqual(resolve_genre_names(["history", "science"]), ["history", "science"])
+        self.assertEqual(resolve_genre_names([]), [])
+
+    def test_agrees_with_shelfless_classify_genres(self):
+        # The invariant the helper exists for: its swap decision must match the
+        # split classification every consumer of classify_genres sees.
+        for genre_set in (["classic fiction"], ["classic fiction", "history"], ["fantasy"], ["memoir"]):
+            resolved = resolve_genre_names(genre_set)
+            classification = classify_genres(canonicalize_genre_names(genre_set))
+            has_nonfiction_variant = any(g in AMBIGUOUS_TO_NONFICTION.values() for g in resolved)
+            if classification == "nonfiction" and set(genre_set) & AMBIGUOUS_FICTION_GENRES:
+                self.assertTrue(has_nonfiction_variant)
+            else:
+                self.assertFalse(has_nonfiction_variant)
