@@ -55,20 +55,18 @@ See the linked docs for full detail.
   co-occurring genres plus Goodreads shelf signals, and `count_fiction_nonfiction` (`:92`) keeps a real
   third `defaulted_count` bucket that is never folded into fiction. Both counting paths
   (`calculate_full_dna`, `_compute_enrichment_stats`) go through it.
-- 🚧 **The actual defect: similarity and recommendations bypass `classify_genres` entirely.**
-  `core/services/recommendation_service.py` (lines 156, 206, 318, 688, 732, 754, 817) and
-  `core/services/user_similarity_service.py` (lines 80, 313) read `genre.name` straight off the M2M —
-  the latter canonicalizes names but still never classifies. A nonfiction classic is stored as
-  "classic fiction" and enters similarity vectors and recommendation genre-alignment as fiction, so
-  both subsystems disagree with the dashboard about the same book.
-- Other raw `genre.name` consumers found by grep (same axis leak, smaller blast radius):
-  `core/services/dna/reader_type.py:181` counts "classic fiction" toward Literary Luminary while `:185`
-  counts "classic nonfiction" toward Non-Fiction Ninja — but no write path ever stores the nonfiction
-  variant, so that term is effectively dead; `core/management/commands/regenerate_dna.py:113` builds
-  reader-type genre sets from raw `{g.name}` without `canonicalize_genre_names`;
-  `AMBIGUOUS_TO_NONFICTION` (`core/dna_constants.py:1909`) is referenced only from tests. Templates
-  render `dna.top_genres` verbatim, so a nonfiction classic is also *labelled* "classic fiction" in the
-  top-genres list and donut.
+- ✅ **~~The actual defect: similarity and recommendations bypass `classify_genres` entirely.~~**
+  Fixed in PR #179: `resolve_genre_names()` (`core/services/genre_classification.py`) canonicalizes and
+  axis-corrects per book (swapping ambiguous names via `AMBIGUOUS_TO_NONFICTION` when the set classifies
+  nonfiction), and every per-book genre read in `recommendation_service.py` and
+  `user_similarity_service.py` goes through it. Reading `Genre.name` raw outside
+  `genre_classification.py` is now a code smell.
+- ✅ ~~Other raw `genre.name` consumers found by grep~~ — all fixed: `regenerate_dna` canonicalizes its
+  reader-type genre sets (PR #180); top_genres/reader-type inputs are axis-resolved via
+  `resolve_genre_labels()` in generation, the poll-time recompute, and the DB reader-type recompute
+  (PR #184), so the "classic nonfiction" term in Non-Fiction Ninja is now live and the top-genres
+  list/donut label nonfiction classics correctly. Existing profiles pick the new labels up on next
+  upload or `regenerate_dna`.
 - 🚧 **`classify_genres` rule 5 contradicts `count_fiction_nonfiction`'s docstring.**
   `if shelf_fiction or ambiguous_fiction: return "fiction"` makes an ambiguous-only genre set with no
   other signal return fiction rather than `None`, so those books land in `fiction_count` instead of
@@ -269,10 +267,11 @@ detail. ~~Struck-through~~ items were verified done against `main` as of 2026-08
 - **The DNA path corrects this at analysis time and is not buggy:** `classify_genres` re-decides from
   co-occurring genres + shelf signals, and `count_fiction_nonfiction` keeps a real `defaulted_count`
   bucket that never folds into fiction.
-- **But similarity and recommendations never call it.** `recommendation_service.py` and
-  `user_similarity_service.py` read `genre.name` straight off the M2M, so a nonfiction classic enters
-  similarity vectors and genre-alignment matching as fiction — those two subsystems disagree with the
-  dashboard about the same book. Line numbers in the upper TODO section. 🚧
+- ✅ ~~**But similarity and recommendations never call it.**~~ Fixed across PRs #179 (similarity +
+  recommendations resolve the axis per book via `resolve_genre_names`), #180 (`regenerate_dna`
+  canonicalizes reader-type genre sets), and #184 (top_genres labels and reader-type inputs are
+  axis-resolved in generation, the poll recompute, and the DB reader-type recompute — the
+  "classic nonfiction" scoring term is live).
 - **`classify_genres` rule 5 returns fiction for an ambiguous-only set** with no other signal, rather
   than `None` — a narrow contradiction of `count_fiction_nonfiction`'s contract. Fixing it shifts the
   reader-type distribution, since genre shares feed scoring. 🚧
