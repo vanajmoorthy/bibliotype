@@ -249,7 +249,20 @@ def _compute_enrichment_progress(user, profile, dna_data):
         genres_done=Count("id", filter=Q(genres__isnull=False), distinct=True),
         pages_done=Count("id", filter=Q(page_count__isnull=False), distinct=True),
         year_done=Count("id", filter=Q(publish_year__isnull=False), distinct=True),
-        attempted=Count("id", filter=Q(google_books_last_checked__isnull=False), distinct=True),
+        # A book counts as attempted when it was stamped (google_books_last_checked)
+        # OR already has complete data (genres + pages + year) — the dispatch gate
+        # in calculate_full_dna never enriches complete books, so an unstamped
+        # complete book would otherwise leave `attempted < total` FOREVER and the
+        # dashboard banner would poll eternally. Bit us on 2026-09-05: a bulk
+        # re-enrichment run reset stamps and hit the Google Books daily quota,
+        # leaving ~5k complete-but-unstamped books; every upload overlapping them
+        # stuck at a frozen percent.
+        attempted=Count(
+            "id",
+            filter=Q(google_books_last_checked__isnull=False)
+            | (Q(genres__isnull=False) & Q(page_count__isnull=False) & Q(publish_year__isnull=False)),
+            distinct=True,
+        ),
     )
     total = counts["total"]
     if total == 0:
