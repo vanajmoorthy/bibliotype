@@ -11,6 +11,7 @@ from ..analytics.events import (
     track_dna_displayed,
     track_public_profile_viewed,
     track_recommendation_error,
+    track_recommendations_displayed,
     track_recommendations_generated,
 )
 from ..cache_utils import safe_cache_add
@@ -70,12 +71,15 @@ def display_dna_view(request):
                         )
                     recommendations = []
 
-                # Track recommendations displayed (only if we have some)
+                # Track recommendations displayed (only if we have some).
+                # recommendations_generated fires once in the Celery task; this
+                # fires on every dashboard render with stored recs.
                 if recommendations:
-                    track_recommendations_generated(
+                    track_recommendations_displayed(
                         user_id=request.user.id,
                         recommendation_count=len(recommendations),
                         is_authenticated=True,
+                        reader_type=(dna_data or {}).get("reader_type"),
                     )
             except Exception as e:
                 logger.error(f"Error loading recommendations for user {request.user.id}: {e}", exc_info=True)
@@ -161,6 +165,8 @@ def display_dna_view(request):
                         session_key=request.session.session_key,
                         recommendation_count=len(recommendations),
                         is_authenticated=False,
+                        reader_type=dna_data.get("reader_type"),
+                        source="anonymous_dashboard_view",
                     )
             except Exception as e:
                 logger.error(f"Error generating recommendations for anonymous user: {e}", exc_info=True)
@@ -171,15 +177,21 @@ def display_dna_view(request):
 
     # Track DNA displayed
     has_recommendations = len(recommendations) > 0
+    reader_type = (dna_data or {}).get("reader_type")
     if request.user.is_authenticated:
-        track_dna_displayed(request, is_authenticated=True, has_recommendations=has_recommendations)
+        track_dna_displayed(
+            request, is_authenticated=True, has_recommendations=has_recommendations, reader_type=reader_type
+        )
     else:
         # Track anonymous DNA displayed
         track_anonymous_dna_displayed(
             session_key=request.session.session_key,
             has_recommendations=has_recommendations,
+            reader_type=reader_type,
         )
-        track_dna_displayed(request, is_authenticated=False, has_recommendations=has_recommendations)
+        track_dna_displayed(
+            request, is_authenticated=False, has_recommendations=has_recommendations, reader_type=reader_type
+        )
 
     # Calculate title with proper possessive form
     title = None
@@ -296,6 +308,7 @@ def public_profile_view(request, username):
                 recommendations = []  # Continue with empty recommendations
 
         # Track public profile viewed
+        profile_dna = profile.dna_data or {}
         track_public_profile_viewed(
             profile_username=profile_user.username,
             profile_user_id=profile_user.id,
@@ -303,6 +316,8 @@ def public_profile_view(request, username):
             viewer_is_owner=request.user.is_authenticated and request.user == profile_user,
             viewer_user_id=request.user.id if request.user.is_authenticated else None,
             viewer_session_id=request.session.session_key if not request.user.is_authenticated else None,
+            profile_reader_type=profile.reader_type or profile_dna.get("reader_type"),
+            profile_books_count=profile_dna.get("user_stats", {}).get("total_books_read"),
         )
 
         enriched_dna = _enrich_dna_for_display(profile.dna_data)

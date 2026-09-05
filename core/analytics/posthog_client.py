@@ -4,9 +4,10 @@ PostHog Client Wrapper
 Provides environment-aware PostHog client with helper functions for event tracking.
 """
 
-import os
 import logging
+import os
 import socket
+
 import posthog
 from django.conf import settings
 
@@ -147,9 +148,12 @@ def capture_exception(distinct_id, exception, context=None, environment=None):
     properties["server_hostname"] = socket.gethostname()
 
     try:
-        posthog.capture(
+        # posthog.capture_exception sends a real $exception event (with stack
+        # trace) so errors land in PostHog's Error Tracking product — a plain
+        # capture(event="exception") only ever showed up as a custom event.
+        posthog.capture_exception(
+            exception,
             distinct_id=distinct_id,
-            event="exception",
             properties=properties,
         )
     except Exception as e:

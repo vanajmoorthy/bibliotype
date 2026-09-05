@@ -5,6 +5,7 @@ import numpy as np
 
 from ..dna_constants import CANONICAL_GENRE_MAP
 from ..models import AnonymizedReadingProfile, AnonymousUserSession, Author, Book, User, UserBook
+from .genre_classification import resolve_genre_names
 
 logger = logging.getLogger(__name__)
 
@@ -78,9 +79,10 @@ def _build_user_context_for_similarity(user):
 
         weight = rating if rating else 3
 
-        # Genres (prefetched, no query) — canonicalized so old genre rows compare
-        for genre in ub.book.genres.all():
-            genre_weights[CANONICAL_GENRE_MAP.get(genre.name, genre.name)] += weight
+        # Genres (prefetched, no query) — canonicalized + axis-resolved so old
+        # genre rows compare and nonfiction classics don't vector as fiction
+        for genre_name in resolve_genre_names(g.name for g in ub.book.genres.all()):
+            genre_weights[genre_name] += weight
 
         # Authors (select_related, no query)
         author_weights[ub.book.author.normalized_name] += weight
@@ -312,8 +314,8 @@ def _bulk_build_user_contexts(user_ids):
 
             weight = rating if rating else 3
 
-            for genre in ub.book.genres.all():
-                genre_weights[CANONICAL_GENRE_MAP.get(genre.name, genre.name)] += weight
+            for genre_name in resolve_genre_names(g.name for g in ub.book.genres.all()):
+                genre_weights[genre_name] += weight
 
             author_weights[ub.book.author.normalized_name] += weight
 

@@ -6,7 +6,7 @@ Helper functions for tracking specific events in the Bibliotype application.
 
 import logging
 
-from .posthog_client import get_environment, get_distinct_id, capture_event, capture_exception
+from .posthog_client import capture_event, capture_exception, get_distinct_id, get_environment
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,13 @@ def track_dna_generation_started(task_id, user_id=None, session_key=None, is_ano
 
 
 def track_dna_generation_completed(
-    task_id, user_id=None, session_key=None, is_anonymous=False, books_count=None, processing_time=None
+    task_id,
+    user_id=None,
+    session_key=None,
+    is_anonymous=False,
+    books_count=None,
+    processing_time=None,
+    reader_type=None,
 ):
     """Track when DNA generation task completes successfully."""
     distinct_id = str(user_id) if user_id else (session_key or "anonymous")
@@ -65,6 +71,8 @@ def track_dna_generation_completed(
         properties["books_count"] = books_count
     if processing_time is not None:
         properties["processing_time_seconds"] = processing_time
+    if reader_type:
+        properties["reader_type"] = reader_type
 
     capture_event(
         distinct_id=distinct_id,
@@ -74,7 +82,7 @@ def track_dna_generation_completed(
     )
 
 
-def track_anonymous_dna_generated(task_id, session_key, books_count=None, processing_time=None):
+def track_anonymous_dna_generated(task_id, session_key, books_count=None, processing_time=None, reader_type=None):
     """Track when anonymous user successfully generates DNA."""
     distinct_id = session_key or "anonymous"
     environment = get_environment()
@@ -88,6 +96,8 @@ def track_anonymous_dna_generated(task_id, session_key, books_count=None, proces
         properties["books_count"] = books_count
     if processing_time is not None:
         properties["processing_time_seconds"] = processing_time
+    if reader_type:
+        properties["reader_type"] = reader_type
 
     capture_event(
         distinct_id=distinct_id,
@@ -97,18 +107,22 @@ def track_anonymous_dna_generated(task_id, session_key, books_count=None, proces
     )
 
 
-def track_anonymous_dna_displayed(session_key, has_recommendations=False):
+def track_anonymous_dna_displayed(session_key, has_recommendations=False, reader_type=None):
     """Track when anonymous user views their generated DNA."""
     distinct_id = session_key or "anonymous"
     environment = get_environment()
 
+    properties = {
+        "session_key": session_key,
+        "has_recommendations": has_recommendations,
+    }
+    if reader_type:
+        properties["reader_type"] = reader_type
+
     capture_event(
         distinct_id=distinct_id,
         event_name="anonymous_dna_displayed",
-        properties={
-            "session_key": session_key,
-            "has_recommendations": has_recommendations,
-        },
+        properties=properties,
         environment=environment,
     )
 
@@ -139,7 +153,7 @@ def track_dna_generation_failed(
     )
 
 
-def track_dna_displayed(request, is_authenticated, has_recommendations=False):
+def track_dna_displayed(request, is_authenticated, has_recommendations=False, reader_type=None):
     """Track when user views their DNA results."""
     distinct_id = get_distinct_id(request)
     environment = get_environment()
@@ -148,6 +162,8 @@ def track_dna_displayed(request, is_authenticated, has_recommendations=False):
         "is_authenticated": is_authenticated,
         "has_recommendations": has_recommendations,
     }
+    if reader_type:
+        properties["reader_type"] = reader_type
 
     if is_authenticated:
         properties["user_id"] = request.user.id
@@ -242,35 +258,59 @@ def track_public_profile_viewed(
     viewer_is_owner,
     viewer_user_id=None,
     viewer_session_id=None,
+    profile_reader_type=None,
+    profile_books_count=None,
 ):
     """Track when someone views a public profile."""
-    # Use viewer's distinct_id if available, otherwise use profile owner's ID
+    # The distinct_id is the VIEWER, never the profile owner: attributing an
+    # anonymous visit to the owner's person made owners look like they were
+    # refreshing their own pages.
     if viewer_is_authenticated and viewer_user_id:
         distinct_id = str(viewer_user_id)
+        viewer_type = "owner" if viewer_is_owner else "authenticated"
     elif viewer_session_id:
         distinct_id = viewer_session_id
+        viewer_type = "anonymous"
     else:
-        distinct_id = str(profile_user_id)
+        distinct_id = "anonymous"
+        viewer_type = "anonymous"
 
     environment = get_environment()
+
+    properties = {
+        "profile_username": profile_username,
+        "profile_user_id": profile_user_id,
+        "viewer_type": viewer_type,
+        "viewer_is_authenticated": viewer_is_authenticated,
+        "viewer_is_owner": viewer_is_owner,
+        "viewer_user_id": viewer_user_id,
+        "viewer_session_id": viewer_session_id,
+    }
+    if profile_reader_type:
+        properties["profile_reader_type"] = profile_reader_type
+    if profile_books_count is not None:
+        properties["profile_books_count"] = profile_books_count
 
     capture_event(
         distinct_id=distinct_id,
         event_name="public_profile_viewed",
-        properties={
-            "profile_username": profile_username,
-            "profile_user_id": profile_user_id,
-            "viewer_is_authenticated": viewer_is_authenticated,
-            "viewer_is_owner": viewer_is_owner,
-            "viewer_user_id": viewer_user_id,
-            "viewer_session_id": viewer_session_id,
-        },
+        properties=properties,
         environment=environment,
     )
 
 
-def track_recommendations_generated(user_id=None, recommendation_count=0, is_authenticated=False, session_key=None):
-    """Track when recommendations are successfully generated."""
+def track_recommendations_generated(
+    user_id=None,
+    recommendation_count=0,
+    is_authenticated=False,
+    session_key=None,
+    reader_type=None,
+    similar_users_count=None,
+    max_similarity_pct=None,
+    uniqueness_label=None,
+    source=None,
+):
+    """Track when recommendations are actually generated (task for auth users, inline for anonymous)."""
     distinct_id = str(user_id) if user_id else (session_key or "anonymous")
     environment = get_environment()
 
@@ -283,10 +323,47 @@ def track_recommendations_generated(user_id=None, recommendation_count=0, is_aut
         properties["user_id"] = user_id
     if session_key:
         properties["session_id"] = session_key
+    if reader_type:
+        properties["reader_type"] = reader_type
+    if similar_users_count is not None:
+        properties["similar_users_count"] = similar_users_count
+    if max_similarity_pct is not None:
+        properties["max_similarity_pct"] = max_similarity_pct
+    if uniqueness_label:
+        properties["uniqueness_label"] = uniqueness_label
+    if source:
+        properties["source"] = source
 
     capture_event(
         distinct_id=distinct_id,
         event_name="recommendations_generated",
+        properties=properties,
+        environment=environment,
+    )
+
+
+def track_recommendations_displayed(
+    user_id=None, recommendation_count=0, is_authenticated=False, session_key=None, reader_type=None
+):
+    """Track when stored recommendations are rendered on the dashboard (fires per view, unlike recommendations_generated)."""
+    distinct_id = str(user_id) if user_id else (session_key or "anonymous")
+    environment = get_environment()
+
+    properties = {
+        "recommendation_count": recommendation_count,
+        "is_authenticated": is_authenticated,
+    }
+
+    if user_id:
+        properties["user_id"] = user_id
+    if session_key:
+        properties["session_id"] = session_key
+    if reader_type:
+        properties["reader_type"] = reader_type
+
+    capture_event(
+        distinct_id=distinct_id,
+        event_name="recommendations_displayed",
         properties=properties,
         environment=environment,
     )
@@ -367,6 +444,74 @@ def track_account_deleted(user_id):
         properties={
             "user_id": user_id,
         },
+        environment=environment,
+    )
+
+
+def track_vibe_requested(cache_hit, user_id=None, is_anonymous=False):
+    """
+    Track a reading-vibe request and whether the DB-cached vibe was reused.
+
+    Cache-hit rate is the headline LLM cost metric: a generation only happens
+    on a miss. Production only. No vibe text or book data is captured.
+    """
+    environment = get_environment()
+    if environment != "production":
+        return
+
+    capture_event(
+        distinct_id=str(user_id) if user_id else "anonymous",
+        event_name="vibe_requested",
+        properties={
+            "cache_hit": cache_hit,
+            "is_anonymous": is_anonymous,
+        },
+        environment=environment,
+    )
+
+
+def track_vibe_generation_completed(model, latency_ms, prompt_chars, response_chars, provider="gemini"):
+    """Track a successful LLM vibe generation. Production only. Lengths and counts only — never content."""
+    environment = get_environment()
+    if environment != "production":
+        return
+
+    capture_event(
+        distinct_id="system",
+        event_name="vibe_generation_completed",
+        properties={
+            "provider": provider,
+            "model": model,
+            "latency_ms": latency_ms,
+            "prompt_chars": prompt_chars,
+            "response_chars": response_chars,
+        },
+        environment=environment,
+    )
+
+
+def track_vibe_generation_failed(model, error_type, error_message=None, latency_ms=None, provider="gemini"):
+    """Track a failed LLM vibe generation. Production only."""
+    environment = get_environment()
+    if environment != "production":
+        return
+
+    if error_message and len(error_message) > 500:
+        error_message = error_message[:500] + "..."
+
+    properties = {
+        "provider": provider,
+        "model": model,
+        "error_type": error_type,
+        "error_message": error_message,
+    }
+    if latency_ms is not None:
+        properties["latency_ms"] = latency_ms
+
+    capture_event(
+        distinct_id="system",
+        event_name="vibe_generation_failed",
+        properties=properties,
         environment=environment,
     )
 

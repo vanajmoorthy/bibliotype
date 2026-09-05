@@ -25,7 +25,8 @@ from ..tasks import _save_dna_to_profile, claim_anonymous_dna_task
 logger = logging.getLogger(__name__)
 
 
-def signup_view(request):
+@ratelimit(key=client_ip_key, rate="5/m", method="POST", block=True)
+def _signup_view_throttled(request):
     task_id = request.GET.get("task_id")
 
     if request.method == "POST":
@@ -152,6 +153,24 @@ def signup_view(request):
         form = CustomUserCreationForm()
 
     return render(request, "core/signup.html", {"form": form, "task_id_to_claim": task_id})
+
+
+def signup_view(request):
+    # Same wrapper pattern as login_view below: throttle POSTs per client IP
+    # (US-017 hardening — Turnstile stops bots, this caps humans/proxies probing
+    # for registered emails via the duplicate-email path).
+    try:
+        return _signup_view_throttled(request)
+    except Ratelimited:
+        form = CustomUserCreationForm()
+        form._errors = ErrorDict()
+        form._errors[NON_FIELD_ERRORS] = ErrorList(["Too many attempts. Please try again in a minute."])
+        return render(
+            request,
+            "core/signup.html",
+            {"form": form, "task_id_to_claim": request.GET.get("task_id")},
+            status=429,
+        )
 
 
 @ratelimit(key=client_ip_key, rate="5/m", method="POST", block=True)

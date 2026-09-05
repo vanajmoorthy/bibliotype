@@ -17,7 +17,9 @@ def run_management_command_task(command_name: str, args: list = None, kwargs: di
         raise ValueError(f"command not allowed: {command_name}")
 
     import io
+
     from django.core.management import call_command
+
     from ..cache_utils import safe_cache_set
 
     args = args or []

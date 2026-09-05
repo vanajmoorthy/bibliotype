@@ -116,6 +116,19 @@ def generate_recommendations_task(self, user_id: int):
         # Also clear the cache so fresh data is used
         safe_cache_delete(f"user_recommendations_{user_id}")
 
+        from ..analytics.events import track_recommendations_generated
+
+        track_recommendations_generated(
+            user_id=user_id,
+            recommendation_count=len(processed_recs),
+            is_authenticated=True,
+            reader_type=profile.reader_type or (profile.dna_data or {}).get("reader_type"),
+            similar_users_count=recommendations_meta["similar_users_count"],
+            max_similarity_pct=recommendations_meta["max_similarity_pct"],
+            uniqueness_label=recommendations_meta.get("uniqueness_label"),
+            source="task",
+        )
+
         logger.info(f"Successfully generated and stored {len(processed_recs)} recommendations for user {user_id}")
         return len(processed_recs)
 

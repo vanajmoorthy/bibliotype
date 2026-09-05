@@ -4,6 +4,14 @@ on:
         branches:
             - main
 
+# Serialize deploys: two quick merges used to run `docker compose up
+# --force-recreate` on the droplet concurrently, colliding and leaving every
+# container wedged in "Created" (prod 502'd on 2026-09-02). Queue instead —
+# and never cancel an in-flight deploy mid-recreate.
+concurrency:
+    group: production-deploy
+    cancel-in-progress: false
+
 jobs:
     deploy:
         runs-on: ubuntu-latest
@@ -59,4 +67,10 @@ jobs:
                       sudo chmod -R 775 /home/bibliotype/app/staticfiles/
 
                       echo "Pruning old docker images"
-                      docker image prune -f
+                      # -a is required: every deploy tags a unique :sha image, so old
+                      # images are never dangling and plain `prune -f` removes nothing.
+                      # They piled up ~1.3GB per deploy until the disk hit 100% and
+                      # took prod down on 2026-09-05. -a keeps images in use by running
+                      # containers (current app image, postgres, redis) and drops the rest;
+                      # rollbacks re-pull any :sha tag from Docker Hub.
+                      docker image prune -af
