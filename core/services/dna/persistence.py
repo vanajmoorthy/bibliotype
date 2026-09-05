@@ -9,7 +9,15 @@ from ..top_books_service import MIN_REVIEW_LENGTH_FOR_SENTIMENT, compute_book_sc
 logger = logging.getLogger(__name__)
 
 
-def _save_dna_to_profile(profile, dna_data):
+def _save_dna_to_profile(profile, dna_data, dispatch_recommendations=True):
+    """Persist DNA and kick off async recommendations.
+
+    dispatch_recommendations=False (bulk seeding) skips the recommendations
+    task entirely: seeded users are recommendation CANDIDATES, not consumers —
+    nobody views their dashboards — and a corpus run would otherwise drop one
+    heavy task per seeded user onto the interactive "celery" queue, which
+    drains ahead of enrichment_bulk and any real user's upload.
+    """
     profile.dna_data = dna_data
     profile.reader_type = dna_data.get("reader_type")
     profile.total_books_read = dna_data.get("user_stats", {}).get("total_books_read")
@@ -46,6 +54,10 @@ def _save_dna_to_profile(profile, dna_data):
         # Clear the reject-while-pending in-flight marker: this upload finished,
         # so a follow-up upload must be allowed through (see core/views/upload.py).
         safe_cache_delete(f"dna_task_inflight_{profile.user.id}")
+
+        if not dispatch_recommendations:
+            logger.info(f"Skipped recommendations dispatch for {profile.user.username} (bulk run)")
+            return
 
         # Sentinel-guard the dispatch (same guard as display_dna_view) so a
         # dashboard poll landing in the window before the task picks up can't

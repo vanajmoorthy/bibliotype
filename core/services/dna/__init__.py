@@ -323,16 +323,40 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                         except Exception as e:
                             logger.warning(f"Inline enrichment failed for '{book.title}': {e}")
                     if not enriched_inline:
-                        from ...tasks import enrich_book_task
+                        # Bulk corpora overlap heavily on popular titles, and
+                        # since bulk skips inline enrichment nothing stamps
+                        # google_books_last_checked until the queued task runs
+                        # — so every later CSV containing a still-queued book
+                        # would re-dispatch it, and each duplicate burns a
+                        # rate-limit slot as a no-op. A dispatch sentinel
+                        # (TTL = ENRICHMENT_RETRY_AFTER, matching the guard the
+                        # executed task applies) suppresses those duplicates.
+                        # Interactive dispatches are left alone: their
+                        # nonce/supersede semantics already handle re-uploads,
+                        # and cross-user suppression could strand a book if the
+                        # suppressing task gets superseded before running.
+                        should_dispatch = True
+                        if bulk_enrichment:
+                            from ...cache_utils import safe_cache_add
 
-                        logger.debug(
-                            f"Dispatching async enrichment for '{book.title}' (budget exhausted or inline failed)"
-                        )
-                        enrich_book_task.apply_async(
-                            args=(book.pk,),
-                            kwargs={"user_id": upload_user_id, "upload_nonce": upload_nonce},
-                            **dispatch_opts,
-                        )
+                            should_dispatch = safe_cache_add(
+                                f"enrich_dispatched_{book.pk}",
+                                1,
+                                timeout=int(ENRICHMENT_RETRY_AFTER.total_seconds()),
+                            )
+                        if should_dispatch:
+                            from ...tasks import enrich_book_task
+
+                            logger.debug(
+                                f"Dispatching async enrichment for '{book.title}' (budget exhausted or inline failed)"
+                            )
+                            enrich_book_task.apply_async(
+                                args=(book.pk,),
+                                kwargs={"user_id": upload_user_id, "upload_nonce": upload_nonce},
+                                **dispatch_opts,
+                            )
+                        else:
+                            logger.debug(f"Bulk enrich dispatch for '{book.title}' suppressed — already queued")
                 else:
                     logger.debug(f"Book '{book.title}' recently enriched or complete. Skipping.")
 
@@ -889,7 +913,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             # Calculate and store top books
             calculate_and_store_top_books(user, limit=5)
 
-            _save_dna_to_profile(user.userprofile, dna)
+            _save_dna_to_profile(user.userprofile, dna, dispatch_recommendations=not bulk_enrichment)
             logger.info(f"Saved DNA for user: {user.username}")
             return dna
         else:
