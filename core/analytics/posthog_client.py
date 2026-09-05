@@ -4,9 +4,10 @@ PostHog Client Wrapper
 Provides environment-aware PostHog client with helper functions for event tracking.
 """
 
-import os
 import logging
+import os
 import socket
+
 import posthog
 from django.conf import settings
 

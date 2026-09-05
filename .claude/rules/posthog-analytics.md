@@ -59,9 +59,9 @@ Context processor `posthog_settings` provides `POSTHOG_API_KEY` to templates.
 
 **DNA lifecycle:**
 - `file_upload_started` — CSV uploaded (views.py)
-- `dna_generation_started` / `completed` / `failed` — Task lifecycle (tasks.py)
-- `anonymous_dna_generated` — Anonymous success (tasks.py)
-- `dna_displayed` / `anonymous_dna_displayed` — Dashboard viewed (views.py)
+- `dna_generation_started` / `completed` / `failed` — Task lifecycle (tasks.py); `completed` carries `reader_type`
+- `anonymous_dna_generated` — Anonymous success (tasks.py), carries `reader_type`
+- `dna_displayed` / `anonymous_dna_displayed` — Dashboard viewed (views.py), carry `reader_type`
 
 **Authentication:**
 - `user_signed_up` — With `signup_source`: "with_task_claim", "with_session_dna", "before_dna"
@@ -70,9 +70,15 @@ Context processor `posthog_settings` provides `POSTHOG_API_KEY` to templates.
 
 **Profile & settings:**
 - `profile_made_public` — Privacy toggle
-- `public_profile_viewed` — With viewer/owner context
+- `public_profile_viewed` — distinct_id is always the VIEWER (user id, session key, or "anonymous" — never the owner). Properties: `profile_username`, `profile_user_id`, `viewer_type` ("owner"/"authenticated"/"anonymous"), `profile_reader_type`, `profile_books_count`
 - `settings_updated` — With `setting_type`: "display_name" or "recommendation_visibility"
-- `recommendations_generated` — With count
+- `recommendations_generated` — Fires when recs are actually generated (Celery task for auth users with `source="task"` + `reader_type`, `similar_users_count`, `max_similarity_pct`, `uniqueness_label`; inline for anonymous with `source="anonymous_dashboard_view"`)
+- `recommendations_displayed` — Fires per dashboard render with stored recs (count + `reader_type`)
+
+**LLM vibe (production only, never captures vibe text or book data):**
+- `vibe_requested` — Per DNA calculation, with `cache_hit` (DB hash match) — headline LLM cost metric
+- `vibe_generation_completed` — `provider`, `model`, `latency_ms`, `prompt_chars`, `response_chars` (distinct_id = "system")
+- `vibe_generation_failed` — `error_type` (JSONDecodeError/UnexpectedFormat/exception class), truncated `error_message`, `latency_ms` (distinct_id = "system")
 
 **Infrastructure (distinct_id = "system"):**
 - `external_api_call` — Open Library/Google Books calls with status (success/error/not_found)
