@@ -1,8 +1,10 @@
-import numpy as np
-from collections import Counter, defaultdict
-from ..dna_constants import CANONICAL_GENRE_MAP
-from ..models import UserBook, User, Book, Author, AnonymousUserSession, AnonymizedReadingProfile
 import logging
+from collections import Counter, defaultdict
+
+import numpy as np
+
+from ..dna_constants import CANONICAL_GENRE_MAP
+from ..models import AnonymizedReadingProfile, AnonymousUserSession, Author, Book, User, UserBook
 
 logger = logging.getLogger(__name__)
 
@@ -622,3 +624,56 @@ def get_match_quality_label(similarity_score):
         return "Different preferences"
     else:
         return "Opposite tastes"
+
+
+COMPARE_CACHE_TTL = 1800  # 30 min, matching similar_users_{id}
+
+
+def compare_readers(users):
+    """
+    Pairwise similarity payload for the compare page (2-6 users).
+
+    Callers own eligibility checks (is_public, dna_data present) — this only
+    computes. Scores come from calculate_user_similarity_from_context over
+    bulk-built contexts, so the whole group costs one UserBook query.
+    """
+    from ..cache_utils import safe_cache_get, safe_cache_set
+
+    user_ids = sorted(u.id for u in users)
+    cache_key = "compare_" + "_".join(str(i) for i in user_ids)
+    cached = safe_cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    contexts = _bulk_build_user_contexts(user_ids)
+    ordered = sorted(users, key=lambda u: u.username)
+
+    pairs = []
+    for i, user_a in enumerate(ordered):
+        for user_b in ordered[i + 1 :]:
+            data = calculate_user_similarity_from_context(contexts[user_a.id], contexts[user_b.id])
+            score = data["similarity_score"]
+            pairs.append(
+                {
+                    "usernames": [user_a.username, user_b.username],
+                    "score": score,
+                    "pct": int(round(score * 100)),
+                    "label": get_match_quality_label(score),
+                    "components": data["components"],
+                    "components_pct": {k: int(round(v * 100)) for k, v in data["components"].items()},
+                    "shared_books_count": data["shared_books_count"],
+                    "shared_rated_count": data["shared_rated_count"],
+                }
+            )
+
+    mean_score = sum(p["score"] for p in pairs) / len(pairs)
+    result = {
+        "pairs": pairs,
+        "mean_score": mean_score,
+        "mean_pct": int(round(mean_score * 100)),
+        "mean_label": get_match_quality_label(mean_score),
+        "best_pair": max(pairs, key=lambda p: p["score"]),
+    }
+
+    safe_cache_set(cache_key, result, COMPARE_CACHE_TTL)
+    return result
