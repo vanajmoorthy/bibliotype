@@ -5,7 +5,8 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 
-from core.dna_constants import ENRICHMENT_BULK_QUEUE
+from core.cache_utils import safe_cache_add
+from core.dna_constants import ENRICHMENT_BULK_QUEUE, ENRICHMENT_RETRY_AFTER
 from core.models import Book
 from core.services.book_enrichment_service import enrich_book_from_apis
 from core.tasks import enrich_book_task
@@ -90,15 +91,28 @@ class Command(BaseCommand):
 
     def _async_enrich(self, queryset, reset_gb=False):
         dispatched = 0
+        suppressed = 0
         for book in queryset.iterator():
             if reset_gb and book.google_books_last_checked is not None:
                 # The Celery task reloads the book from the DB, so the reset must be persisted.
                 Book.objects.filter(pk=book.pk).update(google_books_last_checked=None)
+            # Dispatch sentinel shared with the bulk pipeline in
+            # core/services/dna: a book already queued (e.g. by a concurrent
+            # seed run) isn't dispatched again — each duplicate would burn a
+            # rate-limit slot as a no-op. --force/--process-all bypass the
+            # sentinel (operator explicitly asked for a re-run) but still set
+            # it so later bulk work sees the book as queued.
+            marker_fresh = safe_cache_add(
+                f"enrich_dispatched_{book.pk}", 1, timeout=int(ENRICHMENT_RETRY_AFTER.total_seconds())
+            )
+            if not marker_fresh and not reset_gb:
+                suppressed += 1
+                continue
             # force mirrors reset_gb so the task's retry-window guard doesn't
             # re-skip a book if its timestamp gets re-set between reset and run.
             enrich_book_task.apply_async(args=(book.pk,), kwargs={"force": reset_gb}, queue=ENRICHMENT_BULK_QUEUE)
             dispatched += 1
-        self._log(f"Dispatched {dispatched} enrichment tasks to Celery.")
+        self._log(f"Dispatched {dispatched} enrichment tasks to Celery ({suppressed} already queued, skipped).")
 
     def _sync_enrich(self, queryset, gb_limit, reset_gb=False):
         session = requests.Session()
