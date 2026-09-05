@@ -655,6 +655,56 @@ class ReaderTypeSparseDataGuardsTests(TestCase):
             self.assertLessEqual(s, 100)
 
 
+class ReaderTypeAuthorLoyalistTests(TestCase):
+    """Author Loyalist signal hygiene: reread dedup, name normalization, generic authors."""
+
+    def test_reread_duplicate_rows_do_not_inflate_share(self):
+        """A single book logged 15 times (StoryGraph-style reread rows) is one authored book."""
+        specs = [(
+            {"title": f"Book {i}", "pages": 300, "pub_year": 2015, "author": f"Author {i}"},
+            set(),
+            {"publish_year": 2015, "publisher": _MAINSTREAM},
+        ) for i in range(30)]
+        specs += [(
+            {"title": "Beloved Book", "pages": 300, "pub_year": 2015, "author": "Loyal Author"},
+            set(),
+            {"publish_year": 2015, "publisher": _MAINSTREAM},
+        ) for _ in range(15)]
+        df, enriched, genre_sets = build_library(specs)
+        _, scores = assign_reader_type(df, enriched, genre_sets)
+        # Raw rows would give 15/45 = 33% (score 100); deduped it's 1/31 → below floor
+        self.assertEqual(scores.get("Author Loyalist", 0), 0)
+
+    def test_author_name_variants_merge_via_normalization(self):
+        """Spelling variants of one author count together, matching DB dedup semantics."""
+        specs = []
+        for i in range(60):
+            if i < 6:
+                author = "J.K. Rowling"
+            elif i < 12:
+                author = "J. K. Rowling"
+            else:
+                author = f"Author {i}"
+            specs.append(({"title": f"Book {i}", "pages": 300, "pub_year": 2015, "author": author},
+                          set(), {"publish_year": 2015, "publisher": _MAINSTREAM}))
+        df, enriched, genre_sets = build_library(specs)
+        _, scores = assign_reader_type(df, enriched, genre_sets)
+        # Merged share 12/60 = 20% → score 35; unmerged would be 6/60 = 10% → 0
+        self.assertGreaterEqual(scores.get("Author Loyalist", 0), MIN_WINNING_SCORE)
+
+    def test_generic_authors_do_not_count_as_loyalty(self):
+        """'Anonymous'/'Various' books are excluded from the loyalty signal entirely."""
+        specs = []
+        for i in range(40):
+            author = "Anonymous" if i < 12 else f"Author {i}"
+            specs.append(({"title": f"Book {i}", "pages": 300, "pub_year": 2015, "author": author},
+                          set(), {"publish_year": 2015, "publisher": _MAINSTREAM}))
+        df, enriched, genre_sets = build_library(specs)
+        _, scores = assign_reader_type(df, enriched, genre_sets)
+        # Without the filter 12/40 = 30% would score 78 and win
+        self.assertEqual(scores.get("Author Loyalist", 0), 0)
+
+
 class ReaderTypeRealCSVRegressionTests(TestCase):
     """Test 8: Fixture CSV files produce plausible winners."""
 

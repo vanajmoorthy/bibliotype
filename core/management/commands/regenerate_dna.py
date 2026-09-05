@@ -98,6 +98,7 @@ class Command(BaseCommand):
             # Full accuracy restores on the user's next re-upload.
             import pandas as _pd
             from core.services.dna.reader_type import assign_reader_type as _assign_reader_type
+            from core.services.genre_classification import canonicalize_genre_names as _canonicalize
             from core.dna_constants import MIN_WINNING_SCORE as _MIN_WIN, READER_TYPE_TIEBREAK_ORDER as _TIEBREAK
 
             rows = []
@@ -111,7 +112,9 @@ class Command(BaseCommand):
                     "Date Read": ub.date_read,
                     "Author": b.author.name if b.author_id else None,
                 })
-                book_genre_sets_regen.append({g.name for g in b.genres.all()})
+                # Canonicalize like recompute_reader_type_from_db does — stored Genre
+                # names are raw and genre_share only matches canonical tokens.
+                book_genre_sets_regen.append(_canonicalize([g.name for g in b.genres.all()]))
                 if b.title:
                     enriched_data_regen[b.title] = {
                         "publish_year": b.publish_year,

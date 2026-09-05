@@ -18,6 +18,10 @@ logger = logging.getLogger(__name__)
 # Regex for detecting Goodreads series notation in book titles: "(Series Name, #N)"
 _SERIES_RE = re.compile(r"\(.*#\d", re.IGNORECASE)
 
+# Normalized author names that indicate "no real single author" — never count
+# toward Author Loyalist (anthologies, folk tales, uncredited works).
+_GENERIC_AUTHOR_NAMES = frozenset({"anonymous", "various", "variousauthors", "unknown"})
+
 
 def compute_reread_count(read_df):
     """Return the number of books read more than once, derived purely from read_df.
@@ -211,15 +215,22 @@ def assign_reader_type(read_df, enriched_data, book_genre_sets, reread_count_ove
             small_press_count / Pub, *READER_TYPE_THRESHOLDS["Small Press Supporter"]
         )
 
-    # Author loyalty type (largest single-author share among books with a known author)
+    # Author loyalty type: largest single-author share among unique authored books.
+    # Rows are deduped on (Title, Author) so rereads logged as duplicate rows don't
+    # inflate the share, and names go through Author._normalize so spelling variants
+    # ("J.K. Rowling" / "J. K. Rowling") count as one author — keeping the CSV path
+    # consistent with the DB-recompute path, where authors arrive already merged by
+    # that same normalization.
     if "Author" in read_df.columns:
-        author_counts = read_df["Author"].dropna().astype(str).str.strip()
-        author_counts = author_counts[author_counts != ""].value_counts()
-        A = int(author_counts.sum())
-        if A >= MIN_SIGNAL_BOOKS and len(author_counts) > 0:
-            scores["Author Loyalist"] = score_ramp(
-                int(author_counts.iloc[0]) / A, *READER_TYPE_THRESHOLDS["Author Loyalist"]
-            )
+        from ...models import Author as _Author
+
+        authored = read_df.loc[read_df["Author"].notna(), ["Title", "Author"]].drop_duplicates()
+        author_names = authored["Author"].astype(str).map(_Author._normalize)
+        author_names = author_names[(author_names != "") & ~author_names.isin(_GENERIC_AUTHOR_NAMES)]
+        A = len(author_names)
+        if A >= MIN_SIGNAL_BOOKS:
+            top_author_share = int(author_names.value_counts().iloc[0]) / A
+            scores["Author Loyalist"] = score_ramp(top_author_share, *READER_TYPE_THRESHOLDS["Author Loyalist"])
 
     # Reread type
     scores["Comfort Rereader"] = score_ramp(reread_count / L if L > 0 else 0.0, *READER_TYPE_THRESHOLDS["Comfort Rereader"])
@@ -340,5 +351,5 @@ def recompute_reader_type_from_db(
         "reader_type_explanation": explanation,
         "top_reader_types": top_types_list,
         "reader_type_scores": dict(reader_type_scores),
-        "reader_type_scores_version": 2,
+        "reader_type_scores_version": 3,
     }

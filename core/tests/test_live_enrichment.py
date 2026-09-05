@@ -198,11 +198,11 @@ class RecomputeReaderTypeFromDbTests(TestCase):
                     "reader_type_scores", "reader_type_scores_version"):
             self.assertIn(key, result)
 
-    def test_scores_version_is_2(self):
+    def test_scores_version_is_3(self):
         _add_book(self.user, "Any Book", genres=["history"])
         csv_context = {"reread_count": 0, "books_per_year_avg": 0.0}
         result = recompute_reader_type_from_db(self.user, csv_context)
-        self.assertEqual(result["reader_type_scores_version"], 2)
+        self.assertEqual(result["reader_type_scores_version"], 3)
 
     def test_top_reader_types_has_at_most_3(self):
         for i in range(10):

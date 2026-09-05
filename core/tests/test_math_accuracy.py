@@ -339,7 +339,7 @@ class ReaderTypeDescriptionsTests(TestCase):
     def test_all_scored_reader_types_have_descriptions(self):
         """Every reader type that can be assigned must have a description in READER_TYPE_DESCRIPTIONS."""
         from core.dna_constants import READER_TYPE_TIEBREAK_ORDER
-        # All 20 types in tiebreak order plus the fallbacks
+        # All 19 active types in tiebreak order plus the fallbacks
         scored_types = set(READER_TYPE_TIEBREAK_ORDER) | {"Eclectic Reader"}
         missing = scored_types - set(READER_TYPE_DESCRIPTIONS.keys())
         self.assertEqual(missing, set(), f"Reader types with no descriptions: {missing}")
