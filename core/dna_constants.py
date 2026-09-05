@@ -58,10 +58,6 @@ READER_TYPE_DESCRIPTIONS = {
         "You read to learn and understand the world. Your library is heavily weighted towards non-fiction titles.",
         "From history to science to biography, your reading habits show a strong desire for facts, insights, and real-world knowledge.",
     ],
-    "Social Savant": [
-        "You are fascinated by the dynamics of society. Your reading list is rich with books on sociology, politics, and current events.",
-        "Your library reflects a deep engagement with social structures and human behavior, focusing on the social sciences.",
-    ],
     "Modern Maverick": [
         "You have your finger on the pulse of modern literature. You consistently read new releases and books published in the last few years.",
         "Your bookshelf is a snapshot of the current literary moment, showing a strong preference for contemporary authors and recent publications.",
@@ -74,9 +70,10 @@ READER_TYPE_DESCRIPTIONS = {
         "You devour books at an extraordinary pace. With over 40 books a year under your belt, reading isn't just a hobby — it's a way of life.",
         "Your reading velocity is remarkable. You tear through books at a rate most readers can only dream of.",
     ],
-    "Nature Nut Case": [
-        "The natural world is your reading sanctuary. Your shelves are filled with books about ecology, wildlife, and the great outdoors.",
-        "From field guides to nature writing, your reading habits reveal a deep connection with the environment and the living world around us.",
+    "Author Loyalist": [
+        "When you find an author you love, you commit. A striking share of your library comes from a single writer's pen.",
+        "You don't just read books — you follow careers. One author's name appears on your shelves again and again.",
+        "Completionist energy: your reading history shows deep devotion to one author's entire body of work.",
     ],
     "Self Help Scholar": [
         "You read with purpose and self-improvement in mind. Your library is rich with books on personal development, productivity, and growth.",
@@ -139,16 +136,15 @@ READER_TYPE_THRESHOLDS = {
     "Fantasy Fanatic":         (0.30, 0.70),   # floor raised: 30%+ speculative fiction needed
     "Mystery Maven":           (0.20, 0.60),
     "Romance Reveller":        (0.15, 0.50),
-    "History Hound":           (0.20, 0.55),
+    "History Hound":           (0.15, 0.55),   # floor lowered so genuine history buffs surface
     "Literary Luminary":       (0.10, 0.40),
     "Sonnet Slinger":          (0.05, 0.25),
     "Non-Fiction Ninja":       (0.15, 0.50),
     "Philosophical Philomath": (0.05, 0.25),
-    "Nature Nut Case":         (0.05, 0.25),
-    "Social Savant":           (0.08, 0.30),
     "Self Help Scholar":       (0.08, 0.30),
-    "Tome Tussler":            (0.10, 0.45),
-    "Novella Navigator":       (0.10, 0.45),
+    "Author Loyalist":         (0.12, 0.35),   # largest single-author share; wins at ~19%
+    "Tome Tussler":            (0.08, 0.45),
+    "Novella Navigator":       (0.08, 0.45),
     "Classics Collector":      (0.15, 0.45),   # floor raised: 15%+ pre-1970 needed
     "Modern Maverick":         (0.45, 0.85),
     "Small Press Supporter":   (0.35, 0.75),
@@ -162,10 +158,9 @@ READER_TYPE_THRESHOLDS = {
 READER_TYPE_TIEBREAK_ORDER = [
     "Sonnet Slinger",
     "Philosophical Philomath",
-    "Nature Nut Case",
     "Self Help Scholar",
-    "Social Savant",
     "Comfort Rereader",
+    "Author Loyalist",
     "Series Slayer",
     "Novella Navigator",
     "Tome Tussler",
@@ -200,9 +195,10 @@ READER_TYPE_COLORS = {
     "Sonnet Slinger":          "pink",
     "Mystery Maven":           "cyan",
     "Non-Fiction Ninja":       "cyan",
-    "Social Savant":           "cyan",
+    "Social Savant":           "cyan",    # retired type — legacy mapping for stored profiles
     "Novella Navigator":       "cyan",
-    "Nature Nut Case":         "green",
+    "Nature Nut Case":         "green",   # retired type — legacy mapping for stored profiles
+    "Author Loyalist":         "green",
     "Self Help Scholar":       "green",
     "Small Press Supporter":   "green",
 }

@@ -35,8 +35,9 @@ class TaskUnitTests(TestCase):
         Uses 10 books (meeting MIN_SIGNAL_BOOKS threshold) all in fantasy genres,
         so Fantasy Fanatic reaches 100% genre share and scores 100.
         """
+        # Distinct authors per book so Author Loyalist can't tie Fantasy Fanatic
         rows = "\n".join(
-            [f"Book {i} (The Series, #{i}),Author X,read,300" for i in range(10)]
+            [f"Book {i} (The Series, #{i}),Author {i},read,300" for i in range(10)]
         )
         csv_data = f"Title,Author,Exclusive Shelf,Number of Pages\n{rows}\n"
         read_df = pd.read_csv(StringIO(csv_data))

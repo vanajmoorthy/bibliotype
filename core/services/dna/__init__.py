@@ -818,7 +818,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             "reader_type_explanation": explanation,
             "top_reader_types": top_types_list,
             "reader_type_scores": dict(reader_type_scores),
-            "reader_type_scores_version": 2,
+            "reader_type_scores_version": 3,
             "reader_type_csv_context": {
                 "reread_count": reader_type_reread_count,
                 "books_per_year_avg": reader_type_books_per_year,

@@ -113,6 +113,7 @@ class Command(BaseCommand):
                         "Title": b.title or "",
                         "Number of Pages": b.page_count,
                         "Date Read": ub.date_read,
+                        "Author": b.author.name if b.author_id else None,
                     }
                 )
                 # Canonicalize so old pre-rename Genre rows (e.g. "classics")

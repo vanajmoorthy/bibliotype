@@ -243,12 +243,12 @@ Compiled from `docs/handoffs/`, the reader-type & live-enrichment plans in `docs
 detail. ~~Struck-through~~ items were verified done against `main` as of 2026-08-24.
 
 ### Reader types
-- **Type-retirement decision is deferred — all 20 types are still kept.** Over a 200-library
-  synthetic corpus only 11/20 ever won; these never did: History Hound, Nature Nut Case, Social
-  Savant, Comfort Rereader, Series Slayer, Modern Maverick, Rapacious Reader, Tome Tussler,
-  Novella Navigator, Eclectic Reader (all remain reachable via engineered libraries). Decide
-  whether to drop any. Decision doc: `docs/plans/2026-07-04-feat-reader-type-overhaul-plan.md`;
-  calibration histogram prints in `test_no_type_dominates_distribution`.
+- ~~**Type-retirement decision is deferred — all 20 types are still kept.**~~ Decided 2026-09-02:
+  Nature Nut Case and Social Savant retired (genres folded into Non-Fiction Ninja), Author
+  Loyalist added (largest single-author share, normalized + reread-deduped), floors lowered for
+  History Hound / Tome Tussler / Novella Navigator — 19 active types plus the Eclectic fallback.
+  Calibration histogram prints in `test_no_type_dominates_distribution`; validated against 164
+  real Goodreads exports in `csv/github_exports` (untracked).
 - **Distribution-domination cap was relaxed 25% → 30%** (Fantasy Fanatic sits ~26.5%, largely
   structural to the test corpus) and the Eclectic ≥1% lower bound was dropped. Tighten later if
   you want a stricter guarantee.

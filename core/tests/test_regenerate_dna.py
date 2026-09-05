@@ -28,9 +28,10 @@ class RegenerateDnaGenreCanonicalizationTests(TestCase):
         profile.dna_data = {"reader_type": "Eclectic Reader", "user_stats": {}}
         profile.save()
 
-        author = Author.objects.create(name="Old Vocab Author")
+        # Distinct authors per book so Author Loyalist can't tie Literary Luminary
         classics = Genre.objects.create(name="classics")  # pre-rename Genre row
         for i in range(12):
+            author = Author.objects.create(name=f"Old Vocab Author {i}")
             book = Book.objects.create(title=f"Classic Tome {i}", author=author, page_count=320)
             book.genres.add(classics)
             UserBook.objects.create(
