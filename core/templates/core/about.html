@@ -1,28 +1,28 @@
 {# About page #}
 {% extends 'core/base.html' %}
 
-{% block seo_title %}About Bibliotype - Reading DNA & Literary Personality Analysis{% endblock %}
+{% block seo_title %}About Bibliotype - Reading DNA Analysis{% endblock %}
 
 {% block seo_description %}
-    Learn about Bibliotype, a free tool that analyses your Goodreads reading data to discover your unique literary
-    personality type, reading habits, and book preferences.
+    Learn about Bibliotype, a free tool that analyses your Goodreads or StoryGraph reading data to decode your reading
+    DNA, reading habits, and book preferences.
 {% endblock %}
 
 {% block seo_keywords %}
-    about Bibliotype, reading DNA tool, literary personality analyser, Goodreads analysis, book reading insights,
-    reading statistics tool
+    about Bibliotype, reading DNA tool, reading DNA analyser, Goodreads analysis, book reading insights, reading
+    statistics tool
 {% endblock %}
 
 {% block og_title %}About Bibliotype{% endblock %}
 
 {% block og_description %}
-    Learn about Bibliotype, a free tool that analyses your reading data to discover your unique literary personality.
+    Learn about Bibliotype, a free tool that analyses your reading data to sequence and decode your Bibliotype.
 {% endblock %}
 
 {% block twitter_title %}About Bibliotype{% endblock %}
 
 {% block twitter_description %}
-    Learn about Bibliotype, a free reading analysis tool that discovers your literary personality.
+    Learn about Bibliotype, a free reading analysis tool that decodes your reading DNA.
 {% endblock %}
 
 {% block structured_data %}
@@ -31,7 +31,7 @@
             "@context": "https://schema.org",
             "@type": "AboutPage",
             "name": "About Bibliotype",
-            "description": "Learn about Bibliotype, a free tool that analyses your reading data to discover your literary personality.",
+            "description": "Learn about Bibliotype, a free tool that analyses your reading data to decode your reading DNA.",
             "url": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}",
             "breadcrumb": {
                 "@type": "BreadcrumbList",
@@ -63,19 +63,20 @@
                 <span class="bg-brand-green px-1">What is Bibliotype?</span>
             </h2>
             <p>
-                Bibliotype is a free tool that analyses your reading history to sequence your unique
-                Reading DNA (or <span class="bg-brand-yellow px-1 font-bold">Bibliotype</span>!), a personalised profile of your literary
-                personality, <span class="bg-brand-orange px-1">favourite genres</span>, reading habits, and book
-                preferences.
+                Bibliotype is a free tool that analyses your reading history to sequence your unique Reading DNA (or
+                <span class="bg-brand-yellow px-1 font-bold">Bibliotype</span>!), a personalised profile of your reading
+                taste, <span class="bg-brand-orange px-1">favourite genres</span>, reading habits, and book preferences.
             </p>
 
             <p class="mt-2">
-                Upload your exported data from <span class="bg-brand-purple px-1">Goodreads</span> to see a personalised and insightful dashboard
-                packed with insights. You'll find out your <span class="bg-brand-pink px-1">reader type</span>, a
-                dedicated <span class="bg-brand-cyan px-1">reading vibe</span>, detailed
-                <span class="bg-brand-orange px-1">genre and author breakdowns</span>, reading statistics like  
-                <span class="bg-brand-purple px-1">page counts</span> and <span class="bg-brand-yellow px-1">yearly trends</span>, community benchmarking to see how
-                you compare to other readers, and personalised
+                Upload your exported data from <span class="bg-brand-purple px-1">Goodreads</span> to see a personalised
+                and insightful dashboard packed with insights. You'll find out your
+                <span class="bg-brand-pink px-1">reader type</span>, a dedicated
+                <span class="bg-brand-cyan px-1">reading vibe</span>, detailed
+                <span class="bg-brand-orange px-1">genre and author breakdowns</span>, reading statistics like
+                <span class="bg-brand-purple px-1">page counts</span> and
+                <span class="bg-brand-yellow px-1">yearly trends</span>, community benchmarking to see how you compare
+                to other readers, and personalised
                 <span class="bg-brand-green px-1">book recommendations</span>
                 based on people with similar taste.
             </p>
@@ -86,29 +87,35 @@
                 <span class="bg-brand-cyan px-1">Why did I build this?</span>
             </h2>
             <p>
-                Mostly for fun and to learn 
+                Mostly for fun and to learn
                 <a
                     href="https://www.djangoproject.com/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="hover:bg-brand-yellow font-bold underline bg-brand-orange px-1"
-                    >Django</a>, but also because I wanted to see this kind of data about
+                    class="hover:bg-brand-yellow bg-brand-orange px-1 font-bold underline"
+                    >Django</a
+                >, but also because I wanted to see this kind of data about
                 <span class="bg-brand-yellow px-1">my own reading</span>, and about my friends' reading too. Goodreads
-                gives you a basic yearly summary, and there are other analysers out there but I a) wanted to make one that was more <span class="bg-brand-pink px-1">fun</span> and b) showed you some more insights in comparison to a larger <span class="bg-brand-purple px-1">reading community</span>. It was largely inspired by projects like <a
+                gives you a basic yearly summary, and there are other analysers out there but I a) wanted to make one
+                that was more <span class="bg-brand-pink px-1">fun</span> and b) showed you some more insights in
+                comparison to a larger <span class="bg-brand-purple px-1">reading community</span>. It was largely
+                inspired by projects like
+                <a
                     href="https://receiptify.herokuapp.com/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="hover:bg-brand-yellow font-bold underline bg-brand-green px-1"
-                    >Receiptify</a> and other similar Spotify analysis tools.
+                    class="hover:bg-brand-yellow bg-brand-green px-1 font-bold underline"
+                    >Receiptify</a
+                >
+                and other similar Spotify analysis tools.
             </p>
             <p class="mt-2">
-                It started as a small side project and quickly grew more convoluted from
-                there. It's all
+                It started as a small side project and quickly grew more convoluted from there. It's all
                 <a
                     href="https://github.com/vanajmoorthy/bibliotype"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="hover:bg-brand-yellow font-bold underline bg-brand-cyan px-1"
+                    class="hover:bg-brand-yellow bg-brand-cyan px-1 font-bold underline"
                     >open source</a
                 >, so feel free to have a look around if you're curious about how it works.
             </p>
@@ -125,7 +132,7 @@
                         href="https://www.goodreads.com/review/import"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="hover:bg-brand-yellow font-bold underline bg-brand-purple px-1"
+                        class="hover:bg-brand-yellow bg-brand-purple px-1 font-bold underline"
                         >Goodreads</a
                     >
                     as a CSV file.
@@ -151,7 +158,7 @@
         <div class="text-center">
             <a
                 href="{% url 'core:home' %}"
-                class="border-brand-text shadow-neo bg-brand-green inline-block border-2 px-6 py-3 text-xl font-bold uppercase transition-all duration-150 ease-in-out active:translate-x-1 active:translate-y-1 neo-3d hover:translate-x-px hover:translate-y-px hover:shadow-neo-md active:shadow-none"
+                class="border-brand-text shadow-neo bg-brand-green neo-3d hover:shadow-neo-md inline-block border-2 px-6 py-3 text-xl font-bold uppercase transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-1 active:translate-y-1 active:shadow-none"
             >
                 Generate Your Bibliotype Now
             </a>
