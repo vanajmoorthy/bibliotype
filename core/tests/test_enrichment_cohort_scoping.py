@@ -65,7 +65,9 @@ class CohortScopingTests(TestCase):
         """10 old attempted books + 3 new unattempted; cohort = the 3 new → pending."""
         for i in range(10):
             _add_book(self.user, f"Old {i}", genres=["fantasy"], google_books_checked=True)
-        new_books = [_add_book(self.user, f"New {i}", genres=["mystery"]) for i in range(3)]
+        # Awaiting-enrichment books must be genuinely incomplete: a book with
+        # genres + pages + year is never dispatched, so it counts as attempted.
+        new_books = [_add_book(self.user, f"New {i}", page_count=None, publish_year=None) for i in range(3)]
 
         dna = self._base_dna(cohort_ids=[b.id for b in new_books])
         result = _compute_enrichment_progress(self.user, self.profile, dna)
@@ -80,7 +82,7 @@ class CohortScopingTests(TestCase):
         """As cohort books get attempted, percent tracks N/cohort, not N/all."""
         for i in range(10):
             _add_book(self.user, f"Old {i}", genres=["fantasy"], google_books_checked=True)
-        new_books = [_add_book(self.user, f"New {i}", genres=["mystery"]) for i in range(3)]
+        new_books = [_add_book(self.user, f"New {i}", page_count=None, publish_year=None) for i in range(3)]
         # Attempt one of the three cohort books.
         Book.objects.filter(pk=new_books[0].pk).update(google_books_last_checked=timezone.now())
 
@@ -112,7 +114,7 @@ class CohortScopingTests(TestCase):
         for i in range(10):
             _add_book(self.user, f"Old {i}", genres=["fantasy"], google_books_checked=True)
         for i in range(3):
-            _add_book(self.user, f"New {i}", genres=["mystery"])  # unattempted
+            _add_book(self.user, f"New {i}", page_count=None, publish_year=None)  # unattempted
 
         dna = self._base_dna(cohort_ids=None)  # legacy: key absent
         result = _compute_enrichment_progress(self.user, self.profile, dna)
@@ -120,6 +122,23 @@ class CohortScopingTests(TestCase):
         self.assertTrue(result["pending"])
         self.assertEqual(result["total"], 13)  # all books, no scoping
         self.assertEqual(result["percent"], round(10 / 13 * 100))
+
+    def test_complete_but_unstamped_books_count_as_attempted(self):
+        """Books with genres + pages + year but NO google_books_last_checked count
+        as attempted — the dispatch gate never enriches complete books, so waiting
+        on their stamp would leave the banner pending forever (2026-09-05: a bulk
+        re-enrichment reset stamps, hit the GB daily quota, and stranded every
+        overlapping upload at a frozen percent)."""
+        books = [_add_book(self.user, f"Complete {i}", genres=["fantasy"]) for i in range(3)]
+
+        dna = self._base_dna(cohort_ids=[b.id for b in books])
+        self.profile.dna_data = dna
+        self.profile.save()
+
+        result = _compute_enrichment_progress(self.user, self.profile, self.profile.dna_data)
+
+        self.assertFalse(result["pending"])
+        self.assertEqual(result["total"], 3)
 
     def test_empty_cohort_list_falls_back_to_all_books(self):
         """An empty (falsy) cohort list is treated as legacy — count all books."""
