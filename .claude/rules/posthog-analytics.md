@@ -42,18 +42,26 @@ def track_my_event(user_id, custom_prop):
 ```javascript
 posthog.init(API_KEY, {
     api_host: 'https://eu.i.posthog.com',
-    person_profiles: 'identified_only',  // No anon person profiles
-    cookieless_mode: 'always',           // No cookies needed
+    defaults: '2025-05-24',
+    person_profiles: 'identified_only',   // No anon person profiles
+    persistence: 'localStorage',          // No cookies (localStorage only)
+    capture_exceptions: true,             // Error tracking: JS exception autocapture
+    session_recording: { maskAllInputs: true },
 });
 // Authenticated users: posthog.identify('{{ user.id }}')
 ```
+
+Do NOT re-add `cookieless_mode` — it requires a server-side "cookieless server hash mode" project toggle (events are silently dropped without it), hard-disables session replay and surveys, and conflicts with `identify()`.
+
+Session replay and JS exception autocapture also need their project-level toggles enabled in PostHog settings (Session replay → "Record user sessions"; Error tracking → "Exception autocapture").
 
 Context processor `posthog_settings` provides `POSTHOG_API_KEY` to templates.
 
 ## Active Middleware
 
-- `PostHogExceptionMiddleware` — **ACTIVE** (in settings.py middleware stack). Catches unhandled exceptions, sanitizes error info, tracks as `"exception"` event. **Production only.**
+- `PostHogExceptionMiddleware` — **ACTIVE** (in settings.py middleware stack). Catches unhandled exceptions, sanitizes error info, sends a `$exception` event via `posthog.capture_exception()` → PostHog Error Tracking product. **Production only.**
 - `PostHogPageviewMiddleware` — **DEFINED BUT NOT ACTIVE** (not in middleware stack)
+- Celery: `task_failure` signal handler in `bibliotype/celery.py` sends unhandled task exceptions to Error Tracking (distinct_id = "system", production only)
 
 ## Event Registry
 
