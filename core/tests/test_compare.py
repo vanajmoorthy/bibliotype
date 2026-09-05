@@ -27,6 +27,9 @@ class CompareBaseTestCase(TestCase):
         self.carol = self._make_user("carol", is_public=True, dna=True)
         self.dave = self._make_user("dave", is_public=False, dna=True)
         self.nodna = self._make_user("nodna", is_public=True, dna=False)
+        self.emptylib = self._make_user("emptylib", is_public=True, dna=True)  # DNA but zero UserBooks
+        # Admin-created users bypass the forms' lowercasing — must still resolve.
+        self.mixed = self._make_user("MixedCase", is_public=True, dna=True)
 
         author = Author.objects.create(name="Test Author")
         other_author = Author.objects.create(name="Other Author")
@@ -43,6 +46,8 @@ class CompareBaseTestCase(TestCase):
         for i, book in enumerate(solo_books):
             UserBook.objects.create(user=self.carol, book=book, user_rating=4)
         UserBook.objects.create(user=self.carol, book=books[0], user_rating=2)
+        for book in books[:3]:
+            UserBook.objects.create(user=self.mixed, book=book, user_rating=3)
 
     def _make_user(self, username, is_public, dna):
         user = User.objects.create_user(username=username, email=f"{username}@test.com", password="testpass123")
@@ -72,9 +77,19 @@ class CompareServiceTests(CompareBaseTestCase):
     def test_three_users_yield_three_pairs(self):
         result = compare_readers([self.alice, self.bob, self.carol])
         self.assertEqual(len(result["pairs"]), 3)
-        self.assertEqual(result["best_pair"]["usernames"], ["alice", "bob"])
+        self.assertEqual(result["best_pair"]["user_ids"], sorted([self.alice.id, self.bob.id]))
         mean = sum(p["score"] for p in result["pairs"]) / 3
         self.assertAlmostEqual(result["mean_score"], mean)
+
+    def test_fewer_than_two_distinct_users_raises(self):
+        with self.assertRaises(ValueError):
+            compare_readers([self.alice])
+        with self.assertRaises(ValueError):
+            compare_readers([self.alice, self.alice])  # duplicates collapse
+
+    def test_empty_library_user_raises(self):
+        with self.assertRaises(ValueError):
+            compare_readers([self.alice, self.emptylib])
 
     def test_second_call_is_cached(self):
         compare_readers([self.alice, self.bob])
@@ -118,6 +133,15 @@ class CompareViewTests(CompareBaseTestCase):
     def test_user_without_dna_is_404(self):
         response = self._get("alice,nodna")
         self.assertEqual(response.status_code, 404)
+
+    def test_user_with_empty_library_is_404(self):
+        response = self._get("alice,emptylib")
+        self.assertEqual(response.status_code, 404)
+
+    def test_uppercase_stored_username_is_reachable(self):
+        response = self._get("alice,mixedcase")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "MixedCase")
 
     def test_single_username_is_404(self):
         response = self._get("alice")

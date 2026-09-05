@@ -631,35 +631,47 @@ COMPARE_CACHE_TTL = 1800  # 30 min, matching similar_users_{id}
 
 def compare_readers(users):
     """
-    Pairwise similarity payload for the compare page (2-6 users).
+    Pairwise similarity payload for the compare page (2-6 distinct users).
 
-    Callers own eligibility checks (is_public, dna_data present) — this only
-    computes. Scores come from calculate_user_similarity_from_context over
-    bulk-built contexts, so the whole group costs one UserBook query.
+    Callers own privacy checks (is_public, dna_data present) — this only
+    computes. Raises ValueError for fewer than 2 distinct users or for a
+    user with an empty library, so callers can treat both as "not
+    comparable". Scores come from calculate_user_similarity_from_context
+    over bulk-built contexts, so the whole group costs one UserBook query.
+
+    The payload carries user ids, not usernames, so cached entries survive
+    renames; invalidation is timeout-only (a re-upload can serve scores up
+    to 30 minutes stale, same class as the app's other timeout-based keys).
     """
     from ..cache_utils import safe_cache_get, safe_cache_set
 
-    user_ids = sorted(u.id for u in users)
+    user_ids = sorted({u.id for u in users})
+    if len(user_ids) < 2:
+        raise ValueError("compare_readers needs at least 2 distinct users")
+
     cache_key = "compare_" + "_".join(str(i) for i in user_ids)
     cached = safe_cache_get(cache_key)
     if cached is not None:
         return cached
 
     contexts = _bulk_build_user_contexts(user_ids)
-    ordered = sorted(users, key=lambda u: u.username)
+    if any(not contexts[user_id]["book_ids"] for user_id in user_ids):
+        # A DNA-bearing profile can still have zero UserBook rows (failed
+        # sync, wiped library); scoring it would fabricate a result from the
+        # neutral 0.5 defaults, so refuse — find_similar_users skips these too.
+        raise ValueError("compare_readers needs users with non-empty libraries")
 
     pairs = []
-    for i, user_a in enumerate(ordered):
-        for user_b in ordered[i + 1 :]:
-            data = calculate_user_similarity_from_context(contexts[user_a.id], contexts[user_b.id])
+    for i, id_a in enumerate(user_ids):
+        for id_b in user_ids[i + 1 :]:
+            data = calculate_user_similarity_from_context(contexts[id_a], contexts[id_b])
             score = data["similarity_score"]
             pairs.append(
                 {
-                    "usernames": [user_a.username, user_b.username],
+                    "user_ids": [id_a, id_b],
                     "score": score,
                     "pct": int(round(score * 100)),
                     "label": get_match_quality_label(score),
-                    "components": data["components"],
                     "components_pct": {k: int(round(v * 100)) for k, v in data["components"].items()},
                     "shared_books_count": data["shared_books_count"],
                     "shared_rated_count": data["shared_rated_count"],

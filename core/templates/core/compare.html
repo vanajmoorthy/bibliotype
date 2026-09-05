@@ -10,6 +10,11 @@
 {# Combinatorial URL space — keep crawlers out #}
 {% block seo_robots %}noindex, nofollow{% endblock %}
 
+{# Tailwind scanner: breakdown-bar colors are composed in core/views/compare.py
+   (COMPONENT_ROWS), invisible to the template scanner — keep this list in sync:
+   bg-brand-green bg-brand-purple bg-brand-cyan bg-brand-orange bg-brand-pink
+   bg-badge-4 bg-brand-yellow #}
+
 {% block content %}
     <div class="container mx-auto max-w-4xl px-4 py-8">
         <div class="mb-6 flex flex-col gap-6 md:flex-row md:items-stretch">
@@ -32,11 +37,9 @@
             >
                 <div class="text-sm uppercase">similarity</div>
                 <div class="text-7xl leading-none">{{ pair.pct }}%</div>
-                <span
-                    class="border-brand-text shadow-neo-sm mt-2 inline-block border-2 bg-white px-2 text-sm uppercase"
-                >
-                    {{ pair.label }}
-                </span>
+                <div class="mt-2">
+                    {% include 'core/partials/badge_chip.html' with chip_color='bg-white' chip_label=pair.label %}
+                </div>
             </div>
         </div>
 
@@ -64,7 +67,7 @@
             <p class="mb-4 text-gray-500">one link, same for both of you</p>
             <button
                 @click="navigator.clipboard.writeText(window.location.href).then(() => { copied = true; setTimeout(() => copied = false, 2000) })"
-                class="bg-brand-cyan shadow-neo border-brand-text hover:shadow-neo-md cursor-pointer border-2 px-4 py-3 font-bold uppercase transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-1 active:translate-y-1 active:shadow-none"
+                class="bg-brand-cyan text-brand-text border-brand-text shadow-neo neo-3d hover:shadow-neo-md cursor-pointer border-2 px-4 py-2 text-xl font-bold uppercase transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-1 active:translate-y-1 active:shadow-none"
             >
                 <span x-show="!copied">⧉ copy link</span>
                 <span x-show="copied" x-cloak>copied!</span>
