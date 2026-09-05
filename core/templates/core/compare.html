@@ -1,0 +1,77 @@
+{# Compare page: pairwise reading-taste similarity between two public readers #}
+{% extends 'core/base.html' %}
+
+{% block seo_title %}How similar are {{ usernames.0 }} and {{ usernames.1 }}? - Bibliotype{% endblock %}
+
+{% block seo_description %}
+    Compare the reading DNA of {{ usernames.0 }} and {{ usernames.1 }} on Bibliotype.
+{% endblock %}
+
+{# Combinatorial URL space — keep crawlers out #}
+{% block seo_robots %}noindex, nofollow{% endblock %}
+
+{# Tailwind scanner: breakdown-bar colors are composed in core/views/compare.py
+   (COMPONENT_ROWS), invisible to the template scanner — keep this list in sync:
+   bg-brand-green bg-brand-purple bg-brand-cyan bg-brand-orange bg-brand-pink
+   bg-badge-4 bg-brand-yellow #}
+
+{% block content %}
+    <div class="container mx-auto max-w-4xl px-4 py-8">
+        <div class="mb-6 flex flex-col gap-6 md:flex-row md:items-stretch">
+            <div class="border-brand-text shadow-neo flex-1 border-2 bg-white p-6">
+                <h1 class="text-4xl font-bold lowercase">how similar are you?</h1>
+                <p class="mt-2 text-lg text-gray-500">
+                    comparing the reading dna of
+                    <a href="{% url 'core:public_profile' username=usernames.0 %}" class="underline"
+                        >{{ usernames.0 }}</a
+                    >
+                    and
+                    <a href="{% url 'core:public_profile' username=usernames.1 %}" class="underline"
+                        >{{ usernames.1 }}</a
+                    >
+                    — scored across shared books, ratings, genres, authors &amp; eras.
+                </p>
+            </div>
+            <div
+                class="border-brand-text shadow-neo bg-brand-yellow flex flex-col items-center justify-center border-2 p-6 text-center md:w-60"
+            >
+                <div class="text-sm uppercase">similarity</div>
+                <div class="text-7xl leading-none">{{ pair.pct }}%</div>
+                <div class="mt-2">
+                    {% include 'core/partials/badge_chip.html' with chip_color='bg-white' chip_label=pair.label %}
+                </div>
+            </div>
+        </div>
+
+        <div class="border-brand-text shadow-neo mb-6 border-2 bg-white p-6">
+            <h2 class="text-2xl font-bold uppercase">Why {{ usernames.0 }} + {{ usernames.1 }} match</h2>
+            <p class="text-gray-500">
+                {{ pair.shared_books_count }} shared book{{ pair.shared_books_count|pluralize }}
+                {% if pair.shared_rated_count %}({{ pair.shared_rated_count }} rated by both){% endif %}
+            </p>
+            <div class="mt-4 space-y-3">
+                {% for row in breakdown_rows %}
+                    <div class="flex items-center gap-3">
+                        <div class="w-36 shrink-0 md:w-48">{{ row.label }}</div>
+                        <div class="border-brand-text shadow-neo-sm h-6 flex-1 border-2 bg-white">
+                            <div class="{{ row.color }} h-full" style="width: {{ row.pct }}%"></div>
+                        </div>
+                        <div class="w-12 text-right">{{ row.pct }}%</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="border-brand-text shadow-neo border-2 bg-white p-6" x-data="{ copied: false }">
+            <h2 class="text-2xl font-bold uppercase">Share this</h2>
+            <p class="mb-4 text-gray-500">one link, same for both of you</p>
+            <button
+                @click="navigator.clipboard.writeText(window.location.href).then(() => { copied = true; setTimeout(() => copied = false, 2000) })"
+                class="bg-brand-cyan text-brand-text border-brand-text shadow-neo neo-3d hover:shadow-neo-md cursor-pointer border-2 px-4 py-2 text-xl font-bold uppercase transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-1 active:translate-y-1 active:shadow-none"
+            >
+                <span x-show="!copied">⧉ copy link</span>
+                <span x-show="copied" x-cloak>copied!</span>
+            </button>
+        </div>
+    </div>
+{% endblock %}

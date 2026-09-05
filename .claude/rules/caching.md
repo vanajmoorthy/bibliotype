@@ -39,6 +39,7 @@ All three catch bare `Exception`, log a warning, and track via `track_redis_cach
 | `community_means` | 10min | views.py | views.py |
 | `fresh_pct_{bl}_{br}_{bpy}_{py}` | 10min | views.py | views.py |
 | `google_books_quota_cooldown` | 1hr | book_enrichment_service (on GB 429/403) | book_enrichment_service |
+| `compare_{sorted_user_ids}` | 30min | user_similarity_service (compare_readers) | compare view — payload holds user ids (not usernames); timeout-only invalidation |
 | `enrich_dispatched_{book_pk}` | 24hr | dna analyser (bulk) + enrich_books via safe_cache_add | same — sentinel suppressing duplicate bulk enrichment dispatches; `enrich_books --force` bypasses |
 
 ## Invalidation Strategy
