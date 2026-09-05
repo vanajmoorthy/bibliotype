@@ -146,10 +146,10 @@
                                 return;
                             }
                             updateTargetsFromServer(data);
-                            setTimeout(checkStatus, 3000);
+                            setTimeout(checkStatus, 10000);
                         })
                         .catch(() => {
-                            setTimeout(checkStatus, 3000);
+                            setTimeout(checkStatus, 10000);
                         });
                 }
 
@@ -262,7 +262,7 @@
                                             window.location.reload();
                                         }
                                     } catch (e) {}
-                                }, 3000);
+                                }, 10000);
                             }
                         }"
                         x-init="init()"
@@ -366,7 +366,7 @@
                             showInfo: false,
                             bannerText: 'Enriching your library — {{ enrichment.percent }}% complete. ~{{ enrichment.remaining_minutes }} min remaining.',
                             interval: null,
-                            intervalMs: 5000,
+                            intervalMs: 15000,
                             inFlight: false,
                             init() {
                                 this.interval = setInterval(() => this.poll(), this.intervalMs);
