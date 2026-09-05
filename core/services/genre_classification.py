@@ -19,7 +19,13 @@ and passes no shelf data — the defaults keep its behaviour unchanged.
 
 from itertools import repeat
 
-from ..dna_constants import AMBIGUOUS_FICTION_GENRES, CANONICAL_GENRE_MAP, FICTION_GENRES, NONFICTION_GENRES
+from ..dna_constants import (
+    AMBIGUOUS_FICTION_GENRES,
+    AMBIGUOUS_TO_NONFICTION,
+    CANONICAL_GENRE_MAP,
+    FICTION_GENRES,
+    NONFICTION_GENRES,
+)
 
 _NO_SHELF_SIGNALS = (False, False, frozenset())
 
@@ -27,6 +33,31 @@ _NO_SHELF_SIGNALS = (False, False, frozenset())
 def canonicalize_genre_names(genre_names):
     """Map an iterable of raw genre names to a set of canonical genre names."""
     return {CANONICAL_GENRE_MAP.get(g, g) for g in genre_names}
+
+
+def resolve_genre_names(genre_names):
+    """Canonicalize one book's genre names and correct the fiction/nonfiction axis.
+
+    The Genre DB stores the fiction default for ambiguous genres ("classic
+    fiction", never "classic nonfiction"), so raw names lie about the axis for
+    nonfiction classics. This resolves the axis from the book's full genre set
+    (same policy as the dashboard split, minus shelf signals, which similarity
+    and recommendations don't have) and swaps ambiguous names to their
+    nonfiction variants when the set classifies as nonfiction.
+
+    Returns a deduplicated list preserving input order. Use this instead of
+    reading Genre.name raw anywhere genres feed scoring, matching, or display.
+    """
+    ordered = []
+    seen = set()
+    for name in genre_names:
+        canonical = CANONICAL_GENRE_MAP.get(name, name)
+        if canonical not in seen:
+            seen.add(canonical)
+            ordered.append(canonical)
+    if classify_genres(seen) == "nonfiction":
+        return [AMBIGUOUS_TO_NONFICTION.get(g, g) for g in ordered]
+    return ordered
 
 
 def parse_shelf_signals(raw_bookshelves):
