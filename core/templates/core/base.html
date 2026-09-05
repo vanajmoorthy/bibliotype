@@ -6,19 +6,19 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
         {# SEO Meta Tags #}
-        <title>{% block seo_title %}Bibliotype - Discover Your Reading DNA & Literary Personality{% endblock %}</title>
+        <title>{% block seo_title %}Bibliotype - Discover Your Reading DNA{% endblock %}</title>
         <meta
             name="description"
             content="{% block seo_description %}
-                Discover your unique reading DNA and literary personality type. Upload your Goodreads data to get
-                personalised insights into your reading habits, favourite genres, and book preferences.
+                Upload your Goodreads or StoryGraph data to sequence and decode your Bibliotype - personalised
+                insights into your reading habits, favourite genres, and book preferences.
             {% endblock %}"
         />
         <meta
             name="keywords"
             content="{% block seo_keywords %}
-                reading DNA, literary personality, book analysis, reading habits, Goodreads export, reading statistics,
-                book recommendations, reading insights, bibliophile, reading dashboard
+                reading DNA, bibliotype, book analysis, reading habits, Goodreads export, StoryGraph export,
+                reading statistics, book recommendations, reading insights, bibliophile, reading dashboard
             {% endblock %}"
         />
         <meta name="author" content="Bibliotype" />
@@ -50,17 +50,20 @@
         <meta
             property="og:description"
             content="{% block og_description %}
-                Discover your unique reading DNA and literary personality type. Get personalised insights into your
-                reading habits and book preferences.
+                Upload your Goodreads or StoryGraph data to sequence and decode your Bibliotype. Personalised
+                insights into your reading habits and book preferences.
             {% endblock %}"
         />
         <meta
             property="og:image"
-            content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'android-chrome-512x512.png' %}{% endblock %}"
+            content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'og-image.png' %}{% endblock %}"
         />
-        <meta property="og:image:width" content="512" />
-        <meta property="og:image:height" content="512" />
-        <meta property="og:image:alt" content="{% block og_image_alt %}Bibliotype - Reading DNA Logo{% endblock %}" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta
+            property="og:image:alt"
+            content="{% block og_image_alt %}Bibliotype - a stack of books and the tagline Find out your Reading DNA{% endblock %}"
+        />
         <meta property="og:site_name" content="Bibliotype" />
         <meta property="og:locale" content="en_US" />
 
@@ -77,17 +80,17 @@
         <meta
             name="twitter:description"
             content="{% block twitter_description %}
-                Discover your unique reading DNA and literary personality type. Get personalised insights into your
-                reading habits.
+                Upload your Goodreads or StoryGraph data to sequence and decode your Bibliotype. Personalised
+                insights into your reading habits.
             {% endblock %}"
         />
         <meta
             name="twitter:image"
-            content="{% block twitter_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'android-chrome-512x512.png' %}{% endblock %}"
+            content="{% block twitter_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'og-image.png' %}{% endblock %}"
         />
         <meta
             name="twitter:image:alt"
-            content="{% block twitter_image_alt %}Bibliotype - Reading DNA Logo{% endblock %}"
+            content="{% block twitter_image_alt %}Bibliotype - a stack of books and the tagline Find out your Reading DNA{% endblock %}"
         />
 
         {# Favicons - SVG emoji for modern browsers, PNG fallbacks for Safari #}
@@ -129,7 +132,7 @@
                 "name": "Bibliotype",
                 "alternateName": "Reading DNA",
                 "url": "{{ request.scheme }}://{{ request.get_host }}",
-                "description": "Discover your unique reading DNA and literary personality type. Upload your Goodreads data to get personalised insights into your reading habits, favourite genres, and book preferences.",
+                "description": "Upload your Goodreads or StoryGraph data to sequence and decode your Bibliotype - personalised insights into your reading habits, favourite genres, and book preferences.",
                 "applicationCategory": "UtilityApplication",
                 "operatingSystem": "Web",
                 "offers": {
@@ -139,13 +142,13 @@
                 },
                 "featureList": [
                     "Reading DNA Analysis",
-                    "Literary Personality Types",
+                    "Reader Type Profiles",
                     "Genre & Author Insights",
                     "Reading Statistics Dashboard",
                     "Community Benchmarking",
                     "AI-Powered Reading Vibe"
                 ],
-                "screenshot": "{{ request.scheme }}://{{ request.get_host }}{% static 'android-chrome-512x512.png' %}"
+                "screenshot": "{{ request.scheme }}://{{ request.get_host }}{% static 'og-image.png' %}"
             }
         </script>
         <script type="application/ld+json">
@@ -155,7 +158,7 @@
                 "name": "Bibliotype",
                 "url": "{{ request.scheme }}://{{ request.get_host }}",
                 "logo": "{{ request.scheme }}://{{ request.get_host }}{% static 'android-chrome-512x512.png' %}",
-                "description": "Discover your unique reading DNA and literary personality type.",
+                "description": "Sequence and decode your Bibliotype - discover your reading DNA.",
                 "sameAs": ["https://github.com/vanajmoorthy/bibliotype"]
             }
         </script>

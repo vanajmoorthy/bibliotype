@@ -1,19 +1,19 @@
 {% extends 'core/base.html' %}
 {% load static %}
 
-{% block seo_title %}Bibliotype - Discover Your Reading DNA & Literary Personality | Free Book Analysis Tool{% endblock %}
+{% block seo_title %}Bibliotype - Discover Your Reading DNA | Free Book Analysis Tool{% endblock %}
 
-{% block seo_description %}Upload your Goodreads export to discover your unique reading DNA. Get personalised insights into your literary personality, favourite genres, reading habits, and book preferences. Free book analysis tool powered by AI.{% endblock %}
+{% block seo_description %}Upload your Goodreads or StoryGraph export to sequence and decode your Bibliotype. Personalised insights into your reading DNA, favourite genres, reading habits, and book preferences. Free book analysis tool powered by AI.{% endblock %}
 
-{% block seo_keywords %}reading DNA, literary personality test, book analysis tool, Goodreads export analyser, reading statistics, reading habits analysis, book recommendations, reading insights, bibliophile tools, reading dashboard, free book analysis{% endblock %}
+{% block seo_keywords %}reading DNA, bibliotype, book analysis tool, Goodreads export analyser, StoryGraph export analyser, reading statistics, reading habits analysis, book recommendations, reading insights, bibliophile tools, reading dashboard, free book analysis{% endblock %}
 
 {% block og_title %}Bibliotype - Discover Your Reading DNA{% endblock %}
 
-{% block og_description %}Upload your Goodreads data and discover your unique reading DNA. Get personalised insights into your literary personality, favourite genres, and reading habits.{% endblock %}
+{% block og_description %}Upload your Goodreads or StoryGraph data to sequence and decode your Bibliotype. Personalised insights into your reading DNA, favourite genres, and reading habits.{% endblock %}
 
 {% block twitter_title %}Discover Your Reading DNA with Bibliotype{% endblock %}
 
-{% block twitter_description %}Upload your book data and discover your unique literary personality. Free reading analysis tool.{% endblock %}
+{% block twitter_description %}Upload your book data to sequence and decode your Bibliotype. Free reading analysis tool.{% endblock %}
 
 {% block structured_data %}
 <script type="application/ld+json">
@@ -21,7 +21,7 @@
     "@context": "https://schema.org",
     "@type": "WebPage",
     "name": "Bibliotype - Discover Your Reading DNA",
-    "description": "Upload your Goodreads export to discover your unique reading DNA and literary personality type.",
+    "description": "Upload your Goodreads or StoryGraph export to sequence and decode your Bibliotype - your unique reading DNA.",
     "url": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}",
     "mainEntity": {
         "@type": "SoftwareApplication",
@@ -54,7 +54,7 @@
         "name": "How do I get my reading DNA?",
         "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Upload your Goodreads export CSV file to Bibliotype. We'll analyse your reading data and generate your personalised Reading DNA dashboard with insights into your literary personality, favourite genres, and reading habits."
+            "text": "Upload your Goodreads export CSV file to Bibliotype. We'll analyse your reading data and generate your personalised Reading DNA dashboard with insights into your reader type, favourite genres, and reading habits."
         }
     }, {
         "@type": "Question",
@@ -68,14 +68,14 @@
         "name": "Is Bibliotype free?",
         "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes, Bibliotype is completely free to use. Upload your reading data and get instant insights into your literary personality."
+            "text": "Yes, Bibliotype is completely free to use. Upload your reading data and get instant insights into your reading DNA."
         }
     }, {
         "@type": "Question",
         "name": "What is Reading DNA?",
         "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Reading DNA is your unique literary personality profile that analyses your reading habits, favourite genres, authors, and book preferences to reveal insights about your reading style and preferences."
+            "text": "Reading DNA is your unique reader profile - Bibliotype analyses your reading habits, favourite genres, authors, and book preferences to reveal insights about your reading style and taste."
         }
     }]
 }
@@ -198,7 +198,7 @@
                 <span class="highlight-sweep px-2">Reading DNA</span>
             </h1>
             <p class="mt-4 text-xl text-[var(--color-brand-text)]">
-                Upload your Goodreads or StoryGraph data to learn your literary personality type.
+                Upload your <span class="bg-brand-orange px-1">Goodreads</span> or <span class="bg-brand-green px-1">StoryGraph</span> data to sequence and decode your <span class="bg-brand-pink px-1">Bibliotype</span>.
             </p>
             <div class="mt-6">
                 {% include 'core/partials/buttons/secondary_button.html' with text="Instructions" color="pink" extra_attrs='@click="instructionsOpen = true"' %}
