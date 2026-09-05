@@ -9,9 +9,9 @@ from django.db import transaction
 from django.db.models import Count, Q
 
 from ..cache_utils import safe_cache_get, safe_cache_set
-from ..dna_constants import CANONICAL_GENRE_MAP, GLOBAL_AVERAGES
+from ..dna_constants import GLOBAL_AVERAGES
 from ..services.dna.utils import _build_cover_url, _cover_initial
-from ..services.genre_classification import canonicalize_genre_names, count_fiction_nonfiction
+from ..services.genre_classification import canonicalize_genre_names, count_fiction_nonfiction, resolve_genre_labels
 
 logger = logging.getLogger(__name__)
 
@@ -73,9 +73,7 @@ def _compute_enrichment_stats(
             return cached
 
     books = list(
-        Book.objects.filter(readers__user=user)
-        .select_related("author", "publisher")
-        .prefetch_related("genres")
+        Book.objects.filter(readers__user=user).select_related("author", "publisher").prefetch_related("genres")
     )
     if not books:
         return None
@@ -83,33 +81,32 @@ def _compute_enrichment_stats(
     total = len(books)
     page_counts = [b.page_count for b in books if b.page_count]
 
-    all_genres = []
-    genre_sets = []
-    mainstream_count = 0
-    for book in books:
-        book_genres = [g.name for g in book.genres.all()]
-        all_genres.extend(book_genres)
-        genre_sets.append(canonicalize_genre_names(book_genres))
-        if book.author.is_mainstream or (book.publisher and book.publisher.is_mainstream):
-            mainstream_count += 1
-
-    # Context-dependent fiction/nonfiction classification (shared helper).
+    # Context-dependent fiction/nonfiction classification (shared helpers).
     # Books with no classifiable genres land in defaulted_count, never fiction.
     # When generation persisted per-book shelf signals, align them with `books`
     # and feed them in so the split matches generation quality (not API-only).
-    if shelf_signals:
-        shelf_signal_list = []
-        for book in books:
-            sig = shelf_signals.get(str(book.id))
-            if sig:
-                shelf_signal_list.append((bool(sig[0]), bool(sig[1]), frozenset(sig[2])))
-            else:
-                shelf_signal_list.append((False, False, frozenset()))
-        fiction_count, nonfiction_count, defaulted_count = count_fiction_nonfiction(genre_sets, shelf_signal_list)
-    else:
-        fiction_count, nonfiction_count, defaulted_count = count_fiction_nonfiction(genre_sets)
+    # Genre labels are axis-resolved per book with the SAME signals, mirroring
+    # generation in core/services/dna/__init__.py — otherwise top_genres labels
+    # flip between the stored DNA and live-enrichment polls.
+    resolved = []
+    genre_sets = []
+    shelf_signal_list = []
+    mainstream_count = 0
+    for book in books:
+        book_genres = [g.name for g in book.genres.all()]
+        genre_sets.append(canonicalize_genre_names(book_genres))
+        sig = shelf_signals.get(str(book.id)) if shelf_signals else None
+        signal = (bool(sig[0]), bool(sig[1]), frozenset(sig[2])) if sig else (False, False, frozenset())
+        shelf_signal_list.append(signal)
+        resolved.extend(
+            resolve_genre_labels(
+                book_genres, shelf_fiction=signal[0], shelf_nonfiction=signal[1], shelf_genres=signal[2]
+            )
+        )
+        if book.author.is_mainstream or (book.publisher and book.publisher.is_mainstream):
+            mainstream_count += 1
 
-    mapped = [CANONICAL_GENRE_MAP.get(g, g) for g in all_genres]
+    fiction_count, nonfiction_count, defaulted_count = count_fiction_nonfiction(genre_sets, shelf_signal_list)
 
     # Book extremes (longest/shortest read). Mirror the generation-time logic in
     # core/services/dna/__init__.py so live-poll values match the final render.
@@ -142,8 +139,8 @@ def _compute_enrichment_stats(
     stats = {
         "total_pages_read": sum(page_counts) if page_counts else None,
         "avg_book_length": round(sum(page_counts) / len(page_counts)) if page_counts else None,
-        "top_genres": Counter(mapped).most_common(10),
-        "unique_genres_count": len(set(mapped)),
+        "top_genres": Counter(resolved).most_common(10),
+        "unique_genres_count": len(set(resolved)),
         "fiction_nonfiction_split": (
             {
                 "fiction_count": fiction_count,
@@ -169,6 +166,7 @@ def _compute_enrichment_stats(
             books=books,
             current_reader_type=current_reader_type,
             current_explanation=current_explanation,
+            shelf_signal_list=shelf_signal_list,
         )
         if reader_type_result:
             stats.update(reader_type_result)
@@ -286,9 +284,7 @@ def _compute_enrichment_progress(user, profile, dna_data):
                     # the in-memory dna_data the caller holds is consistent.
                     dna_data.clear()
                     dna_data.update(locked_dna)
-                elif locked.pending_dna_task_id or (
-                    locked_dna.get("vibe_data_hash") != dna_data.get("vibe_data_hash")
-                ):
+                elif locked.pending_dna_task_id or (locked_dna.get("vibe_data_hash") != dna_data.get("vibe_data_hash")):
                     # A newer generation superseded this request between the
                     # unfinalized read and acquiring the lock (re-upload in
                     # flight, or the locked row is a different DNA). Don't clobber

@@ -27,6 +27,7 @@ from core.services.genre_classification import (
     classify_genres,
     count_fiction_nonfiction,
     parse_shelf_signals,
+    resolve_genre_labels,
     resolve_genre_names,
 )
 
@@ -417,3 +418,41 @@ class ResolveGenreNamesTests(TestCase):
                 self.assertTrue(has_nonfiction_variant)
             else:
                 self.assertFalse(has_nonfiction_variant)
+
+
+class ResolveGenreLabelsTests(TestCase):
+    """resolve_genre_labels: multiplicity-preserving axis resolution for top_genres.
+
+    Used by both top_genres builders (generation + poll-time recompute) and the
+    DB reader-type recompute; the labels it returns are what the dashboard shows.
+    """
+
+    def test_multiplicity_preserved_and_swapped(self):
+        # Two aliases of the same canonical genre stay two occurrences
+        self.assertEqual(
+            resolve_genre_labels(["classics", "classic literature", "history"]),
+            ["classic nonfiction", "classic nonfiction", "history"],
+        )
+
+    def test_fiction_context_left_alone(self):
+        self.assertEqual(
+            resolve_genre_labels(["classic fiction", "history", "fantasy"]),
+            ["classic fiction", "history", "fantasy"],
+        )
+
+    def test_shelf_nonfiction_tiebreak_swaps_ambiguous_only_set(self):
+        self.assertEqual(resolve_genre_labels(["classic fiction"], shelf_nonfiction=True), ["classic nonfiction"])
+        # ...but with no signal at all, the fiction default stands (rule 5)
+        self.assertEqual(resolve_genre_labels(["classic fiction"]), ["classic fiction"])
+
+    def test_shelf_genres_participate_in_classification(self):
+        # A "history" shelf on an ambiguous-only book flips it nonfiction
+        self.assertEqual(
+            resolve_genre_labels(["classic fiction"], shelf_genres=frozenset({"history"})),
+            ["classic nonfiction"],
+        )
+
+    def test_agrees_with_shelfless_resolve_genre_names(self):
+        # The two resolvers must never disagree on the axis for the same book
+        for names in (["classic fiction", "history"], ["fantasy"], ["classics", "biography"], []):
+            self.assertEqual(set(resolve_genre_labels(names)), set(resolve_genre_names(names)))
