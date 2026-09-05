@@ -66,11 +66,11 @@ class ReaderTypeScoringMathTests(TestCase):
         self.assertEqual(scores["Tome Tussler"], 100)
 
     def test_tome_tussler_zero_below_floor(self):
-        """1 of 10 books long = 10%, exactly at floor → score 0 (floor exclusive)."""
-        rows = ["Book A,Auth,read,500"] + [f"Book {i},Auth,read,300" for i in range(9)]
+        """2 of 25 books long = 8%, exactly at floor → score 0 (floor exclusive)."""
+        rows = ["Book A,Auth,read,500", "Book B,Auth,read,600"] + [f"Book {i},Auth,read,300" for i in range(23)]
         df = self._make_df(rows)
         _, scores = assign_reader_type(df, {}, [])
-        # 1/10 = 0.10 = exactly floor → score_ramp returns 0
+        # 2/25 = 0.08 = exactly floor → score_ramp returns 0
         self.assertEqual(scores.get("Tome Tussler", 0), 0)
 
     def test_novella_navigator_scores_above_floor(self):

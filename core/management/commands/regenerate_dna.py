@@ -109,6 +109,7 @@ class Command(BaseCommand):
                     "Title": b.title or "",
                     "Number of Pages": b.page_count,
                     "Date Read": ub.date_read,
+                    "Author": b.author.name if b.author_id else None,
                 })
                 book_genre_sets_regen.append({g.name for g in b.genres.all()})
                 if b.title:

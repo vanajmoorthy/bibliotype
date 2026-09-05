@@ -182,17 +182,15 @@ def assign_reader_type(read_df, enriched_data, book_genre_sets, reread_count_ove
     poetry_share = genre_share({"poetry"})
     scores["Sonnet Slinger"] = score_ramp(poetry_share, *READER_TYPE_THRESHOLDS["Sonnet Slinger"])
 
-    nonfiction_share = genre_share({"non-fiction", "memoir", "true crime", "essays", "classic nonfiction"})
+    # "nature" and "social science" fold into Non-Fiction Ninja — they belonged to the
+    # retired Nature Nut Case / Social Savant types.
+    nonfiction_share = genre_share(
+        {"non-fiction", "memoir", "true crime", "essays", "classic nonfiction", "nature", "social science"}
+    )
     scores["Non-Fiction Ninja"] = score_ramp(nonfiction_share, *READER_TYPE_THRESHOLDS["Non-Fiction Ninja"])
 
     philosophy_share = genre_share({"philosophy"})
     scores["Philosophical Philomath"] = score_ramp(philosophy_share, *READER_TYPE_THRESHOLDS["Philosophical Philomath"])
-
-    nature_share = genre_share({"nature"})
-    scores["Nature Nut Case"] = score_ramp(nature_share, *READER_TYPE_THRESHOLDS["Nature Nut Case"])
-
-    social_share = genre_share({"social science"})
-    scores["Social Savant"] = score_ramp(social_share, *READER_TYPE_THRESHOLDS["Social Savant"])
 
     selfhelp_share = genre_share({"self-help"})
     scores["Self Help Scholar"] = score_ramp(selfhelp_share, *READER_TYPE_THRESHOLDS["Self Help Scholar"])
@@ -212,6 +210,16 @@ def assign_reader_type(read_df, enriched_data, book_genre_sets, reread_count_ove
         scores["Small Press Supporter"] = score_ramp(
             small_press_count / Pub, *READER_TYPE_THRESHOLDS["Small Press Supporter"]
         )
+
+    # Author loyalty type (largest single-author share among books with a known author)
+    if "Author" in read_df.columns:
+        author_counts = read_df["Author"].dropna().astype(str).str.strip()
+        author_counts = author_counts[author_counts != ""].value_counts()
+        A = int(author_counts.sum())
+        if A >= MIN_SIGNAL_BOOKS and len(author_counts) > 0:
+            scores["Author Loyalist"] = score_ramp(
+                int(author_counts.iloc[0]) / A, *READER_TYPE_THRESHOLDS["Author Loyalist"]
+            )
 
     # Reread type
     scores["Comfort Rereader"] = score_ramp(reread_count / L if L > 0 else 0.0, *READER_TYPE_THRESHOLDS["Comfort Rereader"])
@@ -297,12 +305,13 @@ def recompute_reader_type_from_db(
     if not books:
         return None
 
-    # Build a minimal DataFrame with only Title and Number of Pages.
+    # Build a minimal DataFrame with only Title, Number of Pages, and Author.
     # Date Read and Read Count come from csv_context via overrides — we don't
     # reconstruct them here because they lived only in the original CSV.
     titles = [b.title or "" for b in books]
     page_counts = [b.page_count for b in books]
-    read_df = pd.DataFrame({"Title": titles, "Number of Pages": page_counts})
+    authors = [b.author.name if b.author_id else None for b in books]
+    read_df = pd.DataFrame({"Title": titles, "Number of Pages": page_counts, "Author": authors})
 
     enriched_data = {
         b.title: {"publish_year": b.publish_year, "publisher": b.publisher}

@@ -1,12 +1,10 @@
 """
 Validation harness for the normalized reader-type scorer.
 
-NOTE: Retirement check DEFERRED — all 20 types are kept pending Vanaj's review
-of the calibration histogram from test_no_type_dominates_distribution. Nature
-Nut Case and Social Savant never won the 200-library realistic corpus, but they
-ARE reachable via engineered libraries (confirmed by test_every_type_reachable).
-Retiring is irreversible; keeping is not. Vanaj should inspect the histogram
-output and decide whether to drop them in a follow-up.
+Nature Nut Case and Social Savant were retired (they never won the realistic
+corpus); their genres now feed Non-Fiction Ninja. Author Loyalist (largest
+single-author share) was added in their place — 19 active types plus the
+Eclectic Reader fallback.
 
 Tests use assign_reader_type directly — no DB, no mocks, pure function.
 """
@@ -57,14 +55,20 @@ def gr_row(
     date_read=None,
     read_count=1,
     rating=4,
+    author=None,
 ):
-    """Return a dict of Goodreads-schema columns used by assign_reader_type."""
+    """Return a dict of Goodreads-schema columns used by assign_reader_type.
+
+    author=None keeps the book out of the Author Loyalist denominator, so
+    libraries that don't set authors can never trigger that type.
+    """
     return {
         "Title": title,
         "Number of Pages": pages,
         "Date Read": pd.to_datetime(date_read) if date_read else pd.NaT,
         "Read Count": read_count,
         "My Rating": rating,
+        "Author": author,
     }
 
 
@@ -183,26 +187,14 @@ def typed_library(reader_type, n=90, seed=0):
                           genre, {"publish_year": 2014, "publisher": _MAINSTREAM}))
         return build_library(specs)
 
-    elif reader_type == "Nature Nut Case":
+    elif reader_type == "Author Loyalist":
+        # 40% of books by one author → score_ramp(0.40, 0.12, 0.35) = 100
+        # Distinct authors + no genres elsewhere so nothing else fires.
         specs = []
         for i in range(n):
-            # Use nature + neutral fillers; avoid history/biography/historical fiction
-            # which would trigger History Hound. Nature Nut Case (tiebreak idx 2)
-            # beats History Hound (idx 14) anyway, but cleaner to avoid the tie.
-            genre = {"nature"} if i < round(n * 0.35) else {"science"}
-            specs.append(({"title": f"Book {i}", "pages": 280, "pub_year": 2016},
-                          genre, {"publish_year": 2016, "publisher": _MAINSTREAM}))
-        return build_library(specs)
-
-    elif reader_type == "Social Savant":
-        specs = []
-        for i in range(n):
-            # Use social science + neutral fillers; avoid biography/history which
-            # would trigger History Hound. Social Savant (idx 4) beats History
-            # Hound (idx 14) in tiebreak, but clean inputs are better.
-            genre = {"social science"} if i < round(n * 0.40) else {"science"}
-            specs.append(({"title": f"Book {i}", "pages": 320, "pub_year": 2017},
-                          genre, {"publish_year": 2017, "publisher": _MAINSTREAM}))
+            author = "Terry Pratchett" if i < round(n * 0.4) else f"Author {i}"
+            specs.append(({"title": f"Book {i}", "pages": 300, "pub_year": 2015, "author": author},
+                          set(), {"publish_year": 2015, "publisher": _MAINSTREAM}))
         return build_library(specs)
 
     elif reader_type == "Self Help Scholar":
@@ -327,7 +319,7 @@ def typed_library(reader_type, n=90, seed=0):
 
 
 # ---------------------------------------------------------------------------
-# All 20 types
+# All 19 types
 # ---------------------------------------------------------------------------
 ALL_TYPES = list(READER_TYPE_TIEBREAK_ORDER)
 
@@ -341,7 +333,7 @@ class ReaderTypeEveryTypeReachableTests(TestCase):
     """Test 1: Every type is reachable from an engineered library."""
 
     def test_every_type_reachable(self):
-        """assign_reader_type(*typed_library(t)) returns t for all 20 types."""
+        """assign_reader_type(*typed_library(t)) returns t for all 19 types."""
         for reader_type in ALL_TYPES:
             with self.subTest(reader_type=reader_type):
                 lib = typed_library(reader_type)
@@ -380,6 +372,12 @@ class ReaderTypeDistributionTests(TestCase):
 
         size = rng.randint(30, 400)
         specs = []
+
+        # Author pool: ~10% of libraries are "author-loyal" (one author picked
+        # ~25% of the time on top of the uniform pool) so Author Loyalist
+        # participates in the corpus; the rest spread across 30 authors.
+        author_pool = [f"Author {seed}_{k}" for k in range(30)]
+        loyal_bias = 0.25 if rng.random() < 0.10 else 0.0
 
         genre_mix_type = rng.choices(
             ["fantasy_heavy", "litfic", "nonfiction", "romance", "mixed"],
@@ -422,11 +420,12 @@ class ReaderTypeDistributionTests(TestCase):
             title = f"Book (Series {seed}, #{i})" if is_series else f"Book {seed}_{i}"
             date_read = f"{rng.randint(2010, current_year)}/01/15"
             publisher = _SMALL_PRESS if rng.random() < 0.35 else _MAINSTREAM
+            author = author_pool[0] if rng.random() < loyal_bias else rng.choice(author_pool)
 
             genre_set = pick_genre()
             specs.append((
                 {"title": title, "pages": pages, "pub_year": pub_year,
-                 "date_read": date_read, "read_count": read_count},
+                 "date_read": date_read, "read_count": read_count, "author": author},
                 genre_set,
                 {"publish_year": pub_year, "publisher": publisher},
             ))
@@ -551,7 +550,7 @@ class ReaderTypeTiebreakDeterministicTests(TestCase):
         We engineer a Comfort Rereader vs Series Slayer tie via identical normalized
         scores, then verify:
         1. Both scores are equal
-        2. The winner is deterministic (Comfort Rereader is index 5, Series Slayer index 6)
+        2. The winner is deterministic (Comfort Rereader precedes Series Slayer in the order)
         3. Calling assign_reader_type twice returns the same result
         """
         # Build a library where both Comfort Rereader and Series Slayer score the same.
@@ -585,7 +584,7 @@ class ReaderTypeTiebreakDeterministicTests(TestCase):
         # Both should score around 50 (the exact value depends on rounding)
         # Confirm both have the same score and the tiebreak picks Comfort Rereader
         if comfort_score == series_score and comfort_score >= MIN_WINNING_SCORE:
-            # Comfort Rereader (idx 5) < Series Slayer (idx 6) → Comfort wins
+            # Comfort Rereader precedes Series Slayer in the tiebreak order → Comfort wins
             self.assertEqual(winner, "Comfort Rereader",
                              f"Tiebreak failed: comfort={comfort_score}, series={series_score}, got '{winner}'")
 
@@ -595,10 +594,10 @@ class ReaderTypeTiebreakDeterministicTests(TestCase):
         self.assertEqual(dict(scores), dict(scores2), "Non-deterministic scores across two identical calls")
 
     def test_tiebreak_order_is_correct(self):
-        """READER_TYPE_TIEBREAK_ORDER contains all 20 types with no duplicates."""
-        self.assertEqual(len(READER_TYPE_TIEBREAK_ORDER), 20,
-                         f"Expected 20 types, got {len(READER_TYPE_TIEBREAK_ORDER)}")
-        self.assertEqual(len(set(READER_TYPE_TIEBREAK_ORDER)), 20,
+        """READER_TYPE_TIEBREAK_ORDER contains all 19 types with no duplicates."""
+        self.assertEqual(len(READER_TYPE_TIEBREAK_ORDER), 19,
+                         f"Expected 19 types, got {len(READER_TYPE_TIEBREAK_ORDER)}")
+        self.assertEqual(len(set(READER_TYPE_TIEBREAK_ORDER)), 19,
                          "READER_TYPE_TIEBREAK_ORDER has duplicate entries")
 
 
@@ -738,7 +737,7 @@ class ReaderTypeRealCSVRegressionTests(TestCase):
         are valid outcomes for these libraries since the genre stubs are sparse.
         """
         plausible = {"Fantasy Fanatic", "Series Slayer", "Comfort Rereader",
-                     "Modern Maverick", "Eclectic Reader"}
+                     "Modern Maverick", "Eclectic Reader", "Author Loyalist"}
         for i in range(1, 4):
             filename = f"goodreads_library_export synthetic_sf_fan{i}.csv"
             winner, scores = self._run_fixture(filename)
@@ -758,7 +757,7 @@ class ReaderTypeRealCSVRegressionTests(TestCase):
         """
         plausible = {"Literary Luminary", "Modern Maverick", "Eclectic Reader",
                      "Versatile Valedictorian", "Classics Collector", "Comfort Rereader",
-                     "Series Slayer", "Novella Navigator", "History Hound"}
+                     "Series Slayer", "Novella Navigator", "History Hound", "Author Loyalist"}
         for i in range(1, 4):
             filename = f"goodreads_library_export synthetic_lit_fiction{i}.csv"
             winner, scores = self._run_fixture(filename)
@@ -775,7 +774,8 @@ class ReaderTypeRealCSVRegressionTests(TestCase):
         Modern Maverick, and other structural types}."""
         plausible = {"Eclectic Reader", "Versatile Valedictorian", "Modern Maverick",
                      "Small Press Supporter", "Comfort Rereader", "Series Slayer",
-                     "Novella Navigator", "History Hound", "Classics Collector"}
+                     "Novella Navigator", "History Hound", "Classics Collector",
+                     "Author Loyalist"}
         for suffix in ["1", "2", "3", "1_modified", "2_modified", "3_modified",
                        "4_modified", "5_modified"]:
             filename = f"goodreads_library_export synthetic_eclectic{suffix}.csv"
