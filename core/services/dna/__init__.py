@@ -23,7 +23,6 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from core.services.llm_service import VIBE_COLORS, generate_vibe_with_llm
 
 from ...dna_constants import (
-    CANONICAL_GENRE_MAP,
     ENRICHMENT_BULK_QUEUE,
     ENRICHMENT_RETRY_AFTER,
     GLOBAL_AVERAGES,
@@ -38,7 +37,12 @@ from ...percentile_engine import (
     calculate_percentiles_from_aggregates,
     update_analytics_from_stats,
 )
-from ..genre_classification import canonicalize_genre_names, count_fiction_nonfiction, parse_shelf_signals
+from ..genre_classification import (
+    canonicalize_genre_names,
+    count_fiction_nonfiction,
+    parse_shelf_signals,
+    resolve_genre_labels,
+)
 from ..top_books_service import calculate_and_store_top_books
 from .csv_parser import (  # noqa: F401 — re-exported for stable import paths
     STORYGRAPH_TO_GOODREADS,
@@ -162,7 +166,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         if csv_isbns:
             isbn_book_map = {b.isbn13: b for b in Book.objects.filter(isbn13__in=csv_isbns)}
 
-        all_raw_genres, user_book_objects = [], []
+        all_resolved_genres, user_book_objects = [], []
         book_pks_by_idx = {}  # Track book PKs for inline enrichment
         # Upload nonce: enrichment tasks check this to exit early if a newer upload started
         upload_nonce = None
@@ -382,16 +386,31 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         # StoryGraph exports have no such column, so this is Goodreads-only.
         has_shelf_column = "Bookshelves" in read_df.columns
         book_genre_sets = []
+        resolved_genre_sets = []
         shelf_signal_list = []
         for book, genres, original_row in results:
             if book:
                 user_book_objects.append(book)
-                all_raw_genres.extend(genres)
-                book_genre_sets.append(canonicalize_genre_names(genres))
+                canonical_set = canonicalize_genre_names(genres)
+                book_genre_sets.append(canonical_set)
                 raw_shelves = original_row.get("Bookshelves") if has_shelf_column else None
                 if raw_shelves is None or pd.isna(raw_shelves):
                     raw_shelves = ""
-                shelf_signal_list.append(parse_shelf_signals(raw_shelves))
+                shelf_fiction, shelf_nonfiction, shelf_genres = parse_shelf_signals(raw_shelves)
+                shelf_signal_list.append((shelf_fiction, shelf_nonfiction, shelf_genres))
+                # Axis-resolved genre labels: when this book classifies as
+                # nonfiction (the same call the split below makes), ambiguous
+                # fiction-default names swap to their nonfiction variants so
+                # top_genres and reader types agree with the split about the
+                # same book. Occurrence multiplicity is preserved for counting.
+                resolved_list = resolve_genre_labels(
+                    genres,
+                    shelf_fiction=shelf_fiction,
+                    shelf_nonfiction=shelf_nonfiction,
+                    shelf_genres=shelf_genres,
+                )
+                all_resolved_genres.extend(resolved_list)
+                resolved_genre_sets.append(set(resolved_list))
 
         # Context-dependent fiction/nonfiction classification. Books with no
         # classifiable genres are tracked in defaulted_count — never fiction.
@@ -547,14 +566,13 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         reader_type, reader_type_scores = assign_reader_type(
             read_df,
             enriched_data_for_scoring,
-            book_genre_sets,
+            resolved_genre_sets,
             reread_count_override=reader_type_reread_count,
             books_per_year_override=reader_type_books_per_year,
         )
         explanation = random.choice(READER_TYPE_DESCRIPTIONS.get(reader_type, [""]))
         top_types_list = [{"type": t, "score": s} for t, s in reader_type_scores.most_common(3) if s > 0]
-        mapped_genres = [CANONICAL_GENRE_MAP.get(g, g) for g in all_raw_genres]
-        top_genres = Counter(mapped_genres).most_common(10)
+        top_genres = Counter(all_resolved_genres).most_common(10)
 
         if progress_cb:
             progress_cb(total_books, total_books, "Crunching stats")
@@ -666,7 +684,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         top_authors = list(read_df["Author"].value_counts().head(10).items())
         unique_authors_count = int(read_df["Author"].nunique())
-        unique_genres_count = len(set(mapped_genres))
+        unique_genres_count = len(set(all_resolved_genres))
 
         ratings_df = read_df[read_df["My Rating"] > 0].dropna(subset=["My Rating"])
         average_rating_overall = float(round(ratings_df["My Rating"].mean(), 2)) if not ratings_df.empty else "N/A"

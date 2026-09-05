@@ -49,7 +49,9 @@ def compute_books_per_year(read_df):
     return dated_reads_count / distinct_years
 
 
-def assign_reader_type(read_df, enriched_data, book_genre_sets, reread_count_override=None, books_per_year_override=None):
+def assign_reader_type(
+    read_df, enriched_data, book_genre_sets, reread_count_override=None, books_per_year_override=None
+):
     """
     Assign a reader type using normalized 0-100 scoring.
 
@@ -153,6 +155,7 @@ def assign_reader_type(read_df, enriched_data, book_genre_sets, reread_count_ove
     solid_genre_count = 0
     if G >= MIN_SIGNAL_BOOKS:
         from collections import Counter as _Counter
+
         all_genres_flat = []
         for gs in book_genre_sets:
             all_genres_flat.extend(gs)
@@ -214,7 +217,9 @@ def assign_reader_type(read_df, enriched_data, book_genre_sets, reread_count_ove
         )
 
     # Reread type
-    scores["Comfort Rereader"] = score_ramp(reread_count / L if L > 0 else 0.0, *READER_TYPE_THRESHOLDS["Comfort Rereader"])
+    scores["Comfort Rereader"] = score_ramp(
+        reread_count / L if L > 0 else 0.0, *READER_TYPE_THRESHOLDS["Comfort Rereader"]
+    )
 
     # Series type
     scores["Series Slayer"] = score_ramp(series_count / L if L > 0 else 0.0, *READER_TYPE_THRESHOLDS["Series Slayer"])
@@ -223,7 +228,9 @@ def assign_reader_type(read_df, enriched_data, book_genre_sets, reread_count_ove
     scores["Rapacious Reader"] = score_ramp(mean_books_per_year, *READER_TYPE_THRESHOLDS["Rapacious Reader"])
 
     # Versatile Valedictorian (count of solid genres)
-    scores["Versatile Valedictorian"] = score_ramp(float(solid_genre_count), *READER_TYPE_THRESHOLDS["Versatile Valedictorian"])
+    scores["Versatile Valedictorian"] = score_ramp(
+        float(solid_genre_count), *READER_TYPE_THRESHOLDS["Versatile Valedictorian"]
+    )
 
     # Remove zero scores (keep Counter clean)
     scores = Counter({t: s for t, s in scores.items() if s > 0})
@@ -246,13 +253,14 @@ def assign_reader_type(read_df, enriched_data, book_genre_sets, reread_count_ove
                 return READER_TYPE_TIEBREAK_ORDER.index(t)
             except ValueError:
                 return len(READER_TYPE_TIEBREAK_ORDER)
+
         winner = min(tied, key=tiebreak_key)
 
     return winner, scores
 
 
 def recompute_reader_type_from_db(
-    user, csv_context, books=None, current_reader_type=None, current_explanation=None
+    user, csv_context, books=None, current_reader_type=None, current_explanation=None, shelf_signal_list=None
 ):
     """Recompute reader type entirely from DB books + persisted CSV context.
 
@@ -274,6 +282,11 @@ def recompute_reader_type_from_db(
         The type/blurb currently stored for the user. When the recomputed type
         matches, the stored blurb is reused instead of re-rolling random.choice,
         so the explanation doesn't churn on every poll.
+    shelf_signal_list : list[tuple] or None
+        Per-book (shelf_fiction, shelf_nonfiction, shelf_genres) triples aligned
+        with `books`, as built by _compute_enrichment_stats from the persisted
+        shelf-signals map. Used to axis-resolve genre labels the same way
+        generation does; None means no shelf context (API-genre-only).
 
     Returns
     -------
@@ -283,15 +296,13 @@ def recompute_reader_type_from_db(
     import random
 
     from ...dna_constants import READER_TYPE_DESCRIPTIONS
-    from ...services.genre_classification import canonicalize_genre_names
+    from ...services.genre_classification import resolve_genre_labels
 
     if books is None:
         from ...models import Book as _Book
 
         books = list(
-            _Book.objects.filter(readers__user=user)
-            .select_related("author", "publisher")
-            .prefetch_related("genres")
+            _Book.objects.filter(readers__user=user).select_related("author", "publisher").prefetch_related("genres")
         )
 
     if not books:
@@ -304,12 +315,20 @@ def recompute_reader_type_from_db(
     page_counts = [b.page_count for b in books]
     read_df = pd.DataFrame({"Title": titles, "Number of Pages": page_counts})
 
-    enriched_data = {
-        b.title: {"publish_year": b.publish_year, "publisher": b.publisher}
-        for b in books
-        if b.title
-    }
-    book_genre_sets = [canonicalize_genre_names([g.name for g in b.genres.all()]) for b in books]
+    enriched_data = {b.title: {"publish_year": b.publish_year, "publisher": b.publisher} for b in books if b.title}
+    # Axis-resolved to mirror generation: a nonfiction classic must count as
+    # "classic nonfiction" (Non-Fiction Ninja), not "classic fiction" (Literary
+    # Luminary), or the reader type flips between polls and the stored DNA.
+    if shelf_signal_list is None:
+        shelf_signal_list = [(False, False, frozenset())] * len(books)
+    book_genre_sets = [
+        set(
+            resolve_genre_labels(
+                [g.name for g in b.genres.all()], shelf_fiction=sf, shelf_nonfiction=snf, shelf_genres=sg
+            )
+        )
+        for b, (sf, snf, sg) in zip(books, shelf_signal_list)
+    ]
 
     reader_type, reader_type_scores = assign_reader_type(
         read_df,

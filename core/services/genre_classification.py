@@ -60,6 +60,26 @@ def resolve_genre_names(genre_names):
     return ordered
 
 
+def resolve_genre_labels(genre_names, shelf_fiction=False, shelf_nonfiction=False, shelf_genres=frozenset()):
+    """Multiplicity-preserving variant of resolve_genre_names, with shelf signals.
+
+    Used by the two top_genres builders (calculate_full_dna and the poll-time
+    recompute in core/views/_helpers.py), which count every raw occurrence and
+    have shelf context available. Both MUST resolve identically or the
+    top-genres labels flip between generation and live-enrichment polls.
+    """
+    canonical_list = [CANONICAL_GENRE_MAP.get(g, g) for g in genre_names]
+    classification = classify_genres(
+        set(canonical_list),
+        shelf_fiction=shelf_fiction,
+        shelf_nonfiction=shelf_nonfiction,
+        shelf_genres=shelf_genres,
+    )
+    if classification == "nonfiction":
+        return [AMBIGUOUS_TO_NONFICTION.get(g, g) for g in canonical_list]
+    return canonical_list
+
+
 def parse_shelf_signals(raw_bookshelves):
     """Parse a Goodreads `Bookshelves` cell into (shelf_fiction, shelf_nonfiction, shelf_genres).
 
