@@ -151,9 +151,26 @@ class CompareViewTests(CompareBaseTestCase):
         response = self._get("alice,alice")
         self.assertEqual(response.status_code, 404)
 
-    def test_three_usernames_404_until_nway_phase(self):
+    def test_three_users_render_graph_and_callouts(self):
         response = self._get("alice,bob,carol")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "The Web of Taste")
+        self.assertContains(response, "Closest Pair")
+        self.assertContains(response, "alice + bob")  # tightest fixture pair
+        self.assertContains(response, "Odd One Out")
+        self.assertContains(response, "carol")  # reads her own books
+        self.assertContains(response, "Similarity graph of 3 readers")
+        self.assertContains(response, "Group Score")
+
+    def test_six_users_is_the_cap(self):
+        # Cap is enforced before any lookups, so the usernames need not exist.
+        response = self._get("a,b,c,d,e,f,g")
         self.assertEqual(response.status_code, 404)
+
+    def test_two_users_have_no_graph(self):
+        response = self._get("alice,bob")
+        self.assertNotContains(response, "The Web of Taste")
+        self.assertNotContains(response, "Odd One Out")
 
     def test_unsorted_url_redirects_to_canonical(self):
         response = self._get("bob,alice")
