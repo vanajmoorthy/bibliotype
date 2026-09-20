@@ -9,6 +9,7 @@ scanner can't detect from Python data.
 from django import template
 
 from core.dna_constants import READER_TYPE_COLORS
+from core.services.dna.utils import _sanitize_review_text
 
 register = template.Library()
 
@@ -32,3 +33,16 @@ def reader_color(reader_type_name):
     if not reader_type_name:
         return "purple"
     return READER_TYPE_COLORS.get(reader_type_name, "purple")
+
+
+@register.filter
+def strip_review_html(text):
+    """Strip HTML from review text (Goodreads exports embed <br/> etc.).
+
+    New DNA is sanitized at ingestion (_sanitize_review_text), but DNA stored
+    before that fix still carries raw tags — this cleans those at render time.
+    <br> variants become newlines so |linebreaksbr can restore the paragraphs.
+    """
+    if not isinstance(text, str):
+        return text
+    return _sanitize_review_text(text)
