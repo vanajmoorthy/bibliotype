@@ -3,17 +3,17 @@
 
 {% block seo_title %}Bibliotype - Discover Your Reading DNA | Free Book Analysis Tool{% endblock %}
 
-{% block seo_description %}Upload your Goodreads or StoryGraph export to sequence and decode your Bibliotype. Personalised insights into your reading DNA, favourite genres, reading habits, and book preferences. Free book analysis tool powered by AI.{% endblock %}
+{% block seo_description %}Upload your Goodreads or StoryGraph export to sequence and discover your Bibliotype. Personalised insights into your reading DNA, favourite genres, reading habits, and book preferences. Free book analysis tool powered by AI.{% endblock %}
 
 {% block seo_keywords %}reading DNA, bibliotype, book analysis tool, Goodreads export analyser, StoryGraph export analyser, reading statistics, reading habits analysis, book recommendations, reading insights, bibliophile tools, reading dashboard, free book analysis{% endblock %}
 
 {% block og_title %}Bibliotype - Discover Your Reading DNA{% endblock %}
 
-{% block og_description %}Upload your Goodreads or StoryGraph data to sequence and decode your Bibliotype. Personalised insights into your reading DNA, favourite genres, and reading habits.{% endblock %}
+{% block og_description %}Upload your Goodreads or StoryGraph data to sequence and discover your Bibliotype. Personalised insights into your reading DNA, favourite genres, and reading habits.{% endblock %}
 
 {% block twitter_title %}Discover Your Reading DNA with Bibliotype{% endblock %}
 
-{% block twitter_description %}Upload your book data to sequence and decode your Bibliotype. Free reading analysis tool.{% endblock %}
+{% block twitter_description %}Upload your book data to sequence and discover your Bibliotype. Free reading analysis tool.{% endblock %}
 
 {% block structured_data %}
 <script type="application/ld+json">
@@ -21,7 +21,7 @@
     "@context": "https://schema.org",
     "@type": "WebPage",
     "name": "Bibliotype - Discover Your Reading DNA",
-    "description": "Upload your Goodreads or StoryGraph export to sequence and decode your Bibliotype - your unique reading DNA.",
+    "description": "Upload your Goodreads or StoryGraph export to sequence and discover your Bibliotype - your unique reading DNA.",
     "url": "{{ request.scheme }}://{{ request.get_host }}{{ request.path }}",
     "mainEntity": {
         "@type": "SoftwareApplication",
@@ -192,18 +192,18 @@
                 });
             })();
         </script>
-        <div class="relative z-10 mx-auto w-full max-w-2xl p-2 text-center">
+        <div class="relative z-10 mx-auto w-full max-w-3xl p-2 text-center">
             <h1 class="flex flex-wrap justify-center gap-2 text-4xl font-bold tracking-widest uppercase md:text-5xl">
                 Discover Your
                 <span class="highlight-sweep px-2">Reading DNA</span>
             </h1>
             <p class="mt-4 text-xl text-[var(--color-brand-text)]">
-                Upload your <span class="bg-brand-orange px-1">Goodreads</span> or <span class="bg-brand-green px-1">StoryGraph</span> data to sequence and decode your <span class="bg-brand-cyan px-1">Bibliotype</span>.
+                Upload your <span class="bg-brand-orange px-1">Goodreads</span> or <span class="bg-brand-green px-1">StoryGraph</span> data to sequence and discover your <span class="bg-brand-cyan px-1">Bibliotype</span>.
             </p>
             <div class="mt-6">
                 {% include 'core/partials/buttons/secondary_button.html' with text="Instructions" color="pink" extra_attrs='@click="instructionsOpen = true"' %}
             </div>
-            <div x-data="{ isDragging: false, fileName: '' }" class="mt-12">
+            <div x-data="{ isDragging: false, fileName: '' }" class="mx-auto mt-12 w-full max-w-2xl">
                 <form x-transition
                       action="{% url 'core:upload' %}"
                       method="post"
