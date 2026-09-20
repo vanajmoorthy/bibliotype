@@ -75,6 +75,8 @@ csv/
 docs/plans/
 docs/brainstorms/
 
-# Local-only Ralph state and worktrees
+# Local-only worktrees
 .claude/worktrees/
-scripts/ralph/.last-branch
+
+# Local screenshot/scratch artifacts from testing sessions
+.testing-screenshots/
