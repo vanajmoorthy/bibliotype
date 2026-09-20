@@ -1,10 +1,10 @@
-{# Compare page: pairwise reading-taste similarity between two public readers #}
+{# Compare page: pairwise reading-taste similarity between 2-6 public readers #}
 {% extends 'core/base.html' %}
 
-{% block seo_title %}How similar are {{ usernames.0 }} and {{ usernames.1 }}? - Bibliotype{% endblock %}
+{% block seo_title %}How similar are {{ names_sentence }}? - Bibliotype{% endblock %}
 
 {% block seo_description %}
-    Compare the reading DNA of {{ usernames.0 }} and {{ usernames.1 }} on Bibliotype.
+    Compare the reading DNA of {{ names_sentence }} on Bibliotype.
 {% endblock %}
 
 {# Combinatorial URL space — keep crawlers out #}
@@ -16,62 +16,223 @@
    bg-badge-4 bg-brand-yellow #}
 
 {% block content %}
-    <div class="container mx-auto max-w-4xl px-4 py-8">
+    <div
+        class="container mx-auto max-w-4xl px-4 py-8"
+        x-data="{
+            selected: {{ best_index }},
+            copied: false,
+            shareCompare() {
+                const url = window.location.href;
+                if (navigator.share) {
+                    navigator.share({ title: 'How similar are {{ names_sentence|escapejs }}?', url: url }).catch(() => {});
+                } else {
+                    navigator.clipboard.writeText(url).then(() => {
+                        this.copied = true;
+                        setTimeout(() => this.copied = false, 2000);
+                    });
+                }
+            },
+            newReader: '',
+            addReader() {
+                const slug = this.newReader.trim().toLowerCase();
+                if (!slug) return;
+                window.location.href = '/compare/{{ canonical_usernames }},' + encodeURIComponent(slug) + '/';
+            }
+        }"
+    >
         <div class="mb-6 flex flex-col gap-6 md:flex-row md:items-stretch">
             <div class="border-brand-text shadow-neo flex-1 border-2 bg-white p-6">
-                <h1 class="text-4xl font-bold lowercase">how similar are you?</h1>
+                <h1 class="text-4xl font-bold uppercase tracking-wider">How Similar Are You?</h1>
                 <p class="mt-2 text-lg text-gray-500">
-                    comparing the reading dna of
-                    <a href="{% url 'core:public_profile' username=usernames.0 %}" class="underline"
-                        >{{ usernames.0 }}</a
-                    >
-                    and
-                    <a href="{% url 'core:public_profile' username=usernames.1 %}" class="underline"
-                        >{{ usernames.1 }}</a
-                    >
-                    — scored across shared books, ratings, genres, authors &amp; eras.
+                    {% for item in name_items %}
+                        <a href="{% url 'core:public_profile' username=item.name %}" class="text-brand-text underline"
+                            >{{ item.name }}</a
+                        >{{ item.sep }}
+                    {% endfor %}
+                    —
+                    {% if n == 2 %}
+                        one score for how much your reading tastes overlap.
+                    {% else %}
+                        head to head. Thicker lines mean closer taste.
+                    {% endif %}
                 </p>
             </div>
             <div
                 class="border-brand-text shadow-neo bg-brand-yellow flex flex-col items-center justify-center border-2 p-6 text-center md:w-60"
             >
-                <div class="text-sm uppercase">similarity</div>
-                <div class="text-7xl leading-none">{{ pair.pct }}%</div>
+                <div class="text-sm font-bold uppercase tracking-wider">
+                    {% if n == 2 %}Similarity{% else %}Group Score{% endif %}
+                </div>
+                <div class="text-7xl leading-none">{{ group_pct }}%</div>
                 <div class="mt-2">
-                    {% include 'core/partials/badge_chip.html' with chip_color='bg-white' chip_label=pair.label %}
+                    {% include 'core/partials/badge_chip.html' with chip_color='bg-white' chip_label=group_label %}
                 </div>
             </div>
         </div>
 
-        <div class="border-brand-text shadow-neo mb-6 border-2 bg-white p-6">
-            <h2 class="text-2xl font-bold uppercase">Why {{ usernames.0 }} + {{ usernames.1 }} match</h2>
-            <p class="text-gray-500">
-                {{ pair.shared_books_count }} shared book{{ pair.shared_books_count|pluralize }}
-                {% if pair.shared_rated_count %}({{ pair.shared_rated_count }} rated by both){% endif %}
-            </p>
-            <div class="mt-4 space-y-3">
-                {% for row in breakdown_rows %}
-                    <div class="flex items-center gap-3">
-                        <div class="w-36 shrink-0 md:w-48">{{ row.label }}</div>
-                        <div class="border-brand-text shadow-neo-sm h-6 flex-1 border-2 bg-white">
-                            <div class="{{ row.color }} h-full" style="width: {{ row.pct }}%"></div>
+        {% if graph %}
+            <div class="{% if n > 2 %}md:grid md:grid-cols-3 md:gap-6{% endif %} mb-6">
+                <div class="border-brand-text shadow-neo mb-6 border-2 bg-white p-6 md:col-span-2 md:mb-0">
+                    <h2 class="text-2xl font-bold uppercase">The Web of Taste</h2>
+                    <p class="text-gray-500">Tap a percentage to see what's behind it.</p>
+                    <svg
+                        viewBox="{{ graph.viewbox }}"
+                        width="100%"
+                        role="img"
+                        aria-label="Similarity graph of {{ n }} readers"
+                    >
+                        {% for edge in graph.edges %}
+                            <line
+                                x1="{{ edge.x1 }}"
+                                y1="{{ edge.y1 }}"
+                                x2="{{ edge.x2 }}"
+                                y2="{{ edge.y2 }}"
+                                stroke="#1f2937"
+                                stroke-width="{{ edge.width }}"
+                            />
+                        {% endfor %}
+                        {% for edge in graph.edges %}
+                            <g @click="selected = {{ edge.index }}" class="cursor-pointer">
+                                <rect
+                                    x="{{ edge.shadow_x }}"
+                                    y="{{ edge.shadow_y }}"
+                                    width="52"
+                                    height="30"
+                                    fill="#1f2937"
+                                />
+                                <rect
+                                    x="{{ edge.chip_x }}"
+                                    y="{{ edge.chip_y }}"
+                                    width="52"
+                                    height="30"
+                                    fill="{{ edge.chip_fill }}"
+                                    stroke="#1f2937"
+                                    :stroke-width="selected === {{ edge.index }} ? 4 : 2"
+                                />
+                                <text
+                                    x="{{ edge.text_x }}"
+                                    y="{{ edge.text_y }}"
+                                    text-anchor="middle"
+                                    font-size="22"
+                                    fill="#1f2937"
+                                >
+                                    {{ edge.pct }}%
+                                </text>
+                            </g>
+                        {% endfor %}
+                        {% for node in graph.nodes %}
+                            <a href="{% url 'core:public_profile' username=node.name %}">
+                                <rect
+                                    x="{{ node.shadow_x }}"
+                                    y="{{ node.shadow_y }}"
+                                    width="{{ node.w }}"
+                                    height="46"
+                                    fill="#1f2937"
+                                />
+                                <rect
+                                    x="{{ node.rect_x }}"
+                                    y="{{ node.rect_y }}"
+                                    width="{{ node.w }}"
+                                    height="46"
+                                    fill="{{ node.fill }}"
+                                    stroke="#1f2937"
+                                    stroke-width="2"
+                                />
+                                <text
+                                    x="{{ node.x }}"
+                                    y="{{ node.text_y }}"
+                                    text-anchor="middle"
+                                    font-size="26"
+                                    fill="#1f2937"
+                                >
+                                    {{ node.name }}
+                                </text>
+                            </a>
+                        {% endfor %}
+                    </svg>
+                </div>
+                <div class="flex flex-col gap-6">
+                    <div class="border-brand-text shadow-neo bg-brand-green border-2 p-5">
+                        <h2 class="text-xl font-bold uppercase">Closest Pair</h2>
+                        <div class="mt-1 text-2xl">{{ closest.title }}</div>
+                        <div class="text-4xl">{{ closest.pct }}%</div>
+                        <div class="mt-1">
+                            {% include 'core/partials/badge_chip.html' with chip_color='bg-white' chip_label=closest.label %}
                         </div>
-                        <div class="w-12 text-right">{{ row.pct }}%</div>
                     </div>
-                {% endfor %}
+                    <div class="border-brand-text shadow-neo bg-brand-pink border-2 p-5">
+                        <h2 class="text-xl font-bold uppercase">Odd One Out</h2>
+                        <div class="mt-1 text-2xl">{{ odd.name }}</div>
+                        <p class="mt-1 text-gray-700">Averages {{ odd.avg_pct }}% with the others.</p>
+                    </div>
+                </div>
             </div>
+        {% endif %}
+
+        <div class="border-brand-text shadow-neo mb-6 border-2 bg-white p-6">
+            <h2 class="text-2xl font-bold uppercase">The Breakdown</h2>
+            {% for pair in pairs %}
+                <div x-show="selected === {{ pair.index }}" {% if pair.index != best_index %}x-cloak{% endif %}>
+                    {% if n > 2 %}
+                        <p class="mt-1 text-xl">{{ pair.title }} — {{ pair.pct }}%</p>
+                    {% endif %}
+                    <p class="text-gray-500">{{ pair.overlap_sentence }}</p>
+                    <div class="mt-4 space-y-3">
+                        {% for row in pair.rows %}
+                            <div class="flex items-center gap-3">
+                                <div class="w-36 shrink-0 md:w-48">{{ row.label }}</div>
+                                <div class="border-brand-text shadow-neo-sm h-6 flex-1 border-2 bg-white">
+                                    <div class="{{ row.color }} h-full" style="width: {{ row.pct }}%"></div>
+                                </div>
+                                <div class="w-12 text-right">{{ row.pct }}%</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
         </div>
 
-        <div class="border-brand-text shadow-neo border-2 bg-white p-6" x-data="{ copied: false }">
-            <h2 class="text-2xl font-bold uppercase">Share this</h2>
-            <p class="mb-4 text-gray-500">one link, same for both of you</p>
-            <button
-                @click="navigator.clipboard.writeText(window.location.href).then(() => { copied = true; setTimeout(() => copied = false, 2000) })"
-                class="bg-brand-cyan text-brand-text border-brand-text shadow-neo neo-3d hover:shadow-neo-md cursor-pointer border-2 px-4 py-2 text-xl font-bold uppercase transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-1 active:translate-y-1 active:shadow-none"
+        <button
+            type="button"
+            @click="shareCompare()"
+            class="bg-brand-pink border-brand-text shadow-neo neo-3d hover:shadow-neo-md flex w-full cursor-pointer items-center justify-center gap-3 border-2 px-6 py-4 text-xl font-bold uppercase tracking-wider transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-1 active:translate-y-1 active:shadow-none"
+        >
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
             >
-                <span x-show="!copied">⧉ copy link</span>
-                <span x-show="copied" x-cloak>copied!</span>
-            </button>
-        </div>
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                />
+            </svg>
+            <span x-show="!copied">Share This Comparison</span>
+            <span x-show="copied" x-cloak>Link Copied!</span>
+        </button>
+
+        {% if can_add_more %}
+            <div class="mt-6 flex gap-3">
+                <input
+                    type="text"
+                    x-model="newReader"
+                    @keydown.enter="addReader()"
+                    placeholder="Add another reader by username…"
+                    class="border-brand-text shadow-neo-sm focus:ring-brand-purple flex-1 border-2 bg-white px-3 py-2 focus:outline-none focus:ring-2"
+                />
+                <button
+                    type="button"
+                    @click="addReader()"
+                    class="bg-brand-purple border-brand-text shadow-neo-sm neo-3d-sm hover:shadow-neo-xs cursor-pointer border-2 px-4 py-2 font-bold uppercase transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                >
+                    + Add
+                </button>
+            </div>
+            <p class="mt-2 text-sm text-gray-500">Compare up to 6 public readers.</p>
+        {% endif %}
     </div>
 {% endblock %}
