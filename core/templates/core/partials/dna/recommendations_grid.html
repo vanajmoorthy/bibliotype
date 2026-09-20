@@ -30,12 +30,18 @@
     {% load waffle_tags %}
     {% if recommendations_meta.max_similarity_pct %}
         <p class="mb-4 text-base text-gray-500 italic">
-            {{ pronoun_pos|default:"your"|capfirst }} closest match: a reader with
-            {{ recommendations_meta.max_similarity_pct }}% similar taste.
+            {{ pronoun_pos|default:"your"|capfirst }} closest match is
+            {% if recommendations_meta.closest_match_username %}
+                <a href="{% url 'core:public_profile' recommendations_meta.closest_match_username %}"
+                   class="hover:bg-brand-yellow underline">@{{ recommendations_meta.closest_match_username }}</a>
+            {% else %}
+                a private reader
+            {% endif %}
+            who has {{ recommendations_meta.max_similarity_pct }}% similar taste.
             {% with others=recommendations_meta.similar_users_count|add:"-1" %}
                 {% if others > 0 %}
                     {{ others }}
-                    other reader{{ others|pluralize }} contributed to these picks.
+                    other reader{{ others|pluralize }} also contributed to these recommendations.
                 {% endif %}
             {% endwith %}
             {% if recommendations_pool_display %}

@@ -126,9 +126,7 @@ class RecommendationsGridRenderTests(TestCase):
         self.assertNotIn("other reader", html)
 
     def test_pool_display_included_when_present(self):
-        html = _render_grid(
-            {"max_similarity_pct": 78, "similar_users_count": 15}, pool_display=230
-        )
+        html = _render_grid({"max_similarity_pct": 78, "similar_users_count": 15}, pool_display=230)
         self.assertIn("over 230 readers on Bibliotype", html)
 
     def test_stale_meta_falls_back_to_count_copy(self):
@@ -261,9 +259,7 @@ class TaskMetaTests(TestCase):
 
         book = self._make_book()
         mock_recs.return_value = [
-            self._rec_with_sources(
-                book, [{"type": "similar_user", "user_id": 2, "similarity_score": 0.25}]
-            )
+            self._rec_with_sources(book, [{"type": "similar_user", "user_id": 2, "similarity_score": 0.25}])
         ]
 
         generate_recommendations_task(user.id)
@@ -273,3 +269,30 @@ class TaskMetaTests(TestCase):
         self.assertEqual(meta["max_similarity_pct"], 25)
         self.assertEqual(meta["uniqueness_label"], "Pretty unique")
         self.assertEqual(meta["uniqueness_color"], "bg-brand-cyan")
+
+
+@override_settings(CACHES=LOCMEM)
+class ClosestMatchAttributionTests(TestCase):
+    """The attribution line names a public closest match, else 'a private reader'."""
+
+    def test_public_closest_match_is_named_and_linked(self):
+        html = _render_grid({"max_similarity_pct": 46, "similar_users_count": 20, "closest_match_username": "aditi"})
+        self.assertIn("Your closest match is", html)
+        self.assertIn("@aditi", html)
+        self.assertIn('href="/u/aditi/"', html)
+        self.assertIn("who has 46% similar taste.", html)
+        self.assertIn("19 other readers also contributed to these recommendations.", html)
+
+    def test_private_or_legacy_meta_falls_back_to_private_reader(self):
+        # Legacy meta has no closest_match_username key at all
+        html = _render_grid({"max_similarity_pct": 46, "similar_users_count": 1})
+        self.assertIn("Your closest match is a private reader who has 46% similar taste.", html)
+        self.assertNotIn("also contributed", html)
+
+    def test_public_profile_pronoun(self):
+        html = _render_grid(
+            {"max_similarity_pct": 60, "similar_users_count": 2, "closest_match_username": None},
+            pronoun_pos="their",
+        )
+        self.assertIn("Their closest match is a private reader", html)
+        self.assertIn("1 other reader also contributed to these recommendations.", html)

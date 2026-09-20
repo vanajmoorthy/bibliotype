@@ -87,21 +87,35 @@ def generate_recommendations_task(self, user_id: int):
         similar_user_set = set()
         min_overlap_pct = None
         max_similarity = 0.0
+        closest_match_user_id = None
         for rec in processed_recs:
             for source in rec.get("sources", []):
                 if source.get("type") == "similar_user" and source.get("user_id"):
                     similar_user_set.add(source["user_id"])
                     similarity = source.get("similarity_score", 0)
-                    max_similarity = max(max_similarity, similarity)
+                    if similarity > max_similarity:
+                        max_similarity = similarity
+                        closest_match_user_id = source["user_id"]
                     overlap = int(round(similarity * 100))
                     if min_overlap_pct is None or overlap < min_overlap_pct:
                         min_overlap_pct = overlap
+
+        # Only name the closest match if their profile is public; private and
+        # anonymized matches render as "a private reader" in the grid.
+        closest_match_username = None
+        if closest_match_user_id:
+            closest_match_username = (
+                User.objects.filter(id=closest_match_user_id, userprofile__is_public=True)
+                .values_list("username", flat=True)
+                .first()
+            )
 
         recommendations_meta = {
             "similar_users_count": len(similar_user_set),
             # min_overlap_pct kept one release for stale templates/meta; the UI now leads with max
             "min_overlap_pct": min_overlap_pct or 0,
             "max_similarity_pct": int(round(max_similarity * 100)),
+            "closest_match_username": closest_match_username,
         }
 
         uniqueness = compute_uniqueness(len(similar_user_set), max_similarity)
