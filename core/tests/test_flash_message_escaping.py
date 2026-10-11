@@ -45,8 +45,11 @@ class FlashMessageEscapingTests(TestCase):
         client = Client()
         client.force_login(user)
 
-        client.post(reverse("core:update_name"), {"username": "x" * 20})
+        client.post(
+            reverse("core:change_password"),
+            {"current_password": "wrong", "new_password1": "x", "new_password2": "x"},
+        )
         html = client.get(reverse("core:about")).content.decode()
 
-        self.assertIn("Ensure this value has at most 15 characters", html)
+        self.assertIn("Your current password is incorrect.", html)
         self.assertNotIn("&lt;ul", html)
