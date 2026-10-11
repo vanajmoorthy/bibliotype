@@ -9,6 +9,13 @@ logger = logging.getLogger(__name__)
 # TTL for the DNA task-flow caches (dna_result_/session_key_/upload_nonce_/task_owner_ keys)
 DNA_CACHE_TTL = 3600
 
+# How long a user's DNA upload counts as "in flight" (dna_task_inflight_{user_id}):
+# blocks a second upload and keeps the dashboard polling. Set at dispatch and
+# re-armed when the task starts, so it must cover the queue wait, then the task's
+# CELERY_TASK_TIME_LIMIT (900s), with margin. If a worker dies mid-task the marker
+# simply expires, so the user is never locked out for longer than this.
+DNA_TASK_INFLIGHT_TTL = 1800  # 30 minutes
+
 
 def safe_cache_get(key, default=None):
     """Safely get a value from cache, handling Redis connection errors gracefully."""

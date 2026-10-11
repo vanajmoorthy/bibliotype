@@ -130,6 +130,21 @@ class ConcurrentUploadGuardTests(TransactionTestCase):
 
         self.assertIsNone(safe_cache_get(self.marker_key))
 
+    def test_task_rearms_marker_when_it_starts(self):
+        """Queue wait must not eat the marker's TTL: the task re-sets it on start."""
+        from core.tasks import generate_reading_dna_task
+
+        seen = {}
+
+        def fake_calculate(*args, **kwargs):
+            seen["marker"] = safe_cache_get(self.marker_key)
+            raise ValueError("stop here")
+
+        with patch("core.tasks.dna.calculate_full_dna", side_effect=fake_calculate):
+            generate_reading_dna_task.apply(args=("Title\n", self.user.id))
+
+        self.assertEqual(seen["marker"], "1")
+
     @patch("core.views.upload.generate_reading_dna_task.delay")
     def test_uppercase_csv_extension_accepted(self, mock_delay):
         mock_delay.return_value = MagicMock(id="new-task-id")
@@ -175,12 +190,13 @@ class DnaStatusTimeoutTests(TransactionTestCase):
         self.user.userprofile.refresh_from_db()
         self.assertIsNone(self.user.userprofile.pending_dna_task_id)
 
-    def test_upload_task_without_marker_keeps_existing_dna(self):
+    def test_upload_task_without_marker_fails_even_with_older_dna(self):
+        """Older DNA must not make a dead upload look like it succeeded."""
         safe_cache_set(f"dna_upload_task_{self.user.id}", "dead-task-id")
         self.user.userprofile.dna_data = {"reader_type": "Old"}
         self.user.userprofile.save(update_fields=["dna_data"])
 
-        self.assertEqual(self._poll()["status"], "SUCCESS")
+        self.assertEqual(self._poll()["status"], "FAILURE")
 
     def test_upload_task_with_marker_still_pending(self):
         safe_cache_set(f"dna_upload_task_{self.user.id}", "dead-task-id")
@@ -231,3 +247,19 @@ class BadRowUploadTests(TransactionTestCase):
         self.user.userprofile.refresh_from_db()
         self.assertIsNotNone(self.user.userprofile.dna_data)
         self.assertTrue(Book.objects.filter(title="L" * 255).exists())
+
+    def test_every_row_failing_fails_the_upload(self):
+        """If no row syncs, it's a bug rather than bad data: don't save an empty DNA."""
+        from core.models import Author
+
+        upload = SimpleUploadedFile(
+            "goodreads.csv",
+            b"Title,Author,Exclusive Shelf,My Rating,Date Read\nA Book,An Author,read,5,2023/01/15\n",
+            content_type="text/csv",
+        )
+
+        with patch.object(Author.objects, "get_or_create", side_effect=TypeError("bug")):
+            self.client.post(reverse("core:upload"), {"csv_file": upload})
+
+        self.user.userprofile.refresh_from_db()
+        self.assertIsNone(self.user.userprofile.dna_data)

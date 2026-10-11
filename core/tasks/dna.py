@@ -225,6 +225,13 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
         )
         raise
 
+    if user_id is not None:
+        # Re-arm the upload's in-flight marker (set at dispatch) so time spent
+        # waiting in the queue doesn't eat into the run time it must cover.
+        from ..cache_utils import DNA_TASK_INFLIGHT_TTL, safe_cache_set
+
+        safe_cache_set(f"dna_task_inflight_{user_id}", "1", timeout=DNA_TASK_INFLIGHT_TTL)
+
     try:
 
         def progress_cb(current: int, total: int, stage: str):

@@ -199,7 +199,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 try:
                     return _process_book_row(original_row)
                 except (DataError, ValueError, TypeError, OverflowError) as e:
-                    logger.warning(f"Skipping CSV row {original_row.get('Title')!r} that failed to sync: {e}")
+                    # exc_info so a real code bug (not bad data) shows its traceback.
+                    logger.warning(f"Skipping CSV row {original_row.get('Title')!r} that failed to sync", exc_info=True)
+                    failed_rows.append(e)
                     return None, [], original_row
 
             def _process_book_row(original_row):
@@ -410,6 +412,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             # - `enrichment_budget`: lazy start is lock-guarded (exactly-once);
             #   has_remaining() reads are race-tolerant by design — at the
             #   boundary a few in-flight workers may each admit one extra book.
+            failed_rows = []  # list.append is thread-safe
             with ThreadPoolExecutor(max_workers=8) as executor:
                 results = []
                 processed = 0
@@ -422,6 +425,12 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     processed += 1
                     if progress_cb:
                         progress_cb(processed, total_books, "Syncing books")
+
+            if failed_rows:
+                logger.error(f"Skipped {len(failed_rows)} of {total_books} CSV rows that failed to sync")
+                # Every row failing points at a bug, not bad data: fail the upload.
+                if len(failed_rows) == total_books:
+                    raise failed_rows[0]
 
         # Goodreads `Bookshelves` (exact column name — NOT "Bookshelves with
         # positions", whose "(#N)" suffixes would break matching) carries
