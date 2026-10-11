@@ -553,7 +553,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         # floor guards against counts that were never incremented (seed data).
         current_book_ids = {book.id for book, genres, original_row in results if book}
         dropped_book_ids = already_counted_book_ids - current_book_ids
-        if dropped_book_ids:
+        if results and dropped_book_ids:
             Book.objects.filter(pk__in=dropped_book_ids, global_read_count__gt=0).update(
                 global_read_count=F("global_read_count") - 1
             )
