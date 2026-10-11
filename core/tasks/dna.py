@@ -300,4 +300,10 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
             error_message=str(e),
         )
         logger.error(f"Task failed due to an error in the analysis engine: {e}", exc_info=True)
+        if user_id is not None:
+            # Release the reject-while-pending marker (core/views/upload.py) so a
+            # failed upload doesn't block re-uploading until the TTL expires.
+            from ..cache_utils import safe_cache_delete
+
+            safe_cache_delete(f"dna_task_inflight_{user_id}")
         raise

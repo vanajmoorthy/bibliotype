@@ -15,7 +15,7 @@ import pandas as pd
 import requests
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import IntegrityError
+from django.db import DataError, IntegrityError
 from django.db.models import F
 from django.utils import timezone
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
@@ -184,9 +184,27 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         with requests.Session() as session:
             session.headers.update({"User-Agent": settings.EXTERNAL_API_USER_AGENT})
 
+            def _csv_text(value, max_length=255):
+                # Blank cells arrive from pandas as NaN (a float), not "". Truncate
+                # to the model's max_length so an overlong cell can't DataError.
+                if value is None or (not isinstance(value, str) and pd.isna(value)):
+                    return ""
+                return str(value).strip()[:max_length].strip()
+
             def process_book_row(original_row):
-                author_name_from_csv = original_row.get("Author", "").strip()
-                title_from_csv = original_row.get("Title", "").strip()
+                # One malformed row must not fail the whole upload: log it and
+                # skip it the same way blank rows are skipped. Only bad-data errors
+                # are caught — infrastructure errors (DB down) still fail the task
+                # rather than quietly saving a DNA with books missing.
+                try:
+                    return _process_book_row(original_row)
+                except (DataError, ValueError, TypeError, OverflowError) as e:
+                    logger.warning(f"Skipping CSV row {original_row.get('Title')!r} that failed to sync: {e}")
+                    return None, [], original_row
+
+            def _process_book_row(original_row):
+                author_name_from_csv = _csv_text(original_row.get("Author"))
+                title_from_csv = _csv_text(original_row.get("Title"))
 
                 if not author_name_from_csv or not title_from_csv:
                     return None, [], original_row
@@ -223,7 +241,8 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
                 # Only include fields with actual values to avoid overwriting enriched data with None
                 book_defaults = {}
-                if pd.notna(p := original_row.get("Number of Pages")) and int(p) > 0:
+                # Upper bound drops absurd page counts that would overflow the column.
+                if pd.notna(p := original_row.get("Number of Pages")) and 1 <= p < 100_000:
                     book_defaults["page_count"] = int(p)
                 if pd.notna(r := original_row.get("Average Rating")) and float(r) > 0:
                     book_defaults["average_rating"] = float(r)

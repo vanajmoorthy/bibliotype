@@ -13,7 +13,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from ..analytics.events import track_file_upload_started
-from ..cache_utils import DNA_CACHE_TTL, safe_cache_get, safe_cache_set
+from ..cache_utils import DNA_CACHE_TTL, safe_cache_add, safe_cache_delete, safe_cache_get, safe_cache_set
 from ..tasks import generate_reading_dna_task
 from ._helpers import _compute_enrichment_progress, _enrich_dna_for_display
 
@@ -39,7 +39,7 @@ DNA_TASK_INFLIGHT_TTL = 900  # 15 minutes
 def upload_view(request):
     csv_file = request.FILES.get("csv_file")
 
-    if not csv_file or not csv_file.name.endswith(".csv"):
+    if not csv_file or not csv_file.name.lower().endswith(".csv"):
         messages.error(request, "Please upload a valid .csv file.")
         return redirect("core:home")
 
@@ -107,7 +107,13 @@ def upload_view(request):
             # not a lockout). Deliberately does NOT consult AsyncResult: eager
             # tasks report their state inconsistently across environments
             # depending on whether a result backend is configured.
-            if safe_cache_get(f"dna_task_inflight_{request.user.id}"):
+            #
+            # The marker is claimed atomically (cache.add) so two near-simultaneous
+            # posts can't both pass the check and start two tasks. It's set
+            # BEFORE dispatch so the (possibly eager) task can clear it on
+            # completion; the task also clears it on failure (core/tasks/dna.py).
+            inflight_key = f"dna_task_inflight_{request.user.id}"
+            if not safe_cache_add(inflight_key, "1", timeout=DNA_TASK_INFLIGHT_TTL):
                 logger.info(f"Rejected new upload for user {request.user.id}; a prior upload is still processing")
                 messages.info(
                     request,
@@ -126,11 +132,18 @@ def upload_view(request):
 
             upload_nonce = str(uuid.uuid4())
             safe_cache_set(f"upload_nonce_{request.user.id}", upload_nonce, timeout=DNA_CACHE_TTL)
-            # In-flight marker for the reject-while-pending guard above. Set BEFORE
-            # dispatch so the (possibly eager) task can clear it on completion.
-            safe_cache_set(f"dna_task_inflight_{request.user.id}", "1", timeout=DNA_TASK_INFLIGHT_TTL)
 
-            result = generate_reading_dna_task.delay(csv_content, request.user.id)
+            try:
+                result = generate_reading_dna_task.delay(csv_content, request.user.id)
+            except Exception:
+                # Dispatch failed (broker down) — release the marker so the user can retry.
+                safe_cache_delete(inflight_key)
+                raise
+
+            # Remember which pending task is an upload (vs a signup claim, which
+            # sets no in-flight marker) so check_dna_status_view can time it out
+            # once the marker is gone.
+            safe_cache_set(f"dna_upload_task_{request.user.id}", result.id, timeout=DNA_CACHE_TTL)
 
             # Save the pending task ID to track regeneration progress.
             # Use .update() instead of fetching + saving the related object — the
@@ -189,6 +202,20 @@ def check_dna_status_view(request):
             if result.state == "FAILURE":
                 profile.pending_dna_task_id = None
                 profile.save(update_fields=["pending_dna_task_id"])
+                return JsonResponse({"status": "FAILURE", "error": "An error occurred while processing your file."})
+
+            # Upload task whose in-flight marker is gone (the task clears it on
+            # success and failure; the TTL expires it if the worker died mid-task,
+            # e.g. recreated by a deploy) yet pending_dna_task_id is still set:
+            # stop polling instead of spinning forever. Only applies to upload
+            # tasks — a signup claim never sets the marker, so its absence there
+            # means nothing.
+            is_upload_task = safe_cache_get(f"dna_upload_task_{request.user.id}") == profile.pending_dna_task_id
+            if is_upload_task and not safe_cache_get(f"dna_task_inflight_{request.user.id}"):
+                profile.pending_dna_task_id = None
+                profile.save(update_fields=["pending_dna_task_id"])
+                if profile.dna_data:
+                    return JsonResponse({"status": "SUCCESS"})
                 return JsonResponse({"status": "FAILURE", "error": "An error occurred while processing your file."})
 
             info = result.info or {}
