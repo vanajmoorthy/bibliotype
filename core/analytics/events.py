@@ -220,7 +220,7 @@ def track_anonymous_dna_claimed(user_id, task_id, session_key=None):
         properties={
             "user_id": user_id,
             "task_id": task_id,
-            "session_key_hash": _key_hash(session_key) if session_key else None,
+            "session_key_hash": _key_hash(session_key),
         },
         environment=environment,
     )
