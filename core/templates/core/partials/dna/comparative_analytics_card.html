@@ -86,7 +86,7 @@
                         {{ dna.comparative_text.bpy_direction|capfirst }} than
                         <strong>{{ dna.comparative_text.bpy_pct }}%</strong> of readers
                     </p>
-                    {% include 'core/partials/dna/comparison_bars.html' with nl_metric="bpy" nl_decimals=1 nl_unit="books/year" nl_user_value=dna.user_stats.avg_books_per_year nl_compare_value=dna.community_averages.avg_books_per_year nl_third_value=dna.global_averages.avg_books_per_year nl_third_href=methodology_url|add:'#books-per-year' %}
+                    {% include 'core/partials/dna/comparison_bars.html' with nl_metric="bpy" nl_decimals=1 nl_unit="books/yr" nl_user_value=dna.user_stats.avg_books_per_year nl_compare_value=dna.community_averages.avg_books_per_year nl_third_value=dna.global_averages.avg_books_per_year nl_third_href=methodology_url|add:'#books-per-year' %}
                 {% else %}
                     <p class="mt-2 text-lg leading-snug">
                         {{ pronoun_sub|default:"You"|title }}'ve read more books than
