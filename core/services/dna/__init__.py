@@ -31,7 +31,7 @@ from ...dna_constants import (
     STORYGRAPH_TAG_TO_GENRE,
     compute_contrariness,
 )
-from ...models import Author, Book, Genre
+from ...models import AnonymousUserSession, Author, Book, Genre, UserBook
 from ...percentile_engine import (
     calculate_community_means,
     calculate_percentiles_from_aggregates,
@@ -186,12 +186,8 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         # or niche-book stats drift for everyone.
         previous_anon_session = None
         if user:
-            from ...models import UserBook
-
             already_counted_book_ids = set(UserBook.objects.filter(user=user).values_list("book_id", flat=True))
         elif session_key:
-            from ...models import AnonymousUserSession
-
             previous_anon_session = AnonymousUserSession.objects.filter(session_key=session_key).first()
             already_counted_book_ids = set(previous_anon_session.books_data) if previous_anon_session else set()
         else:
@@ -514,8 +510,6 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         # Store UserBook entries for registered users
         if user and results:
-            from ...models import UserBook
-
             # Collect current book IDs from this upload
             current_book_ids = {book.id for book, genres, original_row in results if book}
 
