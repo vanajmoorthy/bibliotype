@@ -29,6 +29,8 @@ logger = logging.getLogger(__name__)
 # (e.g. response_format on smaller free models) instead of raising — the prompt
 # already asks for JSON and we parse defensively below.
 litellm.drop_params = True
+# No "Give Feedback / Get Help" banner on every provider error; we log our own.
+litellm.suppress_debug_info = True
 
 _warned_missing_key = False
 
