@@ -85,7 +85,6 @@ def generate_recommendations_task(self, user_id: int):
         from ..dna_constants import compute_uniqueness
 
         similar_user_set = set()
-        min_overlap_pct = None
         max_similarity = 0.0
         closest_match_user_id = None
         for rec in processed_recs:
@@ -96,9 +95,6 @@ def generate_recommendations_task(self, user_id: int):
                     if similarity > max_similarity:
                         max_similarity = similarity
                         closest_match_user_id = source["user_id"]
-                    overlap = int(round(similarity * 100))
-                    if min_overlap_pct is None or overlap < min_overlap_pct:
-                        min_overlap_pct = overlap
 
         # Only name the closest match if their profile is public; private and
         # anonymized matches render as "a private reader" in the grid.
@@ -112,8 +108,6 @@ def generate_recommendations_task(self, user_id: int):
 
         recommendations_meta = {
             "similar_users_count": len(similar_user_set),
-            # min_overlap_pct kept one release for stale templates/meta; the UI now leads with max
-            "min_overlap_pct": min_overlap_pct or 0,
             "max_similarity_pct": int(round(max_similarity * 100)),
             "closest_match_username": closest_match_username,
         }

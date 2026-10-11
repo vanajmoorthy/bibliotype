@@ -16,7 +16,7 @@ import pandas as pd
 import requests
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import IntegrityError
+from django.db import DataError, IntegrityError
 from django.db.models import F
 from django.utils import timezone
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
@@ -32,7 +32,7 @@ from ...dna_constants import (
     STORYGRAPH_TAG_TO_GENRE,
     compute_contrariness,
 )
-from ...models import Author, Book, Genre
+from ...models import AnonymousUserSession, Author, Book, Genre, UserBook
 from ...percentile_engine import (
     calculate_community_means,
     calculate_percentiles_from_aggregates,
@@ -185,12 +185,43 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         # only runs once a book actually needs inline enrichment) and
         # lock-guarded so the start is exactly-once under concurrency.
         enrichment_budget = _EnrichmentBudget()
+        # Books this reader was already counted for by an earlier upload. A
+        # re-upload must not add another "reader" to Book.global_read_count,
+        # or niche-book stats drift for everyone.
+        previous_anon_session = None
+        if user:
+            already_counted_book_ids = set(UserBook.objects.filter(user=user).values_list("book_id", flat=True))
+        elif session_key:
+            previous_anon_session = AnonymousUserSession.objects.filter(session_key=session_key).first()
+            already_counted_book_ids = set(previous_anon_session.books_data) if previous_anon_session else set()
+        else:
+            already_counted_book_ids = set()
         with requests.Session() as session:
             session.headers.update({"User-Agent": settings.EXTERNAL_API_USER_AGENT})
 
+            def _csv_text(value, max_length=255):
+                # Blank cells arrive from pandas as NaN (a float), not "". Truncate
+                # to the model's max_length so an overlong cell can't DataError.
+                if value is None or (not isinstance(value, str) and pd.isna(value)):
+                    return ""
+                return str(value).strip()[:max_length].strip()
+
             def process_book_row(original_row):
-                author_name_from_csv = original_row.get("Author", "").strip()
-                title_from_csv = original_row.get("Title", "").strip()
+                # One malformed row must not fail the whole upload: log it and
+                # skip it the same way blank rows are skipped. Only bad-data errors
+                # are caught — infrastructure errors (DB down) still fail the task
+                # rather than quietly saving a DNA with books missing.
+                try:
+                    return _process_book_row(original_row)
+                except (DataError, ValueError, TypeError, OverflowError) as e:
+                    # exc_info so a real code bug (not bad data) shows its traceback.
+                    logger.warning(f"Skipping CSV row {original_row.get('Title')!r} that failed to sync", exc_info=True)
+                    failed_rows.append(e)
+                    return None, [], original_row
+
+            def _process_book_row(original_row):
+                author_name_from_csv = _csv_text(original_row.get("Author"))
+                title_from_csv = _csv_text(original_row.get("Title"))
 
                 if not author_name_from_csv or not title_from_csv:
                     return None, [], original_row
@@ -227,7 +258,8 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
                 # Only include fields with actual values to avoid overwriting enriched data with None
                 book_defaults = {}
-                if pd.notna(p := original_row.get("Number of Pages")) and int(p) > 0:
+                # Upper bound drops absurd page counts that would overflow the column.
+                if pd.notna(p := original_row.get("Number of Pages")) and 1 <= p < 100_000:
                     book_defaults["page_count"] = int(p)
                 if pd.notna(r := original_row.get("Average Rating")) and float(r) > 0:
                     book_defaults["average_rating"] = float(r)
@@ -333,7 +365,10 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                             with _INLINE_ENRICH_SEMAPHORE:
                                 if enrichment_budget.has_remaining():
                                     enrich_book_from_apis(book, session, slow_down=False, quick_mode=True)
-                                    enriched_inline = True
+                                    # Unstamped means the Google Books call failed (quota
+                                    # cooldown, 5xx, timeout), so hand it to the async task,
+                                    # which retries, instead of counting it as done.
+                                    enriched_inline = book.google_books_last_checked is not None
                         except Exception as e:
                             logger.warning(f"Inline enrichment failed for '{book.title}': {e}")
                     if not enriched_inline:
@@ -374,15 +409,16 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 else:
                     logger.debug(f"Book '{book.title}' recently enriched or complete. Skipping.")
 
-                Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
+                if book.pk not in already_counted_book_ids:
+                    Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
 
-                # Pull only the post-increment value back into the Python object.
-                # Niche-book stats (`book.global_read_count` reads downstream around
-                # the most-niche-book and NICHE_THRESHOLD aggregations) depend on
-                # this being current. `refresh_from_db(fields=[...])` avoids
-                # reloading large columns like cover_url / JSON blobs that didn't
-                # change.
-                book.refresh_from_db(fields=["global_read_count"])
+                    # Pull only the post-increment value back into the Python object.
+                    # Niche-book stats (`book.global_read_count` reads downstream around
+                    # the most-niche-book and NICHE_THRESHOLD aggregations) depend on
+                    # this being current. `refresh_from_db(fields=[...])` avoids
+                    # reloading large columns like cover_url / JSON blobs that didn't
+                    # change.
+                    book.refresh_from_db(fields=["global_read_count"])
 
                 genre_names = [g.name for g in book.genres.all()]
                 return book, genre_names, original_row
@@ -401,6 +437,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             # - `enrichment_budget`: lazy start is lock-guarded (exactly-once);
             #   has_remaining() reads are race-tolerant by design — at the
             #   boundary a few in-flight workers may each admit one extra book.
+            failed_rows = []  # list.append is thread-safe
             with ThreadPoolExecutor(max_workers=8) as executor:
                 results = []
                 processed = 0
@@ -413,6 +450,12 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     processed += 1
                     if progress_cb:
                         progress_cb(processed, total_books, "Syncing books")
+
+            if failed_rows:
+                logger.error(f"Skipped {len(failed_rows)} of {total_books} CSV rows that failed to sync")
+                # Every row failing points at a bug, not bad data: fail the upload.
+                if len(failed_rows) == total_books:
+                    raise failed_rows[0]
 
         # Goodreads `Bookshelves` (exact column name — NOT "Bookshelves with
         # positions", whose "(#N)" suffixes would break matching) carries
@@ -508,8 +551,6 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         # Store UserBook entries for registered users
         if user and results:
-            from ...models import UserBook
-
             # Collect current book IDs from this upload
             current_book_ids = {book.id for book, genres, original_row in results if book}
 
@@ -668,6 +709,8 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     previous_stats = existing_dna.get("user_stats")
             except ObjectDoesNotExist:
                 pass
+        elif previous_anon_session and previous_anon_session.dna_data:
+            previous_stats = previous_anon_session.dna_data.get("user_stats")
         update_analytics_from_stats(user_base_stats, previous_stats=previous_stats)
 
         # Percentiles stored here serve as a fallback for contexts that bypass
@@ -681,13 +724,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         niche_books_count = 0
         if user_book_objects:
-            user_book_objects.sort(key=lambda b: b.global_read_count)
+            # min(), not an in-place sort: user_book_objects keeps CSV order.
+            niche = min(user_book_objects, key=lambda b: b.global_read_count)
             most_niche_book = {
-                "title": user_book_objects[0].title,
-                "author": user_book_objects[0].author.name,
-                "read_count": user_book_objects[0].global_read_count,
-                "cover_url": user_book_objects[0].cover_url or _build_cover_url(user_book_objects[0].isbn13),
-                "initial": _cover_initial(user_book_objects[0].title),
+                "title": niche.title,
+                "author": niche.author.name,
+                "read_count": niche.global_read_count,
+                "cover_url": niche.cover_url or _build_cover_url(niche.isbn13),
+                "initial": _cover_initial(niche.title),
             }
             niche_books_count = sum(1 for b in user_book_objects if b.global_read_count <= NICHE_THRESHOLD)
 
@@ -952,7 +996,8 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         else:
             # Save anonymous session data
             if session_key:
-                save_anonymous_session_data(session_key, dna, user_book_objects, read_df)
+                book_row_pairs = [(book, original_row) for book, _, original_row in results if book]
+                save_anonymous_session_data(session_key, dna, book_row_pairs)
                 logger.info(f"Saved anonymous session data for session: {session_key}")
             logger.info("DNA generated for an anonymous user. Returning result for display")
             return dna

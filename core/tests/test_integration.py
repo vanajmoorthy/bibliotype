@@ -111,6 +111,8 @@ class BookEnrichmentIntegrationTests(TestCase):
         from core.tasks import enrich_book_task
 
         safe_cache_set("upload_nonce_42", "current-upload-id", timeout=3600)
+        # A completed enrichment stamps the book (an unstamped one is retried).
+        mock_enrich.side_effect = lambda b, *a, **kw: setattr(b, "google_books_last_checked", timezone.now())
 
         enrich_book_task.delay(self.book.id, user_id=42, upload_nonce="current-upload-id")
 
@@ -163,8 +165,6 @@ class BookEnrichmentIntegrationTests(TestCase):
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_enrich_book_task_marks_attempted_after_max_retries(self, mock_enrich):
         """When task exhausts max retries, book is marked as attempted so polling doesn't get stuck."""
-        from celery.exceptions import MaxRetriesExceededError
-
         from core.tasks import enrich_book_task
 
         # Simulate persistent API failures
@@ -172,13 +172,8 @@ class BookEnrichmentIntegrationTests(TestCase):
 
         self.assertIsNone(self.book.google_books_last_checked)
 
-        # Simulate a task instance where retries are already exhausted by patching
-        # the retry method to raise MaxRetriesExceededError directly
-        with patch.object(enrich_book_task, "retry", side_effect=MaxRetriesExceededError("max retries")):
-            try:
-                enrich_book_task.delay(self.book.id)
-            except Exception:
-                pass
+        # Run the final attempt: retries already exhausted.
+        enrich_book_task.apply(args=[self.book.id], retries=enrich_book_task.max_retries)
 
         self.book.refresh_from_db()
         # Book must be marked as attempted to prevent stuck-at-X% polling
@@ -545,6 +540,7 @@ class InlineEnrichmentDuringDnaTests(TransactionTestCase):
             # thread's own DB connection, like the real enrichment does.
             fantasy, _ = Genre.objects.get_or_create(name="fantasy")
             book.genres.add(fantasy)
+            book.google_books_last_checked = timezone.now()  # completed exchange
             return book, 1, 1
 
         mock_inline.side_effect = add_genre
@@ -998,30 +994,32 @@ class CreateUserbooksFromAnonymousSessionTests(TestCase):
             expires_at=timezone.now() + timezone.timedelta(days=7),
         )
 
-    @patch("core.services.top_books_service.calculate_and_store_top_books")
-    def test_creates_userbooks_and_marks_top_books(self, mock_calc_top):
-        """Happy path: UserBooks created, top books marked with positions."""
+    def test_creates_userbooks_with_ratings_and_at_most_five_top_books(self):
+        """UserBooks carry the anonymous ratings; top books come only from
+        calculate_and_store_top_books (no duplicate positions, never > 5)."""
         from core.tasks import _create_userbooks_from_anonymous_session
+
+        extra_books = [Book.objects.create(title=f"Extra {i}", author=self.author) for i in range(7)]
+        all_books = [self.book1, self.book2, self.book3, *extra_books]
+        self.anon_session.books_data = [b.id for b in all_books]
+        # Session's own top list disagrees with ratings — it must not be layered on top.
+        self.anon_session.top_books_data = [b.id for b in extra_books[:5]]
+        # JSONField stores keys as strings
+        self.anon_session.book_ratings = {str(self.book1.id): 5, str(self.book2.id): 4, str(self.book3.id): 2}
+        self.anon_session.save()
 
         _create_userbooks_from_anonymous_session(self.user, self.session_key)
 
-        # All 3 UserBooks should exist
-        self.assertEqual(UserBook.objects.filter(user=self.user).count(), 3)
+        self.assertEqual(UserBook.objects.filter(user=self.user).count(), 10)
+        self.assertEqual(UserBook.objects.get(user=self.user, book=self.book1).user_rating, 5)
+        self.assertEqual(UserBook.objects.get(user=self.user, book=self.book2).user_rating, 4)
+        self.assertEqual(UserBook.objects.get(user=self.user, book=self.book3).user_rating, 2)
+        self.assertIsNone(UserBook.objects.get(user=self.user, book=extra_books[0]).user_rating)
 
-        # Top books should be marked
-        ub1 = UserBook.objects.get(user=self.user, book=self.book1)
-        self.assertTrue(ub1.is_top_book)
-        self.assertEqual(ub1.top_book_position, 1)
-
-        ub2 = UserBook.objects.get(user=self.user, book=self.book2)
-        self.assertTrue(ub2.is_top_book)
-        self.assertEqual(ub2.top_book_position, 2)
-
-        # Non-top book
-        ub3 = UserBook.objects.get(user=self.user, book=self.book3)
-        self.assertFalse(ub3.is_top_book)
-
-        mock_calc_top.assert_called_once_with(self.user, limit=5)
+        top = UserBook.objects.filter(user=self.user, is_top_book=True)
+        self.assertEqual(top.count(), 5)
+        self.assertEqual(sorted(top.values_list("top_book_position", flat=True)), [1, 2, 3, 4, 5])
+        self.assertEqual(top.get(top_book_position=1).book, self.book1)
 
     @patch("core.services.top_books_service.calculate_and_store_top_books")
     def test_handles_missing_book_ids(self, mock_calc_top):
@@ -1300,3 +1298,47 @@ class GenreAliasPrecompileTests(TestCase):
         pattern, canonical_name = _COMPILED_ALIAS_PATTERNS[0]
         self.assertTrue(hasattr(pattern, "search"))
         self.assertIsInstance(canonical_name, str)
+
+
+@override_settings(
+    CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
+)
+class AnonymousSessionRatingPairingTests(TransactionTestCase):
+    """Anonymous uploads store each CSV rating against the book that row resolved to.
+
+    The niche-book stat used to sort user_book_objects in place by
+    global_read_count, and save_anonymous_session_data then zipped CSV rows
+    with that list by index — so ratings landed on the wrong books.
+    TransactionTestCase because calculate_full_dna's worker threads use their
+    own DB connections."""
+
+    CSV = (
+        "Title,Author,Exclusive Shelf,My Rating,Number of Pages,"
+        "Original Publication Year,Date Read,Average Rating,My Review,ISBN13\n"
+        "Popular Book,Pairing Author,read,5,300,2020,2023/01/10,4.0,,\n"
+        "Middling Book,Pairing Author,read,1,250,2019,2023/02/15,3.5,,\n"
+        "Obscure Book,Pairing Author,read,3,200,2018,2023/03/20,3.0,,\n"
+    )
+
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    def test_ratings_attach_to_their_own_books(self, mock_inline, mock_vibe, mock_enrich, mock_author):
+        from core.services.dna import calculate_full_dna
+
+        author = Author.objects.create(name="Pairing Author", normalized_name=Author._normalize("Pairing Author"))
+        # CSV order is the reverse of global_read_count order, so an in-place
+        # sort by read count would reverse the list.
+        popular = Book.objects.create(title="Popular Book", author=author, global_read_count=100)
+        middling = Book.objects.create(title="Middling Book", author=author, global_read_count=50)
+        obscure = Book.objects.create(title="Obscure Book", author=author, global_read_count=0)
+
+        dna = calculate_full_dna(self.CSV, session_key="pairing-session")
+
+        self.assertEqual(dna["most_niche_book"]["title"], "Obscure Book")
+        anon = AnonymousUserSession.objects.get(session_key="pairing-session")
+        ratings = {int(k): v for k, v in anon.book_ratings.items()}
+        self.assertEqual(ratings, {popular.id: 5, middling.id: 1, obscure.id: 3})
+        self.assertEqual(anon.top_books_data[0], popular.id)
+        self.assertNotIn(middling.id, anon.top_books_data[:2])

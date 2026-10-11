@@ -92,7 +92,7 @@ isort --profile black --line-length 120 .
 npx prettier --write "**/*.html"
 ```
 
-Config is in `pyproject.toml` (Black, isort) and `.prettierrc` (Prettier with jinja-template + tailwindcss plugins).
+Config is in `pyproject.toml` (Black, isort) and `.prettierrc.json` (Prettier with jinja-template + tailwindcss plugins).
 
 ## Architecture
 
@@ -107,7 +107,7 @@ CSV Upload → Celery Task (async) → DNA Analysis → Book/Author DB Sync
 - `core/services/` — Business logic (9 modules). Entry point: `dna_analyser.py:calculate_full_dna()`
 - `core/analytics/` — PostHog event tracking
 - `core/templates/core/partials/` — Reusable template components
-- `core/dna_constants.py` — Reader types, genre mappings, publisher hierarchies (~40KB)
+- `core/dna_constants.py` — Reader types, genre mappings, global averages
 
 **Non-obvious patterns:**
 - All views are function-based (no CBVs)
@@ -148,7 +148,7 @@ These load automatically when you work on matching files:
 
 Required: `SECRET_KEY`, `GEMINI_API_KEY`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` (or `DATABASE_URL`)
 
-Optional: `REDIS_CACHE_URL`, `CELERY_BROKER_URL`, `POSTHOG_API_KEY`, `GOOGLE_BOOKS_API_KEY`, `NYT_API_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DJANGO_ENV`
+Optional: `REDIS_CACHE_URL`, `CELERY_BROKER_URL`, `POSTHOG_API_KEY`, `GOOGLE_BOOKS_API_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DJANGO_ENV`
 
 See `.env.example` for the full list including email and Turnstile CAPTCHA config.
 

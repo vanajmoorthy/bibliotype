@@ -39,8 +39,8 @@
                 <div class="w-full max-w-2xl text-center" x-show="status !== 'FAILURE'">
                     {% include 'core/partials/cycling_messages.html' %}
                     <p class="mb-8 text-lg text-gray-600">
-                        We're analyzing your library and fetching details from the archives. This can take a minute or
-                        two. Please keep this page open — we'll redirect you as soon as it's ready!
+                        Analysing your library. This takes a minute or two, so keep this page open and we'll take you
+                        there when it's ready.
                     </p>
                     <div class="shadow-neo border-brand-text border-2 bg-white p-8">
                         <div class="flex justify-center">
@@ -363,7 +363,6 @@
                     function enrichmentPoller() {
                         return {
                             pending: true,
-                            showInfo: false,
                             bannerText: 'Enriching your library — {{ enrichment.percent }}% complete. ~{{ enrichment.remaining_minutes }} min remaining.',
                             interval: null,
                             intervalMs: 15000,
@@ -434,45 +433,6 @@
                     }
                 </script>
                 {% endif %}
-                <style>
-                    .fade-in-section {
-                        opacity: 0;
-                        transform: translateY(6px);
-                        transition:
-                            opacity 0.45s ease-out,
-                            transform 0.45s ease-out;
-                    }
-                    .fade-in-section.is-visible {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                </style>
-                <script>
-                    document.addEventListener("DOMContentLoaded", function () {
-                        const container = document.querySelector('[x-data="shareModalData()"]');
-                        if (!container) return;
-                        const sections = container.querySelectorAll(":scope > *");
-                        const observer = new IntersectionObserver(
-                            (entries) => {
-                                entries.forEach((entry) => {
-                                    if (entry.isIntersecting) {
-                                        entry.target.classList.add("is-visible");
-                                        entry.target.querySelectorAll(".scroll-fade-left, .scroll-fade-up").forEach((el) => el.classList.add("is-visible"));
-                                        observer.unobserve(entry.target);
-                                    }
-                                });
-                            },
-                            { threshold: 0.05 },
-                        );
-                        sections.forEach((s) => {
-                            if (s.tagName === "SCRIPT" || s.tagName === "STYLE") return;
-                            const rect = s.getBoundingClientRect();
-                            if (rect.top < window.innerHeight) return;
-                            s.classList.add("fade-in-section");
-                            observer.observe(s);
-                        });
-                    });
-                </script>
             </div>
         {% else %}
             <div class="flex h-full flex-col p-4">

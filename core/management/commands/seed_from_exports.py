@@ -15,8 +15,9 @@ Typical usage:
     manage.py seed_from_exports --download              # full corpus
     manage.py seed_from_exports --purge                 # remove seeded users
 
-Seeded users are identified by the `seed_` username prefix and the
-`@seed.bibliotype.invalid` email domain — there is no model flag.
+Seeded users are identified by their `seed_<file>@seed.bibliotype.invalid`
+email — there is no model flag. Their usernames are human-looking handles
+(see core/seed_names.py) because they surface in the UI as recs matches.
 
 Seeding runs with bulk_enrichment=True: enrichment is deferred to the
 rate-limited `enrichment_bulk` queue, so DNA is initially computed from
@@ -37,11 +38,12 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 
+from core.seed_names import seed_identity
 from core.services.dna import calculate_full_dna
 
 MANIFEST_PATH = Path(settings.BASE_DIR) / "core" / "seed_data" / "github_exports_manifest.json"
 DEFAULT_CSV_DIR = "csv/github_exports"
-USERNAME_PREFIX = "seed_"
+EMAIL_PREFIX = "seed_"
 SEED_EMAIL_DOMAIN = "seed.bibliotype.invalid"
 # Mirrors the cap in core.tasks.generate_reading_dna_task / core.views.MAX_UPLOAD_ROWS.
 MAX_ROWS = 50000
@@ -106,14 +108,17 @@ class Command(BaseCommand):
         processed = skipped = failed = 0
 
         for i, path in enumerate(files, start=1):
-            username = self._username_for(path)
-            user, created = User.objects.get_or_create(
-                username=username,
-                defaults={"email": f"{username}@{SEED_EMAIL_DOMAIN}"},
-            )
+            email = self._email_for(path)
+            user = User.objects.filter(email=email).first()
+            created = user is None
             if created:
+                first_name, handle = seed_identity(
+                    email, lambda name: User.objects.filter(username__iexact=name).exists()
+                )
+                user = User(username=handle, first_name=first_name, email=email)
                 user.set_unusable_password()
-                user.save(update_fields=["password"])
+                user.save()
+            username = user.username
 
             if not options["force"] and not created and user.userprofile.dna_data:
                 skipped += 1
@@ -153,9 +158,9 @@ class Command(BaseCommand):
 
     # --- helpers -----------------------------------------------------------
 
-    def _username_for(self, path):
+    def _email_for(self, path):
         stem = re.sub(r"[^a-z0-9_]+", "_", path.stem.lower()).strip("_")
-        return (USERNAME_PREFIX + stem)[:150]
+        return f"{(EMAIL_PREFIX + stem)[:200]}@{SEED_EMAIL_DOMAIN}"
 
     def _validate(self, csv_content, path):
         header, _, _ = csv_content.partition("\n")
@@ -193,7 +198,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Downloads: {fetched} fetched, {present} already present, {failures} failed.")
 
     def _purge(self):
-        seeded = User.objects.filter(username__startswith=USERNAME_PREFIX, email__endswith=f"@{SEED_EMAIL_DOMAIN}")
+        seeded = User.objects.filter(email__endswith=f"@{SEED_EMAIL_DOMAIN}")
         count = seeded.count()
         seeded.delete()
         self.stdout.write(self.style.SUCCESS(f"Purged {count} seeded users."))

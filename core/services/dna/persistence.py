@@ -79,8 +79,12 @@ def _save_dna_to_profile(profile, dna_data, dispatch_recommendations=True):
         raise
 
 
-def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_df):
-    """Save anonymous user data to temporary session storage"""
+def save_anonymous_session_data(session_key, dna_data, book_row_pairs):
+    """Save anonymous user data to temporary session storage.
+
+    book_row_pairs is a list of (Book, CSV row dict) tuples, each row paired with
+    the book it resolved to, so ratings and reviews attach to the right book.
+    """
     from datetime import timedelta
 
     from django.utils import timezone
@@ -88,32 +92,29 @@ def save_anonymous_session_data(session_key, dna_data, user_book_objects, read_d
     from ...models import AnonymousUserSession
 
     # Extract books and ratings
-    books_data = [book.id for book in user_book_objects if book]
+    books_data = [book.id for book, _ in book_row_pairs]
     book_ratings = {}  # Store ratings for rating correlation
 
     # Calculate top books for anonymous users based on ratings and reviews
     book_scores = []
     analyzer = SentimentIntensityAnalyzer()
 
-    for idx, row_dict in enumerate(read_df.to_dict("records")):
-        if idx < len(user_book_objects) and user_book_objects[idx]:
-            book = user_book_objects[idx]
+    for book, row_dict in book_row_pairs:
+        rating_int = None
+        rating = row_dict.get("My Rating")
+        if pd.notna(rating) and rating > 0:
+            try:
+                rating_int = int(rating)
+                book_ratings[book.id] = rating_int  # Store rating for correlation
+            except (ValueError, TypeError):
+                rating_int = None
 
-            rating_int = None
-            rating = row_dict.get("My Rating")
-            if pd.notna(rating) and rating > 0:
-                try:
-                    rating_int = int(rating)
-                    book_ratings[book.id] = rating_int  # Store rating for correlation
-                except (ValueError, TypeError):
-                    rating_int = None
+        sentiment = None
+        review = str(row_dict.get("My Review", "")).strip()
+        if review and len(review) > MIN_REVIEW_LENGTH_FOR_SENTIMENT:
+            sentiment = analyzer.polarity_scores(review)["compound"]
 
-            sentiment = None
-            review = str(row_dict.get("My Review", "")).strip()
-            if review and len(review) > MIN_REVIEW_LENGTH_FOR_SENTIMENT:
-                sentiment = analyzer.polarity_scores(review)["compound"]
-
-            book_scores.append((book.id, compute_book_score(rating_int, sentiment)))
+        book_scores.append((book.id, compute_book_score(rating_int, sentiment)))
 
     book_scores.sort(key=lambda x: x[1], reverse=True)
     top_books_data = [book_id for book_id, score in book_scores[:5]]

@@ -456,3 +456,87 @@ class ResolveGenreLabelsTests(TestCase):
         # The two resolvers must never disagree on the axis for the same book
         for names in (["classic fiction", "history"], ["fantasy"], ["classics", "biography"], []):
             self.assertEqual(set(resolve_genre_labels(names)), set(resolve_genre_names(names)))
+
+
+class CorpusMinedAliasTests(TestCase):
+    """Aliases added from the 2026-09 github-exports corpus mining pass.
+
+    Each entry was a high-frequency Open Library subject that fell through the
+    alias table (weights = sum of per-library occurrences over 197 exports).
+    """
+
+    def _assert_maps(self, expected_canonical, aliases):
+        for alias in aliases:
+            self.assertEqual(
+                CANONICAL_GENRE_MAP.get(alias),
+                expected_canonical,
+                f"Alias '{alias}' should map to '{expected_canonical}', got '{CANONICAL_GENRE_MAP.get(alias)}'",
+            )
+
+    def test_literary_fiction_compounds(self):
+        # "fiction / literary" is the unsplit GB-style compound OL also emits
+        self._assert_maps("literary fiction", ["fiction / literary", "domestic fiction"])
+
+    def test_modern_fiction_stays_excluded(self):
+        # Broad like "contemporary fiction": aliasing it would tag genre novels literary
+        self.assertIn("modern fiction", EXCLUDED_GENRES)
+        self.assertNotIn("modern fiction", CANONICAL_GENRE_MAP)
+
+    def test_political_fiction_maps_to_literary(self):
+        self._assert_maps("literary fiction", ["political fiction"])
+
+    def test_science_fiction_subjects(self):
+        self._assert_maps(
+            "science fiction",
+            ["interplanetary voyages", "human-alien encounters", "ciencia-ficción", "ciencia ficción"],
+        )
+
+    def test_fantasy_subjects_incl_foreign_editions(self):
+        self._assert_maps("fantasy", ["fantastic fiction", "magia", "magie", "magos", "sorciers", "magiciens"])
+
+    def test_young_adult_and_children(self):
+        self._assert_maps("young adult fiction", ["school stories", "novela juvenil"])
+        self._assert_maps("children's fiction", ["child and youth fiction"])
+
+    def test_personal_finance_is_self_help(self):
+        self._assert_maps("self-help", ["personal finance", "finance, personal"])
+
+
+class GoogleBooksCompoundCategoryTests(TestCase):
+    """GB "A / B" categories also match their first two segments as an exact compound alias."""
+
+    def test_fiction_literary_compound_yields_literary_fiction(self):
+        from core.services.book_enrichment_service import _canonicalize_google_books_categories
+
+        # Split alone gives set(): "Fiction" and "Literary" are both excluded
+        self.assertIn("literary fiction", _canonicalize_google_books_categories(["Fiction / Literary"]))
+        self.assertIn("literary fiction", _canonicalize_google_books_categories(["Fiction / Literary / General"]))
+
+    def test_split_parts_still_match(self):
+        from core.services.book_enrichment_service import _canonicalize_google_books_categories
+
+        self.assertIn("fantasy", _canonicalize_google_books_categories(["Juvenile Fiction / Fantasy"]))
+        self.assertIn("history", _canonicalize_google_books_categories(["History / Ancient / Rome"]))
+
+    def test_compound_does_not_leak_aliases_from_inside_segments(self):
+        from core.services.book_enrichment_service import _canonicalize_google_books_categories
+
+        # Whole-string regex search would tag YA onto every "Juvenile Fiction" book
+        # ("juvenile fiction" is excluded on purpose)
+        self.assertEqual(_canonicalize_google_books_categories(["Juvenile Fiction / General"]), set())
+        self.assertEqual(
+            _canonicalize_google_books_categories(["Juvenile Fiction / Fantasy & Magic"]),
+            _canonicalize_google_books_categories(["Fantasy & Magic"]),
+        )
+
+    def test_existing_historical_compound_now_matches(self):
+        from core.services.book_enrichment_service import _canonicalize_google_books_categories
+
+        self.assertIn("historical fiction", _canonicalize_google_books_categories(["Fiction / Historical / General"]))
+
+    def test_fiction_compounds_stay_on_the_fiction_axis(self):
+        from core.services.book_enrichment_service import _canonicalize_google_books_categories
+
+        # "Fiction / X" is always a novel; these used to map to psychology / biography
+        self.assertEqual(_canonicalize_google_books_categories(["Fiction / Psychological"]), {"literary fiction"})
+        self.assertEqual(_canonicalize_google_books_categories(["Fiction / Biographical"]), {"historical fiction"})

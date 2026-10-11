@@ -245,7 +245,6 @@ class TaskMetaTests(TestCase):
 
         self.assertEqual(meta["similar_users_count"], 2)
         self.assertEqual(meta["max_similarity_pct"], 80)
-        self.assertEqual(meta["min_overlap_pct"], 30)
         # Strong best match -> no badge fields
         self.assertNotIn("uniqueness_label", meta)
 

@@ -23,10 +23,6 @@ _configured = False
 _warned_missing_key = False
 
 
-def is_configured() -> bool:
-    return bool(settings.GEMINI_API_KEY)
-
-
 def client():
     """Return a configured `GenerativeModel`, or `None` if no API key is set."""
     global _configured, _warned_missing_key

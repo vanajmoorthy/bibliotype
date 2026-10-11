@@ -6,6 +6,8 @@ match deterministically instead of calling .get() (which raised
 MultipleObjectsReturned → HTTP 500 for both accounts).
 """
 
+from unittest.mock import patch
+
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
@@ -36,3 +38,10 @@ class LoginDuplicateEmailTests(TestCase):
         response = self.client.post(self.url, {"username": "dup@example.com", "password": "firstpw123!"})
         # The earliest (ordered by id) account authenticates and is redirected.
         self.assertEqual(response.status_code, 302)
+
+    def test_unknown_email_still_runs_password_hasher(self):
+        # Without a dummy hash, unknown emails return measurably faster and leak which emails are registered.
+        with patch("core.views.auth.User.set_password") as set_password:
+            response = self.client.post(self.url, {"username": "nobody@example.com", "password": "whatever123!"})
+        self.assertEqual(response.status_code, 200)
+        set_password.assert_called_once_with("whatever123!")

@@ -15,27 +15,6 @@
                         Enriching your library — {{ enrichment.percent }}% complete. ~{{ enrichment.remaining_minutes }}
                         min remaining.
                     </span>
-                    <button
-                        @click="showInfo = !showInfo"
-                        class="border-brand-text/40 hover:bg-brand-yellow/50 ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border text-sm leading-none"
-                        title="Why?"
-                    >
-                        i
-                    </button>
-                    <div
-                        x-show="showInfo"
-                        x-cloak
-                        @click.away="showInfo = false"
-                        class="border-brand-text/20 mx-auto mt-2 max-w-lg rounded border bg-white/90 p-2 text-left text-sm leading-relaxed"
-                    >
-                        {% if enrichment.csv_source == "storygraph" %}
-                            StoryGraph exports don't include genre or page count data, so we fetch this from Open
-                            Library and Google Books in the background.
-                        {% else %}
-                            We're fetching genre data for your books from Open Library and Google Books in the
-                            background.
-                        {% endif %}
-                    </div>
                 </div>
             </template>
         {% endif %}

@@ -207,13 +207,12 @@ def calculate_user_similarity_from_context(ctx1, ctx2):
         weights["shared_correlation"] = 0.35 * confidence
     else:
         weights["shared_correlation"] = 0
-        shared_rated_count = shared_rated_count if correlation is not None else 0
 
     # 2. Jaccard (book overlap)
     intersection = ctx1["book_ids"] & ctx2["book_ids"]
     union = ctx1["book_ids"] | ctx2["book_ids"]
     components["jaccard"] = len(intersection) / len(union) if union else 0
-    weights["jaccard"] = 0.15 if correlation is not None else 0.25
+    weights["jaccard"] = 0.15 if weights["shared_correlation"] > 0 else 0.25
 
     # 3. Top books overlap
     top1 = ctx1["top_book_ids"]
@@ -438,7 +437,8 @@ def calculate_anonymous_similarity_with_context(anonymous_session, user_ctx):
     anon_top_books = set(anonymous_session.top_books_data or [])
     anon_genres = _canonicalize_genre_counter(anonymous_session.genre_distribution or {})
     anon_authors = Counter(anonymous_session.author_distribution or {})
-    anon_ratings = getattr(anonymous_session, "book_ratings", None) or {}
+    # JSONField round-trips dict keys as strings; user_ctx book ids are ints.
+    anon_ratings = {int(k): v for k, v in (getattr(anonymous_session, "book_ratings", None) or {}).items()}
 
     user_books = user_ctx["book_ids"]
     user_ratings = user_ctx["book_ratings"]

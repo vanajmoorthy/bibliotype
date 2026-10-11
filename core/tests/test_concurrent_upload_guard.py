@@ -106,3 +106,160 @@ class ConcurrentUploadGuardTests(TransactionTestCase):
 
         # Task ran inline and deleted the marker as part of saving the DNA.
         self.assertIsNone(safe_cache_get(self.marker_key))
+
+    @patch("core.views.upload.generate_reading_dna_task.delay")
+    def test_two_racing_posts_dispatch_one_task(self, mock_delay):
+        """Two posts whose guard checks interleave (both read before either
+        writes) must still start only one task — the marker is claimed atomically."""
+        mock_delay.return_value = MagicMock(id="new-task-id")
+
+        # Simulate the race window: any read of the marker sees "not set yet".
+        with patch("core.views.upload.safe_cache_get", return_value=None):
+            self.client.post(reverse("core:upload"), {"csv_file": _csv_file()})
+            self.client.post(reverse("core:upload"), {"csv_file": _csv_file()})
+
+        mock_delay.assert_called_once()
+
+    def test_failed_task_clears_marker(self):
+        """A task that fails (no books on the read shelf → ValueError) releases
+        the marker so the user can re-upload straight away."""
+        header = "Title,Author,Exclusive Shelf"
+        csv = SimpleUploadedFile("goodreads.csv", f"{header}\nSome Book,Someone,to-read".encode(), "text/csv")
+
+        self.client.post(reverse("core:upload"), {"csv_file": csv})
+
+        self.assertIsNone(safe_cache_get(self.marker_key))
+
+    def test_task_rearms_marker_when_it_starts(self):
+        """Queue wait must not eat the marker's TTL: the task re-sets it on start."""
+        from core.tasks import generate_reading_dna_task
+
+        seen = {}
+
+        def fake_calculate(*args, **kwargs):
+            seen["marker"] = safe_cache_get(self.marker_key)
+            raise ValueError("stop here")
+
+        with patch("core.tasks.dna.calculate_full_dna", side_effect=fake_calculate):
+            generate_reading_dna_task.apply(args=("Title\n", self.user.id))
+
+        self.assertEqual(seen["marker"], "1")
+
+    @patch("core.views.upload.generate_reading_dna_task.delay")
+    def test_uppercase_csv_extension_accepted(self, mock_delay):
+        mock_delay.return_value = MagicMock(id="new-task-id")
+        upload = _csv_file()
+        upload.name = "export.CSV"
+
+        self.client.post(reverse("core:upload"), {"csv_file": upload})
+
+        mock_delay.assert_called_once()
+
+
+@override_settings(
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
+)
+class DnaStatusTimeoutTests(TransactionTestCase):
+    """check_dna_status_view stops polling an upload task whose worker died."""
+
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.client = Client()
+        self.user = User.objects.create_user(username="poll", password="x", email="poll@example.com")
+        self.client.force_login(self.user)
+        self.user.userprofile.pending_dna_task_id = "dead-task-id"
+        self.user.userprofile.save(update_fields=["pending_dna_task_id"])
+
+    def tearDown(self):
+        from django.db import connections
+
+        connections.close_all()
+
+    def _poll(self):
+        pending = MagicMock(state="PENDING", info=None)
+        with patch("core.views.upload.AsyncResult", return_value=pending):
+            return self.client.get(reverse("core:api_check_dna_status")).json()
+
+    def test_upload_task_without_marker_times_out(self):
+        safe_cache_set(f"dna_upload_task_{self.user.id}", "dead-task-id")  # marker absent: worker died
+
+        self.assertEqual(self._poll()["status"], "FAILURE")
+        self.user.userprofile.refresh_from_db()
+        self.assertIsNone(self.user.userprofile.pending_dna_task_id)
+
+    def test_upload_task_without_marker_fails_even_with_older_dna(self):
+        """Older DNA must not make a dead upload look like it succeeded."""
+        safe_cache_set(f"dna_upload_task_{self.user.id}", "dead-task-id")
+        self.user.userprofile.dna_data = {"reader_type": "Old"}
+        self.user.userprofile.save(update_fields=["dna_data"])
+
+        self.assertEqual(self._poll()["status"], "FAILURE")
+
+    def test_upload_task_with_marker_still_pending(self):
+        safe_cache_set(f"dna_upload_task_{self.user.id}", "dead-task-id")
+        safe_cache_set(f"dna_task_inflight_{self.user.id}", "1")
+
+        self.assertEqual(self._poll()["status"], "PENDING")
+
+    def test_claim_task_is_not_timed_out(self):
+        """A signup claim sets no marker; its pending id must keep polling."""
+        self.assertEqual(self._poll()["status"], "PENDING")
+
+
+@override_settings(
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
+)
+class BadRowUploadTests(TransactionTestCase):
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        self.client = Client()
+        self.user = User.objects.create_user(username="rows", password="x", email="rows@example.com")
+        self.client.force_login(self.user)
+
+    def tearDown(self):
+        from django.db import connections
+
+        connections.close_all()
+
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    def test_blank_author_and_overlong_title_do_not_fail_upload(self, mock_enrich, mock_vibe):
+        from core.models import Book
+
+        mock_enrich.return_value = (None, 0, 0)
+        long_title = "L" * 300
+        csv = (
+            "Title,Author,Exclusive Shelf,My Rating,Number of Pages,Date Read\n"
+            "Good Book,Good Author,read,5,150,2023/01/15\n"
+            "No Author Book,,read,4,200,2023/02/15\n"
+            f"{long_title},Long Author,read,3,99999999999,2023/03/15\n"
+        )
+        upload = SimpleUploadedFile("goodreads.csv", csv.encode(), content_type="text/csv")
+
+        self.client.post(reverse("core:upload"), {"csv_file": upload})
+
+        self.user.userprofile.refresh_from_db()
+        self.assertIsNotNone(self.user.userprofile.dna_data)
+        self.assertTrue(Book.objects.filter(title="L" * 255).exists())
+
+    def test_every_row_failing_fails_the_upload(self):
+        """If no row syncs, it's a bug rather than bad data: don't save an empty DNA."""
+        from core.models import Author
+
+        upload = SimpleUploadedFile(
+            "goodreads.csv",
+            b"Title,Author,Exclusive Shelf,My Rating,Date Read\nA Book,An Author,read,5,2023/01/15\n",
+            content_type="text/csv",
+        )
+
+        with patch.object(Author.objects, "get_or_create", side_effect=TypeError("bug")):
+            self.client.post(reverse("core:upload"), {"csv_file": upload})
+
+        self.user.userprofile.refresh_from_db()
+        self.assertIsNone(self.user.userprofile.dna_data)

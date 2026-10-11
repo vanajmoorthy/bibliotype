@@ -1,32 +1,32 @@
 {% load dna_extras %}
 <div class="border-brand-text shadow-neo border-2 bg-white p-6">
-    <div class="grid grid-cols-1 gap-6 text-lg md:grid-cols-2">
-        <div>
+    <div class="grid grid-cols-1 gap-x-6 gap-y-2 text-lg md:grid-cols-2">
+        <div class="row-span-3 grid grid-rows-subgrid">
             <h2 class="text-2xl font-bold uppercase">Most Positive Review</h2>
             {% if dna.most_positive_review %}
-                <p class="mt-2 font-bold">
+                <p class="font-bold">
                     {{ dna.most_positive_review.Title }}{% if dna.most_positive_review.Author %} <span class="font-normal">— {{ dna.most_positive_review.Author }}</span>{% endif %}
                 </p>
                 {# Review text is sanitized at ingestion; strip_review_html also cleans legacy stored DNA - never use |safe here #}
-                <blockquote class="border-brand-text shadow-neo-sm mt-2 border-2 bg-brand-green p-3">
+                <blockquote class="border-brand-text shadow-neo-sm self-start border-2 bg-brand-green p-3">
                     "{{ dna.most_positive_review.my_review|strip_review_html|linebreaksbr }}"
                 </blockquote>
             {% else %}
-                <p class="mt-2">No reviews found.</p>
+                <p>No reviews found.</p>
             {% endif %}
         </div>
-        <div>
+        <div class="row-span-3 mt-4 grid grid-rows-subgrid md:mt-0">
             <h2 class="text-2xl font-bold uppercase">Most Negative Review</h2>
             {% if dna.most_negative_review %}
-                <p class="mt-2 font-bold">
+                <p class="font-bold">
                     {{ dna.most_negative_review.Title }}{% if dna.most_negative_review.Author %} <span class="font-normal">— {{ dna.most_negative_review.Author }}</span>{% endif %}
                 </p>
                 {# Review text is sanitized at ingestion; strip_review_html also cleans legacy stored DNA - never use |safe here #}
-                <blockquote class="border-brand-text shadow-neo-sm mt-2 border-2 bg-brand-orange p-3">
+                <blockquote class="border-brand-text shadow-neo-sm self-start border-2 bg-brand-orange p-3">
                     "{{ dna.most_negative_review.my_review|strip_review_html|linebreaksbr }}"
                 </blockquote>
             {% else %}
-                <p class="mt-2">No reviews found.</p>
+                <p>No reviews found.</p>
             {% endif %}
         </div>
     </div>

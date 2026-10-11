@@ -399,10 +399,10 @@ def _enrich_dna_for_display(dna_data):
         comm_len = community.get("avg_book_length")
         if comm_len and user_len >= comm_len:
             comparative_text["length_direction"] = "longer"
-            comparative_text["length_pct"] = round(len_pct, 1)
+            comparative_text["length_pct"] = round(len_pct)
         else:
             comparative_text["length_direction"] = "shorter"
-            comparative_text["length_pct"] = round(100 - len_pct, 1)
+            comparative_text["length_pct"] = round(100 - len_pct)
 
         # Book age
         year_pct = percentiles.get("avg_publish_year", 50)
@@ -410,10 +410,10 @@ def _enrich_dna_for_display(dna_data):
         comm_year = community.get("avg_publish_year")
         if comm_year and user_year <= comm_year:
             comparative_text["age_direction"] = "older"
-            comparative_text["age_pct"] = round(year_pct, 1)
+            comparative_text["age_pct"] = round(year_pct)
         else:
             comparative_text["age_direction"] = "newer"
-            comparative_text["age_pct"] = round(100 - year_pct, 1)
+            comparative_text["age_pct"] = round(100 - year_pct)
 
         # Books per year
         bpy_pct = percentiles.get("avg_books_per_year", 50)
@@ -421,10 +421,10 @@ def _enrich_dna_for_display(dna_data):
         comm_bpy = community.get("avg_books_per_year")
         if comm_bpy and user_bpy >= comm_bpy:
             comparative_text["bpy_direction"] = "more"
-            comparative_text["bpy_pct"] = round(bpy_pct, 1)
+            comparative_text["bpy_pct"] = round(bpy_pct)
         else:
             comparative_text["bpy_direction"] = "fewer"
-            comparative_text["bpy_pct"] = round(100 - bpy_pct, 1)
+            comparative_text["bpy_pct"] = round(100 - bpy_pct)
 
     dna_data["comparative_text"] = comparative_text
 
@@ -508,3 +508,47 @@ def _expand_book_dict(rec, badge_color_map):
         "author": {"name": rec.get("book_author", "Unknown Author")},
         "average_rating": rec.get("book_average_rating"),
     }
+
+
+def _resolve_rec_source_names(recommendations, recommendations_meta=None, owner_name=None):
+    """Name other readers on rec cards only if their profile is public *now*, by current username.
+
+    Stored recs/meta snapshot usernames at generation time, so they go stale when a reader renames,
+    deletes their account or goes private. Resolve by user id at render time; anything not public
+    renders unnamed. Returns a copy of recommendations_meta; recommendations are updated in place.
+    """
+    from django.contrib.auth.models import User
+
+    meta = dict(recommendations_meta or {})
+    similar_sources = [
+        s
+        for rec in recommendations
+        for s in rec.get("sources", [])
+        if s.get("type") == "similar_user" and s.get("user_id")
+    ]
+    closest = max(similar_sources, key=lambda s: s.get("similarity_score", 0), default=None)
+    primaries = [rec["primary_source_user"] for rec in recommendations if rec.get("primary_source_user")]
+
+    ids = {s.get("user_id") for s in primaries if s.get("user_id")}
+    if closest:
+        ids.add(closest["user_id"])
+    public_names = (
+        dict(User.objects.filter(id__in=ids, userprofile__is_public=True).values_list("id", "username")) if ids else {}
+    )
+
+    for source in primaries:
+        source["username"] = public_names.get(source.get("user_id"))
+    if "closest_match_username" in meta:
+        meta["closest_match_username"] = public_names.get(closest["user_id"]) if closest else None
+
+    # The public-page "X and Y share N books" line must never name the other reader.
+    for rec in recommendations:
+        components = rec.get("explanation_components") or {}
+        if "shared_public" in components:
+            shared = (rec.get("primary_source_user") or {}).get("shared_books")
+            if owner_name and shared:
+                components["shared_public"] = f"{owner_name} and this reader share {shared} books in common"
+            else:
+                components.pop("shared_public")
+
+    return meta

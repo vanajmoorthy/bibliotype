@@ -230,7 +230,8 @@ def _build_anonymous_context(anon_session):
     top_books = set(anon_session.top_books_data or [])
 
     # Use getattr for backwards compatibility if migration hasn't run yet
-    book_ratings = getattr(anon_session, "book_ratings", None) or {}
+    # JSONField round-trips dict keys as strings; book ids are ints everywhere else.
+    book_ratings = {int(k): v for k, v in (getattr(anon_session, "book_ratings", None) or {}).items()}
 
     disliked_book_ids = {book_id for book_id, rating in book_ratings.items() if rating <= 2}
 
@@ -798,13 +799,13 @@ def _add_explanations(recommendations, context):
         # --- Component 1: Shared Books ---
         if best_source["type"] == "similar_user":
             shared_count = best_source.get("shared_books", 0)
-            recommender_name = best_source.get("username", "")
             if shared_count > 1:  # Only show if there's a meaningful overlap
                 rec["explanation_components"]["shared"] = f"You share {shared_count} books in common"
-                if owner_name and recommender_name:
+                # Never name the other reader here: this line renders on the public profile.
+                if owner_name:
                     rec["explanation_components"][
                         "shared_public"
-                    ] = f"{owner_name} and {recommender_name} share {shared_count} books in common"
+                    ] = f"{owner_name} and this reader share {shared_count} books in common"
                 else:
                     rec["explanation_components"]["shared_public"] = f"They share {shared_count} books in common"
 

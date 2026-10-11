@@ -1,23 +1,33 @@
 name: Deploy to DigitalOcean
+# Deploy only after the test workflow passes on a push to main. Previously
+# this ran on push in parallel with the tests, so a red build still shipped.
+# `branches` matches the CI run's head branch, so a fork PR from a branch named
+# main also gets here; the job's event check drops it.
 on:
-    push:
-        branches:
-            - main
-
-# Serialize deploys: two quick merges used to run `docker compose up
-# --force-recreate` on the droplet concurrently, colliding and leaving every
-# container wedged in "Created" (prod 502'd on 2026-09-02). Queue instead —
-# and never cancel an in-flight deploy mid-recreate.
-concurrency:
-    group: production-deploy
-    cancel-in-progress: false
+    workflow_run:
+        workflows: ["Django CI"]
+        types: [completed]
+        branches: [main]
 
 jobs:
     deploy:
+        if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+        # Serialize deploys: two quick merges used to run `docker compose up
+        # --force-recreate` on the droplet concurrently, colliding and leaving every
+        # container wedged in "Created" (prod 502'd on 2026-09-02). Queue instead —
+        # and never cancel an in-flight deploy mid-recreate. Job-level so runs
+        # skipped by the `if` (failed CI, fork PRs) never take the queue slot and
+        # cancel a pending real deploy.
+        concurrency:
+            group: production-deploy
+            cancel-in-progress: false
         runs-on: ubuntu-latest
         steps:
+            # Check out the exact commit the tests ran on, not whatever main is now.
             - name: Checkout code
               uses: actions/checkout@v4
+              with:
+                  ref: ${{ github.event.workflow_run.head_sha }}
 
             - name: Login to Docker Hub
               uses: docker/login-action@v3
@@ -49,8 +59,19 @@ jobs:
                   script: |
                       cd /home/bibliotype/app
 
+                      DEPLOY_SHA=${{ github.event.workflow_run.head_sha }}
                       git fetch origin main
-                      git reset --hard origin/main
+
+                      # Test runs can finish out of order. Never roll prod back to a
+                      # commit older than the one already deployed (its image could
+                      # predate migrations that have since been applied).
+                      if [ "$(git rev-parse HEAD)" != "$DEPLOY_SHA" ] && git merge-base --is-ancestor "$DEPLOY_SHA" HEAD; then
+                          echo "$DEPLOY_SHA is older than the deployed commit; skipping."
+                          exit 0
+                      fi
+
+                      # Same commit as the image, so compose file and code match.
+                      git reset --hard "$DEPLOY_SHA"
 
                       export IMAGE_TAG=${{ steps.vars.outputs.sha_short }}
                       export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
@@ -60,7 +81,10 @@ jobs:
 
                       docker pull $DOCKERHUB_USERNAME/bibliotype:$IMAGE_TAG
 
-                      docker compose -f docker-compose.prod.yml up -d --force-recreate
+                      # No --force-recreate: only services whose config changed are
+                      # recreated (web/worker: new IMAGE_TAG each commit). Recreating
+                      # redis (no volume) wiped queued tasks and in-flight uploads.
+                      docker compose -f docker-compose.prod.yml up -d
 
                       echo "Fixing static file permissions..."
                       sudo chown -R bibliotype:www-data /home/bibliotype/app/staticfiles/

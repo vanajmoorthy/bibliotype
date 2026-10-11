@@ -204,51 +204,6 @@ READER_TYPE_COLORS = {
 }
 
 
-MAINSTREAM_PUBLISHERS_HIERARCHY = {
-    "Penguin Random House": [
-        "Penguin Books",
-        "Random House",
-        "Viking Press",
-        "G. P. Putnam's Sons",
-        "Knopf Doubleday",
-        "Crown Publishing",
-        "Ballantine Books",
-        "Bantam Dell",
-        "Dutton",
-        "Berkley",
-        "Riverhead Books",
-        "Vintage Books",
-        "Anchor Books",
-        "Signet",
-    ],
-    "Hachette Livre": [
-        "Hachette",
-        "Grand Central Publishing",
-        "Little, Brown and Company",
-        "Orbit Books",
-        "Orion Publishing Group",
-        "Perseus Books Group",
-    ],
-    "HarperCollins": [
-        "Harper",
-        "William Morrow",
-        "Avon Books",
-        "Harlequin Enterprises",
-        "Ecco Press",
-        "Harvill Secker",
-    ],
-    "Macmillan Publishers": ["Macmillan", "Farrar, Straus and Giroux", "St. Martin's Press", "Tor Books", "Picador"],
-    "Simon & Schuster": ["Simon and Schuster", "Scribner", "Atria Books", "Gallery Books"],
-    # Other Major Standalones
-    "Bloomsbury Publishing": ["Bloomsbury"],
-    "Scholastic Corporation": ["Scholastic"],
-    "Oxford University Press": ["Oxford University Press"],
-    "Pearson Education": ["Pearson Education", "Prentice Hall"],
-    "John Wiley & Sons": ["Wiley"],
-    "Routledge": ["Routledge"],
-    "Grove Atlantic": ["Grove Press"],
-}
-
 GENRE_ALIASES = {
     # --- FICTION ---
     "fantasy": {
@@ -256,6 +211,13 @@ GENRE_ALIASES = {
         "epic fantasy",
         "high fantasy",
         "wizards",
+        # Corpus-mined (2026-09): frequent OL subjects incl. ES/FR editions
+        "fantastic fiction",
+        "magia",
+        "magie",
+        "magos",
+        "sorciers",
+        "magiciens",
         "magic",
         "urban fantasy",
         "magical realism",
@@ -289,6 +251,11 @@ GENRE_ALIASES = {
         "time travel",
         "science fiction, american",
         "utopias",
+        # Corpus-mined (2026-09)
+        "interplanetary voyages",
+        "human-alien encounters",
+        "ciencia-ficción",
+        "ciencia ficción",
         "the future",
         "artificial intelligence",
         "hainish cycle",
@@ -347,6 +314,12 @@ GENRE_ALIASES = {
     "literary fiction": {
         "contemporary literary fiction",
         "literary novels",
+        # Corpus-mined (2026-09): OL keeps GB-style compound as one subject
+        "fiction / literary",
+        # "Fiction / X" is always a novel: keep it off the nonfiction axis (was psychology)
+        "fiction / psychological",
+        "domestic fiction",
+        "political fiction",
     },
     "poetry": {
         "poems",
@@ -384,6 +357,8 @@ GENRE_ALIASES = {
         "trojan war",
         "fiction, historical, general",
         "fiction / historical",
+        # Biographical novels (was biography, a nonfiction genre)
+        "fiction / biographical",
         "rome, fiction",
         "war stories",
         "world war i",
@@ -450,6 +425,9 @@ GENRE_ALIASES = {
         "runaway teenagers",
         "teenage boys",
         "youth, fiction",
+        # Corpus-mined (2026-09)
+        "school stories",
+        "novela juvenil",
     },
     "young adult nonfiction": {
         "juvenile nonfiction",
@@ -461,6 +439,8 @@ GENRE_ALIASES = {
         "boys",
         "children's plays",
         "children's plays, english",
+        # Corpus-mined (2026-09)
+        "child and youth fiction",
     },
     # Classification label only — resolved from "children's fiction" at analysis time.
     "children's nonfiction": set(),
@@ -528,7 +508,6 @@ GENRE_ALIASES = {
         "authors, biography",
         "cancer, patients, biography",
         "terminally ill, biography",
-        "fiction / biographical",
     },
     "history": {
         "history",
@@ -551,7 +530,6 @@ GENRE_ALIASES = {
         "mental illness",
         "neuropsychology",
         "cognitive neuroscience",
-        "fiction / psychological",
         "recollection (psychology)",
         "aversion therapy",
         "behavior",
@@ -632,6 +610,9 @@ GENRE_ALIASES = {
         "maturity",
         "conduct of life",
         "conduct of life, fiction",
+        # Corpus-mined (2026-09): Rich Dad Poor Dad-class subjects
+        "personal finance",
+        "finance, personal",
     },
     "science": {
         "science",
@@ -1824,7 +1805,7 @@ CONTRARINESS_SCALE = [
     (1.5, "Wildly contrarian", "bg-brand-pink"),
     (1.0, "Very contrarian", "bg-brand-orange"),
     (0.6, "Moderately contrarian", "bg-brand-yellow"),
-    (0.3, "Mildly contrarian", "bg-brand-cyan"),
+    (0.3, "Slightly contrarian", "bg-brand-cyan"),
     (0.0, "Aligned with consensus", "bg-brand-green"),
 ]
 

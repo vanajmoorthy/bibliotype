@@ -127,12 +127,28 @@ def _canonicalize_google_books_categories(categories):
     Google Books categories are often more accurate than Open Library subjects.
     They come formatted like: "Fiction / Literary" or "History / Ancient / Rome",
     so we split on `/` first and then delegate to `_clean_and_canonicalize_genres`.
+
+    A compound like "Fiction / Literary" splits into two individually-excluded
+    tokens but carries a real signal as a pair, so the first two segments are
+    also looked up as an exact compound alias ("fiction / literary"). Exact
+    lookup, not the regex search: searching the whole string would let any
+    alias inside any segment win ("Fiction / Psychological" -> psychology).
     """
     if not categories:
         return set()
 
     flat = [part for cat in categories for part in cat.split("/")]
-    return _clean_and_canonicalize_genres(flat)
+    genres = _clean_and_canonicalize_genres(flat)
+
+    for cat in categories:
+        if "/" not in cat:
+            continue
+        compound = " / ".join(part.strip().lower() for part in cat.split("/")[:2])
+        canonical_name = CANONICAL_GENRE_MAP.get(compound)
+        if canonical_name and canonical_name not in EXCLUDED_GENRES:
+            genres.add(canonical_name)
+
+    return genres
 
 
 def get_book_details_for_seeder(title: str, author: str, session: requests.Session) -> dict:
@@ -345,12 +361,14 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
         res.raise_for_status()
         data = res.json()
 
-        if data.get("totalItems", 0) == 0:
+        # totalItems can be non-zero while "items" is absent, so key off items.
+        items = data.get("items") or []
+        if not items:
             logger.debug(f"Google Books: Not found for '{book.title}'")
             track_external_api_call("google_books", book.pk, book.title, "not_found")
             return {}, 1
 
-        volume_info = data["items"][0].get("volumeInfo", {})
+        volume_info = items[0].get("volumeInfo", {})
 
         result = {
             "ratings_count": volume_info.get("ratingsCount"),

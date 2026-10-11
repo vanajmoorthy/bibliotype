@@ -34,7 +34,6 @@ RUN poetry install --no-root --no-interaction
 # without it in the image, pnpm >= 11 fails install with ERR_PNPM_IGNORED_BUILDS.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY static/ ./static/
-COPY tailwind.config.js ./
 
 # Install Node.js dependencies
 RUN pnpm install --frozen-lockfile

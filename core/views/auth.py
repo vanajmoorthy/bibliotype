@@ -16,11 +16,11 @@ from django.urls import reverse, reverse_lazy
 from django_ratelimit.decorators import ratelimit
 from django_ratelimit.exceptions import Ratelimited
 
-from ..analytics.events import track_anonymous_dna_claimed, track_user_logged_in, track_user_signed_up
+from ..analytics.events import track_user_logged_in, track_user_signed_up
 from ..cache_utils import safe_cache_get
 from ..forms import CustomUserCreationForm
 from ..ratelimit_utils import client_ip_key, get_real_client_ip
-from ..tasks import _save_dna_to_profile, claim_anonymous_dna_task
+from ..tasks import claim_anonymous_dna_task, claim_dna
 
 logger = logging.getLogger(__name__)
 
@@ -108,26 +108,19 @@ def _signup_view_throttled(request):
                 user.userprofile.save()
                 claim_anonymous_dna_task.delay(user.id, task_id_to_claim, pre_login_session_key)
 
-                # Track signup and DNA claim
+                # anonymous_dna_claimed fires from the claim task once the DNA is actually saved
                 track_user_signed_up(
                     user_id=user.id,
                     signup_source="with_task_claim",
                     task_id_to_claim=task_id_to_claim,
                     had_dna_in_session=had_dna_in_session,
                 )
-                track_anonymous_dna_claimed(
-                    user_id=user.id,
-                    task_id=task_id_to_claim,
-                    session_key=None,  # Session key not needed, task_id is sufficient identifier
-                )
-
                 messages.success(request, "Account created! We'll save your Bibliotype as soon as it's ready.")
                 processing_url = reverse("core:display_dna") + "?processing=true"
                 return redirect(processing_url)
 
             if "dna_data" in request.session:
-                dna_to_save = request.session.pop("dna_data")
-                _save_dna_to_profile(user.userprofile, dna_to_save)
+                claim_dna(user, request.session.pop("dna_data"), pre_login_session_key)
 
                 # Track signup with session DNA (could be after anonymous DNA)
                 track_user_signed_up(
@@ -186,8 +179,14 @@ def _login_view_throttled(request):
             user_obj = User.objects.filter(email__iexact=email).order_by("id").first()
             if user_obj:
                 user = authenticate(request, username=user_obj.username, password=password)
+            else:
+                # Run the hasher anyway so response time doesn't reveal whether the email is
+                # registered (mirrors Django's ModelBackend).
+                User().set_password(password)
 
         if user is not None:
+            # login() rotates the session key; AnonymousUserSession is keyed by the old one
+            pre_login_session_key = request.session.session_key
             login(request, user)
 
             had_dna_in_session = "dna_data" in request.session
@@ -195,7 +194,7 @@ def _login_view_throttled(request):
             if "dna_data" in request.session:
                 dna_to_save = request.session.pop("dna_data")
                 if not user.userprofile.dna_data:
-                    _save_dna_to_profile(user.userprofile, dna_to_save)
+                    claim_dna(user, dna_to_save, pre_login_session_key)
                 messages.success(request, "Logged in successfully!", extra_tags="ephemeral")
 
                 # Track login
