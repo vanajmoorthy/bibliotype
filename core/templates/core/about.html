@@ -69,10 +69,10 @@
             </p>
 
             <p class="mt-2">
-                Upload your exported data from <span class="bg-brand-purple px-1">Goodreads</span> to see a personalised
-                and insightful dashboard packed with insights. You'll find out your
-                <span class="bg-brand-pink px-1">reader type</span>, a dedicated
-                <span class="bg-brand-cyan px-1">reading vibe</span>, detailed
+                Upload your exported data from <span class="bg-brand-purple px-1">Goodreads</span> or
+                <span class="bg-brand-green px-1">StoryGraph</span> to see a personalised and insightful dashboard
+                packed with insights. You'll find out your <span class="bg-brand-pink px-1">reader type</span>, a
+                dedicated <span class="bg-brand-cyan px-1">reading vibe</span>, detailed
                 <span class="bg-brand-orange px-1">genre and author breakdowns</span>, reading statistics like
                 <span class="bg-brand-purple px-1">page counts</span> and
                 <span class="bg-brand-yellow px-1">yearly trends</span>, community benchmarking to see how you compare
@@ -94,12 +94,10 @@
                     rel="noopener noreferrer"
                     class="hover:bg-brand-yellow bg-brand-orange px-1 font-bold underline"
                     >Django</a
-                >, but also because I wanted to see this kind of data about
-                <span class="bg-brand-yellow px-1">my own reading</span>, and about my friends' reading too. Goodreads
-                gives you a basic yearly summary, and there are other analysers out there but I a) wanted to make one
-                that was more <span class="bg-brand-pink px-1">fun</span> and b) showed you some more insights in
-                comparison to a larger <span class="bg-brand-purple px-1">reading community</span>. It was largely
-                inspired by projects like
+                >, but also because I wanted to see this kind of data about my own reading, and about my friends'
+                reading too. Goodreads gives you a basic yearly summary, and there are other analysers out there but I
+                a) wanted to make one that was more fun and b) showed you some more insights in comparison to a larger
+                reading community. It was largely inspired by projects like
                 <a
                     href="https://receiptify.herokuapp.com/"
                     target="_blank"
@@ -135,7 +133,15 @@
                         class="hover:bg-brand-yellow bg-brand-purple px-1 font-bold underline"
                         >Goodreads</a
                     >
-                    as a CSV file.
+                    or
+                    <a
+                        href="https://app.thestorygraph.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="hover:bg-brand-yellow bg-brand-green px-1 font-bold underline"
+                        >StoryGraph</a
+                    >
+                    as a CSV file. On StoryGraph it's under Manage Account, then Export StoryGraph Library.
                 </li>
                 <li>Upload the file to Bibliotype.</li>
                 <li>Get your personalised Bibliotype dashboard.</li>
@@ -152,6 +158,27 @@
                 Bibliotype permanently and share it with friends. Read the
                 <a href="{% url 'core:privacy' %}" class="hover:bg-brand-yellow font-bold underline">Privacy Policy</a>
                 for full details on how your data is handled.
+            </p>
+        </div>
+
+        <div class="border-brand-text shadow-neo space-y-5 border-2 bg-white p-6 text-lg md:p-8">
+            <h2 class="text-2xl font-bold tracking-wider uppercase">
+                <span class="bg-brand-orange px-1">Feedback</span>
+            </h2>
+            <p>
+                I'd love to hear what you think, whether it's a bug, a stat that looks off, or an idea for something
+                new. Fill out the
+                <a
+                    href="https://forms.gle/EoZAbYdigngwFdpm9"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="hover:bg-brand-yellow font-bold underline"
+                    >feedback form</a
+                >
+                or email me at
+                <a href="mailto:vanajmoorthy@gmail.com" class="hover:bg-brand-yellow font-bold underline"
+                    >vanajmoorthy@gmail.com</a
+                >.
             </p>
         </div>
 
