@@ -70,6 +70,10 @@ def check_author_mainstream_status_task(author_id: int, user_id: int = None, upl
         raise
 
 
+class GoogleBooksUnavailable(Exception):
+    """Enrichment ran but the Google Books exchange didn't complete (book left unstamped)."""
+
+
 # name pinned: wire name must survive the package split (queued msgs + beat).
 # It must ALSO stay the single name for both interactive and bulk dispatch:
 # rate_limit is per task NAME per worker, so a separately named bulk task would
@@ -137,19 +141,39 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
             session.headers.update({"User-Agent": settings.EXTERNAL_API_USER_AGENT})
             enrich_book_from_apis(book, session, slow_down=True)
 
+        # enrich_book_from_apis returns normally but leaves the book unstamped
+        # when the Google Books call failed (quota cooldown, 5xx, timeout).
+        # Treat that as a failure so it's retried; otherwise nothing ever
+        # retries it and the dashboard banner polls forever below 100%.
+        if book.google_books_last_checked is None:
+            raise GoogleBooksUnavailable(f"Google Books fetch did not complete for '{book.title}'")
+
         logger.info(f"Successfully enriched '{book.title}'")
     except Exception as e:
-        from celery.exceptions import MaxRetriesExceededError
+        from ..services.book_enrichment_service import GOOGLE_BOOKS_COOLDOWN_KEY, GOOGLE_BOOKS_COOLDOWN_SECONDS
 
-        logger.error(f"Error enriching book '{book.title}' (id={book_id}): {e}", exc_info=True)
-        try:
-            raise self.retry(countdown=60 * (2**self.request.retries), exc=e)
-        except MaxRetriesExceededError:
+        if isinstance(e, GoogleBooksUnavailable):
+            logger.warning(f"{e} (id={book_id})")
+        else:
+            logger.error(f"Error enriching book '{book.title}' (id={book_id}): {e}", exc_info=True)
+
+        # Check exhaustion ourselves: self.retry(exc=e) re-raises `e` (not
+        # MaxRetriesExceededError) once retries run out, so catching that never fired.
+        if self.request.retries >= self.max_retries:
             # Mark book as attempted so polling completion detection can finish.
             # Without this, books that consistently fail enrichment leave the
             # dashboard banner stuck at the same percent forever.
             Book.objects.filter(pk=book_id).update(google_books_last_checked=timezone.now())
             logger.warning(f"Max retries exhausted for book '{book.title}' (id={book_id}); marking as attempted")
+            return
+
+        # During a quota cooldown every attempt short-circuits, so wait it out
+        # instead of burning retries on the exponential backoff.
+        if safe_cache_get(GOOGLE_BOOKS_COOLDOWN_KEY):
+            countdown = GOOGLE_BOOKS_COOLDOWN_SECONDS
+        else:
+            countdown = 60 * (2**self.request.retries)
+        raise self.retry(countdown=countdown, exc=e)
 
 
 # name pinned: wire name must survive the package split (queued msgs + beat)

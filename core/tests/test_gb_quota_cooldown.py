@@ -96,6 +96,17 @@ class GoogleBooksQuotaCooldownTests(TestCase):
         self.assertTrue(cache.get(svc.GOOGLE_BOOKS_COOLDOWN_KEY))
 
     @patch("core.services.book_enrichment_service.track_external_api_call")
+    def test_total_items_without_items_is_not_found(self, mock_track):
+        session = Mock()
+        session.get.return_value.json.return_value = {"totalItems": 1}
+
+        with patch.object(svc, "GOOGLE_BOOKS_API_KEY", "test-key"):
+            result, calls = svc._fetch_ratings_and_categories_from_google_books(_mock_book(), session)
+
+        self.assertEqual(result, {})
+        self.assertEqual(calls, 1)
+
+    @patch("core.services.book_enrichment_service.track_external_api_call")
     def test_plain_transport_error_does_not_trip_cooldown(self, mock_track):
         session = Mock()
         session.get.side_effect = requests.ConnectionError("read timed out")
@@ -134,6 +145,57 @@ class FailedFetchStampingTests(TestCase):
 
         self.book.refresh_from_db()
         self.assertIsNotNone(self.book.google_books_last_checked)
+
+
+# No EAGER_PROPAGATES: eager retries run inline, but the outermost call would
+# then re-raise celery's Retry signal instead of returning.
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CACHES=LOCMEM_CACHE)
+class UnstampedBookRetryTests(TransactionTestCase):
+    """A book left unstamped by a failed Google Books fetch must be retried, not
+    silently dropped — otherwise enrichment progress never reaches 100%."""
+
+    def setUp(self):
+        cache.clear()
+        author = Author.objects.create(name="Cooldown Author")
+        self.book = Book.objects.create(title="Cooldown Book", author=author, isbn13="9780000000102")
+
+    def tearDown(self):
+        from django.db import connections
+
+        connections.close_all()
+
+    @patch("core.services.book_enrichment_service._fetch_from_open_library", return_value=({}, 0))
+    def test_task_retries_during_cooldown_then_stamps(self, mock_ol):
+        from core.tasks import enrich_book_task
+
+        cache.set(svc.GOOGLE_BOOKS_COOLDOWN_KEY, 1, timeout=60)
+        with patch.object(svc, "GOOGLE_BOOKS_API_KEY", "test-key"):
+            enrich_book_task.apply(args=[self.book.pk])
+
+        # Initial run + max_retries retries, then the exhausted branch stamps it.
+        self.assertEqual(mock_ol.call_count, enrich_book_task.max_retries + 1)
+        self.book.refresh_from_db()
+        self.assertIsNotNone(self.book.google_books_last_checked)
+
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    def test_inline_failure_falls_back_to_async_task(self, mock_inline, mock_dispatch, *_):
+        from core.services.dna import calculate_full_dna
+
+        user = User.objects.create_user(username="cooldown_user", password="pw")
+        csv = (
+            "Title,Author,Exclusive Shelf,My Rating,Number of Pages,"
+            "Original Publication Year,Date Read,Average Rating,My Review,ISBN13\n"
+            "Unstamped Book,Unstamped Author,read,4,300,2020,2023/01/10,4.0,,\n"
+        )
+        calculate_full_dna(csv, user=user)
+
+        # Inline ran but left the book unstamped, so the async task must take over.
+        mock_inline.assert_called_once()
+        mock_dispatch.assert_called_once()
 
 
 class VibeFailureTests(TestCase):

@@ -323,7 +323,10 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                                 f"has_genres={has_genres}, needs_page_data={needs_page_data})"
                             )
                             enrich_book_from_apis(book, session, slow_down=False, quick_mode=True)
-                            enriched_inline = True
+                            # Unstamped means the Google Books call failed (quota
+                            # cooldown, 5xx, timeout) — hand it to the async task,
+                            # which retries, instead of counting it as done.
+                            enriched_inline = book.google_books_last_checked is not None
                         except Exception as e:
                             logger.warning(f"Inline enrichment failed for '{book.title}': {e}")
                     if not enriched_inline:

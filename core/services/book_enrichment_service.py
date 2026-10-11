@@ -345,12 +345,14 @@ def _fetch_ratings_and_categories_from_google_books(book, session, slow_down=Fal
         res.raise_for_status()
         data = res.json()
 
-        if data.get("totalItems", 0) == 0:
+        # totalItems can be non-zero while "items" is absent, so key off items.
+        items = data.get("items") or []
+        if not items:
             logger.debug(f"Google Books: Not found for '{book.title}'")
             track_external_api_call("google_books", book.pk, book.title, "not_found")
             return {}, 1
 
-        volume_info = data["items"][0].get("volumeInfo", {})
+        volume_info = items[0].get("volumeInfo", {})
 
         result = {
             "ratings_count": volume_info.get("ratingsCount"),
