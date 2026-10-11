@@ -93,14 +93,18 @@
                         {% if rec.primary_source_user %}
                             <div>
                                 <span>
-                                    {% if is_public_view %}Recommended by{% else %}Recommended by{% endif %}
-                                    <a
-                                        href="{% url 'core:public_profile' rec.primary_source_user.username %}"
-                                        target="_blank"
-                                        class="font-bold hover:underline"
-                                    >
-                                        {{ rec.primary_source_user.username }}
-                                    </a>
+                                    Recommended by
+                                    {% if rec.primary_source_user.username %}
+                                        <a
+                                            href="{% url 'core:public_profile' rec.primary_source_user.username %}"
+                                            target="_blank"
+                                            class="font-bold hover:underline"
+                                        >
+                                            {{ rec.primary_source_user.username }}
+                                        </a>
+                                    {% else %}
+                                        a private reader
+                                    {% endif %}
                                 </span>
                                 <div class="mt-1">
                                     <span

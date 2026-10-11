@@ -186,6 +186,10 @@ def _login_view_throttled(request):
             user_obj = User.objects.filter(email__iexact=email).order_by("id").first()
             if user_obj:
                 user = authenticate(request, username=user_obj.username, password=password)
+            else:
+                # Run the hasher anyway so response time doesn't reveal whether the email is
+                # registered (mirrors Django's ModelBackend).
+                User().set_password(password)
 
         if user is not None:
             login(request, user)

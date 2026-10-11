@@ -21,6 +21,7 @@ from .models import (
     UserBook,
     UserProfile,
 )
+from .services.anonymization_service import _key_hash
 
 logger = logging.getLogger(__name__)
 
@@ -133,9 +134,14 @@ class UserBookAdmin(admin.ModelAdmin):
 
 @admin.register(AnonymousUserSession)
 class AnonymousUserSessionAdmin(admin.ModelAdmin):
-    list_display = ("session_key", "created_at", "expires_at", "anonymized")
+    # session_key is a bearer credential: list a truncated hash, never the raw key.
+    list_display = ("id", "session_key_hash", "created_at", "expires_at", "anonymized")
     list_filter = ("anonymized", "expires_at")
     readonly_fields = ("created_at",)
+
+    @admin.display(description="Session key hash")
+    def session_key_hash(self, obj):
+        return _key_hash(obj.session_key)
 
 
 @admin.register(AnonymizedReadingProfile)

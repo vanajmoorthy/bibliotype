@@ -44,8 +44,10 @@ def update_privacy_view(request):
     profile.is_public = is_public
     profile.save()
 
-    # Going private removes the user from the recommendation candidate pool, so drop
-    # the recs caches that could still surface them (mirrors update_recommendation_visibility).
+    # Going private removes the user from the anonymous-visitor candidate sample (which filters
+    # is_public), so drop the recs caches that could still surface them. Registered users' recs
+    # keep using them (that's visible_in_recommendations), but rec cards only name readers who
+    # are public at render time (_resolve_rec_source_names).
     if was_public and not is_public:
         safe_cache_delete(f"user_recommendations_{request.user.id}")
         safe_cache_delete(f"similar_users_{request.user.id}")
@@ -76,21 +78,6 @@ def update_privacy_view(request):
 
     if "dna_data" in request.session:
         request.session.pop("dna_data", None)
-
-    return redirect("core:display_dna")
-
-
-@login_required
-@require_POST
-def update_display_name_view(request):
-    form = UpdateDisplayNameForm(request.POST, user=request.user, instance=request.user)
-    if form.is_valid():
-        form.save()
-        track_settings_updated(request.user.id, setting_type="display_name")
-        messages.success(request, "Your display name has been updated!", extra_tags="ephemeral")
-    else:
-        for error in form.errors.values():
-            messages.error(request, error)
 
     return redirect("core:display_dna")
 

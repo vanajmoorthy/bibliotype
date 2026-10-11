@@ -796,13 +796,13 @@ def _add_explanations(recommendations, context):
         # --- Component 1: Shared Books ---
         if best_source["type"] == "similar_user":
             shared_count = best_source.get("shared_books", 0)
-            recommender_name = best_source.get("username", "")
             if shared_count > 1:  # Only show if there's a meaningful overlap
                 rec["explanation_components"]["shared"] = f"You share {shared_count} books in common"
-                if owner_name and recommender_name:
+                # Never name the other reader here: this line renders on the public profile.
+                if owner_name:
                     rec["explanation_components"][
                         "shared_public"
-                    ] = f"{owner_name} and {recommender_name} share {shared_count} books in common"
+                    ] = f"{owner_name} and this reader share {shared_count} books in common"
                 else:
                     rec["explanation_components"]["shared_public"] = f"They share {shared_count} books in common"
 
