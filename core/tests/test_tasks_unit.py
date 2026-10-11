@@ -210,13 +210,15 @@ class ReReadDetectionTests(TestCase):
         Book C,Author Z,read,200,2
         Book D,Author W,read,200,1
         """
+        # Pad to MIN_SIGNAL_BOOKS: the reread signal is ignored on smaller libraries
+        csv_data += "".join(f"Filler {i},Author F,read,200,1\n" for i in range(6))
         read_df = pd.read_csv(StringIO(csv_data))
         read_df.columns = read_df.columns.str.strip()
 
         reader_type, scores = assign_reader_type(read_df, {}, [])
 
         # Books A (Read Count=3) and C (Read Count=2) are re-reads
-        # 2 rereads / 4 books = 0.50 → exceeds saturation (0.25) → score 100
+        # 2 rereads / 10 books = 0.20 → above floor (0.03)
         # (new normalized scorer, not raw additive points)
         self.assertGreater(scores.get("Comfort Rereader", 0), 0,
                            "Comfort Rereader should score > 0 for rereads")
@@ -230,12 +232,14 @@ class ReReadDetectionTests(TestCase):
         Book A,Author X,read,200
         Book B,Author Y,read,200
         """
+        # Pad to MIN_SIGNAL_BOOKS: the reread signal is ignored on smaller libraries
+        csv_data += "".join(f"Filler {i},Author F,read,200\n" for i in range(7))
         read_df = pd.read_csv(StringIO(csv_data))
         read_df.columns = read_df.columns.str.strip()
 
         reader_type, scores = assign_reader_type(read_df, {}, [])
 
-        # Book A appears twice → 1 reread / 3 total books = 0.33 → exceeds saturation (0.25) → score 100
+        # Book A appears twice → 1 reread / 10 total books = 0.10 → above floor (0.03)
         # (new normalized scorer, not raw additive points)
         self.assertGreater(scores.get("Comfort Rereader", 0), 0,
                            "Comfort Rereader should score > 0 for reread")

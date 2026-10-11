@@ -235,13 +235,10 @@ def assign_reader_type(
             top_author_share = int(author_names.value_counts().iloc[0]) / A
             scores["Author Loyalist"] = score_ramp(top_author_share, *READER_TYPE_THRESHOLDS["Author Loyalist"])
 
-    # Reread type
-    scores["Comfort Rereader"] = score_ramp(
-        reread_count / L if L > 0 else 0.0, *READER_TYPE_THRESHOLDS["Comfort Rereader"]
-    )
-
-    # Series type
-    scores["Series Slayer"] = score_ramp(series_count / L if L > 0 else 0.0, *READER_TYPE_THRESHOLDS["Series Slayer"])
+    # Reread + series types (share of the whole library)
+    if L >= MIN_SIGNAL_BOOKS:
+        scores["Comfort Rereader"] = score_ramp(reread_count / L, *READER_TYPE_THRESHOLDS["Comfort Rereader"])
+        scores["Series Slayer"] = score_ramp(series_count / L, *READER_TYPE_THRESHOLDS["Series Slayer"])
 
     # Rapacious Reader (books/year rate, not a fraction)
     scores["Rapacious Reader"] = score_ramp(mean_books_per_year, *READER_TYPE_THRESHOLDS["Rapacious Reader"])

@@ -14,6 +14,7 @@ from core.dna_constants import (
     CANONICAL_GENRE_MAP,
     FICTION_GENRES,
     GENRE_ALIASES,
+    MIN_SIGNAL_BOOKS,
     NONFICTION_GENRES,
     READER_TYPE_DESCRIPTIONS,
 )
@@ -136,10 +137,10 @@ class ReaderTypeScoringMathTests(TestCase):
             "Book B,Auth,read,200,1",
             "Book C,Auth,read,200,5",  # reread
             "Book D,Auth,read,200,1",
-        ]
+        ] + [f"Filler {i},Auth,read,200,1" for i in range(6)]
         df = self._make_df(rows, has_read_count=True)
         _, scores = assign_reader_type(df, {}, [])
-        # 2 rereads / 4 total = 0.5 > sat (0.25) → score 100
+        # 2 rereads / 10 total = 0.2, above floor (0.03)
         self.assertGreater(scores.get("Comfort Rereader", 0), 0)
 
     def test_comfort_rereader_goodreads_duplicate_titles(self):
@@ -148,7 +149,7 @@ class ReaderTypeScoringMathTests(TestCase):
             "Book A,Auth,read,200",
             "Book A,Auth,read,200",  # duplicate → 1 reread
             "Book B,Auth,read,200",
-        ]
+        ] + [f"Filler {i},Auth,read,200" for i in range(7)]
         df = self._make_df(rows)
         _, scores = assign_reader_type(df, {}, [])
         self.assertGreater(scores.get("Comfort Rereader", 0), 0)
@@ -162,6 +163,22 @@ class ReaderTypeScoringMathTests(TestCase):
         df = self._make_df(rows, has_read_count=True)
         _, scores = assign_reader_type(df, {}, [])
         self.assertEqual(scores.get("Comfort Rereader", 0), 0)
+
+    def test_reread_and_series_need_min_library_size(self):
+        """Below MIN_SIGNAL_BOOKS, rereads and series titles don't score at all."""
+        rows = [f'"Book {i} (Saga, #{i})",Auth,read,200,3' for i in range(MIN_SIGNAL_BOOKS - 1)]
+        df = self._make_df(rows, has_read_count=True)
+        _, scores = assign_reader_type(df, {}, [])
+        self.assertEqual(scores.get("Comfort Rereader", 0), 0)
+        self.assertEqual(scores.get("Series Slayer", 0), 0)
+
+    def test_reread_and_series_score_at_min_library_size(self):
+        """At exactly MIN_SIGNAL_BOOKS the same library shape scores both types."""
+        rows = [f'"Book {i} (Saga, #{i})",Auth,read,200,3' for i in range(MIN_SIGNAL_BOOKS)]
+        df = self._make_df(rows, has_read_count=True)
+        _, scores = assign_reader_type(df, {}, [])
+        self.assertGreater(scores.get("Comfort Rereader", 0), 0)
+        self.assertGreater(scores.get("Series Slayer", 0), 0)
 
     def test_classics_collector_pre_1970(self):
         """Books published before 1970 contribute to Classics Collector."""
@@ -339,6 +356,7 @@ class ReaderTypeDescriptionsTests(TestCase):
     def test_all_scored_reader_types_have_descriptions(self):
         """Every reader type that can be assigned must have a description in READER_TYPE_DESCRIPTIONS."""
         from core.dna_constants import READER_TYPE_TIEBREAK_ORDER
+
         # All 19 active types in tiebreak order plus the fallbacks
         scored_types = set(READER_TYPE_TIEBREAK_ORDER) | {"Eclectic Reader"}
         missing = scored_types - set(READER_TYPE_DESCRIPTIONS.keys())

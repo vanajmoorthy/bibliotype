@@ -156,12 +156,13 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
             _sg_row("A", "A1", isbn="9780000004001", read_count="3", tags="sci-fi"),
             _sg_row("B", "A2", isbn="9780000004002", read_count="2", tags="fantasy"),
             _sg_row("C", "A3", isbn="9780000004003", read_count="1", tags="thriller"),
+            # Padding to MIN_SIGNAL_BOOKS: the reread signal is ignored on smaller libraries
+            *[_sg_row(f"F{i}", f"F{i}", isbn=f"978000000401{i}", read_count="1", tags="thriller") for i in range(7)],
         ])
 
         self.user.refresh_from_db()
         scores = self.user.userprofile.dna_data.get("reader_type_scores", {})
-        # 2 books with Read Count > 1 out of 3 total → 67% reread rate > saturation (25%)
-        # → Comfort Rereader normalized score is 100.
+        # 2 books with Read Count > 1 out of 10 total → 20% reread rate > floor (3%)
         # With the new normalized scorer, scores are 0-100 (not raw additive points).
         self.assertGreater(scores.get("Comfort Rereader", 0), 0, "Comfort Rereader should score > 0")
 
