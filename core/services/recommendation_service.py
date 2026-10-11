@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from ..cache_utils import safe_cache_delete, safe_cache_get, safe_cache_set
 from ..models import AnonymizedReadingProfile, AnonymousUserSession, Author, Book, Genre, User, UserBook
+from .anonymization_service import _key_hash
 from .genre_classification import resolve_genre_names
 from .user_similarity_service import (
     _build_user_context_for_similarity,
@@ -106,7 +107,8 @@ def _get_recommendations_for_anonymous_uncached(session_key, limit=10):
 
 def get_recommendations_for_anonymous(session_key, limit=10):
     """Get recommendations for an anonymous user, with 15-minute result caching."""
-    cache_key = f"anon_recommendations_{session_key}"
+    # Hashed: cache keys reach PostHog in redis_cache_error events, and session keys are bearer credentials.
+    cache_key = f"anon_recommendations_{_key_hash(session_key)}"
     cached_result = safe_cache_get(cache_key)
     if cached_result is not None:
         return cached_result

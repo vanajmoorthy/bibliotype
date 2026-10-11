@@ -6,7 +6,8 @@ Helper functions for tracking specific events in the Bibliotype application.
 
 import logging
 
-from .posthog_client import capture_event, capture_exception, get_distinct_id, get_environment
+from ..services.anonymization_service import _key_hash
+from .posthog_client import capture_event, capture_exception, get_distinct_id, get_environment, session_distinct_id
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,6 @@ def track_file_upload_started(request, file_size):
             "file_size": file_size,
             "is_authenticated": request.user.is_authenticated,
             "user_id": request.user.id if request.user.is_authenticated else None,
-            "session_id": request.session.session_key if not request.user.is_authenticated else None,
         },
         environment=environment,
     )
@@ -31,7 +31,7 @@ def track_file_upload_started(request, file_size):
 
 def track_dna_generation_started(task_id, user_id=None, session_key=None, is_anonymous=False):
     """Track when DNA generation task starts."""
-    distinct_id = str(user_id) if user_id else (session_key or "anonymous")
+    distinct_id = str(user_id) if user_id else session_distinct_id(session_key)
     environment = get_environment()
 
     capture_event(
@@ -40,7 +40,6 @@ def track_dna_generation_started(task_id, user_id=None, session_key=None, is_ano
         properties={
             "task_id": task_id,
             "user_id": user_id,
-            "session_key": session_key,
             "is_anonymous": is_anonymous,
         },
         environment=environment,
@@ -57,13 +56,12 @@ def track_dna_generation_completed(
     reader_type=None,
 ):
     """Track when DNA generation task completes successfully."""
-    distinct_id = str(user_id) if user_id else (session_key or "anonymous")
+    distinct_id = str(user_id) if user_id else session_distinct_id(session_key)
     environment = get_environment()
 
     properties = {
         "task_id": task_id,
         "user_id": user_id,
-        "session_key": session_key,
         "is_anonymous": is_anonymous,
     }
 
@@ -84,12 +82,11 @@ def track_dna_generation_completed(
 
 def track_anonymous_dna_generated(task_id, session_key, books_count=None, processing_time=None, reader_type=None):
     """Track when anonymous user successfully generates DNA."""
-    distinct_id = session_key or "anonymous"
+    distinct_id = session_distinct_id(session_key)
     environment = get_environment()
 
     properties = {
         "task_id": task_id,
-        "session_key": session_key,
     }
 
     if books_count is not None:
@@ -109,11 +106,10 @@ def track_anonymous_dna_generated(task_id, session_key, books_count=None, proces
 
 def track_anonymous_dna_displayed(session_key, has_recommendations=False, reader_type=None):
     """Track when anonymous user views their generated DNA."""
-    distinct_id = session_key or "anonymous"
+    distinct_id = session_distinct_id(session_key)
     environment = get_environment()
 
     properties = {
-        "session_key": session_key,
         "has_recommendations": has_recommendations,
     }
     if reader_type:
@@ -131,7 +127,7 @@ def track_dna_generation_failed(
     task_id, user_id=None, session_key=None, is_anonymous=False, error_type=None, error_message=None
 ):
     """Track when DNA generation task fails."""
-    distinct_id = str(user_id) if user_id else (session_key or "anonymous")
+    distinct_id = str(user_id) if user_id else session_distinct_id(session_key)
     environment = get_environment()
 
     # Sanitize error message
@@ -144,7 +140,6 @@ def track_dna_generation_failed(
         properties={
             "task_id": task_id,
             "user_id": user_id,
-            "session_key": session_key,
             "is_anonymous": is_anonymous,
             "error_type": error_type,
             "error_message": error_message,
@@ -167,8 +162,6 @@ def track_dna_displayed(request, is_authenticated, has_recommendations=False, re
 
     if is_authenticated:
         properties["user_id"] = request.user.id
-    else:
-        properties["session_id"] = request.session.session_key
 
     capture_event(
         distinct_id=distinct_id,
@@ -210,13 +203,14 @@ def track_anonymous_dna_claimed(user_id, task_id, session_key=None):
     """Track when user signs up and claims their anonymous DNA."""
     environment = get_environment()
 
+    # The session key is a bearer credential, so only its hash leaves the server.
     capture_event(
         distinct_id=str(user_id),
         event_name="anonymous_dna_claimed",
         properties={
             "user_id": user_id,
             "task_id": task_id,
-            "session_key": session_key,
+            "session_key_hash": _key_hash(session_key),
         },
         environment=environment,
     )
@@ -268,11 +262,8 @@ def track_public_profile_viewed(
     if viewer_is_authenticated and viewer_user_id:
         distinct_id = str(viewer_user_id)
         viewer_type = "owner" if viewer_is_owner else "authenticated"
-    elif viewer_session_id:
-        distinct_id = viewer_session_id
-        viewer_type = "anonymous"
     else:
-        distinct_id = "anonymous"
+        distinct_id = session_distinct_id(viewer_session_id)
         viewer_type = "anonymous"
 
     environment = get_environment()
@@ -284,7 +275,6 @@ def track_public_profile_viewed(
         "viewer_is_authenticated": viewer_is_authenticated,
         "viewer_is_owner": viewer_is_owner,
         "viewer_user_id": viewer_user_id,
-        "viewer_session_id": viewer_session_id,
     }
     if profile_reader_type:
         properties["profile_reader_type"] = profile_reader_type
@@ -311,7 +301,7 @@ def track_recommendations_generated(
     source=None,
 ):
     """Track when recommendations are actually generated (task for auth users, inline for anonymous)."""
-    distinct_id = str(user_id) if user_id else (session_key or "anonymous")
+    distinct_id = str(user_id) if user_id else session_distinct_id(session_key)
     environment = get_environment()
 
     properties = {
@@ -321,8 +311,6 @@ def track_recommendations_generated(
 
     if user_id:
         properties["user_id"] = user_id
-    if session_key:
-        properties["session_id"] = session_key
     if reader_type:
         properties["reader_type"] = reader_type
     if similar_users_count is not None:
@@ -346,7 +334,7 @@ def track_recommendations_displayed(
     user_id=None, recommendation_count=0, is_authenticated=False, session_key=None, reader_type=None
 ):
     """Track when stored recommendations are rendered on the dashboard (fires per view, unlike recommendations_generated)."""
-    distinct_id = str(user_id) if user_id else (session_key or "anonymous")
+    distinct_id = str(user_id) if user_id else session_distinct_id(session_key)
     environment = get_environment()
 
     properties = {
@@ -356,8 +344,6 @@ def track_recommendations_displayed(
 
     if user_id:
         properties["user_id"] = user_id
-    if session_key:
-        properties["session_id"] = session_key
     if reader_type:
         properties["reader_type"] = reader_type
 

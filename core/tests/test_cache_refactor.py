@@ -22,6 +22,7 @@ from core.models import (
     Publisher,
     UserBook,
 )
+from core.services.anonymization_service import _key_hash
 
 
 @override_settings(
@@ -421,7 +422,7 @@ class AnonymousRecommendationCacheTests(TestCase):
 
         result = get_recommendations_for_anonymous("anon_cache_test", limit=6)
 
-        cached = cache.get("anon_recommendations_anon_cache_test")
+        cached = cache.get(f"anon_recommendations_{_key_hash('anon_cache_test')}")
         self.assertIsNotNone(cached)
         self.assertEqual(len(cached), len(result))
 
@@ -445,7 +446,7 @@ class AnonymousRecommendationCacheTests(TestCase):
 
         self.assertEqual(result, [])
         # Empty result from missing session should not be cached
-        cached = cache.get("anon_recommendations_nonexistent_session")
+        cached = cache.get(f"anon_recommendations_{_key_hash('nonexistent_session')}")
         self.assertIsNone(cached)
 
 
