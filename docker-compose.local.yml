@@ -48,6 +48,11 @@ services:
             - POSTHOG_API_KEY=${POSTHOG_API_KEY}
             - GEMINI_API_KEY=${GEMINI_API_KEY}
             - GEMINI_MODEL=${GEMINI_MODEL:-gemini-flash-lite-latest}
+            - GROQ_API_KEY=${GROQ_API_KEY:-}
+            - CEREBRAS_API_KEY=${CEREBRAS_API_KEY:-}
+            - LLM_MODELS=${LLM_MODELS:-}
+            - LLM_TIMEOUT_SECONDS=${LLM_TIMEOUT_SECONDS:-}
+            - LLM_NUM_RETRIES=${LLM_NUM_RETRIES:-}
             - GOOGLE_BOOKS_API_KEY=${GOOGLE_BOOKS_API_KEY}
             - POSTGRES_DB=${POSTGRES_DB}
             - POSTGRES_USER=${POSTGRES_USER}
@@ -82,6 +87,11 @@ services:
             - POSTHOG_API_KEY=${POSTHOG_API_KEY}
             - GEMINI_API_KEY=${GEMINI_API_KEY}
             - GEMINI_MODEL=${GEMINI_MODEL:-gemini-flash-lite-latest}
+            - GROQ_API_KEY=${GROQ_API_KEY:-}
+            - CEREBRAS_API_KEY=${CEREBRAS_API_KEY:-}
+            - LLM_MODELS=${LLM_MODELS:-}
+            - LLM_TIMEOUT_SECONDS=${LLM_TIMEOUT_SECONDS:-}
+            - LLM_NUM_RETRIES=${LLM_NUM_RETRIES:-}
             - GOOGLE_BOOKS_API_KEY=${GOOGLE_BOOKS_API_KEY}
             - DEBUG=True
             - ALLOWED_HOSTS=localhost,127.0.0.1
