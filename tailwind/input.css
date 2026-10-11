@@ -88,14 +88,14 @@
     position: relative;
     --neo-3d-size: 4px;
     &:hover { --neo-3d-size: 3px; }
-    &:active { --neo-3d-size: 0; }
+    &:active { --neo-3d-size: 0px; }
 }
 
 @utility neo-3d-sm {
     position: relative;
     --neo-3d-size: 2px;
     &:hover { --neo-3d-size: 1px; }
-    &:active { --neo-3d-size: 0; }
+    &:active { --neo-3d-size: 0px; }
 }
 
 /* Reserve uniform top space on every tile in a row when one of them shows
