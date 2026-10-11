@@ -552,11 +552,17 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 if db_book.cover_url:
                     cr_book["cover_url"] = db_book.cover_url
 
+        # Books in the previous upload but not this one lose this reader. The
+        # floor guards against counts that were never incremented (seed data).
+        current_book_ids = {book.id for book, genres, original_row in results if book}
+        dropped_book_ids = already_counted_book_ids - current_book_ids
+        if results and dropped_book_ids:
+            Book.objects.filter(pk__in=dropped_book_ids, global_read_count__gt=0).update(
+                global_read_count=F("global_read_count") - 1
+            )
+
         # Store UserBook entries for registered users
         if user and results:
-            # Collect current book IDs from this upload
-            current_book_ids = {book.id for book, genres, original_row in results if book}
-
             # Delete stale UserBook records from previous uploads that are no longer in the CSV
             stale_count, _ = UserBook.objects.filter(user=user).exclude(book_id__in=current_book_ids).delete()
             if stale_count:
