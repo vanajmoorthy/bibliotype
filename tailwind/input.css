@@ -131,24 +131,18 @@ ol.list-decimal {
     list-style-type: decimal;
 }
 
-/* Crosshatch placeholder for loading book covers */
+/* Loading placeholder for covers and charts: soft, thick diagonal stripes in
+   grey, matching the stripe pattern of the loaded fiction/nonfiction pie
+   (createStripePattern in charts_scripts.html: 24px tile, 10px stroke). */
 .cover-crosshatch {
-    background-color: #e5e7eb;
-    background-image:
-        repeating-linear-gradient(
-            45deg,
-            transparent,
-            transparent 4px,
-            #1f2937 4px,
-            #1f2937 6px
-        ),
-        repeating-linear-gradient(
-            -45deg,
-            transparent,
-            transparent 4px,
-            #1f2937 4px,
-            #1f2937 6px
-        );
+    background-color: #d1d5db;
+    background-image: repeating-linear-gradient(
+        -45deg,
+        #d1d5db 0,
+        #d1d5db 7px,
+        #e5e7eb 7px,
+        #e5e7eb 17px
+    );
 }
 
 /* Hard offset text-shadow for display type (e.g. the 404 numeral) */
