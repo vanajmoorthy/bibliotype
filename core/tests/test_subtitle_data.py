@@ -1,22 +1,17 @@
 """
 Tests for subtitle data features: new dna_data fields computed by calculate_full_dna(),
-the contrariness scale, the backfill_subtitle_data management command, and
-recommendations_meta stored by generate_recommendations_task.
+the contrariness scale, and recommendations_meta stored by generate_recommendations_task.
 """
 
-from io import StringIO
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.core.management import call_command
 from django.test import TestCase, TransactionTestCase, override_settings
-from django.utils import timezone
 
 from core.dna_constants import compute_contrariness
-from core.models import Author, Book, Genre, UserBook, UserProfile
+from core.models import Author, Book
 from core.tasks import generate_reading_dna_task
-
 
 # ──────────────────────────────────────────────
 # Helper: build a Goodreads-style CSV string
@@ -413,158 +408,7 @@ class SubtitleEdgeCaseTests(TransactionTestCase):
 
 
 # ──────────────────────────────────────────────
-# 4. Backfill management command
-# ──────────────────────────────────────────────
-
-
-class BackfillSubtitleDataTests(TestCase):
-    """Tests for the backfill_subtitle_data management command."""
-
-    def setUp(self):
-        self.user = User.objects.create_user(username="backfilluser", password="pw")
-        self.author1 = Author.objects.create(name="Backfill Author A")
-        self.author2 = Author.objects.create(name="Backfill Author B")
-
-        self.genre = Genre.objects.create(name="fantasy")
-
-        self.book1 = Book.objects.create(
-            title="Backfill Book One", author=self.author1, average_rating=4.0, global_read_count=2
-        )
-        self.book1.genres.add(self.genre)
-
-        self.book2 = Book.objects.create(
-            title="Backfill Book Two", author=self.author2, average_rating=3.5, global_read_count=10
-        )
-
-        UserBook.objects.create(user=self.user, book=self.book1, user_rating=5, user_review="A very positive and long review text.")
-        UserBook.objects.create(user=self.user, book=self.book2, user_rating=2, user_review="Negative long enough review text here.")
-
-        # DNA exists but has no subtitle fields
-        self.user.userprofile.dna_data = {
-            "reader_type": "Fantasy Fanatic",
-            "top_genres": [["fantasy", 1]],
-            "user_stats": {"total_books_read": 2},
-        }
-        self.user.userprofile.save()
-
-    def test_backfill_adds_all_subtitle_fields(self):
-        out = StringIO()
-        call_command("backfill_subtitle_data", "--username", "backfilluser", stdout=out)
-
-        self.user.userprofile.refresh_from_db()
-        dna = self.user.userprofile.dna_data
-
-        self.assertEqual(dna["unique_authors_count"], 2)
-        self.assertEqual(dna["unique_genres_count"], 1)  # only "fantasy" mapped
-        self.assertEqual(dna["controversial_books_count"], 2)
-        self.assertGreater(dna["avg_rating_difference"], 0.0)
-        self.assertIn(dna["contrariness_label"], [
-            "Aligned with consensus", "Slightly contrarian", "Moderately contrarian",
-            "Very contrarian", "Wildly contrarian",
-        ])
-        self.assertTrue(dna["contrariness_color"].startswith("bg-brand-"))
-        self.assertEqual(dna["total_reviews_count"], 2)
-        self.assertGreaterEqual(dna["positive_reviews_count"], 0)
-        self.assertGreaterEqual(dna["negative_reviews_count"], 0)
-        # book1 has global_read_count=2 (<=5), book2 has 10 (>5)
-        self.assertEqual(dna["niche_books_count"], 1)
-        self.assertEqual(dna["niche_threshold"], 5)
-
-    def test_backfill_preserves_existing_dna_keys(self):
-        """Backfill merges into dna_data without removing existing keys."""
-        out = StringIO()
-        call_command("backfill_subtitle_data", "--username", "backfilluser", stdout=out)
-
-        self.user.userprofile.refresh_from_db()
-        dna = self.user.userprofile.dna_data
-
-        self.assertEqual(dna["reader_type"], "Fantasy Fanatic")
-        self.assertEqual(dna["user_stats"], {"total_books_read": 2})
-
-    def test_backfill_dry_run_does_not_modify(self):
-        out = StringIO()
-        call_command("backfill_subtitle_data", "--username", "backfilluser", "--dry-run", stdout=out)
-        output = out.getvalue()
-
-        self.assertIn("Dry run complete", output)
-
-        self.user.userprofile.refresh_from_db()
-        dna = self.user.userprofile.dna_data
-        self.assertNotIn("contrariness_label", dna)
-
-    def test_backfill_skips_already_backfilled_without_force(self):
-        """Profiles that already have subtitle fields are skipped unless --force."""
-        # Manually add the sentinel fields
-        dna = self.user.userprofile.dna_data.copy()
-        dna["contrariness_label"] = "Old label"
-        dna["unique_authors_count"] = 999
-        self.user.userprofile.dna_data = dna
-        self.user.userprofile.save()
-
-        out = StringIO()
-        call_command("backfill_subtitle_data", "--username", "backfilluser", stdout=out)
-
-        self.user.userprofile.refresh_from_db()
-        # Should not have changed
-        self.assertEqual(self.user.userprofile.dna_data["unique_authors_count"], 999)
-
-    def test_backfill_force_overwrites(self):
-        """--force overwrites existing subtitle fields."""
-        dna = self.user.userprofile.dna_data.copy()
-        dna["contrariness_label"] = "Old label"
-        dna["unique_authors_count"] = 999
-        self.user.userprofile.dna_data = dna
-        self.user.userprofile.save()
-
-        out = StringIO()
-        call_command("backfill_subtitle_data", "--username", "backfilluser", "--force", stdout=out)
-
-        self.user.userprofile.refresh_from_db()
-        self.assertNotEqual(self.user.userprofile.dna_data["unique_authors_count"], 999)
-        self.assertEqual(self.user.userprofile.dna_data["unique_authors_count"], 2)
-
-    def test_backfill_limit_flag(self):
-        """--limit restricts number of profiles processed."""
-        user2 = User.objects.create_user(username="backfill2", password="pw")
-        user2.userprofile.dna_data = {"reader_type": "Test"}
-        user2.userprofile.save()
-
-        out = StringIO()
-        call_command("backfill_subtitle_data", "--limit", "1", stdout=out)
-        output = out.getvalue()
-
-        self.assertIn("Found 1 profiles to process", output)
-
-    def test_backfill_skips_user_without_userbooks(self):
-        """A user with dna_data but no UserBook records is skipped."""
-        user_empty = User.objects.create_user(username="emptybf", password="pw")
-        user_empty.userprofile.dna_data = {"reader_type": "Empty"}
-        user_empty.userprofile.save()
-
-        out = StringIO()
-        call_command("backfill_subtitle_data", "--username", "emptybf", stdout=out)
-        output = out.getvalue()
-
-        self.assertIn("no UserBook records", output)
-
-    def test_backfill_contrariness_values_correct(self):
-        """Verify the actual contrariness values from backfill match expected thresholds."""
-        out = StringIO()
-        call_command("backfill_subtitle_data", "--username", "backfilluser", stdout=out)
-
-        self.user.userprofile.refresh_from_db()
-        dna = self.user.userprofile.dna_data
-
-        # Book 1: user_rating=5, avg=4.0 => diff=1.0
-        # Book 2: user_rating=2, avg=3.5 => diff=1.5
-        # Mean diff = (1.0 + 1.5) / 2 = 1.25
-        self.assertAlmostEqual(dna["avg_rating_difference"], 1.25, places=2)
-        self.assertEqual(dna["contrariness_label"], "Very contrarian")
-        self.assertEqual(dna["contrariness_color"], "bg-brand-orange")
-
-
-# ──────────────────────────────────────────────
-# 5. Recommendations meta
+# 4. Recommendations meta
 # ──────────────────────────────────────────────
 
 
@@ -620,7 +464,6 @@ class RecommendationsMetaTests(TransactionTestCase):
         meta = user.userprofile.recommendations_meta
         self.assertIsNotNone(meta)
         self.assertEqual(meta["similar_users_count"], 2)
-        self.assertEqual(meta["min_overlap_pct"], 50)  # 0.5 * 100 = 50
 
     @patch("core.services.recommendation_service.get_recommendations_for_user")
     def test_stores_meta_without_similar_users(self, mock_get_recs):
@@ -651,7 +494,6 @@ class RecommendationsMetaTests(TransactionTestCase):
         user.userprofile.refresh_from_db()
         meta = user.userprofile.recommendations_meta
         self.assertEqual(meta["similar_users_count"], 0)
-        self.assertEqual(meta["min_overlap_pct"], 0)
 
     @patch("core.services.recommendation_service.get_recommendations_for_user")
     def test_stores_meta_with_empty_recommendations(self, mock_get_recs):
@@ -669,11 +511,10 @@ class RecommendationsMetaTests(TransactionTestCase):
         user.userprofile.refresh_from_db()
         meta = user.userprofile.recommendations_meta
         self.assertEqual(meta["similar_users_count"], 0)
-        self.assertEqual(meta["min_overlap_pct"], 0)
 
     @patch("core.services.recommendation_service.get_recommendations_for_user")
-    def test_meta_picks_minimum_overlap(self, mock_get_recs):
-        """min_overlap_pct should be the lowest similarity across all similar_user sources."""
+    def test_meta_picks_maximum_similarity(self, mock_get_recs):
+        """max_similarity_pct should be the highest similarity across all similar_user sources."""
         user = User.objects.create_user(username="recmeta_min", password="pw")
         user.userprofile.dna_data = {"reader_type": "Test", "top_genres": []}
         user.userprofile.save()
@@ -715,8 +556,8 @@ class RecommendationsMetaTests(TransactionTestCase):
         meta = user.userprofile.recommendations_meta
         # 3 unique users: 100, 200
         self.assertEqual(meta["similar_users_count"], 2)
-        # min similarity is 0.35 => 35%
-        self.assertEqual(meta["min_overlap_pct"], 35)
+        # max similarity is 0.9 => 90%
+        self.assertEqual(meta["max_similarity_pct"], 90)
 
     def test_recommendations_meta_default_empty_dict(self):
         """New UserProfile has recommendations_meta defaulting to empty dict."""

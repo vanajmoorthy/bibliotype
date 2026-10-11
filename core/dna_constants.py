@@ -204,51 +204,6 @@ READER_TYPE_COLORS = {
 }
 
 
-MAINSTREAM_PUBLISHERS_HIERARCHY = {
-    "Penguin Random House": [
-        "Penguin Books",
-        "Random House",
-        "Viking Press",
-        "G. P. Putnam's Sons",
-        "Knopf Doubleday",
-        "Crown Publishing",
-        "Ballantine Books",
-        "Bantam Dell",
-        "Dutton",
-        "Berkley",
-        "Riverhead Books",
-        "Vintage Books",
-        "Anchor Books",
-        "Signet",
-    ],
-    "Hachette Livre": [
-        "Hachette",
-        "Grand Central Publishing",
-        "Little, Brown and Company",
-        "Orbit Books",
-        "Orion Publishing Group",
-        "Perseus Books Group",
-    ],
-    "HarperCollins": [
-        "Harper",
-        "William Morrow",
-        "Avon Books",
-        "Harlequin Enterprises",
-        "Ecco Press",
-        "Harvill Secker",
-    ],
-    "Macmillan Publishers": ["Macmillan", "Farrar, Straus and Giroux", "St. Martin's Press", "Tor Books", "Picador"],
-    "Simon & Schuster": ["Simon and Schuster", "Scribner", "Atria Books", "Gallery Books"],
-    # Other Major Standalones
-    "Bloomsbury Publishing": ["Bloomsbury"],
-    "Scholastic Corporation": ["Scholastic"],
-    "Oxford University Press": ["Oxford University Press"],
-    "Pearson Education": ["Pearson Education", "Prentice Hall"],
-    "John Wiley & Sons": ["Wiley"],
-    "Routledge": ["Routledge"],
-    "Grove Atlantic": ["Grove Press"],
-}
-
 GENRE_ALIASES = {
     # --- FICTION ---
     "fantasy": {

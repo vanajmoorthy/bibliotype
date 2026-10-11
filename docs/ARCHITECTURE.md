@@ -299,21 +299,13 @@ The result includes a human-readable reason: "Prolific author (10+ works, 2k+ vi
 
 Publisher mainstream detection is more complex because publisher names in book metadata are inconsistent. "Penguin Books", "Penguin Random House", "Penguin Classics", and "Penguin Press" are all the same parent company.
 
-### The Hierarchy
+### The Big 5
 
-The codebase maintains a hardcoded hierarchy of the "Big 5" publishers and their subsidiaries:
-
-- **Penguin Random House**: Penguin Books, Random House, Viking Press, Knopf Doubleday, Crown Publishing, Ballantine Books, Bantam Dell, Dutton, Berkley, Riverhead, Vintage, Anchor, Signet, G.P. Putnam's Sons
-- **Hachette Livre**: Grand Central Publishing, Little Brown and Company, Orbit Books, Orion, Perseus
-- **HarperCollins**: William Morrow, Avon Books, Harlequin, Ecco Press, Harvill Secker
-- **Macmillan Publishers**: Farrar Straus and Giroux, St. Martin's Press, Tor Books, Picador
-- **Simon & Schuster**: Scribner, Atria Books, Gallery Books
-
-Plus smaller notable publishers: Bloomsbury, Scholastic, Oxford University Press, Pearson, Wiley, Routledge, Grove Atlantic.
+`publisher_service.BIG_5_PUBLISHERS` names the parent companies that count as mainstream: Penguin Random House, Hachette Livre, HarperCollins, Macmillan Publishers, Simon & Schuster. There is no hardcoded imprint list; the research step below asks the LLM whether a publisher is one of these or an imprint of one.
 
 ### LLM-Assisted Research
 
-For publishers not in the hardcoded list, the system tries a multi-step research process:
+To place a publisher, the system runs a multi-step research process:
 
 1. **Wikipedia search** with three query variations: `"{name} (publisher)"`, `"{name} (imprint)"`, and just `"{name}"`. The first non-disambiguation page wins.
 
@@ -678,7 +670,7 @@ All events include an `environment` property ("production" or "development") to 
 
 ### Middleware
 
-`PostHogPageviewMiddleware` runs before every view (except `/admin/`, `/static/`, `/api/`, and `/silk/`) and tracks a `$pageview` event with path, method, referrer, and user agent.
+Pageviews are captured client-side by the PostHog JS snippet in `base.html`, not by middleware.
 
 `PostHogExceptionMiddleware` catches unhandled exceptions, but only tracks them in production. Development exceptions are left to Django's debug page.
 
