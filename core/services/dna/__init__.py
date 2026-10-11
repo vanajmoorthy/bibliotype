@@ -671,13 +671,14 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         niche_books_count = 0
         if user_book_objects:
-            user_book_objects.sort(key=lambda b: b.global_read_count)
+            # min(), not an in-place sort: user_book_objects keeps CSV order.
+            niche = min(user_book_objects, key=lambda b: b.global_read_count)
             most_niche_book = {
-                "title": user_book_objects[0].title,
-                "author": user_book_objects[0].author.name,
-                "read_count": user_book_objects[0].global_read_count,
-                "cover_url": user_book_objects[0].cover_url or _build_cover_url(user_book_objects[0].isbn13),
-                "initial": _cover_initial(user_book_objects[0].title),
+                "title": niche.title,
+                "author": niche.author.name,
+                "read_count": niche.global_read_count,
+                "cover_url": niche.cover_url or _build_cover_url(niche.isbn13),
+                "initial": _cover_initial(niche.title),
             }
             niche_books_count = sum(1 for b in user_book_objects if b.global_read_count <= NICHE_THRESHOLD)
 
@@ -942,7 +943,8 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         else:
             # Save anonymous session data
             if session_key:
-                save_anonymous_session_data(session_key, dna, user_book_objects, read_df)
+                book_row_pairs = [(book, original_row) for book, _, original_row in results if book]
+                save_anonymous_session_data(session_key, dna, book_row_pairs)
                 logger.info(f"Saved anonymous session data for session: {session_key}")
             logger.info("DNA generated for an anonymous user. Returning result for display")
             return dna

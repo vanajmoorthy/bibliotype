@@ -378,6 +378,31 @@ class RecommendationsTestCase(TestCase):
         self.assertIsNotNone(anon_session)
         self.assertEqual(len(anon_session.book_ratings), 2)
 
+    def test_anonymous_ratings_survive_db_round_trip(self):
+        """JSONField returns book_ratings keys as strings; readers must still match int book ids."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from core.services.recommendation_service import _build_anonymous_context
+
+        AnonymousUserSession.objects.create(
+            session_key="round_trip_key",
+            dna_data={},
+            books_data=[self.book1.id, self.book2.id],
+            top_books_data=[self.book1.id],
+            genre_distribution={"fantasy": 10},
+            author_distribution={},
+            book_ratings={self.book1.id: 5, self.book2.id: 1},
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        anon_session = AnonymousUserSession.objects.get(session_key="round_trip_key")
+        self.assertIn(str(self.book2.id), anon_session.book_ratings)  # keys come back as strings
+
+        context = _build_anonymous_context(anon_session)
+
+        self.assertEqual(context["disliked_book_ids"], {self.book2.id})
+
     def test_anonymous_recommendations_with_rating_correlation(self):
         """Test that anonymous recommendations can store and retrieve book_ratings"""
         # Just verify the field exists in the model - no database operations needed
