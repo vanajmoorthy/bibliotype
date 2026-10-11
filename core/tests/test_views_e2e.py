@@ -583,6 +583,47 @@ class SignupDuplicateEmailTests(TransactionTestCase):
         self.assertTrue(User.objects.filter(username="freshuser").exists())
         self.assertEqual(len(self.mail.outbox), 0)
 
+    @patch("core.tasks.generate_recommendations_task.delay")
+    def test_signup_with_session_dna_creates_userbooks(self, mock_recs):
+        """Signing up from the dashboard link (no ?task_id) must save the
+        session DNA AND the anonymous library as UserBooks."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from core.models import AnonymousUserSession, Author, Book, UserBook
+
+        author = Author.objects.create(name="Session Author")
+        book_a = Book.objects.create(title="Session A", author=author)
+        book_b = Book.objects.create(title="Session B", author=author)
+
+        session = self.client.session
+        session["dna_data"] = {"reader_type": "Session Reader", "user_stats": {}}
+        session.save()
+        AnonymousUserSession.objects.create(
+            session_key=session.session_key,
+            dna_data={"reader_type": "Session Reader"},
+            books_data=[book_a.id, book_b.id],
+            book_ratings={str(book_a.id): 5},
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+        response = self.client.post(
+            reverse("core:signup"),
+            {
+                "username": "sessionuser",
+                "email": "session@test.com",
+                "password1": "Brand-New-p4ssword!",
+                "password2": "Brand-New-p4ssword!",
+            },
+        )
+
+        self.assertRedirects(response, reverse("core:display_dna"), fetch_redirect_response=False)
+        user = User.objects.get(username="sessionuser")
+        self.assertEqual(user.userprofile.reader_type, "Session Reader")
+        self.assertEqual(UserBook.objects.filter(user=user).count(), 2)
+        self.assertEqual(UserBook.objects.get(user=user, book=book_a).user_rating, 5)
+
 
 @override_settings(
     CACHES={

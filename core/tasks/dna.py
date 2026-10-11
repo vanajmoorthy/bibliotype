@@ -19,8 +19,14 @@ from ..services.dna import _save_dna_to_profile, calculate_full_dna
 logger = logging.getLogger(__name__)
 
 
+# Poll the anonymous DNA task every CLAIM_RETRY_COUNTDOWN seconds for up to
+# CELERY_TASK_TIME_LIMIT (900s) — a big library can take minutes to process.
+CLAIM_RETRY_COUNTDOWN = 10
+CLAIM_MAX_RETRIES = 90
+
+
 # name pinned: wire name must survive the package split (queued msgs + beat)
-@shared_task(bind=True, max_retries=5, name="core.tasks.claim_anonymous_dna_task")
+@shared_task(bind=True, max_retries=CLAIM_MAX_RETRIES, name="core.tasks.claim_anonymous_dna_task")
 def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str):
     """
     Claim cached anonymous DNA for a freshly-signed-up user.
@@ -107,8 +113,12 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str)
     else:
         result = AsyncResult(task_id)
         if not result.ready():
-            logger.info(f"Task {task_id} not ready yet. Retrying claim for user {user_id} in 10s")
-            raise self.retry(countdown=10, exc=Exception(f"Task {task_id} not ready"))
+            if self.request.retries >= self.max_retries:
+                logger.error(f"Task {task_id} still not ready after {self.request.retries} retries. Giving up claim")
+                _clear_pending_and_return()
+                return
+            logger.info(f"Task {task_id} not ready yet. Retrying claim for user {user_id} in {CLAIM_RETRY_COUNTDOWN}s")
+            raise self.retry(countdown=CLAIM_RETRY_COUNTDOWN, exc=Exception(f"Task {task_id} not ready"))
         if not result.successful():
             logger.error(f"Task {task_id} failed. Cannot claim DNA for user {user_id}")
             user.userprofile.pending_dna_task_id = None
@@ -140,7 +150,8 @@ def _create_userbooks_from_anonymous_session(user, session_key):
     try:
         anon_session = AnonymousUserSession.objects.get(session_key=session_key)
         book_ids = anon_session.books_data or []
-        top_book_ids = anon_session.top_books_data or []
+        # JSONField round-trips dict keys as strings
+        ratings = {str(k): v for k, v in (anon_session.book_ratings or {}).items()}
 
         if not book_ids:
             logger.warning(f"No book IDs found in AnonymousUserSession {session_key}")
@@ -150,7 +161,9 @@ def _create_userbooks_from_anonymous_session(user, session_key):
         for book_id in book_ids:
             try:
                 book = Book.objects.get(pk=book_id)
-                UserBook.objects.get_or_create(user=user, book=book, defaults={})
+                UserBook.objects.get_or_create(
+                    user=user, book=book, defaults={"user_rating": ratings.get(str(book_id))}
+                )
                 books_created += 1
             except Book.DoesNotExist:
                 logger.warning(f"Book with id {book_id} not found when creating UserBooks")
@@ -160,17 +173,6 @@ def _create_userbooks_from_anonymous_session(user, session_key):
 
         if books_created > 0:
             calculate_and_store_top_books(user, limit=5)
-            # Also mark the top books from the anonymous session if they exist
-            for position, book_id in enumerate(top_book_ids[:5], 1):
-                try:
-                    book = Book.objects.get(pk=book_id)
-                    user_book = UserBook.objects.filter(user=user, book=book).first()
-                    if user_book:
-                        user_book.is_top_book = True
-                        user_book.top_book_position = position
-                        user_book.save()
-                except Book.DoesNotExist:
-                    continue
 
     except AnonymousUserSession.DoesNotExist:
         logger.warning(f"AnonymousUserSession {session_key} not found when claiming DNA for user {user.username}")

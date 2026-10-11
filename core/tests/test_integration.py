@@ -998,30 +998,32 @@ class CreateUserbooksFromAnonymousSessionTests(TestCase):
             expires_at=timezone.now() + timezone.timedelta(days=7),
         )
 
-    @patch("core.services.top_books_service.calculate_and_store_top_books")
-    def test_creates_userbooks_and_marks_top_books(self, mock_calc_top):
-        """Happy path: UserBooks created, top books marked with positions."""
+    def test_creates_userbooks_with_ratings_and_at_most_five_top_books(self):
+        """UserBooks carry the anonymous ratings; top books come only from
+        calculate_and_store_top_books (no duplicate positions, never > 5)."""
         from core.tasks import _create_userbooks_from_anonymous_session
+
+        extra_books = [Book.objects.create(title=f"Extra {i}", author=self.author) for i in range(7)]
+        all_books = [self.book1, self.book2, self.book3, *extra_books]
+        self.anon_session.books_data = [b.id for b in all_books]
+        # Session's own top list disagrees with ratings — it must not be layered on top.
+        self.anon_session.top_books_data = [b.id for b in extra_books[:5]]
+        # JSONField stores keys as strings
+        self.anon_session.book_ratings = {str(self.book1.id): 5, str(self.book2.id): 4, str(self.book3.id): 2}
+        self.anon_session.save()
 
         _create_userbooks_from_anonymous_session(self.user, self.session_key)
 
-        # All 3 UserBooks should exist
-        self.assertEqual(UserBook.objects.filter(user=self.user).count(), 3)
+        self.assertEqual(UserBook.objects.filter(user=self.user).count(), 10)
+        self.assertEqual(UserBook.objects.get(user=self.user, book=self.book1).user_rating, 5)
+        self.assertEqual(UserBook.objects.get(user=self.user, book=self.book2).user_rating, 4)
+        self.assertEqual(UserBook.objects.get(user=self.user, book=self.book3).user_rating, 2)
+        self.assertIsNone(UserBook.objects.get(user=self.user, book=extra_books[0]).user_rating)
 
-        # Top books should be marked
-        ub1 = UserBook.objects.get(user=self.user, book=self.book1)
-        self.assertTrue(ub1.is_top_book)
-        self.assertEqual(ub1.top_book_position, 1)
-
-        ub2 = UserBook.objects.get(user=self.user, book=self.book2)
-        self.assertTrue(ub2.is_top_book)
-        self.assertEqual(ub2.top_book_position, 2)
-
-        # Non-top book
-        ub3 = UserBook.objects.get(user=self.user, book=self.book3)
-        self.assertFalse(ub3.is_top_book)
-
-        mock_calc_top.assert_called_once_with(self.user, limit=5)
+        top = UserBook.objects.filter(user=self.user, is_top_book=True)
+        self.assertEqual(top.count(), 5)
+        self.assertEqual(sorted(top.values_list("top_book_position", flat=True)), [1, 2, 3, 4, 5])
+        self.assertEqual(top.get(top_book_position=1).book, self.book1)
 
     @patch("core.services.top_books_service.calculate_and_store_top_books")
     def test_handles_missing_book_ids(self, mock_calc_top):

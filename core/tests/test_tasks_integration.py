@@ -118,6 +118,28 @@ class TaskIntegrationTests(TransactionTestCase):
 
         mock_async_result.assert_called_with(task_id)
 
+    @patch("core.tasks.dna.AsyncResult")
+    def test_claim_gives_up_and_clears_pending_when_retries_exhausted(self, mock_async_result):
+        """If the anonymous DNA task is still running when the claim's retries run
+        out, pending_dna_task_id must be cleared so the dashboard stops polling."""
+        user = User.objects.create_user(username="slowclaim", password="password")
+        task_id = "slow-task-id"
+        session_key = "uploader-session-key"
+        cache.set(f"task_owner_{task_id}", session_key, 3600)
+        user.userprofile.pending_dna_task_id = task_id
+        user.userprofile.save()
+        mock_async_result.return_value.ready.return_value = False
+
+        claim_anonymous_dna_task.apply(
+            args=(user.id, task_id, session_key), retries=claim_anonymous_dna_task.max_retries
+        )
+
+        user.userprofile.refresh_from_db()
+        self.assertIsNone(user.userprofile.pending_dna_task_id)
+        self.assertIsNone(user.userprofile.dna_data)
+        # Retry budget must cover the hard task time limit
+        self.assertGreaterEqual(claim_anonymous_dna_task.max_retries * 10, 900)
+
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.dna.AsyncResult")
     def test_claim_anonymous_dna_task_fails_closed_on_cache_miss(self, mock_async_result, mock_rec_task):
