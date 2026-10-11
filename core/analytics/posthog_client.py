@@ -11,6 +11,8 @@ import socket
 import posthog
 from django.conf import settings
 
+from ..services.anonymization_service import _key_hash
+
 logger = logging.getLogger(__name__)
 
 _posthog_initialized = False
@@ -52,7 +54,7 @@ def get_distinct_id(request):
     Get distinct ID for PostHog tracking.
 
     For authenticated users, returns user ID.
-    For anonymous users, returns session key.
+    For anonymous users, returns a hash of the session key (see session_distinct_id).
 
     Args:
         request: Django request object
@@ -63,7 +65,12 @@ def get_distinct_id(request):
     if request.user.is_authenticated:
         return str(request.user.id)
     else:
-        return request.session.session_key or "anonymous"
+        return session_distinct_id(request.session.session_key)
+
+
+def session_distinct_id(session_key):
+    """Anonymous distinct_id: the session key is a bearer credential, so PostHog only ever sees its hash."""
+    return _key_hash(session_key) if session_key else "anonymous"
 
 
 def capture_event(distinct_id, event_name, properties=None, environment=None):
@@ -71,7 +78,7 @@ def capture_event(distinct_id, event_name, properties=None, environment=None):
     Capture a PostHog event with environment tagging.
 
     Args:
-        distinct_id: User ID or session key
+        distinct_id: User ID, hashed session key, or "system"
         event_name: Name of the event
         properties: Dictionary of event properties
         environment: Optional environment override (defaults to current environment)
@@ -106,7 +113,7 @@ def capture_exception(distinct_id, exception, context=None, environment=None):
     Capture an exception event in PostHog with sanitized error information.
 
     Args:
-        distinct_id: User ID or session key
+        distinct_id: User ID, hashed session key, or "system"
         exception: Exception object
         context: Additional context dictionary
         environment: Optional environment override

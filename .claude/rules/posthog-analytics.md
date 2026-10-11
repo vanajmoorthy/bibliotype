@@ -26,7 +26,8 @@ def track_my_event(user_id, custom_prop):
 ## Conventions
 
 - **Event names:** snake_case (`file_upload_started`, `dna_generation_completed`)
-- **Distinct IDs:** `str(user.id)` for authenticated, `session.session_key` for anonymous, `"system"` for infrastructure events
+- **Distinct IDs:** `str(user.id)` for authenticated, `session_distinct_id(session_key)` for anonymous (the 12-char `_key_hash` of the session key, so one visitor keeps one distinct_id), `"system"` for infrastructure events
+- **Never send a raw session key** (as distinct_id or property). It is a bearer credential: anyone who reads it in PostHog can paste it into a cookie and become that visitor. Use `session_distinct_id()` / `_key_hash()`; there is no server-side alias/identify relying on the raw key.
 - **All events** automatically include `environment` ("production"/"development") and `server_hostname`
 - **Error messages:** Always truncated to 500 chars, sensitive patterns (api_key, password, secret, token) regex-stripped
 
@@ -77,7 +78,7 @@ Context processor `posthog_settings` provides `POSTHOG_API_KEY` to templates.
 
 **Profile & settings:**
 - `profile_made_public` — Privacy toggle
-- `public_profile_viewed` — distinct_id is always the VIEWER (user id, session key, or "anonymous" — never the owner). Properties: `profile_username`, `profile_user_id`, `viewer_type` ("owner"/"authenticated"/"anonymous"), `profile_reader_type`, `profile_books_count`
+- `public_profile_viewed` — distinct_id is always the VIEWER (user id, hashed session key, or "anonymous" — never the owner). Properties: `profile_username`, `profile_user_id`, `viewer_type` ("owner"/"authenticated"/"anonymous"), `profile_reader_type`, `profile_books_count`
 - `settings_updated` — With `setting_type`: "display_name" or "recommendation_visibility"
 - `recommendations_generated` — Fires when recs are actually generated (Celery task for auth users with `source="task"` + `reader_type`, `similar_users_count`, `max_similarity_pct`, `uniqueness_label`; inline for anonymous with `source="anonymous_dashboard_view"`)
 - `recommendations_displayed` — Fires per dashboard render with stored recs (count + `reader_type`)

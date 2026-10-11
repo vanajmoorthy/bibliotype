@@ -39,8 +39,6 @@ class PostHogExceptionMiddleware(MiddlewareMixin):
 
             if request.user.is_authenticated:
                 context["user_id"] = request.user.id
-            else:
-                context["session_id"] = request.session.session_key
 
             capture_exception(
                 distinct_id=distinct_id,
