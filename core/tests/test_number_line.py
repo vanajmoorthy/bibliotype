@@ -344,7 +344,8 @@ class NumberLineRenderTests(TestCase):
         content = self._get_dashboard().content.decode()
         self.assertIn('data-nl-metric="year"', content)
         self.assertIn("asAge: true", content)
-        self.assertIn("unit: 'yrs'", content)
+        self.assertIn("unit: 'years old'", content)
+        self.assertIn("unitOne: 'year old'", content)
 
     def test_controversial_ratings_render_podium_bars(self):
         """Controversial ratings now render as two-bar podium charts (You vs Goodreads)."""

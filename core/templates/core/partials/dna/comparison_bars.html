@@ -6,7 +6,7 @@
     Required context variables: nl_metric — key the live-enrichment script uses to push fresh values ("pages", "year",
     "bpy") nl_user_value, nl_compare_value, nl_third_value — the three numeric values
     Optional: nl_as_age — when set, values are publish years and bars show age in years (current year minus value)
-    nl_unit — suffix after each value (e.g. "yrs") nl_decimals — decimal places (default: 0) nl_third_href — if set,
+    nl_unit — suffix after each value (e.g. "pages") nl_unit_singular — suffix when the value is exactly 1 nl_decimals — decimal places (default: 0) nl_third_href — if set,
     the World Avg label links to this URL (opens in a new tab)
 
     Scope keys (userVal / compVal / thirdVal) match what updateComparative() in charts_scripts.html writes into each
@@ -23,16 +23,23 @@
          thirdVal: {{ nl_third_value|default:'null' }},
          asAge: {{ nl_as_age|yesno:'true,false' }},
          unit: '{{ nl_unit|default:"" }}',
+         unitOne: '{{ nl_unit_singular|default:nl_unit|default:"" }}',
          decimals: {{ nl_decimals|default:"0" }},
          shown: false,
-         // Room kept free after the longest bar for its value label (wider when a unit follows it).
-         reserve: '{% if nl_unit %}3.75rem{% else %}2.75rem{% endif %}',
 
          val(v) { return this.asAge ? Math.max(0, new Date().getFullYear() - v) : v; },
          fmt(v) {
              const n = this.decimals > 0 ? Number(v).toFixed(this.decimals) : Math.round(v);
-             return this.unit ? n + ' ' + this.unit : n;
+             const unit = Number(n) === 1 ? this.unitOne : this.unit;
+             return unit ? n + ' ' + unit : String(n);
          },
+         // Room kept free after the longest bar for the widest value label (VT323 is monospaced, so ch is exact).
+         get reserve() {
+             const labels = [this.userVal, this.compVal, this.thirdVal].filter((v) => v !== null).map((v) => this.fmt(this.val(v)));
+             return Math.max(...labels.map((l) => l.length)) + 1 + 'ch';
+         },
+         // Bars never shrink below a visible stub, so a small value like 4 years still reads as a bar.
+         width(v) { return this.shown ? 'max(1.5rem, calc((100% - ' + this.reserve + ') * ' + this.pct(v) / 100 + '))' : '0'; },
          get maxVal() {
              const vals = [this.userVal, this.compVal, this.thirdVal].filter((v) => v !== null).map((v) => this.val(v));
              return Math.max(...vals) || 1;
@@ -57,7 +64,7 @@
     <div class="flex items-center gap-2">
         <div
             class="border-brand-text h-3.5 shrink-0 border-2 bg-white transition-[width] duration-700 ease-out motion-reduce:transition-none"
-            :style="'width: calc((100% - ' + reserve + ') * ' + pct(userVal) / 100 + ')'"
+            :style="'width: ' + width(userVal)"
         ></div>
         <span class="tabular-nums whitespace-nowrap" x-text="fmt(val(userVal))"></span>
     </div>
@@ -69,7 +76,7 @@
     <div class="flex items-center gap-2">
         <div
             class="border-brand-text bg-brand-purple h-3.5 shrink-0 border-2 transition-[width] duration-700 ease-out motion-reduce:transition-none"
-            :style="'width: calc((100% - ' + reserve + ') * ' + pct(compVal) / 100 + ')'"
+            :style="'width: ' + width(compVal)"
         ></div>
         <span class="tabular-nums whitespace-nowrap" x-text="fmt(val(compVal))"></span>
     </div>
@@ -87,7 +94,7 @@
         <div class="flex items-center gap-2">
             <div
                 class="border-brand-text bg-brand-orange h-3.5 shrink-0 border-2 transition-[width] duration-700 ease-out motion-reduce:transition-none"
-                :style="'width: calc((100% - ' + reserve + ') * ' + pct(thirdVal) / 100 + ')'"
+                :style="'width: ' + width(thirdVal)"
             ></div>
             <span class="tabular-nums whitespace-nowrap" x-text="fmt(val(thirdVal))"></span>
         </div>
