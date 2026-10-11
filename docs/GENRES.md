@@ -24,8 +24,8 @@ Backward compatibility: the pre-overhaul names `classics`, `young adult`, `child
 
 `enrich_book_from_apis` in `core/services/book_enrichment_service.py` fetches:
 
-- **Open Library subjects** → `_clean_and_canonicalize_genres` (`book_enrichment_service.py:45`): drop `EXCLUDED_GENRES`, then word-boundary regex match against all aliases (longest first), double-check the canonical result isn't excluded.
-- **Google Books categories** ("Fiction / Mystery / Cozy") → `_canonicalize_google_books_categories` (`book_enrichment_service.py:81`): split on `/`, delegate to the same cleaner.
+- **Open Library subjects** → `_clean_and_canonicalize_genres` (`book_enrichment_service.py:87`): drop `EXCLUDED_GENRES`, then word-boundary regex match against all aliases (longest first), double-check the canonical result isn't excluded.
+- **Google Books categories** ("Fiction / Mystery / Cozy") → `_canonicalize_google_books_categories` (`book_enrichment_service.py:123`): split on `/`, delegate to the same cleaner. The first two segments are also looked up as an **exact** compound alias (`"fiction / literary"`), because a category like "Fiction / Literary" splits into two individually-excluded tokens. It is an exact lookup, not the regex search: searching the whole string would let an alias inside any segment win (every "Juvenile Fiction / …" would pick up YA via `juvenile`).
 
 Since PR #120 the two sources **merge** (Google Books first — higher confidence — Open Library supplements) instead of GB replacing OL. The combined set is sorted by `GENRE_PRIORITY` and truncated to the top 5–6 before being written to the `Book.genres` M2M.
 

@@ -141,6 +141,8 @@ def _canonicalize_google_books_categories(categories):
     genres = _clean_and_canonicalize_genres(flat)
 
     for cat in categories:
+        if "/" not in cat:
+            continue
         compound = " / ".join(part.strip().lower() for part in cat.split("/")[:2])
         canonical_name = CANONICAL_GENRE_MAP.get(compound)
         if canonical_name and canonical_name not in EXCLUDED_GENRES:

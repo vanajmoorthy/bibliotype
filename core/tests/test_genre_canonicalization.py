@@ -503,12 +503,12 @@ class CorpusMinedAliasTests(TestCase):
 
 
 class GoogleBooksCompoundCategoryTests(TestCase):
-    """Unsplit GB category strings must be matched alongside their `/` parts."""
+    """GB "A / B" categories also match their first two segments as an exact compound alias."""
 
     def test_fiction_literary_compound_yields_literary_fiction(self):
         from core.services.book_enrichment_service import _canonicalize_google_books_categories
 
-        # Before the unsplit pass: "Fiction" and "Literary" are both excluded → set()
+        # Split alone gives set(): "Fiction" and "Literary" are both excluded
         self.assertIn("literary fiction", _canonicalize_google_books_categories(["Fiction / Literary"]))
         self.assertIn("literary fiction", _canonicalize_google_books_categories(["Fiction / Literary / General"]))
 
