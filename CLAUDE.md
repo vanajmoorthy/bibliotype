@@ -141,12 +141,14 @@ These load automatically when you work on matching files:
 
 - **Backend:** Django 5.2, Python 3.13+, Celery 5.5, Redis 7, PostgreSQL 15
 - **Frontend:** Tailwind CSS 4 (custom @theme in `tailwind/input.css`), Alpine.js 3, Chart.js (both CDN)
-- **AI:** Gemini 2.5 Flash via `google-generativeai`
+- **AI:** LiteLLM fallback chain across free tiers (Groq → Gemini), routed through `core/services/_llm.py`
 - **Analytics:** PostHog (EU instance)
 
 ## Environment Variables
 
-Required: `SECRET_KEY`, `GEMINI_API_KEY`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` (or `DATABASE_URL`)
+Required: `SECRET_KEY`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` (or `DATABASE_URL`), plus **at least one** LLM provider key from the chain (`GROQ_API_KEY` or `GEMINI_API_KEY`; `CEREBRAS_API_KEY` is supported if you add a Cerebras model)
+
+LLM chain (optional overrides): `LLM_MODELS` (comma-separated, priority order; default `groq/openai/gpt-oss-120b,groq/qwen/qwen3.8-27b,gemini/gemini-flash-lite-latest`), `LLM_TIMEOUT_SECONDS`, `LLM_NUM_RETRIES`. LiteLLM handles failover/retries/cooldowns across the chain.
 
 Optional: `REDIS_CACHE_URL`, `CELERY_BROKER_URL`, `POSTHOG_API_KEY`, `GOOGLE_BOOKS_API_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DJANGO_ENV`
 
