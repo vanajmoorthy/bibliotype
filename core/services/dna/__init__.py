@@ -31,7 +31,7 @@ from ...dna_constants import (
     STORYGRAPH_TAG_TO_GENRE,
     compute_contrariness,
 )
-from ...models import Author, Book, Genre
+from ...models import AnonymousUserSession, Author, Book, Genre, UserBook
 from ...percentile_engine import (
     calculate_community_means,
     calculate_percentiles_from_aggregates,
@@ -181,6 +181,17 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
         # only runs once a book actually needs inline enrichment) and
         # lock-guarded so the start is exactly-once under concurrency.
         enrichment_budget = _EnrichmentBudget()
+        # Books this reader was already counted for by an earlier upload. A
+        # re-upload must not add another "reader" to Book.global_read_count,
+        # or niche-book stats drift for everyone.
+        previous_anon_session = None
+        if user:
+            already_counted_book_ids = set(UserBook.objects.filter(user=user).values_list("book_id", flat=True))
+        elif session_key:
+            previous_anon_session = AnonymousUserSession.objects.filter(session_key=session_key).first()
+            already_counted_book_ids = set(previous_anon_session.books_data) if previous_anon_session else set()
+        else:
+            already_counted_book_ids = set()
         with requests.Session() as session:
             session.headers.update({"User-Agent": settings.EXTERNAL_API_USER_AGENT})
 
@@ -364,15 +375,16 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 else:
                     logger.debug(f"Book '{book.title}' recently enriched or complete. Skipping.")
 
-                Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
+                if book.pk not in already_counted_book_ids:
+                    Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
 
-                # Pull only the post-increment value back into the Python object.
-                # Niche-book stats (`book.global_read_count` reads downstream around
-                # the most-niche-book and NICHE_THRESHOLD aggregations) depend on
-                # this being current. `refresh_from_db(fields=[...])` avoids
-                # reloading large columns like cover_url / JSON blobs that didn't
-                # change.
-                book.refresh_from_db(fields=["global_read_count"])
+                    # Pull only the post-increment value back into the Python object.
+                    # Niche-book stats (`book.global_read_count` reads downstream around
+                    # the most-niche-book and NICHE_THRESHOLD aggregations) depend on
+                    # this being current. `refresh_from_db(fields=[...])` avoids
+                    # reloading large columns like cover_url / JSON blobs that didn't
+                    # change.
+                    book.refresh_from_db(fields=["global_read_count"])
 
                 genre_names = [g.name for g in book.genres.all()]
                 return book, genre_names, original_row
@@ -498,8 +510,6 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
 
         # Store UserBook entries for registered users
         if user and results:
-            from ...models import UserBook
-
             # Collect current book IDs from this upload
             current_book_ids = {book.id for book, genres, original_row in results if book}
 
@@ -658,6 +668,8 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                     previous_stats = existing_dna.get("user_stats")
             except ObjectDoesNotExist:
                 pass
+        elif previous_anon_session and previous_anon_session.dna_data:
+            previous_stats = previous_anon_session.dna_data.get("user_stats")
         update_analytics_from_stats(user_base_stats, previous_stats=previous_stats)
 
         # Percentiles stored here serve as a fallback for contexts that bypass

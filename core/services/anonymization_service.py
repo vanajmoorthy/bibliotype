@@ -1,6 +1,8 @@
 import hashlib
 import logging
+
 from django.utils import timezone
+
 from ..models import AnonymizedReadingProfile, AnonymousUserSession
 
 logger = logging.getLogger(__name__)
@@ -24,6 +26,10 @@ def anonymize_session(anonymous_session):
             f"Skipping anonymization of session {_key_hash(anonymous_session.session_key)}: "
             f"too few books ({total_books})"
         )
+        # Mark it handled so the nightly batch stops reloading it and the
+        # 30-day cleanup below deletes it (cleanup only removes anonymized rows).
+        anonymous_session.anonymized = True
+        anonymous_session.save(update_fields=["anonymized"])
         return None
 
     AnonymizedReadingProfile.objects.create(
