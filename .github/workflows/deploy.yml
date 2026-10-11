@@ -1,24 +1,26 @@
 name: Deploy to DigitalOcean
 # Deploy only after the test workflow passes on a push to main. Previously
 # this ran on push in parallel with the tests, so a red build still shipped.
-# workflow_run fires for the CI's pull_request runs too, hence the event check.
+# `branches` matches the CI run's head branch, so a fork PR from a branch named
+# main also gets here; the job's event check drops it.
 on:
     workflow_run:
         workflows: ["Django CI"]
         types: [completed]
         branches: [main]
 
-# Serialize deploys: two quick merges used to run `docker compose up
-# --force-recreate` on the droplet concurrently, colliding and leaving every
-# container wedged in "Created" (prod 502'd on 2026-09-02). Queue instead —
-# and never cancel an in-flight deploy mid-recreate.
-concurrency:
-    group: production-deploy
-    cancel-in-progress: false
-
 jobs:
     deploy:
         if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+        # Serialize deploys: two quick merges used to run `docker compose up
+        # --force-recreate` on the droplet concurrently, colliding and leaving every
+        # container wedged in "Created" (prod 502'd on 2026-09-02). Queue instead —
+        # and never cancel an in-flight deploy mid-recreate. Job-level so runs
+        # skipped by the `if` (failed CI, fork PRs) never take the queue slot and
+        # cancel a pending real deploy.
+        concurrency:
+            group: production-deploy
+            cancel-in-progress: false
         runs-on: ubuntu-latest
         steps:
             # Check out the exact commit the tests ran on, not whatever main is now.
@@ -79,11 +81,9 @@ jobs:
 
                       docker pull $DOCKERHUB_USERNAME/bibliotype:$IMAGE_TAG
 
-                      # No --force-recreate: compose recreates only services whose
-                      # config changed. web/worker always change (new IMAGE_TAG per
-                      # commit); db and redis are left running. Recreating redis on
-                      # every deploy wiped the Celery queues and task_owner_*/
-                      # dna_result_* keys (it has no volume), losing uploads in flight.
+                      # No --force-recreate: only services whose config changed are
+                      # recreated (web/worker: new IMAGE_TAG each commit). Recreating
+                      # redis (no volume) wiped queued tasks and in-flight uploads.
                       docker compose -f docker-compose.prod.yml up -d
 
                       echo "Fixing static file permissions..."
