@@ -63,6 +63,7 @@
                                         this.originalName = data.new_username;
                                         this.newName = data.new_username;
                                         this.successMessage = 'Display name updated!';
+                                        this.$dispatch('username-changed', { username: data.new_username });
                                     } else {
                                         this.errorMessage = data.message;
                                     }
@@ -203,7 +204,10 @@
                         <div>
                             <p class="text-lg font-bold tracking-wide uppercase">Enable public profile</p>
                             <p class="mt-1 text-sm text-gray-600">
-                                When on, anyone can view your Bibliotype at /u/{{ user.username }}.
+                                When on, anyone can view your Bibliotype at /u/<span
+                                    @username-changed.window="$el.textContent = $event.detail.username"
+                                    >{{ user.username }}</span
+                                >.
                             </p>
                         </div>
                         {% include 'core/partials/neo_switch.html' with state="isPublic" on_click="togglePublic()" disabled="privacySaving" %}

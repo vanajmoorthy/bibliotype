@@ -323,6 +323,7 @@
                                         x-show="isPublic"
                                         x-cloak
                                         href="{% url 'core:public_profile' username=user.username %}"
+                                        @username-changed.window="$el.href = `/u/${encodeURIComponent($event.detail.username)}/`; $el.textContent = `/u/${$event.detail.username}`"
                                         class="hover:bg-brand-yellow text-base block underline"
                                         target="_blank"
                                         >/u/{{ user.username }}</a

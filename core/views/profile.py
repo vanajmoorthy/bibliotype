@@ -94,8 +94,8 @@ def _update_username_api_throttled(request):
         form = UpdateDisplayNameForm({"username": new_username}, user=request.user, instance=request.user)
 
         if form.is_valid():
-            form.save()
-            return JsonResponse({"status": "success", "new_username": new_username})
+            user = form.save()
+            return JsonResponse({"status": "success", "new_username": user.username})
         else:
             error_message = form.errors.get("username")[0]
             return JsonResponse({"status": "error", "message": error_message}, status=400)
@@ -153,9 +153,7 @@ def update_recommendation_visibility(request):
             request, "You are now visible as a recommendation source to similar readers!", extra_tags="ephemeral"
         )
     else:
-        messages.success(
-            request, "You've opted out of being shown as a recommendation source.", extra_tags="ephemeral"
-        )
+        messages.success(request, "You've opted out of being shown as a recommendation source.", extra_tags="ephemeral")
 
     return redirect("core:display_dna")
 

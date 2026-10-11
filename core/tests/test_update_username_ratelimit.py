@@ -69,3 +69,10 @@ class UpdateUsernameApiRateLimitTests(TestCase):
         response = self._post_username("newname")
         self.assertEqual(response.json(), {"status": "success", "new_username": "newname"})
         self.assertEqual(list(get_messages(response.wsgi_request)), [])
+
+    def test_success_returns_the_saved_username(self):
+        """The dashboard rebuilds /u/<username> links from this value, so it must match what was saved."""
+        response = self._post_username("NewName")
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.username, "newname")
+        self.assertEqual(response.json()["new_username"], "newname")

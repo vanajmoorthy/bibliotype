@@ -10,6 +10,7 @@
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
         @keydown.escape.window="shareModalOpen = false"
+        @username-changed.window="$el.querySelectorAll('[data-share-url]').forEach((el) => { el.textContent = `bibliotype.app/u/${$event.detail.username}`; })"
         @click.self="shareModalOpen = false"
         class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/80"
         style="height: 100dvh; height: 100vh;"
