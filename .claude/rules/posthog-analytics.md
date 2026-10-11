@@ -73,7 +73,7 @@ Context processor `posthog_settings` provides `POSTHOG_API_KEY` to templates.
 **Authentication:**
 - `user_signed_up` — With `signup_source`: "with_task_claim", "with_session_dna", "before_dna"
 - `user_logged_in` — With `had_dna_in_session` flag
-- `anonymous_dna_claimed` — Anonymous DNA transferred to account
+- `anonymous_dna_claimed` — Anonymous DNA transferred to account. Carries `session_key_hash` (truncated SHA-256), never the raw session key
 
 **Profile & settings:**
 - `profile_made_public` — Privacy toggle

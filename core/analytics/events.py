@@ -208,15 +208,19 @@ def track_user_signed_up(user_id, signup_source, task_id_to_claim=None, had_dna_
 
 def track_anonymous_dna_claimed(user_id, task_id, session_key=None):
     """Track when user signs up and claims their anonymous DNA."""
+    # Local import: a module-level one would make analytics load core.models via the service.
+    from ..services.anonymization_service import _key_hash
+
     environment = get_environment()
 
+    # The session key is a bearer credential, so only its hash leaves the server.
     capture_event(
         distinct_id=str(user_id),
         event_name="anonymous_dna_claimed",
         properties={
             "user_id": user_id,
             "task_id": task_id,
-            "session_key": session_key,
+            "session_key_hash": _key_hash(session_key) if session_key else None,
         },
         environment=environment,
     )

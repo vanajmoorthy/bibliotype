@@ -82,6 +82,20 @@ class TaskUnitTests(TestCase):
         mock_profile.save.assert_called_once()
 
 
+class AnonymousDnaClaimedEventTests(TestCase):
+    @patch("core.analytics.events.capture_event")
+    def test_sends_session_key_hash_not_raw_key(self, mock_capture):
+        from core.analytics.events import track_anonymous_dna_claimed
+        from core.services.anonymization_service import _key_hash
+
+        raw_key = "rawsessionkey1234567890abcdef"
+        track_anonymous_dna_claimed(user_id=7, task_id="t-1", session_key=raw_key)
+
+        properties = mock_capture.call_args.kwargs["properties"]
+        self.assertEqual(properties["session_key_hash"], _key_hash(raw_key))
+        self.assertNotIn(raw_key, str(mock_capture.call_args))
+
+
 class NormalizationUnitTests(TestCase):
 
     def test_detect_and_normalize_storygraph_csv(self):
