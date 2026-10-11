@@ -29,7 +29,7 @@ All three catch bare `Exception`, log a warning, and track via `track_redis_cach
 | Key | TTL | Set By | Read By |
 |-----|-----|--------|---------|
 | `user_recommendations_{user_id}` | 15min | recommendation_service | recommendation_service |
-| `anon_recommendations_{session_key}` | 15min | recommendation_service | recommendation_service |
+| `anon_recommendations_{_key_hash(session_key)}` | 15min | recommendation_service | recommendation_service |
 | `similar_users_{user_id}` | 30min | user_similarity_service | user_similarity_service |
 | `anon_profiles_sample` | 1hr | recommendation_service | recommendation_service |
 | `public_users_for_recs_sample` | 30min | recommendation_service | recommendation_service |

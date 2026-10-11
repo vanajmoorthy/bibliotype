@@ -51,3 +51,14 @@ class RawSessionKeyNeverSentTests(TestCase):
         self.assertEqual(anon_ids, {_key_hash(RAW_KEY)})
         claimed = next(c for c in calls if c.kwargs.get("event") == "anonymous_dna_claimed")
         self.assertEqual(claimed.kwargs["properties"]["session_key_hash"], _key_hash(RAW_KEY))
+
+    def test_anonymous_recommendation_cache_key_is_hashed(self, mock_posthog, _init):
+        # Cache keys are sent to PostHog in redis_cache_error events.
+        from core.services.recommendation_service import get_recommendations_for_anonymous
+
+        with patch("core.services.recommendation_service.safe_cache_get", return_value=[]) as mock_get:
+            get_recommendations_for_anonymous(RAW_KEY)
+
+        cache_key = mock_get.call_args.args[0]
+        self.assertNotIn(RAW_KEY, cache_key)
+        self.assertEqual(cache_key, f"anon_recommendations_{_key_hash(RAW_KEY)}")
