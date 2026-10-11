@@ -296,6 +296,13 @@ class FictionNonfictionCoverageSubtitleTests(TestCase):
         self.assertNotIn("Based on", html)
         self.assertIn("Fiction", html)
 
+    def test_percentages_round_half_up_and_sum_to_100(self):
+        """5 fiction / 3 nonfiction = 62.5 / 37.5. Must match the JS poller (Math.round,
+        nonfiction = 100 - fiction): 63 / 37, not widthratio's banker's 62 / 38."""
+        html = self._render({"fiction_count": 5, "nonfiction_count": 3}, None)
+        self.assertIn('id="fiction-pct">63%', html)
+        self.assertIn('id="nonfiction-pct">37%', html)
+
 
 @override_settings(
     CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},

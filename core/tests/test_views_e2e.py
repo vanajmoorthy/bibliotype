@@ -5,6 +5,7 @@ from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TransactionTestCase, override_settings
 from django.urls import reverse
+from django.utils.html import escape
 
 
 @override_settings(
@@ -212,7 +213,10 @@ class ViewE2E_Tests(TransactionTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "We couldn't verify that this Bibliotype belongs to your current session.")
+        # Flash messages are autoescaped, so the apostrophe arrives as &#x27;.
+        self.assertContains(
+            response, escape("We couldn't verify that this Bibliotype belongs to your current session.")
+        )
         self.assertFalse(User.objects.filter(username="attacker").exists())
 
     @patch("core.services.dna.generate_vibe_with_llm")

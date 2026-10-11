@@ -323,8 +323,10 @@
 
             const fEl = document.getElementById("fiction-pct");
             const nfEl = document.getElementById("nonfiction-pct");
-            if (fEl) fEl.textContent = Math.round((split.fiction_count / total) * 100) + "%";
-            if (nfEl) nfEl.textContent = Math.round((split.nonfiction_count / total) * 100) + "%";
+            // Same half-up rounding as the split_pcts filter; nonfiction is the remainder so they sum to 100.
+            const fictionPct = Math.round((split.fiction_count / total) * 100);
+            if (fEl) fEl.textContent = fictionPct + "%";
+            if (nfEl) nfEl.textContent = 100 - fictionPct + "%";
 
             const note = document.getElementById("fiction-coverage-note");
             if (note) {

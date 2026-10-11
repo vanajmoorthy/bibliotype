@@ -95,8 +95,6 @@ def _update_username_api_throttled(request):
 
         if form.is_valid():
             form.save()
-            messages.success(request, "Display name updated successfully!", extra_tags="ephemeral")
-
             return JsonResponse({"status": "success", "new_username": new_username})
         else:
             error_message = form.errors.get("username")[0]
@@ -114,7 +112,7 @@ def update_username_api(request):
     try:
         return _update_username_api_throttled(request)
     except Ratelimited:
-        return JsonResponse({"error": "Too many attempts, try again later."}, status=429)
+        return JsonResponse({"status": "error", "message": "Too many attempts, try again later."}, status=429)
 
 
 @login_required

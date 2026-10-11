@@ -1,6 +1,7 @@
 import json
 
 from django.contrib.auth.models import User
+from django.contrib.messages import get_messages
 from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
@@ -51,7 +52,7 @@ class UpdateUsernameApiRateLimitTests(TestCase):
             response = self._post_username("over_the_limit")
         self.assertEqual(response.status_code, 429)
         payload = response.json()
-        self.assertEqual(payload, {"error": "Too many attempts, try again later."})
+        self.assertEqual(payload, {"status": "error", "message": "Too many attempts, try again later."})
 
     def test_tenth_post_returns_normal_response(self):
         with frozen_ratelimit_window():
@@ -62,3 +63,9 @@ class UpdateUsernameApiRateLimitTests(TestCase):
             response = self._post_username("tenth_name")
         self.assertNotEqual(response.status_code, 429)
         self.assertIn(response.status_code, (200, 400))
+
+    def test_successful_rename_queues_no_flash_message(self):
+        """The JSON API gives its own feedback; a queued flash would pop up stale on a later page."""
+        response = self._post_username("newname")
+        self.assertEqual(response.json(), {"status": "success", "new_username": "newname"})
+        self.assertEqual(list(get_messages(response.wsgi_request)), [])

@@ -259,7 +259,7 @@
                             {% endif %} relative mb-6 border-2 p-4 text-lg font-bold"
                             role="alert"
                         >
-                            <span>{{ message|safe }}</span>
+                            <span>{{ message }}</span>
                             {% include 'core/partials/buttons/close_button.html' with extra_classes="absolute top-2 right-3 cursor-pointer" extra_attrs='@click="show = false"' %}
                         </div>
                     </div>

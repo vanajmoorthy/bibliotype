@@ -5,6 +5,7 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.shortcuts import redirect, render
+from django.utils.safestring import mark_safe
 
 from ..analytics.events import (
     track_anonymous_dna_displayed,
@@ -210,8 +211,10 @@ def display_dna_view(request):
         if "currently_reading_count" not in raw_dna:
             messages.info(
                 request,
-                "Re-upload your library to see your currently-reading books and get better recommendations! "
-                '<a href="/" class="hover:bg-brand-yellow font-bold underline">Upload now</a>',
+                mark_safe(
+                    "Re-upload your library to see your currently-reading books and get better recommendations! "
+                    '<a href="/" class="hover:bg-brand-yellow font-bold underline">Upload now</a>'
+                ),
             )
 
     dna_data = _enrich_dna_for_display(dna_data)
