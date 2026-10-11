@@ -71,8 +71,11 @@ class SeedFromExportsTests(TransactionTestCase):
         output = self._run()
 
         self.assertIn("Processed: 2, skipped: 0, failed: 0", output)
-        alice = User.objects.get(username="seed_001__alice_repo")
-        self.assertEqual(alice.email, "seed_001__alice_repo@seed.bibliotype.invalid")
+        alice = User.objects.get(email="seed_001__alice_repo@seed.bibliotype.invalid")
+        # Seed users get human-looking handles, not CSV-derived names.
+        self.assertFalse(alice.username.startswith("seed_"))
+        self.assertLessEqual(len(alice.username), 15)
+        self.assertTrue(alice.first_name)
         self.assertFalse(alice.has_usable_password())
         self.assertIsNotNone(alice.userprofile.dna_data)
         self.assertEqual(alice.userprofile.dna_data["user_stats"]["total_books_read"], 6)
@@ -81,10 +84,16 @@ class SeedFromExportsTests(TransactionTestCase):
         self._run()
         output = self._run()
         self.assertIn("Processed: 0, skipped: 2, failed: 0", output)
-        self.assertEqual(User.objects.filter(username__startswith="seed_").count(), 2)
+        self.assertEqual(User.objects.filter(email__endswith="@seed.bibliotype.invalid").count(), 2)
 
         output = self._run("--force")
         self.assertIn("Processed: 2, skipped: 0, failed: 0", output)
+
+    def test_rerun_keeps_existing_handles(self, mock_enrich, mock_vibe):
+        self._run()
+        before = set(User.objects.values_list("username", flat=True))
+        self._run("--force")
+        self.assertEqual(set(User.objects.values_list("username", flat=True)), before)
 
     def test_bad_csv_is_skipped_without_aborting(self, mock_enrich, mock_vibe):
         (self.csv_dir / "000__broken.csv").write_text("not,a,goodreads\nexport,at,all\n", encoding="utf-8")
@@ -93,12 +102,12 @@ class SeedFromExportsTests(TransactionTestCase):
 
         self.assertIn("Processed: 2, skipped: 0, failed: 1", output)
         # The shell user for the unprocessable CSV must not linger.
-        self.assertFalse(User.objects.filter(username="seed_000__broken").exists())
+        self.assertFalse(User.objects.filter(email="seed_000__broken@seed.bibliotype.invalid").exists())
 
     def test_limit(self, mock_enrich, mock_vibe):
         output = self._run("--limit", "1")
         self.assertIn("Processed: 1", output)
-        self.assertEqual(User.objects.filter(username__startswith="seed_").count(), 1)
+        self.assertEqual(User.objects.filter(email__endswith="@seed.bibliotype.invalid").count(), 1)
 
     def test_purge_deletes_only_seeded_users(self, mock_enrich, mock_vibe):
         self._run()
@@ -108,7 +117,7 @@ class SeedFromExportsTests(TransactionTestCase):
         call_command("seed_from_exports", "--purge", stdout=out)
 
         self.assertIn("Purged 2 seeded users", out.getvalue())
-        self.assertEqual(User.objects.filter(username__startswith="seed_").count(), 1)
+        self.assertEqual(User.objects.filter(email__endswith="@seed.bibliotype.invalid").count(), 0)
         self.assertTrue(User.objects.filter(pk=organic.pk).exists())
 
     def test_download_fetches_missing_files_and_tolerates_failures(self, mock_enrich, mock_vibe):
@@ -154,4 +163,4 @@ class SeedFromExportsTests(TransactionTestCase):
         self.assertTrue((download_dir / "001__good.csv").is_file())
         self.assertFalse((download_dir / "002__gone.csv").exists())
         # The downloaded file was then seeded.
-        self.assertTrue(User.objects.filter(username="seed_001__good").exists())
+        self.assertTrue(User.objects.filter(email="seed_001__good@seed.bibliotype.invalid").exists())

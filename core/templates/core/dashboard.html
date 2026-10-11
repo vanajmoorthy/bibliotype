@@ -39,8 +39,8 @@
                 <div class="w-full max-w-2xl text-center" x-show="status !== 'FAILURE'">
                     {% include 'core/partials/cycling_messages.html' %}
                     <p class="mb-8 text-lg text-gray-600">
-                        We're analyzing your library and fetching details from the archives. This can take a minute or
-                        two. Please keep this page open — we'll redirect you as soon as it's ready!
+                        Analysing your library — this takes a minute or two. Keep this page open and we'll take you
+                        there when it's ready.
                     </p>
                     <div class="shadow-neo border-brand-text border-2 bg-white p-8">
                         <div class="flex justify-center">
@@ -363,7 +363,6 @@
                     function enrichmentPoller() {
                         return {
                             pending: true,
-                            showInfo: false,
                             bannerText: 'Enriching your library — {{ enrichment.percent }}% complete. ~{{ enrichment.remaining_minutes }} min remaining.',
                             interval: null,
                             intervalMs: 15000,
