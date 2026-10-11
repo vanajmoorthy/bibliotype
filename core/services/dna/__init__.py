@@ -16,7 +16,7 @@ import pandas as pd
 import requests
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import DataError, IntegrityError
+from django.db import DataError, IntegrityError, connections
 from django.db.models import F
 from django.utils import timezone
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
@@ -441,18 +441,35 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             #   has_remaining() reads are race-tolerant by design — at the
             #   boundary a few in-flight workers may each admit one extra book.
             failed_rows = []  # list.append is thread-safe
-            with ThreadPoolExecutor(max_workers=8) as executor:
-                results = []
-                processed = 0
-                row_dicts = read_df.to_dict("records")
-                for row_idx, res in enumerate(executor.map(process_book_row, row_dicts)):
-                    results.append(res)
-                    # Track book PK by DataFrame index for inline enrichment
-                    if res[0] is not None:
-                        book_pks_by_idx[read_df.index[row_idx]] = res[0].pk
-                    processed += 1
-                    if progress_cb:
-                        progress_cb(processed, total_books, "Syncing books")
+            # Each worker opens its own DB connection. Django's connection wrapper
+            # holds reference cycles, so a finished thread's connection lingers until
+            # a full GC pass; close them explicitly once the pool has shut down.
+            worker_connections = []  # list.append is thread-safe
+
+            def _register_worker_connection():
+                worker_connections.append(connections["default"])
+
+            try:
+                with ThreadPoolExecutor(max_workers=8, initializer=_register_worker_connection) as executor:
+                    results = []
+                    processed = 0
+                    row_dicts = read_df.to_dict("records")
+                    for row_idx, res in enumerate(executor.map(process_book_row, row_dicts)):
+                        results.append(res)
+                        # Track book PK by DataFrame index for inline enrichment
+                        if res[0] is not None:
+                            book_pks_by_idx[read_df.index[row_idx]] = res[0].pk
+                        processed += 1
+                        if progress_cb:
+                            progress_cb(processed, total_books, "Syncing books")
+            finally:
+                for worker_connection in worker_connections:
+                    # The pool's threads are gone; allow this thread to close what they opened.
+                    worker_connection.inc_thread_sharing()
+                    try:
+                        worker_connection.close()
+                    finally:
+                        worker_connection.dec_thread_sharing()
 
             if failed_rows:
                 logger.error(f"Skipped {len(failed_rows)} of {total_books} CSV rows that failed to sync")

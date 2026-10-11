@@ -183,3 +183,46 @@ class InlineEnrichmentConcurrencyTests(TransactionTestCase):
 
         mock_enrich.assert_not_called()
         mock_enrich_task.assert_called_once()
+
+
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True, CACHES=LOCMEM)
+class WorkerConnectionCleanupTests(TransactionTestCase):
+    """The DNA row pool's per-thread DB connections are closed when it shuts down,
+    not left for the cyclic GC (each upload would otherwise hold up to 8 open)."""
+
+    @staticmethod
+    def _open_connections():
+        from django.db import connection
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid()"
+            )
+            return cursor.fetchone()[0]
+
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    def test_worker_connections_closed_after_sync(self, *_):
+        import gc
+
+        from core.services.dna import calculate_full_dna
+
+        header = "Title,Author,Exclusive Shelf,My Rating,Number of Pages,Original Publication Year,Date Read,Average Rating,My Review,ISBN13"
+        rows = [
+            f"Pool Book {i},Pool Author {i},read,4,200,2020,2023/01/{i + 1:02d},4.0,,97800000002{i:02d}"
+            for i in range(16)
+        ]
+        before = self._open_connections()
+        gc.disable()  # prove the close is explicit, not a lucky GC pass
+        try:
+            calculate_full_dna("\n".join([header, *rows]))
+            # Backends leave pg_stat_activity a moment after the client disconnects.
+            deadline = time.monotonic() + 3
+            while self._open_connections() > before and time.monotonic() < deadline:
+                time.sleep(0.05)
+            self.assertEqual(self._open_connections(), before)
+        finally:
+            gc.enable()
