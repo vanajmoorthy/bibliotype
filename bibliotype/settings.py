@@ -65,12 +65,12 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 # Groq models (Groq rate-limits per model, so the second still answers when the
 # first is throttled) -> Gemini flash-lite (the reliable floor). Groq's llama-3.3
 # and every Cerebras model had been retired or put behind billing by then.
-LLM_MODELS = os.environ.get(
-    "LLM_MODELS",
-    "groq/openai/gpt-oss-120b,groq/qwen/qwen3.8-27b,gemini/gemini-flash-lite-latest",
+# `or` rather than a get() default: compose passes unset vars through as "".
+LLM_MODELS = (
+    os.environ.get("LLM_MODELS") or "groq/openai/gpt-oss-120b,groq/qwen/qwen3.8-27b,gemini/gemini-flash-lite-latest"
 )
-LLM_TIMEOUT_SECONDS = float(os.environ.get("LLM_TIMEOUT_SECONDS", "20"))
-LLM_NUM_RETRIES = int(os.environ.get("LLM_NUM_RETRIES", "1"))
+LLM_TIMEOUT_SECONDS = float(os.environ.get("LLM_TIMEOUT_SECONDS") or "20")
+LLM_NUM_RETRIES = int(os.environ.get("LLM_NUM_RETRIES") or "1")
 
 # Provider API keys. LiteLLM reads these from the environment by convention
 # (GROQ_API_KEY / CEREBRAS_API_KEY / GEMINI_API_KEY); GEMINI_API_KEY declared
