@@ -46,6 +46,21 @@ class QueueConfigTests(SimpleTestCase):
         # interactive task on the single prod worker.
         self.assertEqual(settings.CELERY_WORKER_PREFETCH_MULTIPLIER, 1)
 
+    def test_result_expiry_matches_dna_cache_ttl(self):
+        # Results sit in the 100MB Redis; nothing reads them after the 1h
+        # task_owner_* TTL, so the 24h Celery default just wastes memory.
+        from bibliotype.celery import app
+        from core.cache_utils import DNA_CACHE_TTL
+
+        self.assertEqual(app.conf.result_expires, DNA_CACHE_TTL)
+
+    def test_prod_worker_receives_sigterm_and_gets_grace_period(self):
+        # Without exec, `sh -c` is PID 1, ignores docker stop's SIGTERM, and
+        # the worker is SIGKILLed mid-task instead of warm-shutting down.
+        content = (Path(settings.BASE_DIR) / "docker-compose.prod.yml").read_text()
+        self.assertIn('sh -c "exec poetry run celery', content)
+        self.assertIn("stop_grace_period:", content)
+
     def test_compose_worker_commands_consume_bulk_queue(self):
         # Guards compose/constant drift. A worker whose -Q omits the bulk queue
         # strands its messages in Redis (the celeryd_after_setup guard turns

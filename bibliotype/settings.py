@@ -286,13 +286,15 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {"queue_order_strategy": "sorted"}
 # (research_publisher_mainstream_task: 20 publishers x LLM research).
 CELERY_TASK_SOFT_TIME_LIMIT = 600
 CELERY_TASK_TIME_LIMIT = 900
-# Don't hoard tasks (fairness across users on one worker); recycle the child
-# process every 50 tasks to cap pandas/enrichment memory creep.
+# Prefetch 1: don't hoard tasks (fairness across users on one worker), and at
+# most ~1 already-reserved bulk task runs before a newly arrived interactive
+# task. Recycle the child process every 50 tasks to cap pandas/enrichment
+# memory creep.
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_WORKER_MAX_TASKS_PER_CHILD = 50
-# Reserve only 1 message ahead of execution so at most ~1 already-reserved bulk
-# task runs before a newly arrived interactive task.
-CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+# Task results live in the 100MB Redis. Nothing reads them after the 1h
+# task_owner_*/dna_result_* TTL (DNA_CACHE_TTL), so don't keep the 24h default.
+CELERY_RESULT_EXPIRES = 3600
 
 # Logging configuration
 # Create logs directory if it doesn't exist
