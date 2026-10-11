@@ -1850,7 +1850,7 @@ CONTRARINESS_SCALE = [
     (1.5, "Wildly contrarian", "bg-brand-pink"),
     (1.0, "Very contrarian", "bg-brand-orange"),
     (0.6, "Moderately contrarian", "bg-brand-yellow"),
-    (0.3, "Mildly contrarian", "bg-brand-cyan"),
+    (0.3, "Slightly contrarian", "bg-brand-cyan"),
     (0.0, "Aligned with consensus", "bg-brand-green"),
 ]
 

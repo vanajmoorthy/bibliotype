@@ -216,24 +216,24 @@ class ContrarinessScaleTests(TestCase):
         self.assertEqual(label, "Aligned with consensus")
         self.assertEqual(color, "bg-brand-green")
 
-    def test_just_below_mildly(self):
+    def test_just_below_slightly(self):
         label, color = compute_contrariness(0.29)
         self.assertEqual(label, "Aligned with consensus")
         self.assertEqual(color, "bg-brand-green")
 
-    def test_exactly_mildly(self):
+    def test_exactly_slightly(self):
         label, color = compute_contrariness(0.3)
-        self.assertEqual(label, "Mildly contrarian")
+        self.assertEqual(label, "Slightly contrarian")
         self.assertEqual(color, "bg-brand-cyan")
 
-    def test_just_above_mildly(self):
+    def test_just_above_slightly(self):
         label, color = compute_contrariness(0.31)
-        self.assertEqual(label, "Mildly contrarian")
+        self.assertEqual(label, "Slightly contrarian")
         self.assertEqual(color, "bg-brand-cyan")
 
     def test_just_below_moderately(self):
         label, color = compute_contrariness(0.59)
-        self.assertEqual(label, "Mildly contrarian")
+        self.assertEqual(label, "Slightly contrarian")
         self.assertEqual(color, "bg-brand-cyan")
 
     def test_exactly_moderately(self):
@@ -459,7 +459,7 @@ class BackfillSubtitleDataTests(TestCase):
         self.assertEqual(dna["controversial_books_count"], 2)
         self.assertGreater(dna["avg_rating_difference"], 0.0)
         self.assertIn(dna["contrariness_label"], [
-            "Aligned with consensus", "Mildly contrarian", "Moderately contrarian",
+            "Aligned with consensus", "Slightly contrarian", "Moderately contrarian",
             "Very contrarian", "Wildly contrarian",
         ])
         self.assertTrue(dna["contrariness_color"].startswith("bg-brand-"))
