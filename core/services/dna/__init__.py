@@ -7,6 +7,7 @@ scoring, persistence, and small utilities live in the sibling submodules.
 import hashlib
 import logging
 import random
+import threading
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
@@ -69,6 +70,9 @@ from .utils import (  # noqa: F401 — re-exported for stable import paths
 )
 
 logger = logging.getLogger(__name__)
+
+# Process-wide cap on concurrent inline API enrichments (shared across uploads).
+_INLINE_ENRICH_SEMAPHORE = threading.BoundedSemaphore(2)
 
 
 def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progress_cb=None, bulk_enrichment=False):
@@ -354,11 +358,17 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                                 f"Inline enrichment for '{book.title}' (created={created}, "
                                 f"has_genres={has_genres}, needs_page_data={needs_page_data})"
                             )
-                            enrich_book_from_apis(book, session, slow_down=False, quick_mode=True)
-                            # Unstamped means the Google Books call failed (quota
-                            # cooldown, 5xx, timeout) — hand it to the async task,
-                            # which retries, instead of counting it as done.
-                            enriched_inline = book.google_books_last_checked is not None
+                            # Cap concurrent inline enrichments so 8 upload workers
+                            # can't burst Open Library / Google Books past their limits.
+                            # Re-check the budget after the wait so queued workers don't
+                            # keep enriching inline once it has run out.
+                            with _INLINE_ENRICH_SEMAPHORE:
+                                if enrichment_budget.has_remaining():
+                                    enrich_book_from_apis(book, session, slow_down=False, quick_mode=True)
+                                    # Unstamped means the Google Books call failed (quota
+                                    # cooldown, 5xx, timeout), so hand it to the async task,
+                                    # which retries, instead of counting it as done.
+                                    enriched_inline = book.google_books_last_checked is not None
                         except Exception as e:
                             logger.warning(f"Inline enrichment failed for '{book.title}': {e}")
                     if not enriched_inline:

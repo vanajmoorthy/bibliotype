@@ -16,6 +16,9 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+# Per-request timeout so a hung Gemini call can't pin a Celery worker.
+GEMINI_TIMEOUT_SECONDS = 30
+
 _configured = False
 _warned_missing_key = False
 

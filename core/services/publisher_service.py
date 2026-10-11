@@ -78,7 +78,7 @@ def research_publisher_identity(publisher_name: str, session: requests.Session) 
         JSON Response:
         """
 
-        response = model.generate_content(prompt)
+        response = model.generate_content(prompt, request_options={"timeout": _gemini.GEMINI_TIMEOUT_SECONDS})
 
         # Clean up the response to extract only the JSON part
         json_text = response.text.strip().replace("```json", "").replace("```", "").strip()

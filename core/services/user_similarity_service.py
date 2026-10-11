@@ -358,12 +358,12 @@ def find_similar_users(user, top_n=30, min_similarity=0.15):
     # Find candidate users who share books with current user
     users_with_shared_books = list(
         User.objects.exclude(id=user.id)
-        .select_related("userprofile")
         .filter(
             userprofile__dna_data__isnull=False,
             userprofile__visible_in_recommendations=True,
             user_books__book_id__in=current_user_ctx["book_ids"],
         )
+        .only("id", "username")
         .distinct()[:500]
     )
 
@@ -373,8 +373,8 @@ def find_similar_users(user, top_n=30, min_similarity=0.15):
         additional_users = list(
             User.objects.exclude(id=user.id)
             .exclude(id__in=existing_ids)
-            .select_related("userprofile")
-            .filter(userprofile__dna_data__isnull=False, userprofile__visible_in_recommendations=True)[:200]
+            .filter(userprofile__dna_data__isnull=False, userprofile__visible_in_recommendations=True)
+            .only("id", "username")[:200]
         )
         all_users = users_with_shared_books + additional_users
     else:
