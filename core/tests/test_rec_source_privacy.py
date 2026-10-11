@@ -72,3 +72,12 @@ class RecSourcePrivacyTests(TestCase):
         response = self.client.get(reverse("core:public_profile", kwargs={"username": "bobzq"}))
         self._assert_names_resolved(response)
         self.assertContains(response, "bobzq and this reader share 12 books in common")
+
+    def test_resolves_all_source_names_in_one_query(self):
+        from core.views._helpers import _resolve_rec_source_names
+
+        recs = self.bob.userprofile.recommendations_data
+        with self.assertNumQueries(1):
+            meta = _resolve_rec_source_names(recs, self.bob.userprofile.recommendations_meta, owner_name="bobzq")
+        self.assertEqual([r["primary_source_user"]["username"] for r in recs], [None, "carolzq"])
+        self.assertIsNone(meta["closest_match_username"])
