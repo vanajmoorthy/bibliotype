@@ -168,8 +168,6 @@ See the linked docs for full detail.
 ### Recommendations & similarity 🚧
 - "How similar are you?" — similarity percentage between 2+ **public** users on a dedicated N-way
   comparison page (not just 1:1). 🙅
-- **Remove the legacy `min_overlap_pct` write + fallback** once most active users have regenerated —
-  still present at `core/tasks/recommendations.py:103` ("kept one release for stale templates/meta").
 - Tune the 0.40 "weak match" uniqueness threshold once real `max_similarity_pct` distributions are
   visible (a PostHog bucket can inform it).
 - ~~Verify the `uniqueness-badge` django-waffle switch is deployed (badge shows "One of a kind" /~~

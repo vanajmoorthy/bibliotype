@@ -60,7 +60,6 @@ Context processor `posthog_settings` provides `POSTHOG_API_KEY` to templates.
 ## Active Middleware
 
 - `PostHogExceptionMiddleware` — **ACTIVE** (in settings.py middleware stack). Catches unhandled exceptions, sanitizes error info, sends a `$exception` event via `posthog.capture_exception()` → PostHog Error Tracking product. **Production only.**
-- `PostHogPageviewMiddleware` — **DEFINED BUT NOT ACTIVE** (not in middleware stack)
 - Celery: `task_failure` signal handler in `bibliotype/celery.py` sends unhandled task exceptions to Error Tracking (distinct_id = "system", production only)
 
 ## Event Registry
