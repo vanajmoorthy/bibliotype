@@ -21,6 +21,7 @@ from ._helpers import (
     _enrich_dna_for_display,
     _expand_book_dict,
     _get_recommendation_pool_display,
+    _resolve_rec_source_names,
 )
 
 logger = logging.getLogger(__name__)
@@ -231,6 +232,8 @@ def display_dna_view(request):
         if recommendations_meta:
             recommendations_pool_display = _get_recommendation_pool_display()
 
+    recommendations_meta = _resolve_rec_source_names(recommendations, recommendations_meta)
+
     # Flag to tell the template to poll for recommendations
     recommendations_pending = (
         request.user.is_authenticated and user_profile and user_profile.dna_data and not recommendations
@@ -328,7 +331,9 @@ def public_profile_view(request, username):
             "title": title,
             "heading_name": heading_name,
             "recommendations": recommendations,
-            "recommendations_meta": profile.recommendations_meta or {},
+            "recommendations_meta": _resolve_rec_source_names(
+                recommendations, profile.recommendations_meta, owner_name=display_name
+            ),
             "recommendations_pool_display": (
                 _get_recommendation_pool_display() if profile.recommendations_meta else None
             ),
