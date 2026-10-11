@@ -97,6 +97,8 @@ class EnrichBookTaskWindowTests(TransactionTestCase):
 
     def test_never_attempted_book_runs(self):
         book = _make_book(checked_ago=None)
+        # A completed enrichment stamps the book (an unstamped one is retried).
+        self.mock_enrich.side_effect = lambda b, *a, **kw: setattr(b, "google_books_last_checked", timezone.now())
         self._run(book)
         self.mock_enrich.assert_called_once()
 

@@ -111,6 +111,8 @@ class BookEnrichmentIntegrationTests(TestCase):
         from core.tasks import enrich_book_task
 
         safe_cache_set("upload_nonce_42", "current-upload-id", timeout=3600)
+        # A completed enrichment stamps the book (an unstamped one is retried).
+        mock_enrich.side_effect = lambda b, *a, **kw: setattr(b, "google_books_last_checked", timezone.now())
 
         enrich_book_task.delay(self.book.id, user_id=42, upload_nonce="current-upload-id")
 
@@ -163,8 +165,6 @@ class BookEnrichmentIntegrationTests(TestCase):
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_enrich_book_task_marks_attempted_after_max_retries(self, mock_enrich):
         """When task exhausts max retries, book is marked as attempted so polling doesn't get stuck."""
-        from celery.exceptions import MaxRetriesExceededError
-
         from core.tasks import enrich_book_task
 
         # Simulate persistent API failures
@@ -172,13 +172,8 @@ class BookEnrichmentIntegrationTests(TestCase):
 
         self.assertIsNone(self.book.google_books_last_checked)
 
-        # Simulate a task instance where retries are already exhausted by patching
-        # the retry method to raise MaxRetriesExceededError directly
-        with patch.object(enrich_book_task, "retry", side_effect=MaxRetriesExceededError("max retries")):
-            try:
-                enrich_book_task.delay(self.book.id)
-            except Exception:
-                pass
+        # Run the final attempt: retries already exhausted.
+        enrich_book_task.apply(args=[self.book.id], retries=enrich_book_task.max_retries)
 
         self.book.refresh_from_db()
         # Book must be marked as attempted to prevent stuck-at-X% polling
@@ -545,6 +540,7 @@ class InlineEnrichmentDuringDnaTests(TransactionTestCase):
             # thread's own DB connection, like the real enrichment does.
             fantasy, _ = Genre.objects.get_or_create(name="fantasy")
             book.genres.add(fantasy)
+            book.google_books_last_checked = timezone.now()  # completed exchange
             return book, 1, 1
 
         mock_inline.side_effect = add_genre
