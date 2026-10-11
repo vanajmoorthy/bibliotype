@@ -38,3 +38,15 @@ class FlashMessageEscapingTests(TestCase):
         self.assertIn("Your profile is now public!", html)
         self.assertIn(f'href="{reverse("core:public_profile", kwargs={"username": "linkuser"})}"', html)
         self.assertNotIn("&lt;a", html)
+
+    def test_form_error_message_is_not_shown_as_raw_markup(self):
+        """Form errors are flashed as ErrorList objects; they must not show up as escaped <ul> text."""
+        user = User.objects.create_user(username="formuser", email="form@example.com", password="pw-123456!")
+        client = Client()
+        client.force_login(user)
+
+        client.post(reverse("core:update_name"), {"username": "x" * 20})
+        html = client.get(reverse("core:about")).content.decode()
+
+        self.assertIn("Ensure this value has at most 15 characters", html)
+        self.assertNotIn("&lt;ul", html)

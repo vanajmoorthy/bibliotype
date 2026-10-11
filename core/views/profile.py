@@ -166,7 +166,9 @@ def update_recommendation_visibility(request):
             request, "You are now visible as a recommendation source to similar readers!", extra_tags="ephemeral"
         )
     else:
-        messages.success(request, "You've opted out of being shown as a recommendation source.", extra_tags="ephemeral")
+        messages.success(
+            request, "You've opted out of being shown as a recommendation source.", extra_tags="ephemeral"
+        )
 
     return redirect("core:display_dna")
 

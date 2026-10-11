@@ -34,9 +34,7 @@ class ComputeEnrichmentStatsTests(TestCase):
     def _add_book(self, title, *, page_count=None, genres=None, mainstream_author=False, mainstream_publisher=False):
         author = self.author
         if mainstream_author:
-            author = Author.objects.create(
-                name=f"Mainstream {title}", normalized_name=f"main{title}", is_mainstream=True
-            )
+            author = Author.objects.create(name=f"Mainstream {title}", normalized_name=f"main{title}", is_mainstream=True)
         publisher = None
         if mainstream_publisher:
             publisher = Publisher.objects.create(name=f"Big {title}", normalized_name=f"big{title}", is_mainstream=True)
