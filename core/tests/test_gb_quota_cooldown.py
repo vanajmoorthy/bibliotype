@@ -169,11 +169,19 @@ class UnstampedBookRetryTests(TransactionTestCase):
         from core.tasks import enrich_book_task
 
         cache.set(svc.GOOGLE_BOOKS_COOLDOWN_KEY, 1, timeout=60)
-        with patch.object(svc, "GOOGLE_BOOKS_API_KEY", "test-key"):
+        with (
+            patch.object(svc, "GOOGLE_BOOKS_API_KEY", "test-key"),
+            patch.object(enrich_book_task, "retry", wraps=enrich_book_task.retry) as mock_retry,
+        ):
             enrich_book_task.apply(args=[self.book.pk])
 
         # Initial run + max_retries retries, then the exhausted branch stamps it.
         self.assertEqual(mock_ol.call_count, enrich_book_task.max_retries + 1)
+        # The wait stays under the Redis broker's 1h visibility_timeout, or the
+        # held retry is redelivered and runs twice.
+        countdowns = [c.kwargs["countdown"] for c in mock_retry.call_args_list]
+        self.assertEqual(len(countdowns), enrich_book_task.max_retries)
+        self.assertTrue(all(0 < c < 3600 for c in countdowns), countdowns)
         self.book.refresh_from_db()
         self.assertIsNotNone(self.book.google_books_last_checked)
 

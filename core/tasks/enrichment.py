@@ -168,9 +168,11 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
             return
 
         # During a quota cooldown every attempt short-circuits, so wait it out
-        # instead of burning retries on the exponential backoff.
+        # instead of burning retries on the exponential backoff. Capped below
+        # the Redis broker's 1h visibility_timeout: a held ETA task older than
+        # that gets redelivered and runs twice.
         if safe_cache_get(GOOGLE_BOOKS_COOLDOWN_KEY):
-            countdown = GOOGLE_BOOKS_COOLDOWN_SECONDS
+            countdown = min(GOOGLE_BOOKS_COOLDOWN_SECONDS, 3000)
         else:
             countdown = 60 * (2**self.request.retries)
         raise self.retry(countdown=countdown, exc=e)
