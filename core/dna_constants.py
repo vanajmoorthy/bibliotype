@@ -15,6 +15,22 @@ from datetime import timedelta
 # `--force`) bypass this window.
 ENRICHMENT_RETRY_AFTER = timedelta(hours=24)
 
+# Books the APIs can't complete (no genres, page count or publish year after a
+# full exchange) would otherwise be re-enriched every ENRICHMENT_RETRY_AFTER
+# whenever someone uploads them, spending Google Books quota on lookups that
+# keep coming back empty. After this many consecutive incomplete attempts the
+# window widens to ENRICHMENT_RETRY_AFTER_INCOMPLETE.
+ENRICHMENT_MAX_INCOMPLETE_ATTEMPTS = 3
+ENRICHMENT_RETRY_AFTER_INCOMPLETE = timedelta(days=30)
+
+
+def enrichment_retry_window(book):
+    """The retry window for this book: 24h normally, 30 days once it has repeatedly come back incomplete."""
+    if book.enrichment_incomplete_attempts >= ENRICHMENT_MAX_INCOMPLETE_ATTEMPTS:
+        return ENRICHMENT_RETRY_AFTER_INCOMPLETE
+    return ENRICHMENT_RETRY_AFTER
+
+
 # Queue for bulk enrichment work (seeding runs, enrich_books backfills) so it
 # drains behind interactive users' tasks on the default "celery" queue. With
 # queue_order_strategy="sorted", priority is alphabetical by queue NAME — this

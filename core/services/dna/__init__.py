@@ -31,6 +31,7 @@ from ...dna_constants import (
     READER_TYPE_DESCRIPTIONS,
     STORYGRAPH_TAG_TO_GENRE,
     compute_contrariness,
+    enrichment_retry_window,
 )
 from ...models import AnonymousUserSession, Author, Book, Genre, UserBook
 from ...percentile_engine import (
@@ -340,12 +341,13 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 # Skip only if the full pipeline ran *recently*. google_books_last_
                 # checked is the last-attempt marker; a book attempted within the
                 # retry window is trusted and skipped, but once the attempt is older
-                # than ENRICHMENT_RETRY_AFTER it becomes eligible again so a book that
-                # got zero genres can pick up data the APIs may have added since.
+                # than enrichment_retry_window(book) it becomes eligible again so a
+                # book that got zero genres can pick up data the APIs may have added
+                # since (widening to 30 days once it has repeatedly come back empty).
                 recently_attempted = (
                     not created
                     and book.google_books_last_checked is not None
-                    and timezone.now() - book.google_books_last_checked < ENRICHMENT_RETRY_AFTER
+                    and timezone.now() - book.google_books_last_checked < enrichment_retry_window(book)
                 )
                 needs_page_data = not book.page_count or not book.publish_year
                 if not recently_attempted and (created or not has_genres or needs_page_data):

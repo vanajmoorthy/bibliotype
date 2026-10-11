@@ -74,6 +74,10 @@ class Book(models.Model):
     google_books_average_rating = models.FloatField(null=True, blank=True)
     google_books_ratings_count = models.PositiveIntegerField(default=0)
     google_books_last_checked = models.DateTimeField(null=True, blank=True, default=None, db_index=True)
+    # Consecutive completed enrichments that still left genres, page count or
+    # publish year missing. Reset to 0 once the book is complete. Widens the
+    # retry window (see dna_constants.enrichment_retry_window).
+    enrichment_incomplete_attempts = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         unique_together = ("normalized_title", "author")

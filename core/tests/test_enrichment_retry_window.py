@@ -161,3 +161,69 @@ class EnrichBooksCommandWindowTests(TestCase):
         self.assertIsNone(book.google_books_last_checked)
         task_kwargs = mock_delay.call_args.kwargs["kwargs"]
         self.assertTrue(task_kwargs.get("force"))
+
+
+class IncompleteBookBackoffTests(TestCase):
+    """Books that keep coming back incomplete widen their retry window to 30 days."""
+
+    def setUp(self):
+        self.ol_patcher = patch("core.services.book_enrichment_service._fetch_from_open_library", return_value=({}, 0))
+        self.gb_patcher = patch(
+            "core.services.book_enrichment_service._fetch_ratings_and_categories_from_google_books",
+            return_value=({}, 1),
+        )
+        self.mock_ol = self.ol_patcher.start()
+        self.mock_gb = self.gb_patcher.start()
+        self.addCleanup(self.ol_patcher.stop)
+        self.addCleanup(self.gb_patcher.stop)
+
+    def _run(self, book):
+        from core.services.book_enrichment_service import enrich_book_from_apis
+
+        enrich_book_from_apis(book, session=object())
+        book.refresh_from_db()
+
+    def test_incomplete_exchange_increments_counter(self):
+        book = _make_book()
+        self._run(book)
+        self.assertEqual(book.enrichment_incomplete_attempts, 1)
+
+    def test_complete_book_resets_counter(self):
+        from core.models import Genre
+
+        book = _make_book()
+        book.enrichment_incomplete_attempts = 2
+        book.page_count = 300
+        book.publish_year = 2001
+        book.save()
+        book.genres.add(Genre.objects.get_or_create(name="fantasy")[0])
+        self._run(book)
+        self.assertEqual(book.enrichment_incomplete_attempts, 0)
+
+    def test_failed_gb_exchange_does_not_count(self):
+        self.mock_gb.return_value = (None, 0)
+        book = _make_book()
+        self._run(book)
+        self.assertEqual(book.enrichment_incomplete_attempts, 0)
+
+    def test_window_widens_after_max_incomplete_attempts(self):
+        from core.dna_constants import (
+            ENRICHMENT_MAX_INCOMPLETE_ATTEMPTS,
+            ENRICHMENT_RETRY_AFTER_INCOMPLETE,
+            enrichment_retry_window,
+        )
+
+        book = _make_book()
+        book.enrichment_incomplete_attempts = ENRICHMENT_MAX_INCOMPLETE_ATTEMPTS - 1
+        self.assertEqual(enrichment_retry_window(book), ENRICHMENT_RETRY_AFTER)
+        book.enrichment_incomplete_attempts = ENRICHMENT_MAX_INCOMPLETE_ATTEMPTS
+        self.assertEqual(enrichment_retry_window(book), ENRICHMENT_RETRY_AFTER_INCOMPLETE)
+
+    def test_backed_off_book_skips_gb_after_24h(self):
+        from core.dna_constants import ENRICHMENT_MAX_INCOMPLETE_ATTEMPTS
+
+        book = _make_book(checked_ago=ENRICHMENT_RETRY_AFTER + timedelta(days=2))
+        book.enrichment_incomplete_attempts = ENRICHMENT_MAX_INCOMPLETE_ATTEMPTS
+        book.save()
+        self._run(book)
+        self.mock_gb.assert_not_called()
