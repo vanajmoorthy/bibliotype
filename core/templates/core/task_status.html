@@ -35,7 +35,8 @@
             </div>
             <div x-show="status === 'FAILURE'"
                  class="border-brand-text shadow-neo mt-8 border-2 bg-red-500 p-4 font-bold text-white"
-                 style="display: none">
+                 style="display: none"
+                 x-text="error || 'Sorry, something went wrong while processing your file. Please try uploading it again.'">
                 Sorry, something went wrong while processing your file. Please try uploading it again.
             </div>
         </div>
@@ -44,6 +45,7 @@
         document.addEventListener("alpine:init", () => {
             Alpine.data("taskPoller", (url) => ({
                 status: "PENDING",
+                error: "",
                 interval: null,
                 anim: null,
                 displayPct: 0,
@@ -116,7 +118,7 @@
                                 window.location.href = data.redirect_url;
                             } else if (this.status === "FAILURE") {
                                 clearInterval(this.interval);
-                                console.error("Task failed:", data.error);
+                                this.error = data.error || "";
                             }
                         } catch (error) {
                             console.error("Polling error:", error);

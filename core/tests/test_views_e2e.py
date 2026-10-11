@@ -380,6 +380,30 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "SUCCESS")
 
+    def _poll_failed_anonymous_task(self, csv_bytes):
+        """Upload anonymously (task runs eagerly and fails), then poll the result view."""
+        upload = SimpleUploadedFile("goodreads.csv", csv_bytes, content_type="text/csv")
+        response = self.client.post(reverse("core:upload"), {"csv_file": upload})
+        task_id = response.url.split("/")[-2]
+        with patch("core.views.upload.AsyncResult", return_value=MagicMock(state="FAILURE")):
+            response = self.client.get(reverse("core:get_task_result", kwargs={"task_id": task_id}))
+        data = response.json()
+        self.assertEqual(data["status"], "FAILURE")
+        return data["error"]
+
+    def test_task_validation_error_reaches_the_user(self):
+        """A CSV with no books on the read shelf fails in the task with a message the user can act on."""
+        error = self._poll_failed_anonymous_task(b"Title,Author,Exclusive Shelf\nSome Book,Someone,to-read\n")
+        self.assertIn('any books on your "read" shelf', error)
+
+    @patch("core.tasks.dna.calculate_full_dna", side_effect=RuntimeError("secret internals"))
+    def test_task_unexpected_error_stays_generic(self, _mock_calc):
+        """Unknown exceptions never leak their text to the user."""
+        from core.views.upload import GENERIC_TASK_ERROR
+
+        error = self._poll_failed_anonymous_task(self.csv_file.read())
+        self.assertEqual(error, GENERIC_TASK_ERROR)
+
     def test_status_check_returns_failure_when_nothing_pending_and_no_data(self):
         """
         No task in flight and no DNA (e.g. a signup claim gave up): stop polling.
@@ -757,14 +781,40 @@ class UploadValidationTests(TransactionTestCase):
 
     @patch("core.views.upload.generate_reading_dna_task")
     def test_missing_schema_columns_is_rejected(self, mock_task):
-        """A CSV without Title + Author/Authors is rejected with the schema error."""
+        """A CSV with none of the expected columns is rejected, naming what's missing."""
         bad = b"FooBar,Baz\n1,2\n3,4\n"
         upload = self._make_csv("not-goodreads.csv", bad)
 
         response = self.client.post(reverse("core:upload"), {"csv_file": upload}, follow=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "does not look like a Goodreads or StoryGraph export")
+        self.assertContains(response, escape('missing the "Title", "Author", "Exclusive Shelf" columns'))
+        mock_task.delay.assert_not_called()
+
+    @patch("core.views.upload.generate_reading_dna_task")
+    def test_goodreads_csv_missing_exclusive_shelf_names_the_column(self, mock_task):
+        """A Goodreads export without "Exclusive Shelf" is rejected before the task runs."""
+        upload = self._make_csv("goodreads.csv", b"Title,Author,My Rating\nSome Book,Someone,4\n")
+
+        response = self.client.post(reverse("core:upload"), {"csv_file": upload}, follow=True)
+
+        self.assertContains(
+            response,
+            escape(
+                'Your CSV is missing the "Exclusive Shelf" column. '
+                "Please upload an unedited Goodreads or StoryGraph export."
+            ),
+        )
+        mock_task.delay.assert_not_called()
+
+    @patch("core.views.upload.generate_reading_dna_task")
+    def test_storygraph_csv_missing_read_status_names_the_column(self, mock_task):
+        """StoryGraph exports are checked against their own column names."""
+        upload = self._make_csv("storygraph.csv", b"Title,Authors,Star Rating\nSome Book,Someone,4.5\n")
+
+        response = self.client.post(reverse("core:upload"), {"csv_file": upload}, follow=True)
+
+        self.assertContains(response, escape('missing the "Read Status" column'))
         mock_task.delay.assert_not_called()
 
     @patch("core.views.upload.generate_reading_dna_task")

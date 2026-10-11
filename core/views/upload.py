@@ -21,6 +21,7 @@ from ..cache_utils import (
     safe_cache_get,
     safe_cache_set,
 )
+from ..services.dna.csv_parser import CSVValidationError, validate_csv_columns
 from ..tasks import generate_reading_dna_task
 from ._helpers import _compute_enrichment_progress, _enrich_dna_for_display
 
@@ -33,6 +34,13 @@ MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024  # 10MB CSV upload limit
 # export schema and rejects pathological inputs before pandas does deep work.
 MAX_UPLOAD_ROWS = 50000
 MAX_UPLOAD_COLUMNS = 100
+
+GENERIC_TASK_ERROR = "Sorry, something went wrong while processing your file. Please try uploading it again."
+
+
+def _task_error_message(task_id):
+    """User-safe failure text: the task's CSVValidationError message if it cached one, else generic."""
+    return safe_cache_get(f"dna_task_error_{task_id}") or GENERIC_TASK_ERROR
 
 
 @require_POST
@@ -75,13 +83,10 @@ def upload_view(request):
             )
             return redirect("core:home")
 
-        head_columns = set(df_head.columns)
-        if not ({"Title", "Author"}.issubset(head_columns) or {"Title", "Authors"}.issubset(head_columns)):
-            messages.error(
-                request,
-                "CSV does not look like a Goodreads or StoryGraph export. "
-                "Expected columns: Title and Author/Authors.",
-            )
+        try:
+            validate_csv_columns(df_head.columns)
+        except CSVValidationError as e:
+            messages.error(request, str(e))
             return redirect("core:home")
 
         # If the input exceeded the row cap, re-serialize the truncated head so
@@ -200,9 +205,10 @@ def check_dna_status_view(request):
 
             # Check for failure first
             if result.state == "FAILURE":
+                task_id = profile.pending_dna_task_id
                 profile.pending_dna_task_id = None
                 profile.save(update_fields=["pending_dna_task_id"])
-                return JsonResponse({"status": "FAILURE", "error": "An error occurred while processing your file."})
+                return JsonResponse({"status": "FAILURE", "error": _task_error_message(task_id)})
 
             # Upload task whose in-flight marker is gone (cleared on success and
             # failure, or expired after a worker died mid-task) but still pending:
@@ -218,7 +224,9 @@ def check_dna_status_view(request):
                     pk=profile.pk, pending_dna_task_id=profile.pending_dna_task_id
                 ).update(pending_dna_task_id=None)
                 if cleared:
-                    return JsonResponse({"status": "FAILURE", "error": "An error occurred while processing your file."})
+                    return JsonResponse(
+                        {"status": "FAILURE", "error": _task_error_message(profile.pending_dna_task_id)}
+                    )
                 return JsonResponse({"status": "SUCCESS"})
 
             info = result.info or {}
@@ -238,7 +246,7 @@ def check_dna_status_view(request):
     # No task in flight: either the DNA landed, or the task (e.g. a signup claim) gave up.
     if profile.dna_data:
         return JsonResponse({"status": "SUCCESS"})
-    return JsonResponse({"status": "FAILURE", "error": "An error occurred while processing your file."})
+    return JsonResponse({"status": "FAILURE", "error": GENERIC_TASK_ERROR})
 
 
 @login_required
@@ -394,6 +402,6 @@ def get_task_result_view(request, task_id):
         progress = {"current": current, "total": total, "percent": percent, "stage": stage}
         return JsonResponse({"status": "PENDING", "progress": progress})
     elif result.state == "FAILURE":
-        return JsonResponse({"status": "FAILURE", "error": "An error occurred during processing."})
+        return JsonResponse({"status": "FAILURE", "error": _task_error_message(task_id)})
     else:
         return JsonResponse({"status": "PENDING"})

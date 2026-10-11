@@ -496,7 +496,7 @@ class CSVDetectionEdgeCasesTests(TestCase):
         df = pd.read_csv(StringIO(csv_text))
         with self.assertRaises(ValueError) as ctx:
             _detect_and_normalize_csv(df)
-        self.assertIn("Unrecognized CSV format", str(ctx.exception))
+        self.assertIn("is missing the", str(ctx.exception))
 
 
 class IsbnNormalizationTests(TestCase):

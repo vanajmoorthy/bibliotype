@@ -34,7 +34,7 @@
             <div
                 id="processing-container"
                 class="flex w-full flex-grow flex-col items-center justify-center p-4"
-                x-data="{ status: 'PENDING' }"
+                x-data="{ status: 'PENDING', error: '' }"
             >
                 <div class="w-full max-w-2xl text-center" x-show="status !== 'FAILURE'">
                     {% include 'core/partials/cycling_messages.html' %}
@@ -72,8 +72,12 @@
                 <div x-show="status === 'FAILURE'" x-cloak class="w-full max-w-2xl text-center">
                     <h1 class="title-underline relative mb-4 inline-block text-4xl font-bold">Something Went Wrong</h1>
                     <div class="border-brand-text shadow-neo mt-4 border-2 bg-red-500 p-6 font-bold text-white">
-                        <p class="text-xl">Sorry, something went wrong while processing your file.</p>
-                        <p class="mt-2">Please try uploading it again.</p>
+                        <p
+                            class="text-xl"
+                            x-text="error || 'Sorry, something went wrong while processing your file. Please try uploading it again.'"
+                        >
+                            Sorry, something went wrong while processing your file. Please try uploading it again.
+                        </p>
                     </div>
                     <a
                         href="{% url 'core:home' %}"
@@ -142,7 +146,9 @@
                                 return;
                             }
                             if (data.status === "FAILURE") {
-                                Alpine.$data(document.getElementById("processing-container")).status = "FAILURE";
+                                const container = Alpine.$data(document.getElementById("processing-container"));
+                                container.error = data.error || "";
+                                container.status = "FAILURE";
                                 return;
                             }
                             updateTargetsFromServer(data);

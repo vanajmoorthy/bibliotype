@@ -14,7 +14,7 @@ from ..analytics.events import (
     track_dna_generation_failed,
     track_dna_generation_started,
 )
-from ..services.dna import _save_dna_to_profile, calculate_full_dna
+from ..services.dna import CSVValidationError, _save_dna_to_profile, calculate_full_dna
 
 logger = logging.getLogger(__name__)
 
@@ -308,6 +308,11 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
             error_message=str(e),
         )
         logger.error(f"Task failed due to an error in the analysis engine: {e}", exc_info=True)
+        if isinstance(e, CSVValidationError) and task_id:
+            # Known, user-safe problem with the file: let the status views show it.
+            from ..cache_utils import DNA_CACHE_TTL, safe_cache_set
+
+            safe_cache_set(f"dna_task_error_{task_id}", str(e), timeout=DNA_CACHE_TTL)
         if user_id is not None:
             # Release the reject-while-pending marker (core/views/upload.py) so a
             # failed upload doesn't block re-uploading until the TTL expires.

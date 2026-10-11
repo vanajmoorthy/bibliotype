@@ -47,6 +47,7 @@ from ..genre_classification import (
 from ..top_books_service import calculate_and_store_top_books
 from .csv_parser import (  # noqa: F401 — re-exported for stable import paths
     STORYGRAPH_TO_GOODREADS,
+    CSVValidationError,
     _detect_and_normalize_csv,
 )
 from .enrichment_budget import (  # noqa: F401 — re-exported for stable import paths
@@ -129,7 +130,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             progress_cb(0, total_books, "Parsing your library")
 
         if read_df.empty:
-            raise ValueError("No books found on the 'read' shelf in your CSV.")
+            raise CSVValidationError(
+                'We couldn\'t find any books on your "read" shelf. Mark some books as read and export again.'
+            )
 
         book_fingerprint_list = sorted([f"{row['Title']}{row['Author']}" for _, row in read_df.iterrows()])
         fingerprint_string = "".join(book_fingerprint_list)
