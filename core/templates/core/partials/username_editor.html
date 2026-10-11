@@ -1,5 +1,6 @@
 <div
     x-data="{ editing: false, newName: '{{ user.username|escapejs }}', originalName: '{{ user.username|escapejs }}', errorMessage: '',  get isNewNameValid() { return this.newName.trim() !== '' && this.newName.length <= 15; },  updateUsername: function() { if (!this.isNewNameValid) return; this.errorMessage = ''; fetch('{% url "core:api_update_username" %}', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }, body: JSON.stringify({ username: this.newName }) }) .then(response => response.json()) .then(data => { if (data.status === 'success') { window.location.reload(); } else { this.errorMessage = data.message; } }) .catch(() => { this.errorMessage = 'Could not connect to the server.'; }); } }"
+    @username-changed.window="originalName = newName = $event.detail.username"
     class="inline-block"
 >
     <div
