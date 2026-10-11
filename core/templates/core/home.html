@@ -252,7 +252,8 @@
                 </form>
             </div>
             <p class="mt-10 text-center text-lg">
-                Your data is processed temporarily and deleted afterwards. Create an account to save & share!
+                Your data is processed temporarily and deleted afterwards.
+                {% if not user.is_authenticated %}<a href="{% url 'core:signup' %}" class="hover:bg-brand-yellow font-bold underline">Create an account</a> to save & share!{% endif %}
             </p>
             <div x-show="instructionsOpen"
                  x-cloak
