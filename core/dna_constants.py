@@ -1743,10 +1743,9 @@ GLOBAL_AVERAGES_SOURCES = {
         "archived_url": None,
         "accessed": "2026-07-29",
         "note": (
-            "This is a working average, not a hard fact. Most adult novels land "
-            "somewhere between 250 and 400 pages, and we picked a round number in "
-            "that range. ProWritingAid has a good rundown of typical novel length "
-            "if you want to check our working."
+            "This is a rough figure rather than a measured one. Most adult novels "
+            "are somewhere between 250 and 400 pages, so we picked a round number in "
+            "the middle. ProWritingAid has a good breakdown of typical book lengths."
         ),
         "citations": [],
     },
@@ -1755,12 +1754,10 @@ GLOBAL_AVERAGES_SOURCES = {
         "archived_url": None,
         "accessed": "2026-07-29",
         "note": (
-            "No survey actually measures the average publication year of the books "
-            "people read, so this is a best-effort estimate rather than a sourced "
-            "figure. Reading leans heavily toward recent decades with a long tail of "
-            "older titles, and we use this as a rough midpoint. For a sense of how "
-            "books spread across time, this analysis of 10 million Goodreads books "
-            "breaks the catalogue down decade by decade."
+            "Nobody surveys the average publication year of the books people read, "
+            "so this one is a guess. Most people read fairly recent books with some "
+            "older ones mixed in, and this is a rough middle point. This analysis of "
+            "10 million Goodreads books shows how they spread out by decade."
         ),
         "citations": [],
     },
@@ -1769,12 +1766,11 @@ GLOBAL_AVERAGES_SOURCES = {
         "archived_url": None,
         "accessed": "2026-07-29",
         "note": (
-            "This is the median across the major reading surveys, which is the "
-            "honest typical-reader figure. Averages look much higher: Gallup reports "
-            "a mean of 12.6 books and Pew 12 to 14. But the mean is dragged up by a "
-            "small group of heavy readers while roughly half of adults read no books "
-            "at all, so the medians tell the real story. Pew lands at 4 to 5, YouGov "
-            "at 2 in the US and 3 in the UK, and we take the middle of those."
+            "This is the median from the big reading surveys. The mean is much "
+            "higher (Gallup says 12.6 books, Pew says 12 to 14), but that gets pulled "
+            "up by a small group of people who read loads, while about half of adults "
+            "read no books at all. The medians are 4 to 5 from Pew, and 2 in the US "
+            "and 3 in the UK from YouGov, so we went with the middle of those."
         ),
         "citations": [
             {

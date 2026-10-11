@@ -1,12 +1,11 @@
-{# Methodology page — how every number on the dashboard is calculated. Each section is a collapsible <details> box. #}
+{# Methodology page: how every number on the dashboard is calculated. Each section is a collapsible <details> box. #}
 {% extends 'core/base.html' %}
 
 {% block seo_title %}How Bibliotype Works: Methodology{% endblock %}
 
 {% block seo_description %}
-    How Bibliotype turns your Goodreads or StoryGraph export into a Reading DNA — comparative analytics, genre fetching
-    and classification, your mainstream score, most positive and negative reviews, and personalised recommendations —
-    with the data sources and assumptions behind each one.
+    How Bibliotype turns your Goodreads or StoryGraph export into a Reading DNA: comparative stats, genres, your
+    mainstream score, your most positive and negative reviews, and recommendations, plus where the data comes from.
 {% endblock %}
 
 {% block seo_keywords %}
@@ -17,15 +16,15 @@
 {% block og_title %}How Bibliotype Works: Methodology{% endblock %}
 
 {% block og_description %}
-    How Bibliotype derives every stat on your dashboard — comparative analytics, genres, mainstream score, reviews, and
-    recommendations — plus the data sources and honest caveats behind each.
+    How Bibliotype works out every stat on your dashboard: comparative stats, genres, mainstream score, reviews, and
+    recommendations, plus where the data comes from.
 {% endblock %}
 
 {% block twitter_title %}How Bibliotype Works: Methodology{% endblock %}
 
 {% block twitter_description %}
-    How Bibliotype calculates comparative analytics, genres, your mainstream score, reviews, and recommendations — data
-    sources, assumptions, and caveats explained plainly.
+    How Bibliotype works out comparative stats, genres, your mainstream score, reviews, and recommendations, and where
+    the data comes from.
 {% endblock %}
 
 {% block structured_data %}
@@ -59,7 +58,7 @@
                     "name": "How is Average Book Length calculated?",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": "Bibliotype averages the page counts of all books on your read shelf that have page count data available. Your figure is then compared against the same average across all Bibliotype readers to produce a community percentile."
+                        "text": "It's the average page count of the books on your read shelf that have one. That number is then ranked against every other Bibliotype reader to give your community percentile."
                     }
                 },
                 {
@@ -67,7 +66,7 @@
                     "name": "How is Average Book Age calculated?",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": "Bibliotype averages the original publication years of all books on your read shelf that have a known publish year. Your figure is compared against all other Bibliotype readers to produce a community percentile."
+                        "text": "It's the average original publication year of the books on your read shelf that have one, ranked against every other Bibliotype reader to give your community percentile."
                     }
                 },
                 {
@@ -75,7 +74,7 @@
                     "name": "How is Books Per Year calculated?",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": "Bibliotype counts only books with a recorded finish date. It then divides that count by the number of distinct calendar years in which you finished at least one book. Your figure is compared against all other Bibliotype readers to produce a community percentile."
+                        "text": "Bibliotype counts the books with a finish date and divides by the number of years in which you finished at least one book. That pace is ranked against every other Bibliotype reader to give your community percentile."
                     }
                 },
                 {
@@ -83,7 +82,7 @@
                     "name": "Where do the genres come from?",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": "Goodreads exports carry no genres and StoryGraph carries only a few tags, so Bibliotype looks each book up in Open Library and Google Books, reads their subject and category labels, then maps those messy labels onto around 56 tidy canonical genres and keeps the most specific ones per book."
+                        "text": "Goodreads exports have no genres and StoryGraph only has a few tags, so Bibliotype looks each book up in Open Library and Google Books, maps their subject labels onto about 56 genres, and keeps the most specific ones for each book."
                     }
                 },
                 {
@@ -91,7 +90,7 @@
                     "name": "What is the Mainstream Score?",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": "The share of your books whose author or publisher is flagged as mainstream — one of the major publishing houses and their imprints, or a widely-published author. A high score means you mostly read well-known names; a low score means you reach for more independent writers."
+                        "text": "The percentage of your books by a big-name author or from one of the major publishers and their imprints. The higher it is, the more you stick to well-known names."
                     }
                 },
                 {
@@ -99,7 +98,7 @@
                     "name": "How does Bibliotype recommend books?",
                     "acceptedAnswer": {
                         "@type": "Answer",
-                        "text": "Bibliotype finds readers whose taste resembles yours by comparing libraries across seven dimensions — including cosine similarity of genre and author mixes and Jaccard similarity of shared books — then suggests the highly-rated books those readers loved that you have not read yet, scored and diversified before ranking."
+                        "text": "Bibliotype compares your library with other readers' in seven ways, including cosine similarity of genres and authors and Jaccard similarity of shared books. It then suggests books the most similar readers rated highly that you haven't read yet."
                     }
                 }
             ]
@@ -109,11 +108,11 @@
 
 {% block content %}
     <div class="mx-auto max-w-3xl space-y-6 p-2 md:p-4">
-        <h1 class="text-center text-4xl font-bold tracking-widest uppercase md:text-5xl">Methodology</h1>
+        <h1 class="text-center text-4xl font-bold uppercase tracking-widest md:text-5xl">Methodology</h1>
 
         <p class="mx-auto max-w-2xl text-center text-lg text-gray-600">
-            Everything on your dashboard is built from your reading export plus a couple of free book databases. Here's
-            how each part is worked out — tap any section to open it.
+            Everything on your dashboard comes from your reading export plus a couple of free book databases. Here's how
+            each bit is worked out. Tap a section to open it.
         </p>
 
         {# ── Comparative Analytics: intro (open by default) ── #}
@@ -125,7 +124,7 @@
                 class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
                 aria-label="Toggle section: How Comparative Analytics Work"
             >
-                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                <h2 class="text-2xl font-bold uppercase tracking-wider">
                     <span class="bg-brand-cyan px-1">How Comparative Analytics Work</span>
                 </h2>
                 <svg
@@ -143,27 +142,22 @@
             <div class="space-y-4 px-6 pb-6 text-lg md:px-8 md:pb-8">
                 <p>
                     The <span class="bg-brand-yellow px-1 font-bold">Comparative Analytics</span> card on your dashboard
-                    shows three stats, and for each one it gives you two things to compare against: a
+                    shows three stats, and compares each one against a
                     <span class="bg-brand-green px-1">global average</span> and your
-                    <span class="bg-brand-pink px-1">community percentile</span>. This section covers what each stat
-                    measures, how it's built from your data, and how much to trust each number.
+                    <span class="bg-brand-pink px-1">community percentile</span>. The two are quite different things:
                 </p>
-                <p>One distinction matters more than anything else here, so we want to be upfront about it.</p>
                 <ul class="list-outside list-disc space-y-2 pl-6">
                     <li>
                         <span class="bg-brand-pink px-1 font-bold">Community percentiles are real data.</span>
-                        They come straight from every Bibliotype library. When the card says you read longer books than
-                        70% of readers, that number is measured from actual uploaded shelves, and it shifts as more
-                        people join.
+                        If the card says you read longer books than 70% of readers, that's worked out from everyone
+                        who's uploaded to Bibliotype, and it'll shift as more people join.
                     </li>
                     <li>
                         <span class="bg-brand-green px-1 font-bold">Global averages are rough estimates.</span>
-                        The books-per-year figure is a median pulled from the big reading surveys, so it's on firm
-                        ground. The other two are rougher working estimates, since nobody actually measures them well.
-                        They're honest reference points rather than precise truths, and we've shown our working for each
-                        one below. Lean on your community percentile; treat the global average as a backdrop. Once
-                        enough readers have joined, we'd like to derive all of these from the community's own libraries
-                        instead.
+                        Books per year comes from the big reading surveys, so that one's fairly solid. Nobody really
+                        measures the other two, so they're educated guesses (there's more on each below). Your community
+                        percentile is the more useful number. Once enough people have joined, I'd like to swap these for
+                        figures from Bibliotype's own readers.
                     </li>
                 </ul>
             </div>
@@ -178,7 +172,7 @@
                 class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
                 aria-label="Toggle section: Average Book Length"
             >
-                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                <h2 class="text-2xl font-bold uppercase tracking-wider">
                     <span class="bg-brand-green px-1">Average Book Length</span>
                 </h2>
                 <svg
@@ -196,52 +190,43 @@
             <div class="space-y-3 px-6 pb-6 text-lg md:px-8 md:pb-8">
                 <div>
                     <h3 class="font-bold uppercase">What it measures</h3>
-                    <p>
-                        The mean page count of every book on your read shelf that has one, rounded to the nearest whole
-                        page.
-                    </p>
+                    <p>The average page count of the books on your read shelf, rounded to the nearest page.</p>
                 </div>
 
                 <div>
-                    <h3 class="font-bold uppercase">How your value is computed</h3>
+                    <h3 class="font-bold uppercase">How we work it out</h3>
                     <p>
-                        Bibliotype pulls each book's page count from your export and fills the gaps from Open Library
-                        and Google Books. Only books with a resolved page count make it into the average. Anything still
-                        missing one sits it out.
+                        We take page counts from your export and fill in the gaps from Open Library and Google Books.
+                        Books we can't find a page count for are left out.
                     </p>
                 </div>
 
                 <div>
                     <h3 class="font-bold uppercase">Community percentile</h3>
-                    <p>
-                        Your average is ranked against the same figure for every other reader. The percentile is the
-                        share of readers whose average book length is shorter than yours.
-                    </p>
+                    <p>The percentage of readers whose average book is shorter than yours.</p>
                 </div>
 
                 <div>
-                    <h3 class="font-bold uppercase">Assumptions and caveats</h3>
+                    <h3 class="font-bold uppercase">Worth knowing</h3>
                     <ul class="list-outside list-disc space-y-1 pl-6">
                         <li>
-                            If enrichment is still in progress, some books may not yet have a page count and the figure
-                            will update automatically once enrichment completes.
+                            While we're still fetching book details, some page counts will be missing. The number
+                            updates once that's done.
                         </li>
                         <li>
-                            Different editions of the same book can have very different page counts. Bibliotype uses
-                            whichever edition Open Library or Google Books returns first, which may not match the
-                            edition you read.
+                            Editions of the same book can vary a lot in length. We use whichever edition Open Library or
+                            Google Books gives us first, which might not be the one you read.
                         </li>
                         <li>
-                            Very short books (e.g. novellas) and very long ones (e.g. omnibus editions) are included
-                            without trimming, so a single unusually long book can shift your average noticeably.
+                            Nothing gets trimmed, so one giant omnibus edition can bump your average up quite a bit.
                         </li>
                     </ul>
                 </div>
 
                 <div class="border-brand-text border-l-4 bg-gray-50 p-3 text-base">
                     <p>
-                        <span class="font-bold">Global benchmark:</span> we compare your average against a working
-                        figure of {{ global_averages.avg_book_length_pages }} pages.
+                        <span class="font-bold">Global benchmark:</span> we compare your average against roughly
+                        {{ global_averages.avg_book_length_pages }} pages.
                         {{ global_averages_sources.avg_book_length_pages.note }}
                         {% if global_averages_sources.avg_book_length_pages.url %}
                             <a
@@ -288,7 +273,7 @@
                 class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
                 aria-label="Toggle section: Average Book Age"
             >
-                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                <h2 class="text-2xl font-bold uppercase tracking-wider">
                     <span class="bg-brand-orange px-1">Average Book Age</span>
                 </h2>
                 <svg
@@ -307,53 +292,46 @@
                 <div>
                     <h3 class="font-bold uppercase">What it measures</h3>
                     <p>
-                        The mean original publication year of all books on your read shelf that have a known publish
-                        year, giving a sense of whether you tend to read newer releases or reach further back into the
-                        backlist.
+                        The average year the books on your read shelf were first published. Basically, do you read new
+                        releases or older stuff?
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="font-bold uppercase">How your value is computed</h3>
+                    <h3 class="font-bold uppercase">How we work it out</h3>
                     <p>
-                        Bibliotype pulls the publication year from your export and fills the gaps from Open Library and
-                        Google Books. Only books with a resolved publication year count toward the average.
+                        We take publication years from your export and fill in the gaps from Open Library and Google
+                        Books. Books we can't find a year for are left out.
                     </p>
                 </div>
 
                 <div>
                     <h3 class="font-bold uppercase">Community percentile</h3>
                     <p>
-                        Your average publish year is ranked against the same figure for every other Bibliotype reader. A
-                        higher percentile means your reading skews more recent compared to the community; a lower
-                        percentile means you tend to read older books.
+                        Your average year is ranked against every other reader's. A higher percentile means you read
+                        newer books than most people here.
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="font-bold uppercase">Assumptions and caveats</h3>
+                    <h3 class="font-bold uppercase">Worth knowing</h3>
                     <ul class="list-outside list-disc space-y-1 pl-6">
                         <li>
-                            If enrichment is still in progress, some books may be missing a publish year and the figure
-                            will update automatically once enrichment completes.
+                            While we're still fetching book details, some years will be missing. The number updates once
+                            that's done.
                         </li>
                         <li>
-                            Bibliotype uses the <em>original</em> publication year where possible, not the year of a
-                            reprint or new edition. If Open Library or Google Books only provides an edition date, that
-                            is used instead.
+                            We try to use the <em>original</em> publication year rather than the year of a reprint, but
+                            sometimes the databases only have an edition date, so we use that.
                         </li>
-                        <li>
-                            Books from ancient or medieval periods can pull the average down significantly if you read a
-                            lot of classics.
-                        </li>
+                        <li>A few very old classics will drag your average back a long way.</li>
                     </ul>
                 </div>
 
                 <div class="border-brand-text border-l-4 bg-gray-50 p-3 text-base">
                     <p>
-                        <span class="font-bold">Global benchmark:</span> the baseline we compare against is a publish
-                        year of {{ global_averages.avg_publish_year }}.
-                        {{ global_averages_sources.avg_publish_year.note }}
+                        <span class="font-bold">Global benchmark:</span> we compare against a publish year of
+                        {{ global_averages.avg_publish_year }}. {{ global_averages_sources.avg_publish_year.note }}
                         {% if global_averages_sources.avg_publish_year.url %}
                             <a
                                 href="{{ global_averages_sources.avg_publish_year.url }}"
@@ -399,7 +377,7 @@
                 class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
                 aria-label="Toggle section: Books Per Year"
             >
-                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                <h2 class="text-2xl font-bold uppercase tracking-wider">
                     <span class="bg-brand-purple px-1">Books Per Year</span>
                 </h2>
                 <svg
@@ -417,51 +395,43 @@
             <div class="space-y-3 px-6 pb-6 text-lg md:px-8 md:pb-8">
                 <div>
                     <h3 class="font-bold uppercase">What it measures</h3>
-                    <p>
-                        Your average annual reading pace, calculated only from books with a recorded finish date in your
-                        export.
-                    </p>
+                    <p>How many books you finish in a typical year.</p>
                 </div>
 
                 <div>
-                    <h3 class="font-bold uppercase">How your value is computed</h3>
+                    <h3 class="font-bold uppercase">How we work it out</h3>
                     <p>
-                        Bibliotype counts the number of books with a recorded finish date, then divides by the number of
-                        distinct calendar years in which you finished at least one book. For example, if you finished 50
-                        books spread across 5 different years, your pace is 10 books a year.
+                        We count the books with a finish date and divide by the number of years in which you finished at
+                        least one. So 50 books spread across 5 years works out at 10 a year.
                     </p>
                 </div>
 
                 <div>
                     <h3 class="font-bold uppercase">Community percentile</h3>
-                    <p>
-                        Your pace is ranked against every other reader's. The percentile is the share of readers who get
-                        through fewer books a year than you do.
-                    </p>
+                    <p>The percentage of readers who get through fewer books a year than you.</p>
                 </div>
 
                 <div>
-                    <h3 class="font-bold uppercase">Assumptions and caveats</h3>
+                    <h3 class="font-bold uppercase">Worth knowing</h3>
                     <ul class="list-outside list-disc space-y-1 pl-6">
                         <li>
-                            Only books with a recorded finish date count. If you mark books as read on Goodreads without
-                            entering a date, they are excluded and your pace may appear lower than reality.
+                            Books without a finish date don't count, so if you often mark books as read without a date,
+                            your pace will look lower than it really is.
                         </li>
                         <li>
-                            The calculation uses the number of years in which you finished at least one book, not the
-                            total span between your first and last recorded finish date. A reading gap of several years
-                            does not pull your average down.
+                            Years where you didn't finish anything are skipped, so taking a few years off reading won't
+                            drag your average down.
                         </li>
                         <li>
-                            If you finished only one book or all your books fall in the same calendar year, the
-                            community percentile comparison is omitted and a simpler total-books count is shown instead.
+                            If all your dated books fall in the same year, we skip the percentile and just show your
+                            total.
                         </li>
                     </ul>
                 </div>
 
                 <div class="border-brand-text border-l-4 bg-gray-50 p-3 text-base">
                     <p>
-                        <span class="font-bold">Global benchmark:</span> we compare against a typical pace of about
+                        <span class="font-bold">Global benchmark:</span> we compare against about
                         {{ global_averages.avg_books_per_year }} books a year.
                         {{ global_averages_sources.avg_books_per_year.note }}
                         {% if global_averages_sources.avg_books_per_year.url %}
@@ -509,7 +479,7 @@
                 class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
                 aria-label="Toggle section: How We Fetch Genres"
             >
-                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                <h2 class="text-2xl font-bold uppercase tracking-wider">
                     <span class="bg-brand-pink px-1">How We Fetch Genres</span>
                 </h2>
                 <svg
@@ -528,8 +498,8 @@
                 <div>
                     <h3 class="font-bold uppercase">What it does</h3>
                     <p>
-                        Your export barely comes with genres — Goodreads gives none at all, and StoryGraph only gives a
-                        few tags — so for every book we go and look them up.
+                        Goodreads exports don't include genres at all, and StoryGraph only gives a few tags, so we look
+                        every book up ourselves.
                     </p>
                 </div>
 
@@ -551,27 +521,26 @@
                             rel="noopener"
                             class="hover:bg-brand-yellow underline"
                             >Google Books</a
-                        >. Open Library gives us a book's "subjects" (things like <em>space opera</em>,
-                        <em>British fiction</em>, or <em>grief</em>); Google Books gives us its categories. If your
-                        StoryGraph export already has tags, we use those too. We match a book by its ISBN where we have
-                        one, and otherwise by title and author.
+                        >. Open Library has "subjects" for each book (things like <em>space opera</em> or
+                        <em>grief</em>) and Google Books has categories. If your StoryGraph export has tags we use those
+                        too. We find each book by its ISBN if there is one, or by title and author if not.
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="font-bold uppercase">Assumptions and caveats</h3>
+                    <h3 class="font-bold uppercase">Worth knowing</h3>
                     <ul class="list-outside list-disc space-y-1 pl-6">
                         <li>
-                            Matching isn't perfect. An obscure edition, an unusual title, or a book missing an ISBN can
-                            match the wrong record or nothing at all.
+                            Sometimes we grab the wrong book, or can't find it at all, especially for obscure editions
+                            or books without an ISBN.
                         </li>
                         <li>
-                            Enrichment happens in the background, so genres can keep filling in for a minute or two
-                            after your dashboard first appears.
+                            This happens in the background, so genres can keep filling in for a minute or two after your
+                            dashboard loads.
                         </li>
                         <li>
-                            The labels reflect how these databases and their communities catalogued a book, not a single
-                            official truth — two databases can disagree.
+                            The labels are whatever these databases decided, and they don't always agree with each
+                            other.
                         </li>
                     </ul>
                 </div>
@@ -587,7 +556,7 @@
                 class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
                 aria-label="Toggle section: How We Simplify and Classify Genres"
             >
-                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                <h2 class="text-2xl font-bold uppercase tracking-wider">
                     <span class="bg-brand-yellow px-1">How We Simplify &amp; Classify Genres</span>
                 </h2>
                 <svg
@@ -606,47 +575,39 @@
                 <div>
                     <h3 class="font-bold uppercase">The problem</h3>
                     <p>
-                        Raw genre labels are messy and inconsistent. "Fiction, Fantasy, General", "epic fantasy", and
-                        "sword &amp; sorcery" all mean roughly the same thing, and a single book can arrive tagged a
-                        dozen different ways.
+                        The labels we get back are a mess. "Fiction, Fantasy, General", "epic fantasy" and "sword &amp;
+                        sorcery" all mean roughly the same thing, and one book can come back with a dozen of them.
                     </p>
                 </div>
 
                 <div>
                     <h3 class="font-bold uppercase">How it works</h3>
                     <p>
-                        We map every raw label onto one of about 56 tidy canonical genres — fantasy, history, romance,
-                        memoir, and so on — using a large dictionary of aliases. Then we keep the five most specific
-                        genres per book (six if the fifth is a very specific fiction genre like fantasy or thriller), so
-                        a book is described by what makes it distinctive rather than a generic "Fiction".
+                        We have a big list of aliases that maps every label onto one of about 56 genres (fantasy,
+                        history, romance, memoir and so on). Then we keep the five most specific genres for each book,
+                        or six if the fifth is something like fantasy or thriller, so you see "space opera" instead of
+                        just "Fiction".
                     </p>
                 </div>
 
                 <div>
                     <h3 class="font-bold uppercase">Fiction vs non-fiction</h3>
                     <p>
-                        Some labels are genuinely ambiguous — "classic", "young adult", and "children's" can be either.
-                        We only flip those to non-fiction when the book also carries a clear non-fiction marker such as
-                        <em>history</em> or <em>biography</em>. A clear signal from the databases always beats a shelf
-                        name you (or another reader) typed.
+                        Some labels, like "classic", "young adult" and "children's", could go either way. We only count
+                        those as non-fiction if the book also has something like <em>history</em> or <em>biography</em>.
+                        What the databases say wins over shelf names people have typed.
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="font-bold uppercase">Assumptions and caveats</h3>
+                    <h3 class="font-bold uppercase">Worth knowing</h3>
                     <ul class="list-outside list-disc space-y-1 pl-6">
                         <li>
-                            It's rule-based, so it isn't flawless. Poetry, for instance, we file under fiction as a
-                            deliberate simplification.
+                            It's all rules, so it gets things wrong sometimes. Poetry goes under fiction, for example,
+                            just to keep things simple.
                         </li>
-                        <li>
-                            A book only gets reclassified when the evidence is clear — we'd rather leave an ambiguous
-                            book where it is than flip it on a weak signal.
-                        </li>
-                        <li>
-                            Genre is inherently fuzzy. Two thoughtful readers will disagree about where a book belongs,
-                            and so will two databases.
-                        </li>
+                        <li>If it's not clear whether a book is fiction or non-fiction, we leave it where it is.</li>
+                        <li>People argue about genres all the time, so you might not agree with every label.</li>
                     </ul>
                 </div>
             </div>
@@ -661,7 +622,7 @@
                 class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
                 aria-label="Toggle section: Mainstream Score"
             >
-                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                <h2 class="text-2xl font-bold uppercase tracking-wider">
                     <span class="bg-brand-cyan px-1">Mainstream Score</span>
                 </h2>
                 <svg
@@ -680,33 +641,26 @@
                 <div>
                     <h3 class="font-bold uppercase">What it measures</h3>
                     <p>
-                        The share of your books that come from a big-name author or one of the major publishing houses
-                        and their many imprints — Penguin Random House, Hachette, HarperCollins, Macmillan, and Simon
-                        &amp; Schuster.
+                        The percentage of your books by a big-name author or from one of the big publishers (Penguin
+                        Random House, Hachette, HarperCollins, Macmillan and Simon &amp; Schuster) and their imprints.
                     </p>
                 </div>
 
                 <div>
                     <h3 class="font-bold uppercase">How it works</h3>
                     <p>
-                        For every book we check whether its author <em>or</em> its publisher is flagged as mainstream,
-                        then divide by your total number of books. A high score means you mostly read widely-published,
-                        well-known names; a low score means you reach for more independent or under-the-radar writers.
+                        We check whether each book's author <em>or</em> publisher is on our mainstream list, then divide
+                        by your total number of books. A high score means you mostly read well-known names, and a low
+                        one means you read more indie and lesser-known stuff.
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="font-bold uppercase">Assumptions and caveats</h3>
+                    <h3 class="font-bold uppercase">Worth knowing</h3>
                     <ul class="list-outside list-disc space-y-1 pl-6">
-                        <li>
-                            "Mainstream" is a rough flag, not a value judgement. Niche isn't better or worse than
-                            popular — it's just a different way to read.
-                        </li>
+                        <li>It's not a judgement either way, there's nothing wrong with reading popular books!</li>
                         <li>A book with no known publisher only counts as mainstream if its author does.</li>
-                        <li>
-                            Publishing imprints are tangled in the real world (big houses own dozens of smaller labels),
-                            so matching a book to a major publisher is approximate.
-                        </li>
+                        <li>The big publishers own loads of smaller imprints, so we won't catch every one.</li>
                     </ul>
                 </div>
             </div>
@@ -721,7 +675,7 @@
                 class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
                 aria-label="Toggle section: Most Positive and Most Negative Review"
             >
-                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                <h2 class="text-2xl font-bold uppercase tracking-wider">
                     <span class="bg-brand-green px-1">Most Positive &amp; Negative Review</span>
                 </h2>
                 <svg
@@ -740,22 +694,22 @@
                 <div>
                     <h3 class="font-bold uppercase">What it does</h3>
                     <p>
-                        If you write reviews in Goodreads or StoryGraph, we surface your most glowing one and your most
-                        scathing one.
+                        If you write reviews on Goodreads or StoryGraph, we find your most glowing one and your harshest
+                        one.
                     </p>
                 </div>
 
                 <div>
                     <h3 class="font-bold uppercase">How it works</h3>
                     <p>
-                        We look at every review you wrote that's more than a few words long and score its tone with
+                        We go through every review you've written that's more than a few words long and score it with
                         <a
                             href="https://github.com/cjhutto/vaderSentiment"
                             target="_blank"
                             rel="noopener"
                             class="hover:bg-brand-yellow underline"
                             >VADER</a
-                        >, a well-known open-source
+                        >, an open-source
                         <a
                             href="https://en.wikipedia.org/wiki/Sentiment_analysis"
                             target="_blank"
@@ -763,21 +717,18 @@
                             class="hover:bg-brand-yellow underline"
                             >sentiment analysis</a
                         >
-                        tool — it reads a piece of text and rates how positive or negative it sounds. For the positive
-                        pick we prefer your 5-star reviews and choose the warmest-toned one; for the negative pick we
-                        prefer your 1-star reviews and choose the harshest. If you have no 5- or 1-star reviews, we fall
-                        back to the most positive and most negative tone across everything you wrote.
+                        tool that rates how positive or negative a bit of text sounds. For the positive one we pick the
+                        warmest of your 5-star reviews, and for the negative one the harshest of your 1-star reviews. If
+                        you don't have any 5 or 1-star reviews, we just pick from everything you've written.
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="font-bold uppercase">Assumptions and caveats</h3>
+                    <h3 class="font-bold uppercase">Worth knowing</h3>
                     <ul class="list-outside list-disc space-y-1 pl-6">
-                        <li>
-                            Tone-scoring is blunt. Sarcasm, mixed feelings, and quoting someone else can all fool it.
-                        </li>
-                        <li>Very short reviews are skipped, since there isn't enough text to read a tone from.</li>
-                        <li>If you don't write reviews, this part of your dashboard simply doesn't appear.</li>
+                        <li>It's easily fooled by sarcasm, mixed feelings or quotes.</li>
+                        <li>Really short reviews are skipped because there isn't enough to go on.</li>
+                        <li>If you don't write reviews, this bit just won't show up on your dashboard.</li>
                     </ul>
                 </div>
             </div>
@@ -792,7 +743,7 @@
                 class="flex cursor-pointer list-none items-center justify-between gap-3 p-6 md:p-8"
                 aria-label="Toggle section: How We Recommend Books"
             >
-                <h2 class="text-2xl font-bold tracking-wider uppercase">
+                <h2 class="text-2xl font-bold uppercase tracking-wider">
                     <span class="bg-brand-orange px-1">How We Recommend Books</span>
                 </h2>
                 <svg
@@ -809,15 +760,15 @@
             </summary>
             <div class="space-y-3 px-6 pb-6 text-lg md:px-8 md:pb-8">
                 <p>
-                    This is the most involved one, so bear with us. The core idea is simple: find readers whose taste
-                    looks like yours, then suggest the books they loved that you haven't read yet.
+                    This is the most complicated one. The basic idea is to find readers with similar taste to yours,
+                    then suggest books they loved that you haven't read yet.
                 </p>
 
                 <div>
-                    <h3 class="font-bold uppercase">Step 1 — measure how similar two readers are</h3>
+                    <h3 class="font-bold uppercase">1. How similar are two readers?</h3>
                     <p>
-                        We compare any two libraries across seven angles and blend them into a single similarity score.
-                        Two of those angles use standard maths worth naming:
+                        We compare two libraries in seven different ways and combine them into one similarity score. Two
+                        of them use some well-known maths:
                     </p>
                     <ul class="mt-2 list-outside list-disc space-y-1 pl-6">
                         <li>
@@ -828,9 +779,8 @@
                                 class="hover:bg-brand-yellow underline"
                                 >Cosine similarity</a
                             >
-                            — measures how closely two lists of preferences point in the same direction, regardless of
-                            how much each person has read. We use it to compare your genre mix and your favourite
-                            authors against someone else's.
+                            compares the mix of genres and authors you read with someone else's, without caring about
+                            how much either of you reads.
                         </li>
                         <li>
                             <a
@@ -840,54 +790,50 @@
                                 class="hover:bg-brand-yellow underline"
                                 >Jaccard similarity</a
                             >
-                            — the share of books two readers have in common out of all the distinct books they've read
-                            between them. It rewards genuinely overlapping shelves.
+                            is how many books you've both read, out of all the books either of you has read.
                         </li>
                     </ul>
                     <p class="mt-2">
-                        The other five angles look at how you both rated the same books, your shared top books, how
-                        harsh or generous your ratings tend to be, and which decades you read from.
+                        The other five look at how you both rated the same books, your shared favourites, whether you
+                        rate harshly or generously, and which decades you tend to read from.
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="font-bold uppercase">Step 2 — gather candidates</h3>
+                    <h3 class="font-bold uppercase">2. Collect books to suggest</h3>
                     <p>
-                        From the readers most similar to you (plus a sample of anonymised community libraries), we
-                        collect the books they rated highly and strip out anything you've already read or rated poorly.
+                        We take the books your most similar readers (plus some anonymised libraries) rated highly, and
+                        throw out anything you've already read.
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="font-bold uppercase">Step 3 — score and rank</h3>
+                    <h3 class="font-bold uppercase">3. Rank them</h3>
                     <p>
-                        Each candidate earns points for how many similar readers loved it, how highly it's rated
-                        overall, how well it fits your favourite genres, and whether it matches what you're currently
-                        reading.
+                        Books score higher if more of your similar readers loved them, if they're rated well overall, if
+                        they fit your favourite genres, and if they're like what you're reading right now.
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="font-bold uppercase">Step 4 — keep it varied</h3>
+                    <h3 class="font-bold uppercase">4. Mix it up</h3>
                     <p>
-                        Finally we stop any one author or series from dominating, so you get a spread rather than ten
-                        books from the same trilogy.
+                        Lastly we limit how many books can come from one author or series, so you don't get your whole
+                        list from the same trilogy.
                     </p>
                 </div>
 
                 <div>
-                    <h3 class="font-bold uppercase">Assumptions and caveats</h3>
+                    <h3 class="font-bold uppercase">Worth knowing</h3>
                     <ul class="list-outside list-disc space-y-1 pl-6">
                         <li>
-                            Recommendations get better as more people upload their libraries, and they need a reasonable
-                            reading history of your own to work well.
+                            They get better as more people upload, and work best if you've logged a decent number of
+                            books yourself.
                         </li>
+                        <li>You're only matched with readers who've left recommendation visibility on.</li>
                         <li>
-                            Anonymous uploads can only be matched against readers who have chosen to share their data.
-                        </li>
-                        <li>
-                            We only ever suggest real books that other readers actually rated highly — nothing is
-                            invented from thin air.
+                            Every suggestion is a real book that someone similar to you rated highly. No AI makes them
+                            up.
                         </li>
                     </ul>
                 </div>
@@ -905,7 +851,7 @@
         </div>
     </div>
 
-    {# Open the section a dashboard link points at (e.g. …/methodology/#book-length) and scroll to it. #}
+    {# Open the section a dashboard link points at (e.g. /methodology/#book-length) and scroll to it. #}
     <script>
         (function () {
             function openTargetSection() {
