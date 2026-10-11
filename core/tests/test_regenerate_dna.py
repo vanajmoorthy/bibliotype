@@ -48,3 +48,38 @@ class RegenerateDnaGenreCanonicalizationTests(TestCase):
         self.assertGreater(profile.dna_data["reader_type_scores"].get("Literary Luminary", 0), 0)
         # top_genres was already canonicalized before this fix — guard it stays so
         self.assertEqual(profile.dna_data["top_genres"][0][0], "classic fiction")
+
+
+class RegenerateDnaCarryForwardTests(TestCase):
+    """Series Slayer / Comfort Rereader are carried forward from stored scores (their
+    signals live only in the CSV), behind the same library-size guard as scoring."""
+
+    def _user_with_library(self, username, n_books):
+        user = User.objects.create_user(username=username, email=f"{username}@example.com", password="x")
+        profile = user.userprofile
+        profile.dna_data = {
+            "reader_type": "Comfort Rereader",
+            "reader_type_scores": {"Comfort Rereader": 100, "Series Slayer": 80},
+            "user_stats": {},
+        }
+        profile.save()
+        for i in range(n_books):
+            author = Author.objects.create(name=f"{username} Author {i}")
+            book = Book.objects.create(title=f"{username} Book {i}", author=author, page_count=320)
+            UserBook.objects.create(user=user, book=book, user_rating=4, date_read=date(2022, 1, 1))
+        return profile
+
+    def test_small_library_drops_carried_scores(self):
+        profile = self._user_with_library("tiny", 3)
+        call_command("regenerate_dna", "--username", "tiny")
+        profile.refresh_from_db()
+        self.assertNotIn("Comfort Rereader", profile.dna_data["reader_type_scores"])
+        self.assertNotIn("Series Slayer", profile.dna_data["reader_type_scores"])
+        self.assertNotEqual(profile.dna_data["reader_type"], "Comfort Rereader")
+
+    def test_library_at_threshold_keeps_carried_scores(self):
+        profile = self._user_with_library("big", 12)
+        call_command("regenerate_dna", "--username", "big")
+        profile.refresh_from_db()
+        self.assertEqual(profile.dna_data["reader_type_scores"].get("Comfort Rereader"), 100)
+        self.assertEqual(profile.dna_data["reader_type"], "Comfort Rereader")

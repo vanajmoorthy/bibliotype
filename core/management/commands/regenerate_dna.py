@@ -99,6 +99,7 @@ class Command(BaseCommand):
             # Full accuracy restores on the user's next re-upload.
             import pandas as _pd
 
+            from core.dna_constants import MIN_SIGNAL_BOOKS as _MIN_SIGNAL
             from core.dna_constants import MIN_WINNING_SCORE as _MIN_WIN
             from core.dna_constants import READER_TYPE_TIEBREAK_ORDER as _TIEBREAK
             from core.services.dna.reader_type import assign_reader_type as _assign_reader_type
@@ -133,12 +134,14 @@ class Command(BaseCommand):
                 regen_df, enriched_data_regen, book_genre_sets_regen
             )
 
-            # Carry forward CSV-only signals from stored scores
+            # Carry forward CSV-only signals from stored scores, behind the same
+            # library-size guard assign_reader_type applies to them
             old_scores = profile.dna_data.get("reader_type_scores", {})
             scores = Counter(new_scores_counter)
-            for carry_type in ("Series Slayer", "Comfort Rereader"):
-                if carry_type in old_scores and carry_type not in scores:
-                    scores[carry_type] = old_scores[carry_type]
+            if len(regen_df) >= _MIN_SIGNAL:
+                for carry_type in ("Series Slayer", "Comfort Rereader"):
+                    if carry_type in old_scores and carry_type not in scores:
+                        scores[carry_type] = old_scores[carry_type]
 
             # Re-run winner selection with carry-forward scores included
             if scores and scores.most_common(1)[0][1] >= _MIN_WIN:

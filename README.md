@@ -92,8 +92,8 @@ See the linked docs for full detail.
   whether to drop/clean any.
 - Distribution-domination cap relaxed ≤25% → ≤30% (Fantasy Fanatic ~26.5%, structural to the test
   corpus) — can be tightened later.
-- Reread/series signals aren't `MIN_SIGNAL_BOOKS`-guarded like genre/page/year signals; tiny libraries
-  with rereads can still score Comfort Rereader / Series Slayer. Documented as defensible; may refine.
+- ✅ Reread/series signals are now `MIN_SIGNAL_BOOKS`-guarded like genre/page/year signals: libraries
+  under 10 books can't score Comfort Rereader / Series Slayer (also applied to `regenerate_dna`'s carry-forward).
 - **Series Slayer is unearnable for StoryGraph uploads** (no series markers) — permanent limitation.
 - No fleet `regenerate_dna` on prod and no backfill of `reader_type_csv_context` — existing profiles keep
   their old vocabulary/scoring until users re-upload (intentional). `AnonymizedReadingProfile.reader_type`
@@ -248,8 +248,8 @@ detail. ~~Struck-through~~ items were verified done against `main` as of 2026-08
 - **Distribution-domination cap was relaxed 25% → 30%** (Fantasy Fanatic sits ~26.5%, largely
   structural to the test corpus) and the Eclectic ≥1% lower bound was dropped. Tighten later if
   you want a stricter guarantee.
-- **Reread / Series signals aren't `MIN_SIGNAL_BOOKS`-guarded** — a tiny library (<10 books) with
-  rereads can still score Comfort Rereader / Series Slayer. Possible future refinement, not a bug.
+- ✅ **Reread / Series signals are `MIN_SIGNAL_BOOKS`-guarded.** A library under 10 books no longer
+  scores Comfort Rereader / Series Slayer.
 - **No backfill** of reader types for existing users; they recompute on next upload.
 
 ### Genre & fiction/non-fiction
