@@ -399,10 +399,10 @@ def _enrich_dna_for_display(dna_data):
         comm_len = community.get("avg_book_length")
         if comm_len and user_len >= comm_len:
             comparative_text["length_direction"] = "longer"
-            comparative_text["length_pct"] = round(len_pct, 1)
+            comparative_text["length_pct"] = round(len_pct)
         else:
             comparative_text["length_direction"] = "shorter"
-            comparative_text["length_pct"] = round(100 - len_pct, 1)
+            comparative_text["length_pct"] = round(100 - len_pct)
 
         # Book age
         year_pct = percentiles.get("avg_publish_year", 50)
@@ -410,10 +410,10 @@ def _enrich_dna_for_display(dna_data):
         comm_year = community.get("avg_publish_year")
         if comm_year and user_year <= comm_year:
             comparative_text["age_direction"] = "older"
-            comparative_text["age_pct"] = round(year_pct, 1)
+            comparative_text["age_pct"] = round(year_pct)
         else:
             comparative_text["age_direction"] = "newer"
-            comparative_text["age_pct"] = round(100 - year_pct, 1)
+            comparative_text["age_pct"] = round(100 - year_pct)
 
         # Books per year
         bpy_pct = percentiles.get("avg_books_per_year", 50)
@@ -421,10 +421,10 @@ def _enrich_dna_for_display(dna_data):
         comm_bpy = community.get("avg_books_per_year")
         if comm_bpy and user_bpy >= comm_bpy:
             comparative_text["bpy_direction"] = "more"
-            comparative_text["bpy_pct"] = round(bpy_pct, 1)
+            comparative_text["bpy_pct"] = round(bpy_pct)
         else:
             comparative_text["bpy_direction"] = "fewer"
-            comparative_text["bpy_pct"] = round(100 - bpy_pct, 1)
+            comparative_text["bpy_pct"] = round(100 - bpy_pct)
 
     dna_data["comparative_text"] = comparative_text
 
