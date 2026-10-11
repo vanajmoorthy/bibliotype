@@ -29,6 +29,7 @@ CSV = "\n".join(
         "Reupload B,Reupload Author,read,3,250,2019,2023/02/01,4.0,,9780000000902",
     ]
 )
+CSV_WITHOUT_B = "\n".join(CSV.split("\n")[:2])
 
 
 class AnonymousSessionCleanupTests(TestCase):
@@ -80,6 +81,31 @@ class ReuploadCountTests(TransactionTestCase):
 
         self.assertEqual(self._read_counts(), [1, 1])
         self.assertEqual(AggregateAnalytics.objects.get(pk=1).total_profiles_counted, profiles_after_first)
+
+    def _count(self, title):
+        return Book.objects.get(title=title).global_read_count
+
+    def test_authenticated_reupload_decrements_dropped_books(self, *mocks):
+        user = User.objects.create_user(username="dropper", password="pw")
+        calculate_full_dna(CSV, user=user)
+        calculate_full_dna(CSV_WITHOUT_B, user=user)
+        self.assertEqual((self._count("Reupload A"), self._count("Reupload B")), (1, 0))
+
+        # Re-adding the dropped book counts it once, not twice.
+        calculate_full_dna(CSV, user=user)
+        self.assertEqual(self._read_counts(), [1, 1])
+
+    def test_anonymous_reupload_decrements_dropped_books(self, *mocks):
+        calculate_full_dna(CSV, session_key="anon-dropper")
+        calculate_full_dna(CSV_WITHOUT_B, session_key="anon-dropper")
+        self.assertEqual((self._count("Reupload A"), self._count("Reupload B")), (1, 0))
+
+    def test_dropped_book_count_never_goes_below_zero(self, *mocks):
+        user = User.objects.create_user(username="floor", password="pw")
+        calculate_full_dna(CSV, user=user)
+        Book.objects.filter(title="Reupload B").update(global_read_count=0)
+        calculate_full_dna(CSV_WITHOUT_B, user=user)
+        self.assertEqual(self._count("Reupload B"), 0)
 
 
 def _ctx(ratings):
