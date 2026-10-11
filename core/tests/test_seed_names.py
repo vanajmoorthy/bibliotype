@@ -36,7 +36,9 @@ class SeedIdentityTests(SimpleTestCase):
 
 class RenameSeedUsersMigrationTests(TestCase):
     def test_renames_seed_users_and_patches_stored_recommendations(self):
-        seed = User.objects.create_user(username="seed_012__someone_repo", email="seed_012__someone_repo@seed.bibliotype.invalid")
+        seed = User.objects.create_user(
+            username="seed_012__someone_repo", email="seed_012__someone_repo@seed.bibliotype.invalid"
+        )
         organic = User.objects.create_user(username="seed_lookalike", email="real@person.com", password="x")
         viewer = User.objects.create_user(username="viewer", email="viewer@example.com", password="x")
 

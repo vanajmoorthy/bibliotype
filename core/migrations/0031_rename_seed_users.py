@@ -20,9 +20,7 @@ def rename_seed_users(apps, schema_editor):
         email__endswith=f"@{SEED_EMAIL_DOMAIN}", username__startswith=OLD_USERNAME_PREFIX
     ).order_by("email")
     for user in seed_users:
-        first_name, handle = seed_identity(
-            user.email, lambda name: User.objects.filter(username__iexact=name).exists()
-        )
+        first_name, handle = seed_identity(user.email, lambda name: User.objects.filter(username__iexact=name).exists())
         renamed[user.id] = (user.username, handle)
         user.username = handle
         user.first_name = first_name
