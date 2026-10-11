@@ -205,11 +205,10 @@ def check_dna_status_view(request):
         except Exception:
             return JsonResponse({"status": "PENDING"})
 
-    # Otherwise, check if DNA data exists
+    # No task in flight: either the DNA landed, or the task (e.g. a signup claim) gave up.
     if profile.dna_data:
         return JsonResponse({"status": "SUCCESS"})
-    else:
-        return JsonResponse({"status": "PENDING"})
+    return JsonResponse({"status": "FAILURE", "error": "An error occurred while processing your file."})
 
 
 @login_required

@@ -7,6 +7,7 @@ from django.test import TestCase, TransactionTestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 
 from core.tasks import claim_anonymous_dna_task, generate_reading_dna_task
+from core.tasks.dna import CLAIM_RETRY_COUNTDOWN
 
 
 # This setting makes Celery tasks run synchronously in the test
@@ -138,7 +139,27 @@ class TaskIntegrationTests(TransactionTestCase):
         self.assertIsNone(user.userprofile.pending_dna_task_id)
         self.assertIsNone(user.userprofile.dna_data)
         # Retry budget must cover the hard task time limit
-        self.assertGreaterEqual(claim_anonymous_dna_task.max_retries * 10, 900)
+        self.assertGreaterEqual(claim_anonymous_dna_task.max_retries * CLAIM_RETRY_COUNTDOWN, 900)
+
+    @patch("core.tasks.dna.AsyncResult")
+    def test_claim_stops_at_once_when_anonymous_task_failed(self, mock_async_result):
+        """A FAILED anonymous task can never produce DNA, so the claim must give up on
+        the first attempt instead of burning its retry budget."""
+        user = User.objects.create_user(username="failedclaim", password="password")
+        task_id = "failed-task-id"
+        session_key = "uploader-session-key"
+        cache.set(f"task_owner_{task_id}", session_key, 3600)
+        user.userprofile.pending_dna_task_id = task_id
+        user.userprofile.save()
+        mock_async_result.return_value.ready.return_value = True
+        mock_async_result.return_value.successful.return_value = False
+
+        result = claim_anonymous_dna_task.apply(args=(user.id, task_id, session_key))
+
+        self.assertEqual(result.state, "SUCCESS")  # not RETRY
+        user.userprofile.refresh_from_db()
+        self.assertIsNone(user.userprofile.pending_dna_task_id)
+        self.assertIsNone(user.userprofile.dna_data)
 
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.dna.AsyncResult")

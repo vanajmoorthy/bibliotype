@@ -20,7 +20,7 @@ from ..analytics.events import track_user_logged_in, track_user_signed_up
 from ..cache_utils import safe_cache_get
 from ..forms import CustomUserCreationForm
 from ..ratelimit_utils import client_ip_key, get_real_client_ip
-from ..tasks import _create_userbooks_from_anonymous_session, _save_dna_to_profile, claim_anonymous_dna_task
+from ..tasks import claim_anonymous_dna_task, claim_dna
 
 logger = logging.getLogger(__name__)
 
@@ -120,10 +120,7 @@ def _signup_view_throttled(request):
                 return redirect(processing_url)
 
             if "dna_data" in request.session:
-                dna_to_save = request.session.pop("dna_data")
-                _save_dna_to_profile(user.userprofile, dna_to_save)
-                if pre_login_session_key:
-                    _create_userbooks_from_anonymous_session(user, pre_login_session_key)
+                claim_dna(user, request.session.pop("dna_data"), pre_login_session_key)
 
                 # Track signup with session DNA (could be after anonymous DNA)
                 track_user_signed_up(
@@ -193,9 +190,7 @@ def _login_view_throttled(request):
             if "dna_data" in request.session:
                 dna_to_save = request.session.pop("dna_data")
                 if not user.userprofile.dna_data:
-                    _save_dna_to_profile(user.userprofile, dna_to_save)
-                    if pre_login_session_key:
-                        _create_userbooks_from_anonymous_session(user, pre_login_session_key)
+                    claim_dna(user, dna_to_save, pre_login_session_key)
                 messages.success(request, "Logged in successfully!", extra_tags="ephemeral")
 
                 # Track login

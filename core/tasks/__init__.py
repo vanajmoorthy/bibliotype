@@ -8,6 +8,7 @@ from .dna import (  # noqa: F401 — re-exported for stable import paths
     _create_userbooks_from_anonymous_session,
     _save_dna_to_profile,
     claim_anonymous_dna_task,
+    claim_dna,
     generate_reading_dna_task,
 )
 from .enrichment import (  # noqa: F401 — re-exported for stable import paths

@@ -121,25 +121,24 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str)
             raise self.retry(countdown=CLAIM_RETRY_COUNTDOWN, exc=Exception(f"Task {task_id} not ready"))
         if not result.successful():
             logger.error(f"Task {task_id} failed. Cannot claim DNA for user {user_id}")
-            user.userprofile.pending_dna_task_id = None
-            user.userprofile.save()
+            _clear_pending_and_return()
             return
         dna_data = result.get()
 
-    _save_dna_to_profile(user.userprofile, dna_data)
-
-    if cached_session_key:
-        _create_userbooks_from_anonymous_session(user, cached_session_key)
-
-    user.userprofile.pending_dna_task_id = None
-    user.userprofile.save()
+    claim_dna(user, dna_data, cached_session_key, task_id=task_id)
     logger.info(f"Successfully claimed and saved DNA for user {user_id} from task {task_id}")
 
-    track_anonymous_dna_claimed(
-        user_id=user_id,
-        task_id=task_id,
-        session_key=cached_session_key,
-    )
+
+def claim_dna(user, dna_data, session_key, task_id=None):
+    """Move an anonymous DNA (and its library, if session_key is known) onto user.
+
+    UserBooks go first: saving the DNA clears pending_dna_task_id and dispatches
+    recommendations, and both should see the claimed library.
+    """
+    if session_key:
+        _create_userbooks_from_anonymous_session(user, session_key)
+    _save_dna_to_profile(user.userprofile, dna_data)
+    track_anonymous_dna_claimed(user_id=user.id, task_id=task_id, session_key=session_key)
 
 
 def _create_userbooks_from_anonymous_session(user, session_key):
