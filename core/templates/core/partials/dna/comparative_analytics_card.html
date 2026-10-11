@@ -83,9 +83,7 @@
                 </p>
                 {% if dna.user_stats.avg_books_per_year and dna.comparative_text.bpy_pct %}
                     <p class="mt-2 text-lg leading-snug">
-                        <strong>{{ dna.user_stats.books_with_dates }} books</strong> in
-                        {{ dna.user_stats.num_reading_years }} year{{ dna.user_stats.num_reading_years|pluralize }} —
-                        {{ dna.comparative_text.bpy_direction }} than
+                        {{ dna.comparative_text.bpy_direction|capfirst }} than
                         <strong>{{ dna.comparative_text.bpy_pct }}%</strong> of readers
                     </p>
                     {% include 'core/partials/dna/comparison_bars.html' with nl_metric="bpy" nl_decimals=1 nl_user_value=dna.user_stats.avg_books_per_year nl_compare_value=dna.community_averages.avg_books_per_year nl_third_value=dna.global_averages.avg_books_per_year nl_third_href=methodology_url|add:'#books-per-year' %}
