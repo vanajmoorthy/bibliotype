@@ -165,3 +165,21 @@ class InlineEnrichmentConcurrencyTests(TransactionTestCase):
 
         self.assertEqual(mock_enrich.call_count, 8)
         self.assertLessEqual(state["peak"], 2)
+
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    @patch("core.services.dna._EnrichmentBudget")
+    def test_budget_rechecked_after_waiting_for_a_slot(self, mock_budget, mock_enrich, _vibe, mock_enrich_task, *_):
+        from core.services.dna import calculate_full_dna
+
+        # Budget has time left when the worker queues, but runs out while it waits.
+        mock_budget.return_value.has_remaining.side_effect = [True, False]
+
+        header = "Title,Author,Exclusive Shelf,My Rating,Number of Pages,Original Publication Year,Date Read,Average Rating,My Review,ISBN13"
+        calculate_full_dna(f"{header}\nLate Book,Late Author,read,4,200,2020,2023/01/01,4.0,,9780000000999")
+
+        mock_enrich.assert_not_called()
+        mock_enrich_task.assert_called_once()

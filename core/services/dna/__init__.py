@@ -328,9 +328,12 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                             )
                             # Cap concurrent inline enrichments so 8 upload workers
                             # can't burst Open Library / Google Books past their limits.
+                            # Re-check the budget after the wait so queued workers don't
+                            # keep enriching inline once it has run out.
                             with _INLINE_ENRICH_SEMAPHORE:
-                                enrich_book_from_apis(book, session, slow_down=False, quick_mode=True)
-                            enriched_inline = True
+                                if enrichment_budget.has_remaining():
+                                    enrich_book_from_apis(book, session, slow_down=False, quick_mode=True)
+                                    enriched_inline = True
                         except Exception as e:
                             logger.warning(f"Inline enrichment failed for '{book.title}': {e}")
                     if not enriched_inline:
