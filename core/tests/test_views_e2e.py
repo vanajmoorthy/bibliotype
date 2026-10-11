@@ -5,6 +5,7 @@ from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TransactionTestCase, override_settings
 from django.urls import reverse
+from django.utils.html import escape
 
 
 @override_settings(
@@ -212,7 +213,10 @@ class ViewE2E_Tests(TransactionTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "We couldn't verify that this Bibliotype belongs to your current session.")
+        # Flash messages are autoescaped, so the apostrophe arrives as &#x27;.
+        self.assertContains(
+            response, escape("We couldn't verify that this Bibliotype belongs to your current session.")
+        )
         self.assertFalse(User.objects.filter(username="attacker").exists())
 
     @patch("core.services.dna.generate_vibe_with_llm")
@@ -626,9 +630,7 @@ class UploadValidationTests(TransactionTestCase):
         mock_task.delay.return_value = MagicMock(id="truncated-task-id")
 
         header = "Title,Author,Exclusive Shelf,My Rating,ISBN13"
-        rows = "\n".join(
-            f"Book {i},Author {i},read,4,978000000{i:04d}" for i in range(MAX_UPLOAD_ROWS + 1)
-        )
+        rows = "\n".join(f"Book {i},Author {i},read,4,978000000{i:04d}" for i in range(MAX_UPLOAD_ROWS + 1))
         csv_content = (header + "\n" + rows).encode("utf-8")
         upload = self._make_csv("big.csv", csv_content)
 
@@ -677,10 +679,7 @@ class UploadValidationTests(TransactionTestCase):
         task is dispatched with the original csv_content."""
         mock_task.delay.return_value = MagicMock(id="happy-task-id")
 
-        good = (
-            b"Title,Author,Exclusive Shelf,My Rating,ISBN13\n"
-            b"Dune,Frank Herbert,read,5,9780441172719\n"
-        )
+        good = b"Title,Author,Exclusive Shelf,My Rating,ISBN13\n" b"Dune,Frank Herbert,read,5,9780441172719\n"
         upload = self._make_csv("goodreads.csv", good)
 
         response = self.client.post(reverse("core:upload"), {"csv_file": upload})
@@ -695,10 +694,7 @@ class UploadValidationTests(TransactionTestCase):
         signature column sets."""
         mock_task.delay.return_value = MagicMock(id="sg-task-id")
 
-        sg = (
-            b"Title,Authors,Read Status,Star Rating,ISBN/UID\n"
-            b"Project Hail Mary,Andy Weir,read,5,9780593135204\n"
-        )
+        sg = b"Title,Authors,Read Status,Star Rating,ISBN/UID\n" b"Project Hail Mary,Andy Weir,read,5,9780593135204\n"
         upload = self._make_csv("storygraph.csv", sg)
 
         response = self.client.post(reverse("core:upload"), {"csv_file": upload})

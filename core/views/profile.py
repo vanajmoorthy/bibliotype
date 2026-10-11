@@ -108,8 +108,6 @@ def _update_username_api_throttled(request):
 
         if form.is_valid():
             form.save()
-            messages.success(request, "Display name updated successfully!", extra_tags="ephemeral")
-
             return JsonResponse({"status": "success", "new_username": new_username})
         else:
             error_message = form.errors.get("username")[0]
@@ -127,7 +125,7 @@ def update_username_api(request):
     try:
         return _update_username_api_throttled(request)
     except Ratelimited:
-        return JsonResponse({"error": "Too many attempts, try again later."}, status=429)
+        return JsonResponse({"status": "error", "message": "Too many attempts, try again later."}, status=429)
 
 
 @login_required
@@ -168,9 +166,7 @@ def update_recommendation_visibility(request):
             request, "You are now visible as a recommendation source to similar readers!", extra_tags="ephemeral"
         )
     else:
-        messages.success(
-            request, "You've opted out of being shown as a recommendation source.", extra_tags="ephemeral"
-        )
+        messages.success(request, "You've opted out of being shown as a recommendation source.", extra_tags="ephemeral")
 
     return redirect("core:display_dna")
 

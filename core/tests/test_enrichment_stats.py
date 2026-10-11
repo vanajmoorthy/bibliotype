@@ -34,7 +34,9 @@ class ComputeEnrichmentStatsTests(TestCase):
     def _add_book(self, title, *, page_count=None, genres=None, mainstream_author=False, mainstream_publisher=False):
         author = self.author
         if mainstream_author:
-            author = Author.objects.create(name=f"Mainstream {title}", normalized_name=f"main{title}", is_mainstream=True)
+            author = Author.objects.create(
+                name=f"Mainstream {title}", normalized_name=f"main{title}", is_mainstream=True
+            )
         publisher = None
         if mainstream_publisher:
             publisher = Publisher.objects.create(name=f"Big {title}", normalized_name=f"big{title}", is_mainstream=True)
@@ -295,6 +297,13 @@ class FictionNonfictionCoverageSubtitleTests(TestCase):
         )
         self.assertNotIn("Based on", html)
         self.assertIn("Fiction", html)
+
+    def test_percentages_round_half_up_and_sum_to_100(self):
+        """5 fiction / 3 nonfiction = 62.5 / 37.5. Must match the JS poller (Math.round,
+        nonfiction = 100 - fiction): 63 / 37, not widthratio's banker's 62 / 38."""
+        html = self._render({"fiction_count": 5, "nonfiction_count": 3}, None)
+        self.assertIn('id="fiction-pct">63%', html)
+        self.assertIn('id="nonfiction-pct">37%', html)
 
 
 @override_settings(

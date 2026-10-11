@@ -6,6 +6,8 @@ can look up per-type colours without hard-coding class names that Tailwind's
 scanner can't detect from Python data.
 """
 
+import math
+
 from django import template
 
 from core.dna_constants import READER_TYPE_COLORS
@@ -46,3 +48,18 @@ def strip_review_html(text):
     if not isinstance(text, str):
         return text
     return _sanitize_review_text(text)
+
+
+@register.filter
+def split_pcts(split):
+    """Return (fiction_pct, nonfiction_pct) for a fiction/nonfiction split, summing to 100.
+
+    Rounds half-up like JS Math.round so the server render matches the live
+    poller in charts_scripts.html (Django's widthratio rounds half-to-even).
+    """
+    fiction = split.get("fiction_count", 0) or 0
+    total = fiction + (split.get("nonfiction_count", 0) or 0)
+    if total <= 0:
+        return (0, 0)
+    fiction_pct = math.floor(fiction / total * 100 + 0.5)
+    return (fiction_pct, 100 - fiction_pct)
