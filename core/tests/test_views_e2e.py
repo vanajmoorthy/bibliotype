@@ -376,9 +376,9 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "SUCCESS")
 
-    def test_status_check_returns_pending_when_no_data(self):
+    def test_status_check_returns_failure_when_nothing_pending_and_no_data(self):
         """
-        Test that status check returns PENDING when there's no DNA data.
+        No task in flight and no DNA (e.g. a signup claim gave up): stop polling.
         """
         user = User.objects.create_user(username="testuser5", password="password")
         user.userprofile.save()
@@ -387,7 +387,7 @@ class ViewE2E_Tests(TransactionTestCase):
 
         response = self.client.get(reverse("core:api_check_dna_status"))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["status"], "PENDING")
+        self.assertEqual(response.json()["status"], "FAILURE")
 
     def test_status_check_returns_failure_when_task_failed(self):
         """
@@ -585,6 +585,100 @@ class SignupDuplicateEmailTests(TransactionTestCase):
 
 
 @override_settings(
+    CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "session-dna-claim"}},
+)
+@patch("core.tasks.generate_recommendations_task.delay")
+@patch("core.tasks.dna.track_anonymous_dna_claimed")
+class SessionDnaClaimTests(TransactionTestCase):
+    """Signup/login from the dashboard link (no ?task_id) claims the session DNA:
+    DNA + anonymous library as UserBooks, and one anonymous_dna_claimed event."""
+
+    PASSWORD = "Brand-New-p4ssword!"
+
+    def setUp(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from core.models import AnonymousUserSession, Author, Book
+
+        self.client = Client()
+        author = Author.objects.create(name="Session Author")
+        self.book_a = Book.objects.create(title="Session A", author=author)
+        self.book_b = Book.objects.create(title="Session B", author=author)
+
+        session = self.client.session
+        session["dna_data"] = {"reader_type": "Session Reader", "user_stats": {}}
+        session.save()
+        self.session_key = session.session_key
+        AnonymousUserSession.objects.create(
+            session_key=self.session_key,
+            dna_data={"reader_type": "Session Reader"},
+            books_data=[self.book_a.id, self.book_b.id],
+            book_ratings={str(self.book_a.id): 5},
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+    def tearDown(self):
+        from django.db import connections
+
+        connections.close_all()
+        super().tearDown()
+
+    def _login(self, email):
+        return self.client.post(reverse("core:login"), {"username": email, "password": self.PASSWORD})
+
+    def test_signup_claims_dna_and_library(self, mock_track, mock_recs):
+        from core.models import UserBook
+
+        response = self.client.post(
+            reverse("core:signup"),
+            {
+                "username": "sessionuser",
+                "email": "session@test.com",
+                "password1": self.PASSWORD,
+                "password2": self.PASSWORD,
+            },
+        )
+
+        self.assertRedirects(response, reverse("core:display_dna"), fetch_redirect_response=False)
+        user = User.objects.get(username="sessionuser")
+        self.assertEqual(user.userprofile.reader_type, "Session Reader")
+        self.assertEqual(UserBook.objects.filter(user=user).count(), 2)
+        self.assertEqual(UserBook.objects.get(user=user, book=self.book_a).user_rating, 5)
+        mock_track.assert_called_once_with(user_id=user.id, task_id=None, session_key=self.session_key)
+
+    def test_login_without_dna_claims_dna_and_library(self, mock_track, mock_recs):
+        from core.models import UserBook
+
+        user = User.objects.create_user(username="returning", email="r@test.com", password=self.PASSWORD)
+
+        self._login("r@test.com")
+
+        user.userprofile.refresh_from_db()
+        self.assertEqual(user.userprofile.reader_type, "Session Reader")
+        self.assertEqual(UserBook.objects.filter(user=user).count(), 2)
+        mock_track.assert_called_once_with(user_id=user.id, task_id=None, session_key=self.session_key)
+
+    def test_login_with_existing_dna_keeps_it_and_claims_nothing(self, mock_track, mock_recs):
+        from core.models import UserBook
+
+        user = User.objects.create_user(username="veteran", email="v@test.com", password=self.PASSWORD)
+        user.userprofile.dna_data = {"reader_type": "Existing Reader"}
+        user.userprofile.save()
+        UserBook.objects.create(user=user, book=self.book_b, user_rating=1)
+
+        self._login("v@test.com")
+
+        user.userprofile.refresh_from_db()
+        self.assertEqual(user.userprofile.dna_data, {"reader_type": "Existing Reader"})
+        self.assertEqual(
+            list(UserBook.objects.filter(user=user).values_list("book_id", "user_rating")), [(self.book_b.id, 1)]
+        )
+        mock_track.assert_not_called()
+
+
+@override_settings(
     CACHES={
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
@@ -626,9 +720,7 @@ class UploadValidationTests(TransactionTestCase):
         mock_task.delay.return_value = MagicMock(id="truncated-task-id")
 
         header = "Title,Author,Exclusive Shelf,My Rating,ISBN13"
-        rows = "\n".join(
-            f"Book {i},Author {i},read,4,978000000{i:04d}" for i in range(MAX_UPLOAD_ROWS + 1)
-        )
+        rows = "\n".join(f"Book {i},Author {i},read,4,978000000{i:04d}" for i in range(MAX_UPLOAD_ROWS + 1))
         csv_content = (header + "\n" + rows).encode("utf-8")
         upload = self._make_csv("big.csv", csv_content)
 
@@ -677,10 +769,7 @@ class UploadValidationTests(TransactionTestCase):
         task is dispatched with the original csv_content."""
         mock_task.delay.return_value = MagicMock(id="happy-task-id")
 
-        good = (
-            b"Title,Author,Exclusive Shelf,My Rating,ISBN13\n"
-            b"Dune,Frank Herbert,read,5,9780441172719\n"
-        )
+        good = b"Title,Author,Exclusive Shelf,My Rating,ISBN13\n" b"Dune,Frank Herbert,read,5,9780441172719\n"
         upload = self._make_csv("goodreads.csv", good)
 
         response = self.client.post(reverse("core:upload"), {"csv_file": upload})
@@ -695,10 +784,7 @@ class UploadValidationTests(TransactionTestCase):
         signature column sets."""
         mock_task.delay.return_value = MagicMock(id="sg-task-id")
 
-        sg = (
-            b"Title,Authors,Read Status,Star Rating,ISBN/UID\n"
-            b"Project Hail Mary,Andy Weir,read,5,9780593135204\n"
-        )
+        sg = b"Title,Authors,Read Status,Star Rating,ISBN/UID\n" b"Project Hail Mary,Andy Weir,read,5,9780593135204\n"
         upload = self._make_csv("storygraph.csv", sg)
 
         response = self.client.post(reverse("core:upload"), {"csv_file": upload})
