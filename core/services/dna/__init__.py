@@ -7,6 +7,7 @@ scoring, persistence, and small utilities live in the sibling submodules.
 import hashlib
 import logging
 import random
+import threading
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
@@ -69,6 +70,9 @@ from .utils import (  # noqa: F401 — re-exported for stable import paths
 )
 
 logger = logging.getLogger(__name__)
+
+# Process-wide cap on concurrent inline API enrichments (shared across uploads).
+_INLINE_ENRICH_SEMAPHORE = threading.BoundedSemaphore(2)
 
 
 def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progress_cb=None, bulk_enrichment=False):
@@ -322,7 +326,10 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                                 f"Inline enrichment for '{book.title}' (created={created}, "
                                 f"has_genres={has_genres}, needs_page_data={needs_page_data})"
                             )
-                            enrich_book_from_apis(book, session, slow_down=False, quick_mode=True)
+                            # Cap concurrent inline enrichments so 8 upload workers
+                            # can't burst Open Library / Google Books past their limits.
+                            with _INLINE_ENRICH_SEMAPHORE:
+                                enrich_book_from_apis(book, session, slow_down=False, quick_mode=True)
                             enriched_inline = True
                         except Exception as e:
                             logger.warning(f"Inline enrichment failed for '{book.title}': {e}")

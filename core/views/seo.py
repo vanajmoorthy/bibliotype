@@ -38,9 +38,12 @@ def sitemap_xml_view(request):
     base_url = f"{request.scheme}://{request.get_host()}"
     today = timezone.now().strftime("%Y-%m-%d")
 
-    public_profiles = UserProfile.objects.filter(is_public=True, dna_data__isnull=False).select_related("user")[
-        :1000
-    ]  # Limit to 1000 most recent public profiles
+    # Limit to the 1000 most recently updated public profiles; fetch only the columns we render.
+    public_profiles = (
+        UserProfile.objects.filter(is_public=True, dna_data__isnull=False)
+        .order_by("-last_updated")
+        .values_list("user__username", "recommendations_generated_at")[:1000]
+    )
 
     urls = [
         {
@@ -82,12 +85,12 @@ def sitemap_xml_view(request):
     ]
 
     # Add public profile URLs
-    for profile in public_profiles:
+    for username, recommendations_generated_at in public_profiles:
         try:
-            profile_url = reverse("core:public_profile", kwargs={"username": profile.user.username})
+            profile_url = reverse("core:public_profile", kwargs={"username": username})
             lastmod = today
-            if profile.recommendations_generated_at:
-                lastmod = profile.recommendations_generated_at.strftime("%Y-%m-%d")
+            if recommendations_generated_at:
+                lastmod = recommendations_generated_at.strftime("%Y-%m-%d")
             urls.append(
                 {
                     "loc": f"{base_url}{profile_url}",
@@ -97,7 +100,7 @@ def sitemap_xml_view(request):
                 }
             )
         except Exception:
-            logger.warning(f"Error generating sitemap entry for user {profile.user.username}", exc_info=True)
+            logger.warning(f"Error generating sitemap entry for user {username}", exc_info=True)
             continue
 
     sitemap_xml = '<?xml version="1.0" encoding="UTF-8"?>\n'

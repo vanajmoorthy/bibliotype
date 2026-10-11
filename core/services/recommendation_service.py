@@ -524,11 +524,13 @@ def _collect_candidates_for_anonymous(anon_session, anon_context):
     all_users = safe_cache_get(cache_key)
     if all_users is None:
         all_users = list(
-            User.objects.select_related("userprofile").filter(
+            User.objects.filter(
                 userprofile__dna_data__isnull=False,
                 userprofile__is_public=True,
                 userprofile__visible_in_recommendations=True,
-            )[:500]
+            )
+            .order_by("-userprofile__last_updated")
+            .only("id", "username")[:500]
         )
         safe_cache_set(cache_key, all_users, 1800)
 

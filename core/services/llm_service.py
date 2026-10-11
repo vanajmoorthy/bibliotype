@@ -106,7 +106,9 @@ def generate_vibe_with_llm(dna: dict) -> list:
 
     try:
         generation_config = genai.GenerationConfig(response_mime_type="application/json")
-        response = model.generate_content(prompt, generation_config=generation_config)
+        response = model.generate_content(
+            prompt, generation_config=generation_config, request_options={"timeout": _gemini.GEMINI_TIMEOUT_SECONDS}
+        )
 
         response_json = json.loads(response.text)
         vibe_phrases = response_json.get("vibe_phrases", [])

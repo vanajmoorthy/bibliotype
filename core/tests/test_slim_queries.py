@@ -1,0 +1,167 @@
+"""Query-shape and API-throttle guards from the 2026-10-11 perf audit.
+
+- Similar-user candidate lists are cached in Redis, so they must hold bare
+  (id, username) User rows, not users with their whole profile JSON attached.
+- The sitemap must not load full UserProfile rows, and lists newest first.
+- Gemini calls carry a request timeout.
+- Inline enrichment during an upload is capped at 2 concurrent API calls.
+"""
+
+import threading
+import time
+from datetime import timedelta
+from unittest.mock import MagicMock, patch
+
+from django.contrib.auth.models import User
+from django.core.cache import cache
+from django.test import TestCase, TransactionTestCase, override_settings
+from django.urls import reverse
+from django.utils import timezone
+
+from core.models import AnonymousUserSession, Author, Book, Genre, UserBook, UserProfile
+
+LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "slim-queries-tests"}}
+
+
+def _assert_slim_user(test, user):
+    test.assertNotIn("userprofile", user._state.fields_cache)
+    test.assertIn("password", user.get_deferred_fields())
+    test.assertIn("email", user.get_deferred_fields())
+
+
+@override_settings(CACHES=LOCMEM)
+class SimilarUserQueryShapeTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        author = Author.objects.create(name="Slim Author")
+        genre = Genre.objects.create(name="fantasy")
+        self.book = Book.objects.create(title="Slim Book", author=author, average_rating=4.5)
+        self.book.genres.add(genre)
+        self.book2 = Book.objects.create(title="Slim Book 2", author=author, average_rating=4.5)
+        self.book2.genres.add(genre)
+
+        self.me = User.objects.create_user(username="me", password="pw")
+        self.other = User.objects.create_user(username="other", password="pw")
+        for u in (self.me, self.other):
+            u.userprofile.dna_data = {"top_genres": [("fantasy", 5)], "top_authors": []}
+            u.userprofile.is_public = True
+            u.userprofile.visible_in_recommendations = True
+            u.userprofile.save()
+            UserBook.objects.create(user=u, book=self.book, user_rating=5)
+        UserBook.objects.create(user=self.other, book=self.book2, user_rating=5, is_top_book=True, top_book_position=1)
+
+    def test_find_similar_users_returns_slim_users(self):
+        from core.services.user_similarity_service import find_similar_users
+
+        result = find_similar_users(self.me, top_n=5, min_similarity=0.0)
+        self.assertTrue(result)
+        for u, _ in result:
+            _assert_slim_user(self, u)
+        for u, _ in cache.get(f"similar_users_{self.me.id}"):
+            _assert_slim_user(self, u)
+
+    def test_anonymous_public_sample_is_slim_and_newest_first(self):
+        from core.services.recommendation_service import _build_anonymous_context, _collect_candidates_for_anonymous
+
+        # Touch "me" so it is the most recently updated profile.
+        UserProfile.objects.filter(user=self.other).update(last_updated=timezone.now() - timedelta(days=1))
+
+        anon_session = AnonymousUserSession.objects.create(
+            session_key="slim_anon",
+            dna_data={"top_genres": [("fantasy", 5)]},
+            books_data=[self.book.id],
+            top_books_data=[self.book.id],
+            genre_distribution={"fantasy": 5},
+            author_distribution={},
+            book_ratings={str(self.book.id): 5},
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        _collect_candidates_for_anonymous(anon_session, _build_anonymous_context(anon_session))
+
+        sample = cache.get("public_users_for_recs_sample")
+        self.assertEqual([u.username for u in sample], ["me", "other"])
+        for u in sample:
+            _assert_slim_user(self, u)
+
+
+class SitemapTests(TestCase):
+    def test_sitemap_lists_public_profiles_newest_first(self):
+        old = User.objects.create_user(username="oldreader", password="pw")
+        new = User.objects.create_user(username="newreader", password="pw")
+        hidden = User.objects.create_user(username="hiddenreader", password="pw")
+        for u, public in ((old, True), (new, True), (hidden, False)):
+            UserProfile.objects.filter(user=u).update(dna_data={"x": 1}, is_public=public)
+        UserProfile.objects.filter(user=old).update(last_updated=timezone.now() - timedelta(days=5))
+        UserProfile.objects.filter(user=new).update(
+            last_updated=timezone.now(), recommendations_generated_at=timezone.now() - timedelta(days=2)
+        )
+
+        response = self.client.get(reverse("core:sitemap_xml"))
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode()
+        new_url = reverse("core:public_profile", kwargs={"username": "newreader"})
+        old_url = reverse("core:public_profile", kwargs={"username": "oldreader"})
+        self.assertIn(new_url, body)
+        self.assertIn(old_url, body)
+        self.assertNotIn("hiddenreader", body)
+        self.assertLess(body.index(new_url), body.index(old_url))
+        self.assertIn((timezone.now() - timedelta(days=2)).strftime("%Y-%m-%d"), body)
+
+
+@override_settings(GEMINI_API_KEY="test-key")
+class GeminiTimeoutTests(TestCase):
+    @patch("core.services._gemini.client")
+    def test_vibe_call_has_timeout(self, mock_client):
+        from core.services.llm_service import generate_vibe_with_llm
+
+        mock_client.return_value.generate_content.return_value = MagicMock(text='{"vibe_phrases": ["a", "b"]}')
+        generate_vibe_with_llm({"top_genres": [], "top_authors": []})
+        kwargs = mock_client.return_value.generate_content.call_args.kwargs
+        self.assertEqual(kwargs["request_options"], {"timeout": 30})
+
+    @patch("core.services._gemini.client")
+    def test_publisher_call_has_timeout(self, mock_client):
+        from core.services.publisher_service import research_publisher_identity
+
+        mock_client.return_value.generate_content.return_value = MagicMock(text='{"is_mainstream": true}')
+        session = MagicMock()
+        session.get.return_value = MagicMock(
+            status_code=200, json=lambda: {"extract": "An imprint.", "title": "Viking"}
+        )
+        research_publisher_identity("Viking Press", session)
+        kwargs = mock_client.return_value.generate_content.call_args.kwargs
+        self.assertEqual(kwargs["request_options"], {"timeout": 30})
+
+
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True, CACHES=LOCMEM)
+class InlineEnrichmentConcurrencyTests(TransactionTestCase):
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    def test_inline_enrichment_capped_at_two_concurrent(self, mock_enrich, *_):
+        from core.services.dna import calculate_full_dna
+
+        lock = threading.Lock()
+        state = {"active": 0, "peak": 0}
+
+        def slow_enrich(*args, **kwargs):
+            with lock:
+                state["active"] += 1
+                state["peak"] = max(state["peak"], state["active"])
+            time.sleep(0.1)
+            with lock:
+                state["active"] -= 1
+
+        mock_enrich.side_effect = slow_enrich
+
+        header = "Title,Author,Exclusive Shelf,My Rating,Number of Pages,Original Publication Year,Date Read,Average Rating,My Review,ISBN13"
+        rows = [
+            f"Throttle Book {i},Throttle Author {i},read,4,200,2020,2023/01/{i + 1:02d},4.0,,97800000001{i:02d}"
+            for i in range(8)
+        ]
+        calculate_full_dna("\n".join([header, *rows]))
+
+        self.assertEqual(mock_enrich.call_count, 8)
+        self.assertLessEqual(state["peak"], 2)
