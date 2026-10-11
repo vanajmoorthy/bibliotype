@@ -153,7 +153,7 @@ class NormalizationUnitTests(TestCase):
         with self.assertRaises(ValueError) as ctx:
             _detect_and_normalize_csv(df)
 
-        self.assertIn("Unrecognized CSV format", str(ctx.exception))
+        self.assertIn("is missing the", str(ctx.exception))
         self.assertIn("Goodreads or StoryGraph", str(ctx.exception))
 
     def test_bom_handling_storygraph_csv(self):

@@ -18,6 +18,29 @@ STORYGRAPH_TO_GOODREADS = {
     "Format": "Binding",
 }
 
+# Columns the pipeline reads unconditionally; everything else is optional.
+GOODREADS_REQUIRED_COLUMNS = ("Title", "Author", "Exclusive Shelf")
+STORYGRAPH_REQUIRED_COLUMNS = ("Title", "Authors", "Read Status", "Star Rating")
+
+
+class CSVValidationError(ValueError):
+    """A problem with the uploaded CSV whose message is safe to show the user."""
+
+
+def validate_csv_columns(columns):
+    """Return "goodreads" or "storygraph", or raise CSVValidationError naming the missing columns."""
+    columns = set(columns)
+    is_storygraph = "Exclusive Shelf" not in columns and ("Read Status" in columns or "Authors" in columns)
+    required = STORYGRAPH_REQUIRED_COLUMNS if is_storygraph else GOODREADS_REQUIRED_COLUMNS
+    missing = [col for col in required if col not in columns]
+    if missing:
+        names = ", ".join(f'"{col}"' for col in missing)
+        noun = "column" if len(missing) == 1 else "columns"
+        raise CSVValidationError(
+            f"Your CSV is missing the {names} {noun}. Please upload an unedited Goodreads or StoryGraph export."
+        )
+    return "storygraph" if is_storygraph else "goodreads"
+
 
 def _detect_and_normalize_csv(df):
     """Detect CSV source (Goodreads vs StoryGraph) and normalize columns to Goodreads schema.
@@ -25,11 +48,11 @@ def _detect_and_normalize_csv(df):
     Always normalizes ISBN13 column to 13-digit ISBNs so cross-platform dedup
     works (Goodreads exports use ISBN-10s, StoryGraph uses ISBN-13s).
     """
-    if "Exclusive Shelf" in df.columns:
+    if validate_csv_columns(df.columns) == "goodreads":
         if "ISBN13" in df.columns:
             df["ISBN13"] = df["ISBN13"].apply(lambda x: _isbn_to_isbn13(x) if pd.notna(x) else pd.NA)
         return df, "goodreads"
-    elif "Read Status" in df.columns:
+    else:
         df = df.rename(columns=STORYGRAPH_TO_GOODREADS)
         # Multi-author: take first author from comma-separated list
         # StoryGraph uses "First Last" format (not "Last, First"), so comma = author separator
@@ -48,5 +71,3 @@ def _detect_and_normalize_csv(df):
             if col not in df.columns:
                 df[col] = pd.NA
         return df, "storygraph"
-    else:
-        raise ValueError("Unrecognized CSV format. Please upload a Goodreads or StoryGraph export.")
