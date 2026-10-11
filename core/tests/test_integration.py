@@ -1300,3 +1300,47 @@ class GenreAliasPrecompileTests(TestCase):
         pattern, canonical_name = _COMPILED_ALIAS_PATTERNS[0]
         self.assertTrue(hasattr(pattern, "search"))
         self.assertIsInstance(canonical_name, str)
+
+
+@override_settings(
+    CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
+)
+class AnonymousSessionRatingPairingTests(TransactionTestCase):
+    """Anonymous uploads store each CSV rating against the book that row resolved to.
+
+    The niche-book stat used to sort user_book_objects in place by
+    global_read_count, and save_anonymous_session_data then zipped CSV rows
+    with that list by index — so ratings landed on the wrong books.
+    TransactionTestCase because calculate_full_dna's worker threads use their
+    own DB connections."""
+
+    CSV = (
+        "Title,Author,Exclusive Shelf,My Rating,Number of Pages,"
+        "Original Publication Year,Date Read,Average Rating,My Review,ISBN13\n"
+        "Popular Book,Pairing Author,read,5,300,2020,2023/01/10,4.0,,\n"
+        "Middling Book,Pairing Author,read,1,250,2019,2023/02/15,3.5,,\n"
+        "Obscure Book,Pairing Author,read,3,200,2018,2023/03/20,3.0,,\n"
+    )
+
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
+    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
+    def test_ratings_attach_to_their_own_books(self, mock_inline, mock_vibe, mock_enrich, mock_author):
+        from core.services.dna import calculate_full_dna
+
+        author = Author.objects.create(name="Pairing Author", normalized_name=Author._normalize("Pairing Author"))
+        # CSV order is the reverse of global_read_count order, so an in-place
+        # sort by read count would reverse the list.
+        popular = Book.objects.create(title="Popular Book", author=author, global_read_count=100)
+        middling = Book.objects.create(title="Middling Book", author=author, global_read_count=50)
+        obscure = Book.objects.create(title="Obscure Book", author=author, global_read_count=0)
+
+        dna = calculate_full_dna(self.CSV, session_key="pairing-session")
+
+        self.assertEqual(dna["most_niche_book"]["title"], "Obscure Book")
+        anon = AnonymousUserSession.objects.get(session_key="pairing-session")
+        ratings = {int(k): v for k, v in anon.book_ratings.items()}
+        self.assertEqual(ratings, {popular.id: 5, middling.id: 1, obscure.id: 3})
+        self.assertEqual(anon.top_books_data[0], popular.id)
+        self.assertNotIn(middling.id, anon.top_books_data[:2])

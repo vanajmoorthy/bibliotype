@@ -230,7 +230,8 @@ def _build_anonymous_context(anon_session):
     top_books = set(anon_session.top_books_data or [])
 
     # Use getattr for backwards compatibility if migration hasn't run yet
-    book_ratings = getattr(anon_session, "book_ratings", None) or {}
+    # JSONField round-trips dict keys as strings; book ids are ints everywhere else.
+    book_ratings = {int(k): v for k, v in (getattr(anon_session, "book_ratings", None) or {}).items()}
 
     disliked_book_ids = {book_id for book_id, rating in book_ratings.items() if rating <= 2}
 

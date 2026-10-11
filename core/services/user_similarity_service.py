@@ -438,7 +438,8 @@ def calculate_anonymous_similarity_with_context(anonymous_session, user_ctx):
     anon_top_books = set(anonymous_session.top_books_data or [])
     anon_genres = _canonicalize_genre_counter(anonymous_session.genre_distribution or {})
     anon_authors = Counter(anonymous_session.author_distribution or {})
-    anon_ratings = getattr(anonymous_session, "book_ratings", None) or {}
+    # JSONField round-trips dict keys as strings; user_ctx book ids are ints.
+    anon_ratings = {int(k): v for k, v in (getattr(anonymous_session, "book_ratings", None) or {}).items()}
 
     user_books = user_ctx["book_ids"]
     user_ratings = user_ctx["book_ratings"]
