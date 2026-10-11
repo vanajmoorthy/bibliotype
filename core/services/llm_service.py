@@ -44,6 +44,7 @@ Your task is to generate 1 vivid, character-sketch-style sentence that captures 
 **RULES:**
 - The sentence should be 8-18 words. Not a short phrase — a full, punchy sentence or description.
 - All lowercase.
+- Use British English spelling (e.g. "analyse", "colour", "favourite").
 - No punctuation at the end.
 - Be specific and visual — paint a scene or describe a character, don't just list genres.
 - Be funny but not cringey. Wry and self-aware, not try-hard quirky.

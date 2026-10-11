@@ -357,7 +357,7 @@
                 box.textContent = initial;
             };
             if (book.cover_url) {
-                box.className = "cover-crosshatch border-brand-text shadow-neo-sm h-40 w-[6.75rem] border-2";
+                box.className = "cover-crosshatch border-brand-text shadow-neo-sm h-40 w-[6.75rem] animate-pulse border-2";
                 const probe = new Image();
                 probe.onload = () => {
                     if (probe.naturalWidth < 10) {
@@ -506,7 +506,7 @@
             if (lenText && ct.length_direction != null) {
                 lenText.innerHTML =
                     `${capfirst(ct.length_direction)} than <strong>${escapeHtml(ct.length_pct)}%</strong> ` +
-                    "of Bibliotype readers";
+                    "of readers";
             }
 
             const ageVal = document.getElementById("comp-age-value");
@@ -515,7 +515,7 @@
             if (ageText && ct.age_direction != null) {
                 ageText.innerHTML =
                     `${capfirst(ct.age_direction)} than <strong>${escapeHtml(ct.age_pct)}%</strong> ` +
-                    "of Bibliotype readers";
+                    "of readers";
             }
 
             // --- Number-line markers ---

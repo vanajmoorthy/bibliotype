@@ -2,6 +2,8 @@
 read forwarded headers correctly behind Nginx and produce distinct cache
 keys for distinct clients."""
 
+from unittest.mock import patch
+
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import Client, RequestFactory, TestCase, override_settings
@@ -73,7 +75,12 @@ class LoginRateLimitKeyedOnRealIpTests(TestCase):
     def tearDown(self):
         cache.clear()
 
-    def test_two_distinct_real_ips_get_separate_buckets(self):
+    # django-ratelimit buckets by fixed clock windows (int(time.time())), so a
+    # minute boundary falling between requests resets the count and the 6th
+    # request gets 200 instead of 429. Freeze its clock to keep every request
+    # in one window.
+    @patch("django_ratelimit.core.time.time", return_value=1_700_000_000)
+    def test_two_distinct_real_ips_get_separate_buckets(self, _mock_time):
         login_url = reverse("core:login")
         bad_payload = {"username": "realip@example.com", "password": "wrongpassword"}
 

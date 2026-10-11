@@ -313,68 +313,38 @@ class NumberLineRenderTests(TestCase):
         return self.client.get(reverse("core:display_dna"))
 
     def test_comparative_analytics_renders_three_number_lines(self):
-        """The dashboard should contain 3 number lines, all from comparative analytics.
+        """The dashboard should contain 3 comparison bar groups, all from comparative analytics.
 
-        Controversial ratings now use podium bars (not number lines), so they no
-        longer contribute any `number-line-wrap` markup.
+        Controversial ratings use their own podium bars, which don't carry the
+        `comparison-bars` class.
         """
         response = self._get_dashboard()
         self.assertEqual(response.status_code, 200)
         content = response.content.decode()
         # 3 from comparative analytics + 0 from controversial ratings (podium bars now)
-        self.assertEqual(content.count("number-line-wrap"), 3)
+        self.assertEqual(content.count("comparison-bars"), 3)
 
-    def test_number_line_renders_user_marker(self):
-        """Number line contains a user diamond marker with the correct color class."""
+    def test_comparison_bars_render_series_symbols(self):
+        """Each series label carries its symbol: diamond (You), square (Community), circle (World avg)."""
         response = self._get_dashboard()
         content = response.content.decode()
-        # Default user color is bg-brand-pink, used in the track marker
-        self.assertIn("bg-brand-pink", content)
-        # Diamond marker: rotated square
         self.assertIn("rotate-45", content)
-
-    def test_number_line_renders_compare_marker(self):
-        """Number line contains the community square marker."""
-        response = self._get_dashboard()
-        content = response.content.decode()
-        # Default compare color is bg-brand-cyan (comparative analytics)
-        self.assertIn("bg-brand-cyan", content)
-
-    def test_number_line_renders_third_marker(self):
-        """Number line contains the world avg circle marker."""
-        response = self._get_dashboard()
-        content = response.content.decode()
-        # Third marker uses bg-brand-green and rounded-full
-        self.assertIn("bg-brand-green", content)
+        self.assertIn("bg-brand-purple", content)
         self.assertIn("rounded-full", content)
 
-    def test_number_line_renders_legend_items(self):
-        """Legend row should contain labels for all three markers."""
+    def test_comparison_bars_render_labels(self):
+        """Each bar group labels all three series."""
         response = self._get_dashboard()
-        content = response.content.decode()
-        # Legend items contain the tag names
         self.assertContains(response, "You")
         self.assertContains(response, "Community")
-        self.assertContains(response, "World Avg")
+        self.assertContains(response, "World avg")
 
-    def test_number_line_shows_units_in_legend(self):
-        """The endpoint (min/max) labels were removed from the number line; the
-        unit suffixes now live only in the per-marker legend / poster values."""
-        response = self._get_dashboard()
-        # Units still appear in the legend / poster values (the legend itself is
-        # Alpine-rendered from the marker data; the standalone endpoint label
-        # spans that used to bracket the track are gone).
-        self.assertContains(response, "pages")
-        self.assertContains(response, "CE")
-        self.assertContains(response, "per year")
-
-    def test_number_line_renders_hatching_bands(self):
-        """The gradient diagonal hatching bands are present."""
-        response = self._get_dashboard()
-        content = response.content.decode()
-        # Hatching uses bandStyle() which generates mask-image CSS
-        self.assertIn("bandStyle", content)
-        self.assertIn("mask-image", content)
+    def test_comparison_bars_book_age_shown_in_years(self):
+        """Book age bars convert publish years to age, labelled in years."""
+        content = self._get_dashboard().content.decode()
+        self.assertIn('data-nl-metric="year"', content)
+        self.assertIn("asAge: true", content)
+        self.assertIn("unit: 'yrs'", content)
 
     def test_controversial_ratings_render_podium_bars(self):
         """Controversial ratings now render as two-bar podium charts (You vs Goodreads)."""
@@ -423,7 +393,7 @@ class NumberLineEdgeCaseTests(TestCase):
         dna["user_stats"]["avg_book_length"] = 50  # exactly at min
         response = self._render_with_dna(dna)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "number-line-wrap")
+        self.assertContains(response, "comparison-bars")
 
     def test_number_line_extreme_value_expands_range(self):
         """Extreme values cause the dynamic range to expand — page still renders."""
@@ -431,7 +401,7 @@ class NumberLineEdgeCaseTests(TestCase):
         dna["user_stats"]["avg_book_length"] = 1500  # very high value
         response = self._render_with_dna(dna)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "number-line-wrap")
+        self.assertContains(response, "comparison-bars")
 
     def test_comparative_analytics_hidden_without_percentiles(self):
         """When percentiles can't be computed (too few users), comparative number lines are hidden."""
@@ -451,7 +421,7 @@ class NumberLineEdgeCaseTests(TestCase):
         content = response.content.decode()
         # No number lines at all: comparative is hidden, and controversial ratings
         # use podium bars (not number lines).
-        self.assertEqual(content.count("number-line-wrap"), 0)
+        self.assertEqual(content.count("comparison-bars"), 0)
         # Controversial ratings still render as podium bars below the fallback.
         self.assertContains(response, "Goodreads")
         # Fallback text should be shown for comparative section
@@ -465,4 +435,4 @@ class NumberLineEdgeCaseTests(TestCase):
         self.assertEqual(response.status_code, 200)
         # Only the 3 comparative analytics number lines should exist
         content = response.content.decode()
-        self.assertEqual(content.count("number-line-wrap"), 3)
+        self.assertEqual(content.count("comparison-bars"), 3)

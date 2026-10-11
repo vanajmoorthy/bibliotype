@@ -211,24 +211,24 @@ class ContrarinessScaleTests(TestCase):
         self.assertEqual(label, "Aligned with consensus")
         self.assertEqual(color, "bg-brand-green")
 
-    def test_just_below_mildly(self):
+    def test_just_below_slightly(self):
         label, color = compute_contrariness(0.29)
         self.assertEqual(label, "Aligned with consensus")
         self.assertEqual(color, "bg-brand-green")
 
-    def test_exactly_mildly(self):
+    def test_exactly_slightly(self):
         label, color = compute_contrariness(0.3)
-        self.assertEqual(label, "Mildly contrarian")
+        self.assertEqual(label, "Slightly contrarian")
         self.assertEqual(color, "bg-brand-cyan")
 
-    def test_just_above_mildly(self):
+    def test_just_above_slightly(self):
         label, color = compute_contrariness(0.31)
-        self.assertEqual(label, "Mildly contrarian")
+        self.assertEqual(label, "Slightly contrarian")
         self.assertEqual(color, "bg-brand-cyan")
 
     def test_just_below_moderately(self):
         label, color = compute_contrariness(0.59)
-        self.assertEqual(label, "Mildly contrarian")
+        self.assertEqual(label, "Slightly contrarian")
         self.assertEqual(color, "bg-brand-cyan")
 
     def test_exactly_moderately(self):
