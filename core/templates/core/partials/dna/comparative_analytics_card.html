@@ -38,7 +38,7 @@
                     </p>
                     <p class="mt-2 text-lg leading-snug" id="comp-length-text">
                         {{ dna.comparative_text.length_direction|capfirst }} than
-                        <strong>{{ dna.comparative_text.length_pct }}%</strong> of Bibliotype readers
+                        <strong>{{ dna.comparative_text.length_pct }}%</strong> of readers
                     </p>
                     {% include 'core/partials/dna/number_line.html' with nl_metric="pages" nl_min=dna.number_line_ranges.pages.min nl_max=dna.number_line_ranges.pages.max nl_user_value=dna.user_stats.avg_book_length nl_user_tag="You" nl_user_color="bg-white" nl_compare_value=dna.community_averages.avg_book_length nl_compare_tag="Community" nl_unit="pages" nl_third_value=dna.global_averages.avg_book_length_pages nl_third_tag="World Avg" nl_third_href=methodology_url|add:'#book-length' %}
                 </div>
@@ -69,7 +69,7 @@
                     </p>
                     <p class="mt-2 text-lg leading-snug" id="comp-age-text">
                         {{ dna.comparative_text.age_direction|capfirst }} than
-                        <strong>{{ dna.comparative_text.age_pct }}%</strong> of Bibliotype readers
+                        <strong>{{ dna.comparative_text.age_pct }}%</strong> of readers
                     </p>
                     {% include 'core/partials/dna/number_line.html' with nl_metric="year" nl_min=dna.number_line_ranges.year.min nl_max=dna.number_line_ranges.year.max nl_user_value=dna.user_stats.avg_publish_year nl_user_tag="You" nl_user_color="bg-white" nl_compare_value=dna.community_averages.avg_publish_year nl_compare_tag="Community" nl_compare_color="bg-brand-pink" nl_unit="CE" nl_third_value=dna.global_averages.avg_publish_year nl_third_tag="World Avg" nl_third_href=methodology_url|add:'#book-age' %}
                 </div>
