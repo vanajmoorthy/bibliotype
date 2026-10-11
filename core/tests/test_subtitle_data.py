@@ -1,7 +1,6 @@
 """
 Tests for subtitle data features: new dna_data fields computed by calculate_full_dna(),
-the contrariness scale, and
-recommendations_meta stored by generate_recommendations_task.
+the contrariness scale, and recommendations_meta stored by generate_recommendations_task.
 """
 
 from unittest.mock import patch
