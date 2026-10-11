@@ -20,7 +20,7 @@ def robots_txt_view(request):
                 content = f.read()
             # Replace sitemap URL with actual domain
             sitemap_url = f"{request.scheme}://{request.get_host()}/sitemap.xml"
-            content = content.replace("https://bibliotype.com/sitemap.xml", sitemap_url)
+            content = content.replace("https://bibliotype.app/sitemap.xml", sitemap_url)
             return HttpResponse(content, content_type="text/plain")
         except (FileNotFoundError, IndexError):
             pass
