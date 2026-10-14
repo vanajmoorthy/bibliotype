@@ -16,7 +16,7 @@ def _save_dna_to_profile(profile, dna_data, dispatch_recommendations=True):
     task entirely: seeded users are recommendation CANDIDATES, not consumers —
     nobody views their dashboards — and a corpus run would otherwise drop one
     heavy task per seeded user onto the interactive "celery" queue, which
-    drains ahead of enrichment_bulk and any real user's upload.
+    drains ahead of every enrichment queue and any real user's upload.
     """
     profile.dna_data = dna_data
     profile.reader_type = dna_data.get("reader_type")

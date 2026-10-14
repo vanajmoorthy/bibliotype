@@ -8,6 +8,7 @@ from django.core.management.base import CommandError
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
+from core.dna_constants import ENRICHMENT_QUEUE
 from core.models import (
     AnonymousUserSession,
     Author,
@@ -579,8 +580,8 @@ class InlineEnrichmentDuringDnaTests(TransactionTestCase):
             task_kwargs = call.kwargs["kwargs"]
             self.assertEqual(task_kwargs["user_id"], user.id)
             self.assertIn("upload_nonce", task_kwargs)
-            # Interactive upload — default queue, not the bulk queue
-            self.assertNotIn("queue", call.kwargs)
+            # Interactive upload: the interactive enrichment queue, not the bulk queue
+            self.assertEqual(call.kwargs["queue"], ENRICHMENT_QUEUE)
         # No genres → both books tracked as defaulted, split is None
         self.assertIsNone(dna["fiction_nonfiction_split"])
 
