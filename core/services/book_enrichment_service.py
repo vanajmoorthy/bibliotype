@@ -5,7 +5,8 @@ import time
 
 import requests
 from django.conf import settings
-from django.db import IntegrityError
+from django.db import DatabaseError, IntegrityError
+from django.db.models import F
 from django.utils import timezone
 
 from ..analytics.events import track_external_api_call
@@ -17,7 +18,7 @@ from ..dna_constants import (
     GENRE_PRIORITY,
     enrichment_retry_window,
 )
-from ..models import Author, Book, Genre, Publisher
+from ..models import Author, Book, Genre, Publisher, UnmappedSubject
 from ._book_urls import cover_url_from_isbn, cover_url_from_olid
 
 logger = logging.getLogger(__name__)
@@ -90,12 +91,15 @@ def _clean_title_for_api(title):
     return clean_title.strip()
 
 
-def _clean_and_canonicalize_genres(subjects):
+def _clean_and_canonicalize_genres(subjects, unmatched=None):
     """
     Canonicalize Open Library subjects into our genre taxonomy.
 
     This function is more strict about matching to prevent false positives where
     books get random genres that don't match their actual content.
+
+    If `unmatched` (a set) is given, subjects that hit no alias and no exclusion
+    are added to it, lowercased.
     """
     if not subjects:
         return set()
@@ -122,11 +126,34 @@ def _clean_and_canonicalize_genres(subjects):
         # Debug logging for unmatched subjects (helps identify missing aliases or needed exclusions)
         if not matched and s_lower:
             logger.debug(f"Could not match subject: '{subject}'")
+            if unmatched is not None:
+                unmatched.add(s_lower[:255])
 
     return canonical_genres
 
 
-def _canonicalize_google_books_categories(categories):
+def is_subject_covered(name):
+    """True once an alias or exclusion handles this subject (e.g. after adding it to GENRE_ALIASES)."""
+    unmatched = set()
+    _clean_and_canonicalize_genres([name], unmatched)
+    return not unmatched
+
+
+def _record_unmapped_subjects(names, example_title):
+    """Count subjects no alias matched, once per enrichment, so analyze_genres can surface missing aliases."""
+    if not names:
+        return
+    try:
+        UnmappedSubject.objects.bulk_create(
+            [UnmappedSubject(name=n, example_title=example_title[:255]) for n in names], ignore_conflicts=True
+        )
+        UnmappedSubject.objects.filter(name__in=names).update(seen_count=F("seen_count") + 1, last_seen=timezone.now())
+    except DatabaseError as e:
+        # Bookkeeping only: never fail an enrichment over it.
+        logger.warning(f"Could not record unmapped subjects for '{example_title}': {e}")
+
+
+def _canonicalize_google_books_categories(categories, unmatched=None):
     """
     Canonicalize Google Books categories into our genre taxonomy.
 
@@ -144,7 +171,7 @@ def _canonicalize_google_books_categories(categories):
         return set()
 
     flat = [part for cat in categories for part in cat.split("/")]
-    genres = _clean_and_canonicalize_genres(flat)
+    genres = _clean_and_canonicalize_genres(flat, unmatched)
 
     for cat in categories:
         if "/" not in cat:
@@ -219,7 +246,9 @@ def _fetch_work_genres(work_key, book_title, session, book_details, slow_down=Fa
         work_data = work_response.json()
         raw_subjects = work_data.get("subjects", [])
         logger.debug(f"Raw Subjects from API for '{book_title}': {raw_subjects}")
-        final_genres = list(_clean_and_canonicalize_genres(raw_subjects))
+        unmatched = set()
+        final_genres = list(_clean_and_canonicalize_genres(raw_subjects, unmatched))
+        _record_unmapped_subjects(unmatched, book_title)
         logger.debug(f"Canonicalized Genres for '{book_title}': {final_genres}")
         book_details["genres"] = final_genres
     return 1
@@ -505,7 +534,9 @@ def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
                 is_updated = True
 
             if google_genres := gb_data.get("categories"):
-                gb_genres = set(_canonicalize_google_books_categories(google_genres))
+                unmatched = set()
+                gb_genres = set(_canonicalize_google_books_categories(google_genres, unmatched))
+                _record_unmapped_subjects(unmatched, book.title)
 
             # Mark as checked only after a *completed* API exchange (including
             # a clean "not found") — never after a failed one.

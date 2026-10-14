@@ -1,69 +1,46 @@
 import logging
 
 from django.core.management.base import BaseCommand
-from django.db.models import Count
 
-from core.dna_constants import CANONICAL_GENRE_MAP
-from core.models import Genre
+from core.models import UnmappedSubject
+from core.services.book_enrichment_service import is_subject_covered
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = "Analyzes genres in the database, showing which are unmapped and provides an option to delete them."
+    help = "Lists the most common API subjects that matched no genre alias, so missing aliases can be added."
 
     def add_arguments(self, parser):
+        parser.add_argument("--limit", type=int, default=50, help="How many subjects to list")
         parser.add_argument(
-            "--delete",
-            action="store_true",
-            help="Deletes all genres from the database that are not found in the CANONICAL_GENRE_MAP.",
+            "--prune", action="store_true", help="Delete recorded subjects that an alias or exclusion now covers"
         )
 
     def _log(self, msg):
         self.stdout.write(msg)
         logger.info(f"analyze_genres: {msg}")
 
-    def _warn(self, msg):
-        self.stdout.write(self.style.WARNING(msg))
-        logger.warning(f"analyze_genres: {msg}")
-
     def handle(self, *args, **kwargs):
-        self._log("Analyzing genres in the database...")
+        subjects = UnmappedSubject.objects.order_by("-seen_count", "name")
 
-        all_genres = Genre.objects.annotate(num_books=Count("books")).all()
+        if kwargs["prune"]:
+            covered = [s.pk for s in subjects.only("pk", "name") if is_subject_covered(s.name)]
+            UnmappedSubject.objects.filter(pk__in=covered).delete()
+            self._log(f"Pruned {len(covered)} subjects now covered by an alias or exclusion.")
 
-        unmapped_genres = []
-        mapped_count = 0
+        self._log(f"{subjects.count()} unmapped subjects recorded.")
+        shown = 0
+        for subject in subjects.iterator():
+            if shown >= kwargs["limit"]:
+                break
+            if is_subject_covered(subject.name):
+                continue  # already handled in code; --prune removes these
+            self._log(f"  {subject.seen_count:>6}  '{subject.name}'  (e.g. '{subject.example_title}')")
+            shown += 1
 
-        for genre in all_genres:
-            if genre.name.lower().strip() not in CANONICAL_GENRE_MAP:
-                unmapped_genres.append(genre)
-            else:
-                mapped_count += 1
-
-        self._log(f"Found {all_genres.count()} total unique genre strings in the database.")
-        self._log(f"  - {mapped_count} are correctly mapped.")
-        self._warn(f"  - {len(unmapped_genres)} are UNMAPPED junk/alias genres.")
-
-        if not unmapped_genres:
-            self._log("All genres in the database are properly mapped.")
-            return
-
-        unmapped_genres.sort(key=lambda g: (-g.num_books, g.name))
-
-        self._log("List of UNMAPPED Genres (and book count):")
-        for genre in unmapped_genres:
-            self._log(f"  - '{genre.name}' ({genre.num_books} books)")
-
-        if kwargs["delete"]:
-            self._warn("--- Deleting Unmapped Genres ---")
-
-            pks_to_delete = [genre.pk for genre in unmapped_genres]
-            deleted_count, _ = Genre.objects.filter(pk__in=pks_to_delete).delete()
-
-            self._log(f"Successfully deleted {deleted_count} unmapped genre entries.")
-        else:
+        if shown:
             self._log(
-                "To clean up the database, review the list above. Add any legitimate aliases to your "
-                "GENRE_ALIASES in dna_constants.py, then run this command again with the --delete flag."
+                "Add genuine aliases to GENRE_ALIASES and junk to EXCLUDED_GENRES in dna_constants.py, "
+                "then run with --prune."
             )
