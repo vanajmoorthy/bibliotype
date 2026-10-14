@@ -31,13 +31,22 @@ class Command(BaseCommand):
 
         self._log(f"{subjects.count()} unmapped subjects recorded.")
         shown = 0
+        suggestions = {}
         for subject in subjects.iterator():
             if shown >= kwargs["limit"]:
                 break
             if is_subject_covered(subject.name):
                 continue  # already handled in code; --prune removes these
-            self._log(f"  {subject.seen_count:>6}  '{subject.name}'  (e.g. '{subject.example_title}')")
+            suggestion = f"  -> {subject.suggested_genre}" if subject.suggested_genre else ""
+            self._log(f"  {subject.seen_count:>6}  '{subject.name}'  (e.g. '{subject.example_title}'){suggestion}")
+            if subject.suggested_genre:
+                suggestions.setdefault(subject.suggested_genre, []).append(subject.name)
             shown += 1
+
+        if suggestions:
+            self._log("LLM suggestions (review before adding; 'ignore' ones are EXCLUDED_GENRES candidates):")
+            for genre, names in sorted(suggestions.items()):
+                self._log(f"  {genre}: {names}")
 
         if shown:
             self._log(

@@ -379,6 +379,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.tasks.research_publisher_mainstream_task",
         "schedule": crontab(hour=3, minute=0, day_of_week="sunday"),  # Weekly on Sundays at 3 AM
     },
+    "suggest-genre-aliases": {
+        "task": "core.tasks.suggest_genre_aliases_task",
+        "schedule": crontab(hour=4, minute=0, day_of_week="sunday"),  # Weekly on Sundays at 4 AM
+    },
 }
 
 # Custom 404 handler

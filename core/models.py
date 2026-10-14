@@ -21,6 +21,9 @@ class UnmappedSubject(models.Model):
     seen_count = models.PositiveIntegerField(default=0, db_index=True)
     example_title = models.CharField(max_length=255, blank=True)
     last_seen = models.DateTimeField(auto_now=True)
+    # LLM suggestion for review: a canonical genre name or "ignore". Never applied automatically.
+    suggested_genre = models.CharField(max_length=100, blank=True)
+    suggested_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name
