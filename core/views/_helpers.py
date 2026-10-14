@@ -393,11 +393,14 @@ def _enrich_dna_for_display(dna_data):
     comparative_text = {}
 
     if percentiles:
+        # Each average is stored as 0 when the library has no data for it: skip its sentence then.
         # Book length
         len_pct = percentiles.get("avg_book_length", 50)
-        user_len = user_stats.get("avg_book_length", 0)
+        user_len = user_stats.get("avg_book_length") or 0
         comm_len = community.get("avg_book_length")
-        if comm_len and user_len >= comm_len:
+        if user_len <= 0:
+            pass
+        elif comm_len and user_len >= comm_len:
             comparative_text["length_direction"] = "longer"
             comparative_text["length_pct"] = round(len_pct)
         else:
@@ -406,9 +409,11 @@ def _enrich_dna_for_display(dna_data):
 
         # Book age
         year_pct = percentiles.get("avg_publish_year", 50)
-        user_year = user_stats.get("avg_publish_year", 2025)
+        user_year = user_stats.get("avg_publish_year") or 0
         comm_year = community.get("avg_publish_year")
-        if comm_year and user_year <= comm_year:
+        if user_year <= 0:
+            pass
+        elif comm_year and user_year <= comm_year:
             comparative_text["age_direction"] = "older"
             comparative_text["age_pct"] = round(year_pct)
         else:
@@ -417,9 +422,11 @@ def _enrich_dna_for_display(dna_data):
 
         # Books per year
         bpy_pct = percentiles.get("avg_books_per_year", 50)
-        user_bpy = user_stats.get("avg_books_per_year", 0)
+        user_bpy = user_stats.get("avg_books_per_year") or 0
         comm_bpy = community.get("avg_books_per_year")
-        if comm_bpy and user_bpy >= comm_bpy:
+        if user_bpy <= 0:
+            pass
+        elif comm_bpy and user_bpy >= comm_bpy:
             comparative_text["bpy_direction"] = "more"
             comparative_text["bpy_pct"] = round(bpy_pct)
         else:
@@ -438,7 +445,7 @@ def _enrich_dna_for_display(dna_data):
             community.get("avg_book_length"),
             GLOBAL_AVERAGES["avg_book_length_pages"],
         ]
-        if v is not None
+        if v is not None and v > 0
     ]
     if page_vals:
         lo, hi = min(page_vals), max(page_vals)
@@ -454,7 +461,7 @@ def _enrich_dna_for_display(dna_data):
             community.get("avg_publish_year"),
             GLOBAL_AVERAGES["avg_publish_year"],
         ]
-        if v is not None
+        if v is not None and v > 0
     ]
     years_min = min(1980, math.floor(min(year_vals) / 5) * 5) if year_vals else 1980
     years_max = current_year

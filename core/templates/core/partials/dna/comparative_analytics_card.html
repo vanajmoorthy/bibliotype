@@ -33,12 +33,14 @@
                 >
                     <p class="text-sm font-bold tracking-widest uppercase">Avg book length</p>
                     <p class="mt-1 text-6xl leading-none font-bold">
-                        <span id="comp-length-value">{{ dna.user_stats.avg_book_length }}</span
+                        <span id="comp-length-value">{% if dna.user_stats.avg_book_length > 0 %}{{ dna.user_stats.avg_book_length }}{% else %}–{% endif %}</span
                         ><span class="ml-1 text-2xl">pages</span>
                     </p>
                     <p class="mt-2 text-lg leading-snug" id="comp-length-text">
-                        {{ dna.comparative_text.length_direction|capfirst }} than
-                        <strong>{{ dna.comparative_text.length_pct }}%</strong> of readers
+                        {% if dna.comparative_text.length_direction %}
+                            {{ dna.comparative_text.length_direction|capfirst }} than
+                            <strong>{{ dna.comparative_text.length_pct }}%</strong> of readers
+                        {% endif %}
                     </p>
                     {% include 'core/partials/dna/comparison_bars.html' with nl_metric="pages" nl_unit="pages" nl_user_value=dna.user_stats.avg_book_length nl_compare_value=dna.community_averages.avg_book_length nl_third_value=dna.global_averages.avg_book_length_pages nl_third_href=methodology_url|add:'#book-length' %}
                 </div>
@@ -64,12 +66,14 @@
                 >
                     <p class="text-sm font-bold tracking-widest uppercase">Avg book age</p>
                     <p class="mt-1 text-6xl leading-none font-bold">
-                        <span id="comp-age-value">{{ dna.user_stats.avg_publish_year|floatformat:0 }}</span
+                        <span id="comp-age-value">{% if dna.user_stats.avg_publish_year > 0 %}{{ dna.user_stats.avg_publish_year|floatformat:0 }}{% else %}–{% endif %}</span
                         ><span class="ml-1 text-2xl">CE</span>
                     </p>
                     <p class="mt-2 text-lg leading-snug" id="comp-age-text">
-                        {{ dna.comparative_text.age_direction|capfirst }} than
-                        <strong>{{ dna.comparative_text.age_pct }}%</strong> of readers
+                        {% if dna.comparative_text.age_direction %}
+                            {{ dna.comparative_text.age_direction|capfirst }} than
+                            <strong>{{ dna.comparative_text.age_pct }}%</strong> of readers
+                        {% endif %}
                     </p>
                     {% include 'core/partials/dna/comparison_bars.html' with nl_metric="year" nl_as_age=True nl_unit="years old" nl_unit_singular="year old" nl_user_value=dna.user_stats.avg_publish_year nl_compare_value=dna.community_averages.avg_publish_year nl_third_value=dna.global_averages.avg_publish_year nl_third_href=methodology_url|add:'#book-age' %}
                 </div>
@@ -79,7 +83,7 @@
             <div class="bg-brand-green border-brand-text shadow-neo-sm min-w-[80%] snap-center border-2 p-4 md:min-w-0">
                 <p class="text-sm font-bold tracking-widest uppercase">Reading pace</p>
                 <p class="mt-1 text-6xl leading-none font-bold">
-                    {{ dna.user_stats.avg_books_per_year }}<span class="ml-1 text-2xl">/year</span>
+                    {% if dna.user_stats.avg_books_per_year > 0 %}{{ dna.user_stats.avg_books_per_year }}{% else %}–{% endif %}<span class="ml-1 text-2xl">/year</span>
                 </p>
                 {% if dna.user_stats.avg_books_per_year and dna.comparative_text.bpy_pct %}
                     <p class="mt-2 text-lg leading-snug">

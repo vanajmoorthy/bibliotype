@@ -52,6 +52,29 @@ class UpdateAnalyticsFirstUploadTests(TestCase):
         self.assertEqual(analytics.avg_book_length_dist.get("300-349"), 2)
 
 
+class UpdateAnalyticsMissingStatsTests(TestCase):
+    """Averages stored as 0 (no page/year/date data) are missing, not real values."""
+
+    def test_zero_averages_leave_histograms_unchanged(self):
+        update_analytics_from_stats(
+            {"avg_book_length": 0, "avg_publish_year": 0, "total_books_read": 80, "avg_books_per_year": 0}
+        )
+        analytics = AggregateAnalytics.get_instance()
+        self.assertEqual(analytics.total_profiles_counted, 1)
+        self.assertEqual(analytics.avg_book_length_dist, {})
+        self.assertEqual(analytics.avg_publish_year_dist, {})
+        self.assertEqual(analytics.avg_books_per_year_dist, {})
+        self.assertEqual(analytics.total_books_read_dist.get("75-99"), 1)
+
+    def test_reupload_from_zero_only_adds_new_value(self):
+        analytics = AggregateAnalytics.get_instance()
+        analytics.avg_publish_year_dist = {"0-9": 3}
+        analytics.save()
+        update_analytics_from_stats({"avg_publish_year": 2010}, previous_stats={"avg_publish_year": 0})
+        analytics = AggregateAnalytics.get_instance()
+        self.assertEqual(analytics.avg_publish_year_dist, {"0-9": 3, "2010-2019": 1})
+
+
 class UpdateAnalyticsReuploadTests(TestCase):
     """Tests for update_analytics_from_stats with previous_stats (re-upload deduplication)."""
 
@@ -165,3 +188,10 @@ class CalculatePercentilesTests(TestCase):
         for key in ("avg_book_length", "total_books_read", "avg_books_per_year"):
             if key in result:
                 self.assertLessEqual(result[key], 100.0)
+
+    def test_zero_averages_get_no_percentile(self):
+        self._seed_analytics()
+        result = calculate_percentiles_from_aggregates(
+            {"avg_book_length": 0, "avg_publish_year": 0, "total_books_read": 80, "avg_books_per_year": 0}
+        )
+        self.assertEqual(set(result), {"total_books_read"})

@@ -503,7 +503,7 @@
 
             // --- Poster numbers + comparative sentences ---
             const lenVal = document.getElementById("comp-length-value");
-            if (lenVal && stats.avg_book_length != null) lenVal.textContent = stats.avg_book_length;
+            if (lenVal && stats.avg_book_length != null) lenVal.textContent = stats.avg_book_length > 0 ? stats.avg_book_length : "–";
             const lenText = document.getElementById("comp-length-text");
             if (lenText && ct.length_direction != null) {
                 lenText.innerHTML =
@@ -512,7 +512,8 @@
             }
 
             const ageVal = document.getElementById("comp-age-value");
-            if (ageVal && stats.avg_publish_year != null) ageVal.textContent = Math.round(stats.avg_publish_year);
+            if (ageVal && stats.avg_publish_year != null)
+                ageVal.textContent = stats.avg_publish_year > 0 ? Math.round(stats.avg_publish_year) : "–";
             const ageText = document.getElementById("comp-age-text");
             if (ageText && ct.age_direction != null) {
                 ageText.innerHTML =

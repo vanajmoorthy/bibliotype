@@ -17,6 +17,8 @@
 <div
     class="comparison-bars mt-4 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2.5 gap-y-2 text-base"
     data-nl-metric="{{ nl_metric }}"
+    x-show="userVal > 0"
+    {% if not nl_user_value > 0 %}style="display: none"{% endif %}
     x-data="{
          userVal: {{ nl_user_value }},
          compVal: {{ nl_compare_value }},
