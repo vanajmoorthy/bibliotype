@@ -7,6 +7,8 @@ from django.contrib import messages
 from django.contrib.auth import logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.db import transaction
+from django.db.models import F
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
@@ -18,6 +20,7 @@ from django_ratelimit.exceptions import Ratelimited
 from ..analytics.events import track_account_deleted, track_profile_made_public, track_settings_updated
 from ..cache_utils import safe_cache_delete
 from ..forms import ChangePasswordForm, UpdateDisplayNameForm
+from ..models import Book, UserBook
 
 logger = logging.getLogger(__name__)
 
@@ -218,7 +221,12 @@ def _delete_account_view_throttled(request):
     # Drop the recs candidate sample so the deleted user can't linger in it.
     safe_cache_delete("public_users_for_recs_sample")
     logout(request)
-    User.objects.filter(pk=uid).delete()
+    with transaction.atomic():
+        # The deleted reader no longer counts towards their books' read counts.
+        Book.objects.filter(
+            pk__in=UserBook.objects.filter(user_id=uid).values("book_id"), global_read_count__gt=0
+        ).update(global_read_count=F("global_read_count") - 1)
+        User.objects.filter(pk=uid).delete()
 
     if _wants_json(request):
         return JsonResponse({"status": "success", "redirect": reverse("core:home")})

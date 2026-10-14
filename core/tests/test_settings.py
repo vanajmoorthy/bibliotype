@@ -113,6 +113,23 @@ class DeleteAccountViewTests(TestCase):
         self.assertIsNone(cache.get("public_users_for_recs_sample"))
 
     @patch("core.views.profile.track_account_deleted")
+    def test_delete_removes_the_reader_from_their_books_read_counts(self, _mock_track):
+        from core.models import Author, Book, UserBook
+
+        author = Author.objects.create(name="Count Author")
+        read = Book.objects.create(title="Counted", author=author, global_read_count=3)
+        never_counted = Book.objects.create(title="Seeded", author=author, global_read_count=0)
+        UserBook.objects.create(user=self.user, book=read)
+        UserBook.objects.create(user=self.user, book=never_counted)
+
+        self.assertEqual(self._post("DELETE", self.password).status_code, 200)
+
+        read.refresh_from_db()
+        never_counted.refresh_from_db()
+        self.assertEqual(read.global_read_count, 2)
+        self.assertEqual(never_counted.global_read_count, 0)
+
+    @patch("core.views.profile.track_account_deleted")
     def test_correct_confirmation_and_password_deletes_account(self, mock_track):
         uid = self.user.id
         response = self._post("DELETE", self.password)
