@@ -1055,6 +1055,27 @@ class CreateUserbooksFromAnonymousSessionTests(TestCase):
         self.assertEqual(UserBook.objects.filter(user=self.user).count(), 0)
         mock_calc_top.assert_not_called()
 
+    @patch("core.tasks.dna.track_anonymous_dna_claimed")
+    @patch("core.tasks.dna._save_dna_to_profile")
+    def test_claim_dna_deletes_session_after_successful_claim(self, _mock_save, _mock_track):
+        """A claimed session must not linger for the nightly anonymize job."""
+        from core.tasks import claim_dna
+
+        claim_dna(self.user, {"reader_type": "Test Reader"}, self.session_key)
+
+        self.assertEqual(UserBook.objects.filter(user=self.user).count(), 3)
+        self.assertFalse(AnonymousUserSession.objects.filter(session_key=self.session_key).exists())
+
+    @patch("core.tasks.dna.track_anonymous_dna_claimed")
+    @patch("core.tasks.dna._save_dna_to_profile")
+    @patch("core.services.top_books_service.calculate_and_store_top_books", side_effect=RuntimeError("boom"))
+    def test_claim_dna_keeps_session_when_userbook_creation_fails(self, _mock_calc, _mock_save, _mock_track):
+        from core.tasks import claim_dna
+
+        claim_dna(self.user, {"reader_type": "Test Reader"}, self.session_key)
+
+        self.assertTrue(AnonymousUserSession.objects.filter(session_key=self.session_key).exists())
+
 
 # ──────────────────────────────────────────────
 # Class 5: Management Command Integration Tests
