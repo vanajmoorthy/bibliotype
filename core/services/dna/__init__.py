@@ -38,6 +38,7 @@ from ...percentile_engine import (
     calculate_percentiles_from_aggregates,
     update_analytics_from_stats,
 )
+from ..anonymization_service import _key_hash
 from ..genre_classification import (
     canonicalize_genre_names,
     count_fiction_nonfiction,
@@ -1024,7 +1025,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             if session_key:
                 book_row_pairs = [(book, original_row) for book, _, original_row in results if book]
                 save_anonymous_session_data(session_key, dna, book_row_pairs)
-                logger.info(f"Saved anonymous session data for session: {session_key}")
+                logger.info(f"Saved anonymous session data for session: {_key_hash(session_key)}")
             logger.info("DNA generated for an anonymous user. Returning result for display")
             return dna
 

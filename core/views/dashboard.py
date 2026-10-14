@@ -16,6 +16,7 @@ from ..analytics.events import (
     track_recommendations_generated,
 )
 from ..cache_utils import safe_cache_add
+from ..services.anonymization_service import _key_hash
 from ._helpers import (
     BADGE_COLOR_MAP,
     _compute_enrichment_progress,
@@ -104,7 +105,7 @@ def display_dna_view(request):
                     # Session record doesn't exist - try to recreate from session dna_data
                     # This can happen if the session expired but session data still exists
                     logger.warning(
-                        f"AnonymousUserSession not found for session {request.session.session_key}, attempting to recreate from dna_data..."
+                        f"AnonymousUserSession not found for session {_key_hash(request.session.session_key)}, attempting to recreate from dna_data..."
                     )
                     try:
 

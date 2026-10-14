@@ -181,7 +181,7 @@ class AnonymousUserSession(models.Model):
         ]
 
     def __str__(self):
-        return f"Anonymous session: {self.session_key}"
+        return f"Anonymous session {self.pk}"
 
 
 class AnonymizedReadingProfile(models.Model):
