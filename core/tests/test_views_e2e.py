@@ -1,3 +1,4 @@
+import uuid
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
@@ -64,7 +65,7 @@ class ViewE2E_Tests(TransactionTestCase):
 
         # The view should redirect to the status page, extracting the task_id from the response
         self.assertEqual(response.status_code, 302)
-        self.assertIn(reverse("core:task_status", kwargs={"task_id": "dummy"})[:-6], response.url)
+        self.assertTrue(response.url.startswith("/task/"))
         task_id = response.url.split("/")[-2]
 
         # Poll for Result
@@ -109,6 +110,17 @@ class ViewE2E_Tests(TransactionTestCase):
         new_user.userprofile.refresh_from_db()
         self.assertIsNotNone(new_user.userprofile.dna_data)
         self.assertIn("an e2e vibe", new_user.userprofile.reading_vibe)
+
+    def test_task_status_rejects_non_uuid_task_id(self):
+        """A task_id that breaks out of the poller's inline JS string must not reach the template."""
+        self.assertEqual(self.client.get("/task/x'),alert(document.domain),('/").status_code, 404)
+        self.assertEqual(self.client.get("/api/task-result/x'),alert(1),('/").status_code, 404)
+
+        task_id = str(uuid.uuid4())
+        response = self.client.get(reverse("core:task_status", kwargs={"task_id": task_id}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"taskPoller('/api/task-result/{task_id}/')")
+        self.assertContains(response, f"/signup/?task_id={task_id}")
 
     @patch("core.services.dna.generate_vibe_with_llm")
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
@@ -745,7 +757,7 @@ class UploadValidationTests(TransactionTestCase):
         most MAX_UPLOAD_ROWS data rows (header + 50000 = 50001 lines)."""
         from core.views import MAX_UPLOAD_ROWS
 
-        mock_task.delay.return_value = MagicMock(id="truncated-task-id")
+        mock_task.delay.return_value = MagicMock(id=str(uuid.uuid4()))
 
         header = "Title,Author,Exclusive Shelf,My Rating,ISBN13"
         rows = "\n".join(f"Book {i},Author {i},read,4,978000000{i:04d}" for i in range(MAX_UPLOAD_ROWS + 1))
@@ -821,7 +833,7 @@ class UploadValidationTests(TransactionTestCase):
     def test_valid_goodreads_csv_still_uploads(self, mock_task):
         """Positive control: a Goodreads-shaped CSV passes validation and the
         task is dispatched with the original csv_content."""
-        mock_task.delay.return_value = MagicMock(id="happy-task-id")
+        mock_task.delay.return_value = MagicMock(id=str(uuid.uuid4()))
 
         good = b"Title,Author,Exclusive Shelf,My Rating,ISBN13\n" b"Dune,Frank Herbert,read,5,9780441172719\n"
         upload = self._make_csv("goodreads.csv", good)
@@ -836,7 +848,7 @@ class UploadValidationTests(TransactionTestCase):
         """Positive control: a StoryGraph-shaped CSV (Authors, plural) passes
         validation. Schema check accepts either Goodreads or StoryGraph
         signature column sets."""
-        mock_task.delay.return_value = MagicMock(id="sg-task-id")
+        mock_task.delay.return_value = MagicMock(id=str(uuid.uuid4()))
 
         sg = b"Title,Authors,Read Status,Star Rating,ISBN/UID\n" b"Project Hail Mary,Andy Weir,read,5,9780593135204\n"
         upload = self._make_csv("storygraph.csv", sg)

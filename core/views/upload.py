@@ -313,11 +313,14 @@ def enrichment_status_view(request):
 
 
 def task_status_view(request, task_id):
-    return render(request, "core/task_status.html", {"task_id": task_id})
+    # <uuid:> route keeps task_id out of the inline JS; the template's |add needs a str
+    return render(request, "core/task_status.html", {"task_id": str(task_id)})
 
 
 def get_task_result_view(request, task_id):
     from ..models import AnonymousUserSession
+
+    task_id = str(task_id)  # cache keys and AsyncResult expect the canonical string
 
     # US-002 (hardened post-review): refuse task_ids that aren't bound to the
     # caller's session. Both cache-miss AND mismatch fail closed — the previous
