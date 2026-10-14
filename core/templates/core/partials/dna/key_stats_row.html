@@ -8,10 +8,10 @@
          rating: 0,
          targetBooks: {{ dna.user_stats.total_books_read }},
          targetPages: {{ dna.user_stats.total_pages_read }},
-         targetRating: {{ dna.average_rating_overall }},
+         targetRating: {{ dna.average_rating_overall|floatformat:2|default:"null" }},
 
          fmtPages(v) { return Math.round(v).toLocaleString(); },
-         fmtRating(v) { return v.toFixed(1); },
+         fmtRating(v) { return this.targetRating === null ? 'N/A' : v.toFixed(1); },
 
          animate() {
              const duration = 800;
