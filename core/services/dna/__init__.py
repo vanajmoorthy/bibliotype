@@ -199,6 +199,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             already_counted_book_ids = set(previous_anon_session.books_data) if previous_anon_session else set()
         else:
             already_counted_book_ids = set()
+        # Two CSV rows can resolve to the same Book (duplicate shelf entries,
+        # editions that normalise to one title); count it once per upload.
+        counted_this_upload, counted_lock = set(), threading.Lock()
         with requests.Session() as session:
             session.headers.update({"User-Agent": settings.EXTERNAL_API_USER_AGENT})
 
@@ -412,7 +415,10 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 else:
                     logger.debug(f"Book '{book.title}' recently enriched or complete. Skipping.")
 
-                if book.pk not in already_counted_book_ids:
+                with counted_lock:
+                    count_now = book.pk not in already_counted_book_ids and book.pk not in counted_this_upload
+                    counted_this_upload.add(book.pk)
+                if count_now:
                     Book.objects.filter(pk=book.pk).update(global_read_count=F("global_read_count") + 1)
 
                     # Pull only the post-increment value back into the Python object.
