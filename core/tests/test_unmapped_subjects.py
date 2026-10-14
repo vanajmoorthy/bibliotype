@@ -18,11 +18,11 @@ class UnmappedSubjectTests(TestCase):
 
     def test_record_creates_then_increments(self):
         _record_unmapped_subjects({"dementors"}, "Book One")
-        _record_unmapped_subjects({"dementors", "wizards duel"}, "Book Two")
+        _record_unmapped_subjects({"dementors", "house elves"}, "Book Two")
         dementors = UnmappedSubject.objects.get(name="dementors")
         self.assertEqual(dementors.seen_count, 2)
         self.assertEqual(dementors.example_title, "Book One")
-        self.assertEqual(UnmappedSubject.objects.get(name="wizards duel").seen_count, 1)
+        self.assertEqual(UnmappedSubject.objects.get(name="house elves").seen_count, 1)
 
     def test_command_lists_unmapped_and_prunes_covered(self):
         UnmappedSubject.objects.create(name="dementors", seen_count=5, example_title="Book One")
