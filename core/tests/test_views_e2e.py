@@ -487,16 +487,13 @@ class ViewE2E_Tests(TransactionTestCase):
         # Force the recreate branch on every call by making the ``.get()``
         # lookup miss, then mock out the recommendation engine so we isolate
         # the unique-constraint behavior under test.
-        with (
-            patch.object(
-                AnonymousUserSession.objects,
-                "get",
-                side_effect=AnonymousUserSession.DoesNotExist,
-            ),
-            patch(
-                "core.services.recommendation_service.get_recommendations_for_anonymous",
-                return_value=[],
-            ),
+        with patch.object(
+            AnonymousUserSession.objects,
+            "get",
+            side_effect=AnonymousUserSession.DoesNotExist,
+        ), patch(
+            "core.services.recommendation_service.get_recommendations_for_anonymous",
+            return_value=[],
         ):
             with self.assertNoLogs("core.views", level="ERROR"):
                 response_one = self.client.get(reverse("core:display_dna"))
