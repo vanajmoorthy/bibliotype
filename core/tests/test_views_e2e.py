@@ -109,6 +109,8 @@ class ViewE2E_Tests(TransactionTestCase):
         new_user.userprofile.refresh_from_db()
         self.assertIsNotNone(new_user.userprofile.dna_data)
         self.assertIn("an e2e vibe", new_user.userprofile.reading_vibe)
+        # The anonymous snapshot must not outlive the claim
+        self.assertNotIn("dna_data", self.client.session)
 
     @patch("core.services.dna.generate_vibe_with_llm")
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
@@ -485,13 +487,16 @@ class ViewE2E_Tests(TransactionTestCase):
         # Force the recreate branch on every call by making the ``.get()``
         # lookup miss, then mock out the recommendation engine so we isolate
         # the unique-constraint behavior under test.
-        with patch.object(
-            AnonymousUserSession.objects,
-            "get",
-            side_effect=AnonymousUserSession.DoesNotExist,
-        ), patch(
-            "core.services.recommendation_service.get_recommendations_for_anonymous",
-            return_value=[],
+        with (
+            patch.object(
+                AnonymousUserSession.objects,
+                "get",
+                side_effect=AnonymousUserSession.DoesNotExist,
+            ),
+            patch(
+                "core.services.recommendation_service.get_recommendations_for_anonymous",
+                return_value=[],
+            ),
         ):
             with self.assertNoLogs("core.views", level="ERROR"):
                 response_one = self.client.get(reverse("core:display_dna"))
@@ -506,6 +511,21 @@ class ViewE2E_Tests(TransactionTestCase):
         rows = AnonymousUserSession.objects.filter(session_key=session_key)
         self.assertEqual(rows.count(), 1)
         self.assertEqual(rows.first().dna_data["reader_type"], "Recreate Reader")
+
+    @patch("core.tasks.generate_recommendations_task")
+    def test_logged_in_dashboard_ignores_stale_session_dna(self, mock_recs):
+        user = User.objects.create_user(username="profilereader", email="p@test.com", password="a-Strong-p4ssword!")
+        user.userprofile.dna_data = {"reader_type": "Profile Reader"}
+        user.userprofile.save()
+        self.client.force_login(user)
+        session = self.client.session
+        session["dna_data"] = {"reader_type": "Stale Session Reader"}
+        session.save()
+
+        response = self.client.get(reverse("core:display_dna"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["dna"]["reader_type"], "Profile Reader")
 
 
 @override_settings(
