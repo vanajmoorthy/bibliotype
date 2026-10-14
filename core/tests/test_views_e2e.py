@@ -7,6 +7,8 @@ from django.test import Client, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils.html import escape
 
+from .ratelimit_test_helpers import frozen_ratelimit_window
+
 
 @override_settings(
     CELERY_TASK_ALWAYS_EAGER=True,
@@ -17,6 +19,7 @@ from django.utils.html import escape
             "LOCATION": "unique-snowflake",
         }
     },
+    RATELIMIT_ENABLE=False,
 )
 class ViewE2E_Tests(TransactionTestCase):
 
@@ -713,6 +716,7 @@ class SessionDnaClaimTests(TransactionTestCase):
             "LOCATION": "upload-validation-tests",
         }
     },
+    RATELIMIT_ENABLE=False,
 )
 class UploadValidationTests(TransactionTestCase):
     """US-018: upload_view must reject pathological CSVs before queueing a task.
@@ -845,6 +849,50 @@ class UploadValidationTests(TransactionTestCase):
 
         self.assertEqual(response.status_code, 302)
         mock_task.delay.assert_called_once()
+
+
+@override_settings(
+    CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "upload-ratelimit"}},
+    RATELIMIT_ENABLE=True,
+)
+class UploadRateLimitTests(TransactionTestCase):
+    """Anonymous uploads are capped at 5 per 10 minutes per IP; logged-in users are not counted."""
+
+    CSV = b"Title,Author,Exclusive Shelf,My Rating,ISBN13\nBook,Author,read,4,9780000000001\n"
+
+    def setUp(self):
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+
+    def _post(self):
+        upload = SimpleUploadedFile("goodreads.csv", self.CSV, content_type="text/csv")
+        return self.client.post(reverse("core:upload"), {"csv_file": upload})
+
+    @patch("core.views.upload.generate_reading_dna_task")
+    def test_sixth_anonymous_upload_is_rejected(self, mock_task):
+        mock_task.delay.return_value = MagicMock(id="anon-task-id")
+        with frozen_ratelimit_window():
+            for _ in range(5):
+                self._post()
+            response = self._post()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("core:home"))
+        self.assertEqual(mock_task.delay.call_count, 5)
+
+    @patch("core.views.upload.generate_reading_dna_task")
+    def test_logged_in_uploads_are_not_limited(self, mock_task):
+        mock_task.delay.return_value = MagicMock(id="auth-task-id")
+        user = User.objects.create_user("ratelimited", "rl@example.com", "pw")
+        self.client.force_login(user)
+        with frozen_ratelimit_window():
+            for _ in range(6):
+                cache.delete(f"dna_task_inflight_{user.id}")  # sidestep the separate in-flight guard
+                self._post()
+
+        self.assertEqual(mock_task.delay.call_count, 6)
 
 
 class LoginUrlRedirectTests(TransactionTestCase):
