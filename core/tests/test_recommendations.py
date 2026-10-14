@@ -7,12 +7,13 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase
-from core.models import Book, Author, Genre, Publisher, UserBook
-from core.services.user_similarity_service import calculate_user_similarity, find_similar_users
+
+from core.models import Author, Book, Genre, Publisher, UserBook
 from core.services.recommendation_service import (
     get_recommendations_for_user,
 )
 from core.services.top_books_service import calculate_and_store_top_books
+from core.services.user_similarity_service import calculate_user_similarity, find_similar_users
 
 
 class RecommendationTestCase(TestCase):
@@ -347,11 +348,22 @@ class PrivacyTestCase(TestCase):
         # Add shared book to main user (required for find_similar_users to work)
         UserBook.objects.create(user=self.user, book=shared_book, user_rating=5)
 
+        # A public reader who opted out of recommendations shares the same book and DNA
+        opted_out = User.objects.create_user(username="opted_out", password="test123")
+        opted_out.userprofile.is_public = True
+        opted_out.userprofile.visible_in_recommendations = False
+        opted_out.userprofile.dna_data = other_user.userprofile.dna_data
+        opted_out.userprofile.save()
+        UserBook.objects.create(user=opted_out, book=shared_book, user_rating=5)
+
         # Check that other_user appears in similar users
         similar_users = find_similar_users(self.user, top_n=10, min_similarity=0.0)
 
         # Should find similar users since they share books and have similar DNA data
         self.assertGreater(len(similar_users), 0)
+        returned = {u.id for u, _ in similar_users}
+        self.assertIn(other_user.id, returned)
+        self.assertNotIn(opted_out.id, returned)
 
 
 class GlobalPopularityFallbackTestCase(TestCase):
