@@ -327,6 +327,49 @@ class RecommendationsTestCase(TestCase):
             mock_delay.assert_called_once_with(self.user1.id)
         self.assertEqual(cache.get(f"recs_dispatching_{self.user1.id}"), 1)
 
+    def test_user_save_does_not_write_profile(self):
+        """A User save (login, rename) must not write back a stale in-memory profile."""
+        user = User.objects.get(pk=self.user1.pk)
+        user.userprofile  # load the profile before a DNA task writes
+        UserProfile.objects.filter(user=user).update(dna_data={"reader_type": "Fresh"}, pending_dna_task_id="t9")
+
+        user.first_name = "Renamed"
+        user.save()
+
+        profile = UserProfile.objects.get(user=user)
+        self.assertEqual(profile.dna_data, {"reader_type": "Fresh"})
+        self.assertEqual(profile.pending_dna_task_id, "t9")
+
+    def test_save_dna_to_profile_skips_stale_task(self):
+        """A late task must not overwrite DNA while a newer upload owns the profile."""
+        from django.core.cache import cache
+
+        from core.services.dna import _save_dna_to_profile
+
+        UserProfile.objects.filter(user=self.user1).update(pending_dna_task_id="T2")
+        cache.set(f"dna_task_inflight_{self.user1.id}", "1", timeout=300)
+        profile = UserProfile.objects.get(user=self.user1)
+        before_dna, before = profile.dna_data, profile.last_updated
+        stale = {"reader_type": "Stale Reader", "user_stats": {"total_books_read": 1}}
+
+        with patch("core.tasks.generate_recommendations_task.delay") as mock_delay:
+            _save_dna_to_profile(profile, stale, task_id="T1")
+            mock_delay.assert_not_called()
+        profile.refresh_from_db()
+        self.assertEqual(profile.dna_data, before_dna)
+        self.assertEqual(profile.pending_dna_task_id, "T2")
+        self.assertEqual(cache.get(f"dna_task_inflight_{self.user1.id}"), "1")
+
+        fresh = {"reader_type": "Fresh Reader", "user_stats": {"total_books_read": 2}}
+        with patch("core.tasks.generate_recommendations_task.delay"):
+            _save_dna_to_profile(profile, fresh, task_id="T2")
+        profile.refresh_from_db()
+        self.assertEqual(profile.dna_data, fresh)
+        self.assertEqual(profile.reader_type, "Fresh Reader")
+        self.assertIsNone(profile.pending_dna_task_id)
+        self.assertGreater(profile.last_updated, before)
+        self.assertIsNone(cache.get(f"dna_task_inflight_{self.user1.id}"))
+
     def test_anonymous_user_gets_recommendations(self):
         """Test that anonymous users can have sessions created (skips recommendation generation)"""
         # This test verifies AnonymousUserSession can be created with all required fields

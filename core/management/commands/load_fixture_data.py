@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 from django.db.models.signals import post_save
 
 # Import the specific signal receivers you want to disable
-from core.models import create_user_profile, save_user_profile
+from core.models import create_user_profile
 
 
 class Command(BaseCommand):
@@ -19,7 +19,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING("Disconnecting post_save signals for User model..."))
         # Disconnect the signals
         post_save.disconnect(create_user_profile, sender=User)
-        post_save.disconnect(save_user_profile, sender=User)
 
         try:
             self.stdout.write(f"Loading data from fixture: {fixture_path}...")
@@ -35,4 +34,3 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("Reconnecting post_save signals for User model..."))
             # CRITICAL: Reconnect the signals so the app works normally again
             post_save.connect(create_user_profile, sender=User)
-            post_save.connect(save_user_profile, sender=User)

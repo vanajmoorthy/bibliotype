@@ -45,7 +45,7 @@ def update_privacy_view(request):
     profile = request.user.userprofile
     was_public = profile.is_public
     profile.is_public = is_public
-    profile.save()
+    profile.save(update_fields=["is_public"])
 
     # Going private removes the user from the anonymous-visitor candidate sample (which filters
     # is_public), so drop the recs caches that could still surface them. Registered users' recs
@@ -126,7 +126,7 @@ def update_recommendation_visibility(request):
     profile = request.user.userprofile
     was_visible = profile.visible_in_recommendations
     profile.visible_in_recommendations = is_visible
-    profile.save()
+    profile.save(update_fields=["visible_in_recommendations"])
 
     safe_cache_delete(f"user_recommendations_{request.user.id}")
     safe_cache_delete(f"similar_users_{request.user.id}")

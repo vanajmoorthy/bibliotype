@@ -14,6 +14,7 @@ from ..analytics.events import (
     track_dna_generation_failed,
     track_dna_generation_started,
 )
+from ..models import UserProfile
 from ..services.anonymization_service import _key_hash
 from ..services.dna import CSVValidationError, _save_dna_to_profile, calculate_full_dna
 
@@ -62,8 +63,7 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str)
     def _clear_pending_and_return():
         """Clear the user's pending_dna_task_id so the dashboard doesn't poll forever."""
         try:
-            user.userprofile.pending_dna_task_id = None
-            user.userprofile.save()
+            UserProfile.objects.filter(user=user, pending_dna_task_id=task_id).update(pending_dna_task_id=None)
         except Exception:
             logger.exception("Failed to clear pending_dna_task_id on claim rejection")
 
@@ -132,7 +132,7 @@ def claim_dna(user, dna_data, session_key, task_id=None):
     recommendations, and both should see the claimed library.
     """
     claimed = bool(session_key) and _create_userbooks_from_anonymous_session(user, session_key)
-    _save_dna_to_profile(user.userprofile, dna_data)
+    _save_dna_to_profile(user.userprofile, dna_data, task_id=task_id)
     if claimed:
         from ..models import AnonymousUserSession
 
@@ -247,7 +247,7 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
                 # If result backend is unavailable, ignore progress updates gracefully
                 pass
 
-        result_data = calculate_full_dna(csv_file_content, user, session_key, progress_cb=progress_cb)
+        result_data = calculate_full_dna(csv_file_content, user, session_key, progress_cb=progress_cb, task_id=task_id)
 
         # Calculate processing time
         processing_time = time.time() - start_time

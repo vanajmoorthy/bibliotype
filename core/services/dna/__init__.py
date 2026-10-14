@@ -79,7 +79,9 @@ logger = logging.getLogger(__name__)
 _INLINE_ENRICH_SEMAPHORE = threading.BoundedSemaphore(2)
 
 
-def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progress_cb=None, bulk_enrichment=False):
+def calculate_full_dna(
+    csv_file_content: str, user=None, session_key=None, progress_cb=None, bulk_enrichment=False, task_id=None
+):
     """Run the full DNA pipeline for one CSV.
 
     bulk_enrichment=True (seeding runs, backfills) routes every enrichment
@@ -1038,7 +1040,7 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
             # Calculate and store top books
             calculate_and_store_top_books(user, limit=5)
 
-            _save_dna_to_profile(user.userprofile, dna, dispatch_recommendations=not bulk_enrichment)
+            _save_dna_to_profile(user.userprofile, dna, dispatch_recommendations=not bulk_enrichment, task_id=task_id)
             logger.info(f"Saved DNA for user: {user.username}")
             return dna
         else:
