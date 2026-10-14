@@ -277,11 +277,31 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 if existing_book_by_isbn:
                     book = existing_book_by_isbn
                     created = False
-                    # Targeted UPDATE skips Book.save()'s _normalize_title work
-                    # for fields that haven't changed. Only fill columns that
-                    # are currently NULL on the existing row.
+                else:
+                    try:
+                        book, created = Book.objects.get_or_create(
+                            normalized_title=normalized_book_title,
+                            author=author,
+                            defaults={"title": title_from_csv, **book_defaults},
+                        )
+                    except IntegrityError:
+                        # Duplicate ISBN13 — retry without it
+                        book_defaults.pop("isbn13", None)
+                        book, created = Book.objects.get_or_create(
+                            normalized_title=normalized_book_title,
+                            author=author,
+                            defaults={"title": title_from_csv, **book_defaults},
+                        )
+
+                if not created:
+                    # The Book row is shared across readers, so one uploader's edition
+                    # must not overwrite another's or enrichment's values: only fill
+                    # NULL columns. average_rating is refreshed since enrichment never
+                    # writes it. Targeted UPDATE skips Book.save()'s _normalize_title.
                     fields_to_fill = {
-                        k: v for k, v in book_defaults.items() if v is not None and getattr(book, k, None) is None
+                        k: v
+                        for k, v in book_defaults.items()
+                        if getattr(book, k, None) is None or (k == "average_rating" and book.average_rating != v)
                     }
                     if fields_to_fill:
                         try:
@@ -289,24 +309,9 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                             for k, v in fields_to_fill.items():
                                 setattr(book, k, v)
                         except IntegrityError:
-                            logger.warning(f"IntegrityError updating ISBN-matched book {isbn13_value}, skipping update")
-                else:
-                    try:
-                        book, created = Book.objects.update_or_create(
-                            normalized_title=normalized_book_title,
-                            author=author,
-                            defaults=book_defaults,
-                            create_defaults={"title": title_from_csv, **book_defaults},
-                        )
-                    except IntegrityError:
-                        # Duplicate ISBN13 — retry without it
-                        book_defaults.pop("isbn13", None)
-                        book, created = Book.objects.update_or_create(
-                            normalized_title=normalized_book_title,
-                            author=author,
-                            defaults=book_defaults,
-                            create_defaults={"title": title_from_csv, **book_defaults},
-                        )
+                            logger.warning(
+                                f"IntegrityError filling book {book.pk} (ISBN {isbn13_value}), skipping update"
+                            )
 
                 # Check if the book already has genres. `book.genres.exists()` runs
                 # a single COUNT(*) on the through table and is not cached on the
@@ -555,15 +560,21 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
                 if isbn13_value:
                     cr_book_defaults["isbn13"] = isbn13_value
 
+                # Title only on create: the shared Book row must not be renamed per reader.
                 try:
-                    db_book, _ = Book.objects.update_or_create(
+                    db_book, created = Book.objects.get_or_create(
                         normalized_title=normalized_title, author=author, defaults=cr_book_defaults
                     )
                 except IntegrityError:
                     cr_book_defaults.pop("isbn13", None)
-                    db_book, _ = Book.objects.update_or_create(
+                    db_book, created = Book.objects.get_or_create(
                         normalized_title=normalized_title, author=author, defaults=cr_book_defaults
                     )
+                if not created and isbn13_value and db_book.isbn13 is None:
+                    try:
+                        Book.objects.filter(pk=db_book.pk).update(isbn13=isbn13_value)
+                    except IntegrityError:
+                        logger.warning(f"IntegrityError filling ISBN {isbn13_value} on book {db_book.pk}, skipping")
 
                 # Upgrade cover from enrichment data (verified cover_i or GB thumbnail)
                 if db_book.cover_url:
