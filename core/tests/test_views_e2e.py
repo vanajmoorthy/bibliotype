@@ -380,6 +380,23 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "SUCCESS")
 
+    @patch("core.tasks.generate_recommendations_task.delay")
+    def test_empty_recommendations_are_done_not_pending(self, mock_rec_delay):
+        """A finished run that found nothing ([]) shows the empty state instead of polling and re-dispatching."""
+        user = User.objects.create_user(username="norecs", password="password")
+        user.userprofile.dna_data = {"reader_type": "Completed Reader"}
+        user.userprofile.recommendations_data = []
+        user.userprofile.save()
+        self.client.login(username="norecs", password="password")
+
+        response = self.client.get(reverse("core:display_dna"))
+        self.assertFalse(response.context["recommendations_pending"])
+        self.assertContains(response, "No recommended books yet")
+        mock_rec_delay.assert_not_called()
+
+        response = self.client.get(reverse("core:api_check_recommendations_status"))
+        self.assertEqual(response.json()["status"], "ready")
+
     def _poll_failed_anonymous_task(self, csv_bytes):
         """Upload anonymously (task runs eagerly and fails), then poll the result view."""
         upload = SimpleUploadedFile("goodreads.csv", csv_bytes, content_type="text/csv")
@@ -485,13 +502,16 @@ class ViewE2E_Tests(TransactionTestCase):
         # Force the recreate branch on every call by making the ``.get()``
         # lookup miss, then mock out the recommendation engine so we isolate
         # the unique-constraint behavior under test.
-        with patch.object(
-            AnonymousUserSession.objects,
-            "get",
-            side_effect=AnonymousUserSession.DoesNotExist,
-        ), patch(
-            "core.services.recommendation_service.get_recommendations_for_anonymous",
-            return_value=[],
+        with (
+            patch.object(
+                AnonymousUserSession.objects,
+                "get",
+                side_effect=AnonymousUserSession.DoesNotExist,
+            ),
+            patch(
+                "core.services.recommendation_service.get_recommendations_for_anonymous",
+                return_value=[],
+            ),
         ):
             with self.assertNoLogs("core.views", level="ERROR"):
                 response_one = self.client.get(reverse("core:display_dna"))

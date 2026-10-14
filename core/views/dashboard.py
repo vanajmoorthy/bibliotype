@@ -48,7 +48,7 @@ def display_dna_view(request):
 
         if user_profile.dna_data:
             try:
-                if user_profile.recommendations_data:
+                if user_profile.recommendations_data is not None:
                     stored_recs = user_profile.recommendations_data
 
                     for rec in stored_recs:
@@ -239,7 +239,10 @@ def display_dna_view(request):
 
     # Flag to tell the template to poll for recommendations
     recommendations_pending = (
-        request.user.is_authenticated and user_profile and user_profile.dna_data and not recommendations
+        request.user.is_authenticated
+        and user_profile
+        and user_profile.dna_data
+        and user_profile.recommendations_data is None
     )
 
     context = {
