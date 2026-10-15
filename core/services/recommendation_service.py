@@ -7,13 +7,12 @@ from django.db.models import Q
 from django.utils import timezone
 
 from ..cache_utils import safe_cache_delete, safe_cache_get, safe_cache_set
-from ..models import AnonymizedReadingProfile, AnonymousUserSession, Author, Book, Genre, User, UserBook
+from ..models import AnonymizedReadingProfile, AnonymousUserSession, Author, Book, Genre, UserBook
 from .anonymization_service import _key_hash
 from .genre_classification import resolve_genre_names
 from .user_similarity_service import (
-    _build_user_context_for_similarity,
     _bulk_build_user_contexts,
-    calculate_anonymous_similarity_with_context,
+    build_session_context,
     calculate_similarity_with_anonymized,
     find_similar_users,
     get_match_quality_label,
@@ -487,14 +486,8 @@ def _collect_candidates_from_anonymized_profiles(matching_profiles, read_book_id
             )
 
 
-def _collect_candidates_for_user(user, user_context, limit=10):
-    """Collect candidate books from similar users, anonymized profiles, and fallbacks."""
-    candidates = {}
-    read_book_ids = user_context["read_book_ids"]
-
-    similar_users = find_similar_users(user, min_similarity=MIN_SIMILARITY)
-    _collect_candidates_from_similar_users(similar_users, read_book_ids, candidates)
-
+def _matching_anonymized_profiles(sim_ctx):
+    """(profile, similarity_data) for the cached anonymized-profile sample that clear MIN_SIMILARITY."""
     cache_key = "anon_profiles_sample"
     anonymized_profiles = safe_cache_get(cache_key)
     if anonymized_profiles is None:
@@ -503,14 +496,23 @@ def _collect_candidates_for_user(user, user_context, limit=10):
         anonymized_profiles = list(AnonymizedReadingProfile.objects.filter(id__in=sampled))
         safe_cache_set(cache_key, anonymized_profiles, 3600)
 
-    user_ctx = _build_user_context_for_similarity(user)
     matching_profiles = []
     for anon_profile in anonymized_profiles:
-        similarity_data = calculate_similarity_with_anonymized(user, anon_profile, user_ctx=user_ctx)
+        similarity_data = calculate_similarity_with_anonymized(sim_ctx, anon_profile)
         if similarity_data["similarity_score"] >= MIN_SIMILARITY:
             matching_profiles.append((anon_profile, similarity_data))
+    return matching_profiles
 
-    _collect_candidates_from_anonymized_profiles(matching_profiles, read_book_ids, candidates)
+
+def _collect_candidates_for_user(user, user_context, limit=10):
+    """Collect candidate books from similar users, anonymized profiles, and fallbacks."""
+    candidates = {}
+    read_book_ids = user_context["read_book_ids"]
+
+    sim_ctx = _bulk_build_user_contexts([user.id])[user.id]
+    similar_users = find_similar_users(sim_ctx, user.id, min_similarity=MIN_SIMILARITY)
+    _collect_candidates_from_similar_users(similar_users, read_book_ids, candidates)
+    _collect_candidates_from_anonymized_profiles(_matching_anonymized_profiles(sim_ctx), read_book_ids, candidates)
 
     fallback_candidates = _get_fallback_candidates(user_context, limit=10)
     for book_id, candidate_data in fallback_candidates.items():
@@ -525,51 +527,10 @@ def _collect_candidates_for_anonymous(anon_session, anon_context):
     candidates = {}
     read_book_ids = anon_context["read_book_ids"]
 
-    cache_key = "public_users_for_recs_sample"
-    all_users = safe_cache_get(cache_key)
-    if all_users is None:
-        all_users = list(
-            User.objects.filter(
-                userprofile__dna_data__isnull=False,
-                userprofile__is_public=True,
-                userprofile__visible_in_recommendations=True,
-            )
-            .order_by("-userprofile__last_updated")
-            .only("id", "username")[:500]
-        )
-        safe_cache_set(cache_key, all_users, 1800)
-
-    user_ids = [u.id for u in all_users]
-    user_lookup = {u.id: u for u in all_users}
-    all_user_contexts = _bulk_build_user_contexts(user_ids)
-
-    similarities = []
-    for user_id, user_ctx in all_user_contexts.items():
-        if not user_ctx["book_ids"]:
-            continue
-        similarity_data = calculate_anonymous_similarity_with_context(anon_session, user_ctx)
-        if similarity_data["similarity_score"] >= MIN_SIMILARITY:
-            similarities.append((user_lookup[user_id], similarity_data))
-
-    similarities.sort(key=lambda x: x[1]["similarity_score"], reverse=True)
-    similar_users = similarities[:30]
-
+    sim_ctx = build_session_context(anon_session)
+    similar_users = find_similar_users(sim_ctx, min_similarity=MIN_SIMILARITY, public_only=True)
     _collect_candidates_from_similar_users(similar_users, read_book_ids, candidates)
-
-    cache_key = "anon_profiles_sample"
-    anonymized_profiles = safe_cache_get(cache_key)
-    if anonymized_profiles is None:
-        ids = list(AnonymizedReadingProfile.objects.values_list("id", flat=True))
-        sampled = random.sample(ids, min(len(ids), 100))
-        anonymized_profiles = list(AnonymizedReadingProfile.objects.filter(id__in=sampled))
-        safe_cache_set(cache_key, anonymized_profiles, 3600)
-    matching_profiles = []
-    for anon_profile in anonymized_profiles:
-        similarity_data = calculate_similarity_with_anonymized(anon_session, anon_profile)
-        if similarity_data["similarity_score"] >= MIN_SIMILARITY:
-            matching_profiles.append((anon_profile, similarity_data))
-
-    _collect_candidates_from_anonymized_profiles(matching_profiles, read_book_ids, candidates)
+    _collect_candidates_from_anonymized_profiles(_matching_anonymized_profiles(sim_ctx), read_book_ids, candidates)
 
     # Note: Fallback is handled in _get_recommendations_for_anonymous_uncached after candidate collection
     return candidates

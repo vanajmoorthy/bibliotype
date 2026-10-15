@@ -106,13 +106,6 @@ class DeleteAccountViewTests(TestCase):
         return self.client.post(self.url, {"confirmation": confirmation, "password": password}, **headers)
 
     @patch("core.views.profile.track_account_deleted")
-    def test_delete_clears_recs_candidate_sample_cache(self, _mock_track):
-        cache.set("public_users_for_recs_sample", "cached", 300)
-        response = self._post("DELETE", self.password)
-        self.assertEqual(response.status_code, 200)
-        self.assertIsNone(cache.get("public_users_for_recs_sample"))
-
-    @patch("core.views.profile.track_account_deleted")
     def test_delete_removes_the_reader_from_their_books_read_counts(self, _mock_track):
         from core.models import Author, Book, UserBook
 
@@ -208,7 +201,6 @@ class UpdatePrivacyDualResponseTests(TestCase):
         keys = [
             f"user_recommendations_{self.user.id}",
             f"similar_users_{self.user.id}",
-            "public_users_for_recs_sample",
         ]
         for key in keys:
             cache.set(key, "cached", 300)

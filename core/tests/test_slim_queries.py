@@ -18,7 +18,7 @@ from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from core.models import AnonymousUserSession, Author, Book, Genre, UserBook, UserProfile
+from core.models import Author, Book, Genre, UserBook, UserProfile
 
 LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "slim-queries-tests"}}
 
@@ -51,36 +51,14 @@ class SimilarUserQueryShapeTests(TestCase):
         UserBook.objects.create(user=self.other, book=self.book2, user_rating=5, is_top_book=True, top_book_position=1)
 
     def test_find_similar_users_returns_slim_users(self):
-        from core.services.user_similarity_service import find_similar_users
+        from core.services.user_similarity_service import _bulk_build_user_contexts, find_similar_users
 
-        result = find_similar_users(self.me, top_n=5, min_similarity=0.0)
+        ctx = _bulk_build_user_contexts([self.me.id])[self.me.id]
+        result = find_similar_users(ctx, self.me.id, top_n=5, min_similarity=0.0)
         self.assertTrue(result)
         for u, _ in result:
             _assert_slim_user(self, u)
         for u, _ in cache.get(f"similar_users_{self.me.id}"):
-            _assert_slim_user(self, u)
-
-    def test_anonymous_public_sample_is_slim_and_newest_first(self):
-        from core.services.recommendation_service import _build_anonymous_context, _collect_candidates_for_anonymous
-
-        # Touch "me" so it is the most recently updated profile.
-        UserProfile.objects.filter(user=self.other).update(last_updated=timezone.now() - timedelta(days=1))
-
-        anon_session = AnonymousUserSession.objects.create(
-            session_key="slim_anon",
-            dna_data={"top_genres": [("fantasy", 5)]},
-            books_data=[self.book.id],
-            top_books_data=[self.book.id],
-            genre_distribution={"fantasy": 5},
-            author_distribution={},
-            book_ratings={str(self.book.id): 5},
-            expires_at=timezone.now() + timedelta(days=7),
-        )
-        _collect_candidates_for_anonymous(anon_session, _build_anonymous_context(anon_session))
-
-        sample = cache.get("public_users_for_recs_sample")
-        self.assertEqual([u.username for u in sample], ["me", "other"])
-        for u in sample:
             _assert_slim_user(self, u)
 
 

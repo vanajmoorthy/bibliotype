@@ -524,7 +524,7 @@ class RecommendationVisibilityCacheInvalidationTestCase(TestCase):
 
         safe_cache_set(f"user_recommendations_{self.user.id}", ["rec_a", "rec_b"], 900)
         safe_cache_set(f"similar_users_{self.user.id}", [{"user_id": 99}], 1800)
-        safe_cache_set("public_users_for_recs_sample", [{"user_id": self.user.id}], 1800)
+        safe_cache_set("recommendations_pool_count", 7, 3600)
 
     def test_visible_to_invisible_clears_all_three_caches(self):
         from core.cache_utils import safe_cache_get
@@ -544,7 +544,7 @@ class RecommendationVisibilityCacheInvalidationTestCase(TestCase):
 
         self.assertIsNone(safe_cache_get(f"user_recommendations_{self.user.id}"))
         self.assertIsNone(safe_cache_get(f"similar_users_{self.user.id}"))
-        self.assertIsNone(safe_cache_get("public_users_for_recs_sample"))
+        self.assertIsNone(safe_cache_get("recommendations_pool_count"))
 
     def test_invisible_to_visible_preserves_candidate_pool(self):
         from core.cache_utils import safe_cache_get
@@ -566,9 +566,6 @@ class RecommendationVisibilityCacheInvalidationTestCase(TestCase):
         # reflected on the next read.
         self.assertIsNone(safe_cache_get(f"user_recommendations_{self.user.id}"))
         self.assertIsNone(safe_cache_get(f"similar_users_{self.user.id}"))
-        # But the shared candidate sample is NOT flushed on the
+        # But the shared pool count is NOT flushed on the
         # invisible -> visible direction.
-        self.assertEqual(
-            safe_cache_get("public_users_for_recs_sample"),
-            [{"user_id": self.user.id}],
-        )
+        self.assertEqual(safe_cache_get("recommendations_pool_count"), 7)
