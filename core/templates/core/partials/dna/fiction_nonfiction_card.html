@@ -31,7 +31,7 @@
             {# is classified (defaulted_count only ever shrinks during enrichment). #}
             <p id="fiction-coverage-note" class="mt-3 text-center text-sm text-gray-500 italic">
                 Based on {{ split.fiction_count|add:split.nonfiction_count }} of
-                {{ split.fiction_count|add:split.nonfiction_count|add:split.defaulted_count }} books — refresh in a few
+                {{ split.fiction_count|add:split.nonfiction_count|add:split.defaulted_count }} books. Refresh in a few
                 minutes for more complete data
             </p>
         {% endif %}

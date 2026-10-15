@@ -369,7 +369,7 @@
                     function enrichmentPoller() {
                         return {
                             pending: true,
-                            bannerText: 'Enriching your library — {{ enrichment.percent }}% complete. ~{{ enrichment.remaining_minutes }} min remaining.',
+                            bannerText: 'Enriching your library: {{ enrichment.percent }}% complete. ~{{ enrichment.remaining_minutes }} min remaining.',
                             interval: null,
                             intervalMs: 15000,
                             inFlight: false,
@@ -393,7 +393,7 @@
                                         setTimeout(() => window.location.reload(), 500);
                                         return;
                                     }
-                                    this.bannerText = `Enriching your library — ${data.percent}% complete. ~${data.remaining_minutes} min remaining.`;
+                                    this.bannerText = `Enriching your library: ${data.percent}% complete. ~${data.remaining_minutes} min remaining.`;
                                     Alpine.store('enrichment', {
                                         pending: true,
                                         pages_any_missing: !!data.pages_any_missing,
