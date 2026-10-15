@@ -421,7 +421,9 @@ def _collect_candidates_from_similar_users(similar_users, read_book_ids, candida
                     "similarity_score": similarity_data["similarity_score"],
                     "is_top_book": ub.is_top_book,
                     "user_rating": ub.user_rating,
-                    "match_quality": get_match_quality_label(similarity_data["similarity_score"]),
+                    # Recommenders already cleared MIN_SIMILARITY, so the compare page's bottom bands
+                    # ("Different preferences", "Opposite tastes") would contradict "similar readers".
+                    "match_quality": get_match_quality_label(max(similarity_data["similarity_score"], 0.35)),
                     "shared_books": similarity_data.get("shared_books_count", 0),
                 }
             )
