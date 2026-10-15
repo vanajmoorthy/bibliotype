@@ -3,6 +3,8 @@ Tests for the percentile engine: update_analytics_from_stats, calculate_percenti
 and the deduplication logic for re-uploads.
 """
 
+from io import StringIO
+
 from django.test import TestCase
 
 from core.models import AggregateAnalytics
@@ -195,3 +197,53 @@ class CalculatePercentilesTests(TestCase):
             {"avg_book_length": 0, "avg_publish_year": 0, "total_books_read": 80, "avg_books_per_year": 0}
         )
         self.assertEqual(set(result), {"total_books_read"})
+
+
+class RebuildAnalyticsCommandTests(TestCase):
+    def test_rebuild_counts_every_source_once_and_skips_zero_lengths(self):
+        from datetime import timedelta
+
+        from django.contrib.auth.models import User
+        from django.core.management import call_command
+        from django.utils import timezone
+
+        from core.models import AnonymizedReadingProfile, AnonymousUserSession
+
+        expires = timezone.now() + timedelta(days=7)
+        profile_stats = {"total_books_read": 40, "avg_book_length": 0, "avg_publish_year": 2001}
+        user = User.objects.create_user(username="reader", email="reader@example.com", password="pw")
+        user.userprofile.dna_data = {"user_stats": dict(profile_stats), "stats_by_year": [{"count": 20}, {"count": 20}]}
+        user.userprofile.save()
+        # Unclaimed session: counted
+        AnonymousUserSession.objects.create(
+            session_key="a" * 40,
+            dna_data={"user_stats": {"total_books_read": 60, "avg_book_length": 350, "avg_publish_year": 1990}},
+            expires_at=expires,
+        )
+        # Pre-#246 claimed session still holding the profile's DNA: skipped
+        AnonymousUserSession.objects.create(
+            session_key="b" * 40, dna_data={"user_stats": dict(profile_stats)}, expires_at=expires
+        )
+        # Already anonymised session: counted through its AnonymizedReadingProfile instead
+        AnonymousUserSession.objects.create(
+            session_key="c" * 40,
+            dna_data={"user_stats": {"total_books_read": 70, "avg_book_length": 280, "avg_publish_year": 2015}},
+            expires_at=expires,
+            anonymized=True,
+        )
+        AnonymizedReadingProfile.objects.create(
+            total_books_read=70, reader_type="x", avg_book_length=280, avg_publish_year=None
+        )
+        # Anonymised copy of the claimed session: skipped
+        AnonymizedReadingProfile.objects.create(
+            total_books_read=40, reader_type="x", avg_book_length=0, avg_publish_year=2001
+        )
+
+        call_command("rebuild_analytics", stdout=StringIO())
+
+        analytics = AggregateAnalytics.get_instance()
+        self.assertEqual(analytics.total_profiles_counted, 3)  # 1 profile + 1 session + 1 anonymised
+        self.assertEqual(analytics.avg_book_length_dist, {"250-299": 1, "350-399": 1})
+        self.assertEqual(analytics.avg_publish_year_dist, {"2000-2009": 1, "1990-1999": 1})
+        self.assertEqual(sum(analytics.total_books_read_dist.values()), 3)
+        self.assertEqual(analytics.avg_books_per_year_dist, {"20-24": 1})
