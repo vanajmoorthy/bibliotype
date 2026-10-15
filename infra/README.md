@@ -46,6 +46,9 @@ to Terraform Cloud (free) or a DO Spaces backend before anyone else runs this.
    record is proxied (orange cloud), grey-cloud it while issuing the Let's
    Encrypt cert on the new box (`certbot --nginx`), then re-enable the proxy —
    HTTP-01 through the proxy can be flaky. Old box keeps running as fallback.
+   The firewall only lets Cloudflare reach 80/443, so while grey-clouded either
+   temporarily open 80 to `0.0.0.0/0` or use a DNS-01 challenge instead.
+   Routine `certbot renew` goes through the proxy and is unaffected.
 8. After a quiet day or two: snapshot the old droplet, then destroy it.
 
 ## Launch-week resize
