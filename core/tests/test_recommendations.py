@@ -774,6 +774,18 @@ class SimilarityContextTestCase(TestCase):
             self.assertEqual(session_ctx[key], user_ctx[key], key)
         self.assertEqual(sorted(session_ctx["years_weighted"]), sorted(user_ctx["years_weighted"]))
 
+    def test_anonymous_candidates_exclude_private_readers(self):
+        from core.services.user_similarity_service import build_session_context
+
+        private = self.users["ctx_b"]
+        private.userprofile.is_public = False
+        private.userprofile.save()  # still visible_in_recommendations=True
+
+        ctx = build_session_context(self._anon_session())
+        returned = {u.id for u, _ in find_similar_users(ctx, min_similarity=0.0, public_only=True)}
+        self.assertIn(self.users["ctx_a"].id, returned)
+        self.assertNotIn(private.id, returned)
+
     def test_anonymous_recommendation_queries_do_not_grow_with_candidates(self):
         from django.db import connection
         from django.test.utils import CaptureQueriesContext

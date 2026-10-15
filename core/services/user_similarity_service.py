@@ -284,10 +284,11 @@ def calculate_user_similarity(user1, user2):
     return calculate_user_similarity_from_context(contexts[user1.id], contexts[user2.id])
 
 
-def find_similar_users(ctx, exclude_id=None, top_n=30, min_similarity=0.15):
+def find_similar_users(ctx, exclude_id=None, top_n=30, min_similarity=0.15, public_only=False):
     """
     Find registered users similar to a reader context (a user's, or an anonymous session's).
     exclude_id is the reader's own user id, None for an anonymous session; it also keys the cache.
+    public_only limits candidates to public profiles (the anonymous pool).
     Returns list of (user, similarity_data) tuples sorted by similarity.
     """
     from ..cache_utils import safe_cache_get, safe_cache_set
@@ -304,6 +305,8 @@ def find_similar_users(ctx, exclude_id=None, top_n=30, min_similarity=0.15):
     eligible = User.objects.exclude(id=exclude_id).filter(
         userprofile__dna_data__isnull=False, userprofile__visible_in_recommendations=True
     )
+    if public_only:
+        eligible = eligible.filter(userprofile__is_public=True)
     # Most shared books first, so the cap keeps the strongest candidates.
     users_with_shared_books = list(
         eligible.filter(user_books__book_id__in=ctx["book_ids"])

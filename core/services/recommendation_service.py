@@ -528,7 +528,7 @@ def _collect_candidates_for_anonymous(anon_session, anon_context):
     read_book_ids = anon_context["read_book_ids"]
 
     sim_ctx = build_session_context(anon_session)
-    similar_users = find_similar_users(sim_ctx, min_similarity=MIN_SIMILARITY)
+    similar_users = find_similar_users(sim_ctx, min_similarity=MIN_SIMILARITY, public_only=True)
     _collect_candidates_from_similar_users(similar_users, read_book_ids, candidates)
     _collect_candidates_from_anonymized_profiles(_matching_anonymized_profiles(sim_ctx), read_book_ids, candidates)
 
