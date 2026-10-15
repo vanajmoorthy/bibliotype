@@ -540,3 +540,35 @@ class GoogleBooksCompoundCategoryTests(TestCase):
         # "Fiction / X" is always a novel; these used to map to psychology / biography
         self.assertEqual(_canonicalize_google_books_categories(["Fiction / Psychological"]), {"literary fiction"})
         self.assertEqual(_canonicalize_google_books_categories(["Fiction / Biographical"]), {"historical fiction"})
+
+
+class FictionFormHeadingAliasTests(TestCase):
+    """LCSH fiction form headings are novels; they must never land on the nonfiction axis."""
+
+    def test_fiction_form_headings_map_to_fiction_genres(self):
+        for alias in (
+            "psychological fiction",
+            "fiction, psychological",
+            "american psychological fiction",
+            "fiction, political",
+            "feminist fiction, english",
+            "fiction, religious",
+        ):
+            self.assertEqual(CANONICAL_GENRE_MAP[alias], "literary fiction", alias)
+        self.assertEqual(CANONICAL_GENRE_MAP["fiction, biographical"], "historical fiction")
+
+    def test_topic_fiction_subdivisions_are_excluded(self):
+        # "<topic>, fiction" is a novel about the topic, not the topic's nonfiction genre
+        for subject in (
+            "animals, fiction",
+            "cats, fiction",
+            "dogs, fiction",
+            "conduct of life, fiction",
+            "social classes, fiction",
+        ):
+            self.assertIn(subject, EXCLUDED_GENRES)
+            self.assertNotIn(subject, CANONICAL_GENRE_MAP)
+
+    def test_juvenile_literature_is_nonfiction(self):
+        # LCSH "Juvenile literature" is the children's nonfiction form; "Juvenile fiction" is the novel form
+        self.assertEqual(CANONICAL_GENRE_MAP["juvenile literature"], "young adult nonfiction")

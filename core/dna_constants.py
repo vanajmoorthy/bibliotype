@@ -336,6 +336,13 @@ GENRE_ALIASES = {
         "fiction / psychological",
         "domestic fiction",
         "political fiction",
+        # LCSH fiction form headings (always novels; were psychology/social science/religion)
+        "psychological fiction",
+        "fiction, psychological",
+        "american psychological fiction",
+        "fiction, political",
+        "feminist fiction, english",
+        "fiction, religious",
     },
     "poetry": {
         "poems",
@@ -375,6 +382,7 @@ GENRE_ALIASES = {
         "fiction / historical",
         # Biographical novels (was biography, a nonfiction genre)
         "fiction / biographical",
+        "fiction, biographical",
         "rome, fiction",
         "war stories",
         "world war i",
@@ -428,7 +436,6 @@ GENRE_ALIASES = {
     # analysis time via core/services/genre_classification.py.
     "young adult fiction": {
         "young adult",
-        "juvenile literature",
         "ya",
         "juvenile",
         "teenage fiction",
@@ -447,6 +454,8 @@ GENRE_ALIASES = {
     },
     "young adult nonfiction": {
         "juvenile nonfiction",
+        # LCSH "Juvenile literature" is the children's NONfiction form ("Juvenile fiction" is the novel form)
+        "juvenile literature",
     },
     "children's fiction": {
         "children's literature",
@@ -519,7 +528,6 @@ GENRE_ALIASES = {
         "autobiography",
         "biographies",
         "diaries",
-        "fiction, biographical",
         "biography & autobiography",
         "authors, biography",
         "cancer, patients, biography",
@@ -537,12 +545,9 @@ GENRE_ALIASES = {
     "psychology": {
         "mental health",
         "psychology",
-        "psychological fiction",
         "evolutionary psychology",
-        "fiction, psychological",
         "genetic psychology",
         "behavior evolution",
-        "american psychological fiction",
         "mental illness",
         "neuropsychology",
         "cognitive neuroscience",
@@ -576,7 +581,6 @@ GENRE_ALIASES = {
         "social history",
         "anthropology",
         "current events",
-        "fiction, political",
         "political science",
         "feminism",
         "feminist theory",
@@ -585,7 +589,6 @@ GENRE_ALIASES = {
         "popular culture",
         "race relations",
         "african american studies",
-        "social classes, fiction",
         "ethnic studies",
         "pornography, social aspects",
         "racial segregation",
@@ -594,7 +597,6 @@ GENRE_ALIASES = {
         "city planning",
         "consumption",
         "feminism and literature",
-        "feminist fiction, english",
         "sex role",
     },
     "nature": {
@@ -605,15 +607,12 @@ GENRE_ALIASES = {
         "nature writing",
         "biology",
         "country life",
-        "dogs, fiction",
-        "animals, fiction",
         "zoologists",
         "resource conservation",
         "human-animal relationships",
         "human-animal communication",
         "fishing stories",
         "horses",
-        "cats, fiction",
         "rabbits",
     },
     "self-help": {
@@ -625,7 +624,6 @@ GENRE_ALIASES = {
         "self-actualization (psychology)",
         "maturity",
         "conduct of life",
-        "conduct of life, fiction",
         # Corpus-mined (2026-09): Rich Dad Poor Dad-class subjects
         "personal finance",
         "finance, personal",
@@ -702,11 +700,16 @@ GENRE_ALIASES = {
         "antichrist",
         "religion",
         "religious",
-        "fiction, religious",
     },
 }
 
 EXCLUDED_GENRES = {
+    # LCSH "<topic>, fiction" = a novel about the topic: no genre beats the topic's nonfiction genre
+    "animals, fiction",
+    "cats, fiction",
+    "dogs, fiction",
+    "conduct of life, fiction",
+    "social classes, fiction",
     # --- LIBRARY OF CONGRESS / DEWEY DECIMAL ---
     "813/.54",
     "823/.6",
