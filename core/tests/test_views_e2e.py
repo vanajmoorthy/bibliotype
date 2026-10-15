@@ -411,7 +411,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertContains(response, "No recommended books yet")
         mock_rec_delay.assert_not_called()
 
-        response = self.client.get(reverse("core:api_check_recommendations_status"))
+        response = self.client.get(reverse("core:api_status", args=["recommendations"]))
         self.assertEqual(response.json()["status"], "ready")
 
     def _poll_failed_anonymous_task(self, csv_bytes):
