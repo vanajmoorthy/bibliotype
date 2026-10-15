@@ -653,6 +653,14 @@ class GetRequestDnaTests(TestCase):
             )
         return request
 
+    def test_anonymised_session_row_is_not_served(self):
+        from core.models import AnonymousUserSession
+        from core.views._helpers import get_request_dna
+
+        request = self._request(anon_dna={"reader_type": "Anon"})
+        AnonymousUserSession.objects.filter(session_key=request.session.session_key).update(anonymized=True)
+        self.assertIsNone(get_request_dna(request))
+
     def test_logged_in_uses_profile_and_ignores_session(self):
         from core.views._helpers import get_request_dna
 

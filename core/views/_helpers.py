@@ -42,7 +42,12 @@ def get_request_dna(request) -> ReadingDNA | None:
         return request.user.userprofile.dna_data
     session_key = request.session.session_key
     if session_key:
-        dna = AnonymousUserSession.objects.filter(session_key=session_key).values_list("dna_data", flat=True).first()
+        # Anonymised rows keep dna_data until cleanup but already count in the shared pool; never serve or claim them
+        dna = (
+            AnonymousUserSession.objects.filter(session_key=session_key, anonymized=False)
+            .values_list("dna_data", flat=True)
+            .first()
+        )
         if dna:
             return dna
     # shortcut: sessions from before the mirror was dropped still carry the full DNA; remove this fallback after 7 days
