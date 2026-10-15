@@ -17,6 +17,7 @@ from .enrichment import (  # noqa: F401 — re-exported for stable import paths
     check_author_mainstream_status_task,
     enrich_book_task,
     research_publisher_mainstream_task,
+    suggest_genre_aliases_task,
 )
 from .maintenance import (  # noqa: F401 — re-exported for stable import paths
     anonymize_expired_sessions_task,

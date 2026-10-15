@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 PUBLISHER_CHECK_BATCH_LIMIT = 20
 PUBLISHER_CHECK_AGE_THRESHOLD_DAYS = 90
 
+# Unmapped subjects sent to the LLM per weekly run, most common first
+GENRE_SUGGESTION_BATCH_LIMIT = 50
+
 
 # name pinned: wire name must survive the package split (queued msgs + beat)
 # ignore_result: nothing reads the return value, and bulk runs would otherwise
@@ -232,3 +235,54 @@ def research_publisher_mainstream_task():
 
     logger.info(f"Publisher mainstream check complete: updated {updated_count} publishers")
     return updated_count
+
+
+# name pinned: wire name must survive the package split (queued msgs + beat)
+@shared_task(name="core.tasks.suggest_genre_aliases_task")
+def suggest_genre_aliases_task():
+    """Weekly: ask the LLM which canonical genre, if any, each common unmapped subject means.
+
+    Suggestions are stored for review in analyze_genres and never applied: one bad
+    alias would mislabel every book that carries the subject.
+    """
+    from ..dna_constants import GENRE_ALIASES
+    from ..models import UnmappedSubject
+    from ..services import _llm
+
+    pending = list(
+        UnmappedSubject.objects.filter(suggested_at__isnull=True).order_by("-seen_count")[:GENRE_SUGGESTION_BATCH_LIMIT]
+    )
+    if not pending:
+        return 0
+
+    genres = sorted(GENRE_ALIASES)
+    subject_lines = "\n".join(f'- "{s.name}" (e.g. on "{s.example_title}")' for s in pending)
+    prompt = f"""You map library subject headings for books onto a fixed list of genres.
+
+Genres: {", ".join(genres)}
+
+For each subject below, answer with exactly one genre from the list if the subject clearly means that genre, otherwise "ignore". Character names, places, people, awards, bestseller lists, audiences, formats and vague topics are "ignore".
+
+Subjects:
+{subject_lines}
+
+Respond with only a JSON object mapping each subject string, exactly as written, to its answer."""
+
+    answers = _llm.generate_json(prompt, temperature=0, max_tokens=2048)
+    if not isinstance(answers, dict):
+        logger.warning("Genre alias suggestions: LLM returned no usable response")
+        return 0
+
+    valid = set(genres) | {"ignore"}
+    now = timezone.now()
+    suggested = 0
+    for subject in pending:
+        answer = str(answers.get(subject.name, "")).strip().lower()
+        if answer in valid:  # anything off-list is dropped and asked again next week
+            subject.suggested_genre = answer
+            subject.suggested_at = now
+            subject.save(update_fields=["suggested_genre", "suggested_at"])
+            suggested += 1
+
+    logger.info(f"Genre alias suggestions: stored {suggested} of {len(pending)}")
+    return suggested
