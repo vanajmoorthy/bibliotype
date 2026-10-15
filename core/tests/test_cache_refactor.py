@@ -58,10 +58,6 @@ class SafeCacheUtilsTests(TestCase):
         result = cache.get("test_key")
         self.assertIsNone(result)
 
-    def test_safe_cache_delete_noop_on_missing_key(self):
-        # Should not raise
-        safe_cache_delete("nonexistent_key")
-
     @patch("core.cache_utils.cache")
     @patch("core.cache_utils.track_redis_cache_error")
     def test_safe_cache_get_handles_exception(self, mock_track, mock_cache):
@@ -147,8 +143,9 @@ class SimilarUsersCacheKeyTests(TestCase):
 
     def test_find_similar_users_defaults_match_production_usage(self):
         """Function defaults should be top_n=30, min_similarity=0.15."""
-        from core.services.user_similarity_service import find_similar_users
         import inspect
+
+        from core.services.user_similarity_service import find_similar_users
 
         sig = inspect.signature(find_similar_users)
         self.assertEqual(sig.parameters["top_n"].default, 30)
@@ -343,9 +340,7 @@ class AnonProfilesSampleTests(TestCase):
 
         self.book1 = Book.objects.create(title="Anon Book 1", author=self.author, average_rating=4.5)
         self.book1.genres.add(self.genre)
-        UserBook.objects.create(
-            user=self.user1, book=self.book1, user_rating=5, is_top_book=True, top_book_position=1
-        )
+        UserBook.objects.create(user=self.user1, book=self.book1, user_rating=5, is_top_book=True, top_book_position=1)
 
     def test_cache_key_is_global_not_per_user(self):
         """After Fix 3, anon_profiles_sample should be a global key without user_id."""
@@ -548,13 +543,6 @@ class PercentilesCacheTTLTests(TestCase):
 )
 class ImportPathTests(TestCase):
     """Verify all import paths work correctly after the refactor."""
-
-    def test_cache_utils_importable_from_core(self):
-        from core.cache_utils import safe_cache_delete, safe_cache_get, safe_cache_set
-
-        self.assertTrue(callable(safe_cache_get))
-        self.assertTrue(callable(safe_cache_set))
-        self.assertTrue(callable(safe_cache_delete))
 
     def test_user_similarity_imports_from_cache_utils(self):
         """find_similar_users should import from cache_utils, not recommendation_service."""

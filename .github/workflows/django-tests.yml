@@ -33,7 +33,10 @@ jobs:
                   echo "POSTGRES_DB=testdb" >> .env
                   echo "POSTGRES_USER=testuser" >> .env
                   echo "POSTGRES_PASSWORD=testpass" >> .env
-                  echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+                  # Empty LLM keys: no test may reach a real (or billed) LLM provider.
+                  echo "GEMINI_API_KEY=" >> .env
+                  echo "GROQ_API_KEY=" >> .env
+                  echo "CEREBRAS_API_KEY=" >> .env
 
             # Build and start all the services (web, worker, db, redis) in the background
             - name: Build and start the Docker containers

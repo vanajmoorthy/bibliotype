@@ -8,6 +8,8 @@ from django.test import Client, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils.html import escape
 
+from core.tests.base import PipelineTestCase
+
 from .ratelimit_test_helpers import frozen_ratelimit_window
 
 
@@ -22,9 +24,10 @@ from .ratelimit_test_helpers import frozen_ratelimit_window
     },
     RATELIMIT_ENABLE=False,
 )
-class ViewE2E_Tests(TransactionTestCase):
+class ViewE2E_Tests(PipelineTestCase):
 
     def setUp(self):
+        super().setUp()
         self.client = Client()
         csv_header = "Title,Author,Exclusive Shelf,My Rating,Number of Pages,Original Publication Year,Date Read,Average Rating,My Review,ISBN13"
         csv_row = "E2E Book,E2E Author,read,5,150,2021,2023/01/15,4.2,A test review.,9780000000003"
@@ -48,9 +51,7 @@ class ViewE2E_Tests(TransactionTestCase):
         connections.close_all()
         super().tearDown()
 
-    @patch("core.services.dna.generate_vibe_with_llm")
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_anonymous_upload_to_signup_and_claim_flow(self, mock_enrich_book, mock_generate_vibe):
+    def test_anonymous_upload_to_signup_and_claim_flow(self):
         """
         Critical path test:
         1. Anonymous user uploads a file. The task runs synchronously.
@@ -60,8 +61,7 @@ class ViewE2E_Tests(TransactionTestCase):
         5. The claim task runs, gets the result from the eager backend, and saves it.
         """
         # Configure mocks for the services called *inside* the task
-        mock_enrich_book.return_value = (None, 0, 0)  # Return dummy values
-        mock_generate_vibe.return_value = ["an e2e vibe"]
+        self.mock_vibe.return_value = ["an e2e vibe"]
 
         # Anonymous Upload
         response = self.client.post(reverse("core:upload"), {"csv_file": self.csv_file})
@@ -127,17 +127,14 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertContains(response, f"taskPoller('/api/task-result/{task_id}/')")
         self.assertContains(response, f"/signup/?task_id={task_id}")
 
-    @patch("core.services.dna.generate_vibe_with_llm")
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_anonymous_upload_binds_task_owner_to_session(self, mock_enrich_book, mock_generate_vibe):
+    def test_anonymous_upload_binds_task_owner_to_session(self):
         """
         US-001: After an anonymous upload, the task_id must be bound to the
         caller's session via both `session["anonymous_task_id"]` and the
         `task_owner_<task_id>` cache entry, so downstream views can refuse
         cross-session lookups.
         """
-        mock_enrich_book.return_value = (None, 0, 0)
-        mock_generate_vibe.return_value = ["bind-test vibe"]
+        self.mock_vibe.return_value = ["bind-test vibe"]
 
         response = self.client.post(reverse("core:upload"), {"csv_file": self.csv_file})
 
@@ -149,15 +146,12 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertIsNotNone(session.session_key)
         self.assertEqual(cache.get(f"task_owner_{task_id}"), session.session_key)
 
-    @patch("core.services.dna.generate_vibe_with_llm")
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_task_result_owner_can_fetch_own_task(self, mock_enrich_book, mock_generate_vibe):
+    def test_task_result_owner_can_fetch_own_task(self):
         """
         US-002 positive: the session that uploaded a CSV is able to poll its
         own task_id and gets a SUCCESS response.
         """
-        mock_enrich_book.return_value = (None, 0, 0)
-        mock_generate_vibe.return_value = ["owner vibe"]
+        self.mock_vibe.return_value = ["owner vibe"]
 
         response = self.client.post(reverse("core:upload"), {"csv_file": self.csv_file})
         task_id = response.url.rstrip("/").split("/")[-1]
@@ -167,9 +161,7 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "SUCCESS")
 
-    @patch("core.services.dna.generate_vibe_with_llm")
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_task_result_rejects_foreign_session(self, mock_enrich_book, mock_generate_vibe):
+    def test_task_result_rejects_foreign_session(self):
         """
         US-002 negative: a second client that did not upload the file must
         receive a 403 when polling someone else's task_id, AND no DNA must
@@ -178,8 +170,7 @@ class ViewE2E_Tests(TransactionTestCase):
         leaked DNA into the requester's session, which combined with the
         signup view to re-open the hijack).
         """
-        mock_enrich_book.return_value = (None, 0, 0)
-        mock_generate_vibe.return_value = ["enforced vibe"]
+        self.mock_vibe.return_value = ["enforced vibe"]
 
         uploader = self.client
         upload_response = uploader.post(reverse("core:upload"), {"csv_file": self.csv_file})
@@ -202,16 +193,13 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertNotIn("dna_data", attacker.session)
         self.assertNotIn("book_ids", attacker.session)
 
-    @patch("core.services.dna.generate_vibe_with_llm")
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_signup_rejects_cross_session_task_id_claim(self, mock_enrich_book, mock_generate_vibe):
+    def test_signup_rejects_cross_session_task_id_claim(self):
         """
         US-003 negative: session A uploads and gets a task_id. Session B (a
         different Client) attempts to sign up using A's task_id. The signup
         form must render with a validation error and no user must be created.
         """
-        mock_enrich_book.return_value = (None, 0, 0)
-        mock_generate_vibe.return_value = ["cross-session vibe"]
+        self.mock_vibe.return_value = ["cross-session vibe"]
 
         uploader = self.client
         upload_response = uploader.post(reverse("core:upload"), {"csv_file": self.csv_file})
@@ -236,17 +224,14 @@ class ViewE2E_Tests(TransactionTestCase):
         )
         self.assertFalse(User.objects.filter(username="attacker").exists())
 
-    @patch("core.services.dna.generate_vibe_with_llm")
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_signup_positive_claim_after_session_rotation(self, mock_enrich_book, mock_generate_vibe):
+    def test_signup_positive_claim_after_session_rotation(self):
         """
         US-003 positive: same Client uploads then signs up. login() rotates
         the session_key, but the view captured the pre-login key and passes
         it to the claim task, so the claim should still succeed. Explicitly
         verifies that the session_key did rotate between upload and post-login.
         """
-        mock_enrich_book.return_value = (None, 0, 0)
-        mock_generate_vibe.return_value = ["rotation vibe"]
+        self.mock_vibe.return_value = ["rotation vibe"]
 
         upload_response = self.client.post(reverse("core:upload"), {"csv_file": self.csv_file})
         task_id = upload_response.url.rstrip("/").split("/")[-1]
@@ -277,12 +262,8 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertIsNotNone(user.userprofile.dna_data)
 
     @patch("core.tasks.generate_recommendations_task")
-    @patch("core.services.dna.generate_vibe_with_llm")
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     @patch("core.tasks.check_author_mainstream_status_task")
-    def test_authenticated_user_dna_regeneration_flow(
-        self, mock_author_check, mock_enrich_book, mock_generate_vibe, mock_recommendations_task
-    ):
+    def test_authenticated_user_dna_regeneration_flow(self, mock_author_check, mock_recommendations_task):
         """
         Test complete DNA regeneration flow for authenticated users:
         1. Create user with initial DNA
@@ -290,8 +271,7 @@ class ViewE2E_Tests(TransactionTestCase):
         3. Verify pending_dna_task_id is cleared after save
         4. Verify new DNA data is saved correctly
         """
-        mock_enrich_book.return_value = (None, 0, 0)
-        mock_generate_vibe.return_value = ["new regenerated vibe"]
+        self.mock_vibe.return_value = ["new regenerated vibe"]
         mock_author_check.delay = MagicMock()
         mock_recommendations_task.delay = MagicMock()
 
@@ -330,15 +310,12 @@ class ViewE2E_Tests(TransactionTestCase):
         self.assertEqual(user.userprofile.total_books_read, 10)
 
     @patch("core.tasks.generate_recommendations_task")
-    @patch("core.services.dna.generate_vibe_with_llm")
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_pending_dna_task_id_cleared_on_save(self, mock_enrich_book, mock_generate_vibe, mock_recommendations_task):
+    def test_pending_dna_task_id_cleared_on_save(self, mock_recommendations_task):
         """
         Test that pending_dna_task_id is properly cleared when DNA is saved to profile.
         This is critical for the status polling mechanism to work correctly.
         """
-        mock_enrich_book.return_value = (None, 0, 0)
-        mock_generate_vibe.return_value = ["test vibe"]
+        self.mock_vibe.return_value = ["test vibe"]
         mock_recommendations_task.delay = MagicMock()
 
         # Create user with pending task
@@ -519,13 +496,16 @@ class ViewE2E_Tests(TransactionTestCase):
         # Force the recreate branch on every call by making the ``.get()``
         # lookup miss, then mock out the recommendation engine so we isolate
         # the unique-constraint behavior under test.
-        with patch.object(
-            AnonymousUserSession.objects,
-            "get",
-            side_effect=AnonymousUserSession.DoesNotExist,
-        ), patch(
-            "core.services.recommendation_service.get_recommendations_for_anonymous",
-            return_value=[],
+        with (
+            patch.object(
+                AnonymousUserSession.objects,
+                "get",
+                side_effect=AnonymousUserSession.DoesNotExist,
+            ),
+            patch(
+                "core.services.recommendation_service.get_recommendations_for_anonymous",
+                return_value=[],
+            ),
         ):
             with self.assertNoLogs("core.views", level="ERROR"):
                 response_one = self.client.get(reverse("core:display_dna"))

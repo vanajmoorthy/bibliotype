@@ -173,8 +173,7 @@ class RecommendationTestCase(TestCase):
         self.assertGreater(len(top_books), 0)
 
         # Verify top book flags
-        top_books_queried = UserBook.objects.filter(user=self.user1, is_top_book=True).order_by("top_book_position")
-        self.assertTrue(all(ub.is_top_book for ub in top_books_queried))
+        self.assertEqual(UserBook.objects.filter(user=self.user1, is_top_book=True).count(), len(top_books))
 
     def test_top_books_rating_priority(self):
         """Test that books with higher ratings are prioritized"""

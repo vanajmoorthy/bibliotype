@@ -10,6 +10,7 @@ from django.test import TestCase, TransactionTestCase, override_settings
 from core.models import Author, Book
 from core.services import book_enrichment_service as svc
 from core.services.llm_service import generate_vibe_with_llm
+from core.tests.base import PipelineTestCase
 
 LOCMEM_CACHE = {
     "default": {
@@ -243,11 +244,11 @@ GOODREADS_CSV = (
     CELERY_TASK_STORE_EAGER_RESULT=True,
     CACHES=LOCMEM_CACHE,
 )
-@patch("core.services.book_enrichment_service.enrich_book_from_apis")
-class VibeFailureRetryPipelineTests(TransactionTestCase):
+class VibeFailureRetryPipelineTests(PipelineTestCase):
     """A failed vibe must not be cached: the next DNA run retries the LLM."""
 
     def setUp(self):
+        super().setUp()
         cache.clear()
         self.user = User.objects.create_user(username="vibe_user", email="vibe@test.com", password="x")
 
@@ -257,7 +258,7 @@ class VibeFailureRetryPipelineTests(TransactionTestCase):
         connections.close_all()
         super().tearDown()
 
-    def test_failed_vibe_is_retried_on_next_run(self, mock_enrich):
+    def test_failed_vibe_is_retried_on_next_run(self):
         from core.services.dna import calculate_full_dna
 
         with patch("core.services.dna.generate_vibe_with_llm", return_value=None):
