@@ -61,3 +61,9 @@ def split_pcts(split):
         return (0, 0)
     fiction_pct = int(fiction / total * 100 + 0.5)
     return (fiction_pct, 100 - fiction_pct)
+
+
+@register.filter
+def chart_fields(dna):
+    """Only the DNA keys charts_scripts.html reads, so json_script doesn't publish the whole dict."""
+    return {key: dna.get(key) for key in ("top_genres", "top_authors", "fiction_nonfiction_split")}
