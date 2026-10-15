@@ -80,3 +80,7 @@ docs/brainstorms/
 
 # Local screenshot/scratch artifacts from testing sessions
 .testing-screenshots/
+
+# Finder/iCloud conflict copies ("foo 2.py")
+* 2.*
+*([0-9]).*
