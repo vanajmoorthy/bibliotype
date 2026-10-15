@@ -17,9 +17,9 @@ from ..analytics.events import (
 )
 from ..cache_utils import safe_cache_add
 from ..services.anonymization_service import _key_hash
+from ..services.user_similarity_service import BADGE_COLOR_MAP
+from ._enrichment_stats import _compute_enrichment_progress
 from ._helpers import (
-    BADGE_COLOR_MAP,
-    _compute_enrichment_progress,
     _enrich_dna_for_display,
     _expand_book_dict,
     _get_recommendation_pool_display,

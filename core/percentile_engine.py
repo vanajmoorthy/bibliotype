@@ -10,6 +10,14 @@ logger = logging.getLogger(__name__)
 # Averages stored as 0 when a library has no page/year/date data. 0 means "missing", not a real value.
 MISSING_WHEN_ZERO = {"avg_book_length", "avg_publish_year", "avg_books_per_year"}
 
+# (user_stats key, AggregateAnalytics histogram field, bucket size) for each community metric.
+METRICS = (
+    ("avg_book_length", "avg_book_length_dist", 50),
+    ("avg_publish_year", "avg_publish_year_dist", 10),
+    ("total_books_read", "total_books_read_dist", 25),
+    ("avg_books_per_year", "avg_books_per_year_dist", 5),
+)
+
 
 def _has_value(stats, key):
     value = stats.get(key)
@@ -33,6 +41,19 @@ def _parse_bucket_start(bucket_key):
         return None
 
 
+def _bucket_percentile(dist, bucket_start, bucket_size, total_other_users, count_higher=False):
+    """Share of other users in buckets below (or above) the user's, counting the user's own bucket as half."""
+    bucket_key = f"{bucket_start}-{bucket_start + bucket_size - 1}"
+    beyond_count = sum(
+        count
+        for bucket, count in dist.items()
+        if (bs := _parse_bucket_start(bucket)) is not None
+        and (bs > bucket_start if count_higher else bs < bucket_start)
+    )
+    better_than_count = beyond_count + (dist.get(bucket_key, 0) / 2)
+    return min(100.0, (better_than_count / total_other_users) * 100)
+
+
 def update_analytics_from_stats(user_stats, previous_stats=None):
     """Updates aggregate analytics histograms with a user's stats.
 
@@ -44,13 +65,6 @@ def update_analytics_from_stats(user_stats, previous_stats=None):
         previous_stats: If provided (re-upload), old stats are subtracted before adding new ones.
             When None (first upload or anonymous), total_profiles_counted is incremented.
     """
-    distributions = {
-        "avg_book_length": ("avg_book_length_dist", 50),
-        "avg_publish_year": ("avg_publish_year_dist", 10),
-        "total_books_read": ("total_books_read_dist", 25),
-        "avg_books_per_year": ("avg_books_per_year_dist", 5),
-    }
-
     with transaction.atomic():
         # Lock the singleton row to prevent concurrent workers from interleaving reads/writes.
         # Gracefully skips locking on SQLite (dev/test) where select_for_update is unsupported.
@@ -61,7 +75,7 @@ def update_analytics_from_stats(user_stats, previous_stats=None):
         if previous_stats is None:
             analytics.total_profiles_counted = F("total_profiles_counted") + 1
 
-        for stat_key, (dist_field, bucket_size) in distributions.items():
+        for stat_key, dist_field, bucket_size in METRICS:
             current_dist = getattr(analytics, dist_field)
 
             # Subtract old bucket on re-upload
@@ -90,72 +104,23 @@ def calculate_percentiles_from_aggregates(user_stats):
         return {}
 
     percentiles = {}
-    length_dist = analytics.avg_book_length_dist
     user_length = user_stats.get("avg_book_length", 0)
-    bucket_size_len = 50
-    user_length_bucket_start = user_length // bucket_size_len * bucket_size_len
-    user_length_bucket_key = f"{user_length_bucket_start}-{user_length_bucket_start + bucket_size_len - 1}"
-
-    lower_buckets_count_len = sum(
-        count
-        for bucket, count in length_dist.items()
-        if (bs := _parse_bucket_start(bucket)) is not None and bs < user_length_bucket_start
+    percentiles["avg_book_length"] = _bucket_percentile(
+        analytics.avg_book_length_dist, user_length // 50 * 50, 50, total_other_users
     )
-    same_bucket_count_len = length_dist.get(user_length_bucket_key, 0)
-    better_than_count_length = lower_buckets_count_len + (same_bucket_count_len / 2)
-
-    percentile_length = (better_than_count_length / total_other_users) * 100
-    percentiles["avg_book_length"] = min(100.0, percentile_length)
-    year_dist = analytics.avg_publish_year_dist
+    # Older reading scores higher, so count the buckets above the user's.
     user_year = user_stats.get("avg_publish_year", 2025)
-    bucket_size_year = 10
-    user_year_bucket_start = user_year // bucket_size_year * bucket_size_year
-    user_year_bucket_key = f"{user_year_bucket_start}-{user_year_bucket_start + bucket_size_year - 1}"
-
-    higher_buckets_count_year = sum(
-        count
-        for bucket, count in year_dist.items()
-        if (bs := _parse_bucket_start(bucket)) is not None and bs > user_year_bucket_start
+    percentiles["avg_publish_year"] = _bucket_percentile(
+        analytics.avg_publish_year_dist, user_year // 10 * 10, 10, total_other_users, count_higher=True
     )
-    same_bucket_count_year = year_dist.get(user_year_bucket_key, 0)
-    older_than_count = higher_buckets_count_year + (same_bucket_count_year / 2)
-
-    percentile_year = (older_than_count / total_other_users) * 100
-    percentiles["avg_publish_year"] = min(100.0, percentile_year)
-    books_dist = analytics.total_books_read_dist
     user_books = user_stats.get("total_books_read", 0)
-    bucket_size_books = 25
-    user_books_bucket_start = user_books // bucket_size_books * bucket_size_books
-    user_books_bucket_key = f"{user_books_bucket_start}-{user_books_bucket_start + bucket_size_books - 1}"
-
-    lower_buckets_count_books = sum(
-        count
-        for bucket, count in books_dist.items()
-        if (bs := _parse_bucket_start(bucket)) is not None and bs < user_books_bucket_start
+    percentiles["total_books_read"] = _bucket_percentile(
+        analytics.total_books_read_dist, user_books // 25 * 25, 25, total_other_users
     )
-    same_bucket_count_books = books_dist.get(user_books_bucket_key, 0)
-    better_than_count_books = lower_buckets_count_books + (same_bucket_count_books / 2)
-
-    percentile_books = (better_than_count_books / total_other_users) * 100
-    percentiles["total_books_read"] = min(100.0, percentile_books)
-
-    # Books per year percentile
-    bpy_dist = analytics.avg_books_per_year_dist
     user_bpy = user_stats.get("avg_books_per_year", 0)
-    bucket_size_bpy = 5
-    user_bpy_bucket_start = int(user_bpy // bucket_size_bpy * bucket_size_bpy)
-    user_bpy_bucket_key = f"{user_bpy_bucket_start}-{user_bpy_bucket_start + bucket_size_bpy - 1}"
-
-    lower_buckets_count_bpy = sum(
-        count
-        for bucket, count in bpy_dist.items()
-        if (bs := _parse_bucket_start(bucket)) is not None and bs < user_bpy_bucket_start
+    percentiles["avg_books_per_year"] = _bucket_percentile(
+        analytics.avg_books_per_year_dist, int(user_bpy // 5 * 5), 5, total_other_users
     )
-    same_bucket_count_bpy = bpy_dist.get(user_bpy_bucket_key, 0)
-    better_than_count_bpy = lower_buckets_count_bpy + (same_bucket_count_bpy / 2)
-
-    percentile_bpy = (better_than_count_bpy / total_other_users) * 100
-    percentiles["avg_books_per_year"] = min(100.0, percentile_bpy)
 
     for key in MISSING_WHEN_ZERO:
         if not _has_value(user_stats, key):
@@ -184,8 +149,6 @@ def calculate_community_means():
         return round(weighted_sum / total_count, 1)
 
     return {
-        "avg_book_length": _weighted_mean(analytics.avg_book_length_dist, 50),
-        "avg_publish_year": _weighted_mean(analytics.avg_publish_year_dist, 10),
-        "total_books_read": _weighted_mean(analytics.total_books_read_dist, 25),
-        "avg_books_per_year": _weighted_mean(analytics.avg_books_per_year_dist, 5),
+        stat_key: _weighted_mean(getattr(analytics, dist_field), bucket_size)
+        for stat_key, dist_field, bucket_size in METRICS
     }

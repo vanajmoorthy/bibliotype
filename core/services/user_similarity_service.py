@@ -426,6 +426,17 @@ def get_match_quality_label(similarity_score):
         return "Opposite tastes"
 
 
+# Tailwind badge class for each get_match_quality_label() label.
+BADGE_COLOR_MAP = {
+    "Literary twin": "bg-badge-5",
+    "Kindred reader": "bg-badge-4",
+    "Some shared tastes": "bg-badge-3",
+    "Some overlap": "bg-badge-2",
+    "Different preferences": "bg-gray-200",
+    "Opposite tastes": "bg-gray-200",
+}
+
+
 COMPARE_CACHE_TTL = 1800  # 30 min, matching similar_users_{id}
 
 

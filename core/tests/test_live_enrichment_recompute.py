@@ -14,7 +14,7 @@ from django.test import TestCase, override_settings
 
 from core.cache_utils import safe_cache_delete
 from core.services.dna.reader_type import recompute_reader_type_from_db
-from core.views._helpers import _compute_enrichment_progress, _compute_enrichment_stats
+from core.views._enrichment_stats import _compute_enrichment_progress, _compute_enrichment_stats
 
 from .test_live_enrichment import _add_book, _make_user
 
@@ -29,6 +29,7 @@ def _clear_stats_cache(user):
 # ---------------------------------------------------------------------------
 # M1 — shelf signals persisted at generation drive the recompute split
 # ---------------------------------------------------------------------------
+
 
 @LOCMEM
 class ShelfSignalRecomputeTests(TestCase):
@@ -88,6 +89,7 @@ class ShelfSignalRecomputeTests(TestCase):
 # M2 — reader-type explanation stability across recomputes
 # ---------------------------------------------------------------------------
 
+
 @LOCMEM
 class ReaderTypeExplanationStabilityTests(TestCase):
     def setUp(self):
@@ -123,6 +125,7 @@ class ReaderTypeExplanationStabilityTests(TestCase):
 # M3 — finalize busts the 2s stats cache
 # ---------------------------------------------------------------------------
 
+
 @LOCMEM
 class FinalizeBustsStatsCacheTests(TestCase):
     def setUp(self):
@@ -152,6 +155,7 @@ class FinalizeBustsStatsCacheTests(TestCase):
 # ---------------------------------------------------------------------------
 # L1 — finalize does not clobber a superseding re-upload
 # ---------------------------------------------------------------------------
+
 
 @LOCMEM
 class FinalizeSupersedeGuardTests(TestCase):

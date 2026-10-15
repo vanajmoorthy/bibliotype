@@ -186,7 +186,7 @@ class UnstampedBookRetryTests(TransactionTestCase):
         self.book.refresh_from_db()
         self.assertIsNotNone(self.book.google_books_last_checked)
 
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
@@ -261,7 +261,7 @@ class VibeFailureRetryPipelineTests(PipelineTestCase):
     def test_failed_vibe_is_retried_on_next_run(self):
         from core.services.dna import calculate_full_dna
 
-        with patch("core.services.dna.generate_vibe_with_llm", return_value=None):
+        with patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=None):
             calculate_full_dna(GOODREADS_CSV, self.user)
 
         profile = self.user.userprofile
@@ -269,7 +269,7 @@ class VibeFailureRetryPipelineTests(PipelineTestCase):
         self.assertEqual(profile.reading_vibe, [])
         self.assertIsNone(profile.vibe_data_hash)
 
-        with patch("core.services.dna.generate_vibe_with_llm", return_value=["a real vibe"]) as mock_vibe:
+        with patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["a real vibe"]) as mock_vibe:
             calculate_full_dna(GOODREADS_CSV, self.user)
 
         profile.refresh_from_db()

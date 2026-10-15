@@ -30,7 +30,7 @@ Backward compatibility: the pre-overhaul names `classics`, `young adult`, `child
 Since PR #120 the two sources **merge** (Google Books first — higher confidence — Open Library supplements) instead of GB replacing OL. The combined set is sorted by `GENRE_PRIORITY` and truncated to the top 5–6 before being written to the `Book.genres` M2M.
 
 Enrichment runs in two modes:
-- **Inline** during DNA calculation (since PR #121): new/genre-less books call `enrich_book_from_apis(book, session, quick_mode=True)` right inside `process_book_row` (nested in `calculate_full_dna`, `core/services/dna/__init__.py`) with reduced HTTP timeouts (the `quick_mode` branches in `book_enrichment_service.py`), so your first dashboard render uses real genres. Governed by a 90-second wall-clock budget (`INLINE_ENRICHMENT_BUDGET_SECONDS` in `core/services/dna/enrichment_budget.py`, lazily started so already-enriched libraries pay nothing).
+- **Inline** during DNA calculation (since PR #121): new/genre-less books call `enrich_book_from_apis(book, session, quick_mode=True)` right inside `process_book_row` (nested in `sync_read_books`, `core/services/dna/book_sync.py`) with reduced HTTP timeouts (the `quick_mode` branches in `book_enrichment_service.py`), so your first dashboard render uses real genres. Governed by a 90-second wall-clock budget (`INLINE_ENRICHMENT_BUDGET_SECONDS` in `core/services/dna/enrichment_budget.py`, lazily started so already-enriched libraries pay nothing).
 - **Async fallback** via `enrich_book_task` when the inline call fails or the budget runs out — identical behavior to the pre-overhaul world.
 
 ### StoryGraph tags (CSV parse)
@@ -49,7 +49,7 @@ Everything the analyzer touches goes through `canonicalize_genre_names` (`core/s
 
 One shared module decides — `core/services/genre_classification.py` — used by **both** counting paths so they can't drift:
 - upload-time: `calculate_full_dna` (`core/services/dna/__init__.py`)
-- dashboard recompute: `_compute_enrichment_stats` (`core/views/_helpers.py`)
+- dashboard recompute: `_compute_enrichment_stats` (`core/views/_enrichment_stats.py`)
 
 `classify_genres(canonical, shelf_fiction, shelf_nonfiction, shelf_genres)` (`genre_classification.py`) resolves in this order:
 
@@ -68,7 +68,7 @@ The stored shape in `dna_data`:
 "fiction_nonfiction_split": {"fiction_count": N, "nonfiction_count": N, "defaulted_count": N}
 ```
 
-`fiction_nonfiction_card.html` uses `fiction_count + nonfiction_count` as its denominator and shows a "Based on X of Y books" note while enrichment is pending and defaulted books remain; `genre_coverage_pct` comes from `_compute_enrichment_progress` (`core/views/_helpers.py`).
+`fiction_nonfiction_card.html` uses `fiction_count + nonfiction_count` as its denominator and shows a "Based on X of Y books" note while enrichment is pending and defaulted books remain; `genre_coverage_pct` comes from `_compute_enrichment_progress` (`core/views/_enrichment_stats.py`).
 
 ## 5. Downstream consumers
 

@@ -71,3 +71,29 @@ def _detect_and_normalize_csv(df):
             if col not in df.columns:
                 df[col] = pd.NA
         return df, "storygraph"
+
+
+def _coerce_columns(temp_df):
+    """Coerce numeric/date/review columns in place, adding any the export omitted."""
+    # Numeric columns: coerce if present, otherwise add as NaN.
+    # Goodreads exports may omit columns when the user has no data in them.
+    for col in ["My Rating", "Number of Pages", "Average Rating"]:
+        if col in temp_df.columns:
+            temp_df[col] = pd.to_numeric(temp_df[col], errors="coerce")
+        else:
+            temp_df[col] = pd.NA
+
+    if "Date Read" in temp_df.columns:
+        temp_df["Date Read"] = pd.to_datetime(temp_df["Date Read"], errors="coerce")
+    else:
+        temp_df["Date Read"] = pd.NaT
+
+    if "Original Publication Year" in temp_df.columns:
+        temp_df["Original Publication Year"] = pd.to_numeric(temp_df["Original Publication Year"], errors="coerce")
+    else:
+        temp_df["Original Publication Year"] = None
+
+    if "My Review" in temp_df.columns:
+        temp_df.loc[:, "My Review"] = temp_df["My Review"].fillna("")
+    else:
+        temp_df["My Review"] = ""

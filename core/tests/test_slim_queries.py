@@ -119,7 +119,7 @@ class InlineEnrichmentConcurrencyTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_inline_enrichment_capped_at_two_concurrent(self, mock_enrich, *_):
         from core.services.dna import calculate_full_dna
@@ -150,9 +150,9 @@ class InlineEnrichmentConcurrencyTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    @patch("core.services.dna._EnrichmentBudget")
+    @patch("core.services.dna.book_sync._EnrichmentBudget")
     def test_budget_rechecked_after_waiting_for_a_slot(self, mock_budget, mock_enrich, _vibe, mock_enrich_task, *_):
         from core.services.dna import calculate_full_dna
 
@@ -184,7 +184,7 @@ class WorkerConnectionCleanupTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_worker_connections_closed_after_sync(self, *_):
         import gc

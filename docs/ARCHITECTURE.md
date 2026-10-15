@@ -76,7 +76,7 @@ Stages cycle through four animated headings: "Sequencing Your Bibliotype...", "A
 
 ## 2. The DNA Analysis Engine
 
-The heart of the application is `calculate_full_dna()` in `core/services/dna/__init__.py` (with CSV parsing, reader type scoring, enrichment budget and persistence split into sibling modules in `core/services/dna/`). This function takes a CSV string and produces a large dictionary (the "DNA") containing everything the dashboard needs.
+The heart of the application is `calculate_full_dna()` in `core/services/dna/__init__.py` (with CSV parsing, currently-reading, book sync, stats, the reading vibe, reader type scoring, enrichment budget and persistence split into sibling modules in `core/services/dna/`). This function takes a CSV string and produces a large dictionary (the "DNA") containing everything the dashboard needs.
 
 ### CSV Parsing
 

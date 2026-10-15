@@ -531,7 +531,7 @@ class InlineEnrichmentDuringDnaTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_inline_enrichment_provides_genres(self, mock_inline, mock_vibe, mock_delay, mock_author, mock_recs):
         """New books are enriched inline with quick_mode=True; the genres land in
@@ -566,7 +566,7 @@ class InlineEnrichmentDuringDnaTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_async_fallback_on_inline_exception(self, mock_inline, mock_vibe, mock_delay, mock_author, mock_recs):
         """Inline failure falls back to enrich_book_task.delay with the upload-nonce args."""
@@ -589,7 +589,7 @@ class InlineEnrichmentDuringDnaTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_goodreads_bookshelves_break_ties_in_split(
         self, mock_inline, mock_vibe, mock_delay, mock_author, mock_recs
@@ -618,7 +618,7 @@ class InlineEnrichmentDuringDnaTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     @patch("core.services.dna.enrichment_budget._EnrichmentBudget.has_remaining", return_value=False)
     def test_async_fallback_when_budget_exhausted(
@@ -1341,7 +1341,7 @@ class AnonymousSessionRatingPairingTests(TransactionTestCase):
 
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
     def test_ratings_attach_to_their_own_books(self, mock_inline, mock_vibe, mock_enrich, mock_author):
         from core.services.dna import calculate_full_dna
