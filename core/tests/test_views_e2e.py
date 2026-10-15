@@ -379,7 +379,7 @@ class ViewE2E_Tests(TransactionTestCase):
 
         self.client.login(username="testuser3", password="password")
 
-        response = self.client.get(reverse("core:api_check_dna_status"))
+        response = self.client.get(reverse("core:api_status", args=["dna"]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "PENDING")
 
@@ -393,7 +393,7 @@ class ViewE2E_Tests(TransactionTestCase):
 
         self.client.login(username="testuser4", password="password")
 
-        response = self.client.get(reverse("core:api_check_dna_status"))
+        response = self.client.get(reverse("core:api_status", args=["dna"]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "SUCCESS")
 
@@ -447,13 +447,13 @@ class ViewE2E_Tests(TransactionTestCase):
 
         self.client.login(username="testuser5", password="password")
 
-        response = self.client.get(reverse("core:api_check_dna_status"))
+        response = self.client.get(reverse("core:api_status", args=["dna"]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "FAILURE")
 
     def test_status_check_returns_failure_when_task_failed(self):
         """
-        Test that check_dna_status_view returns FAILURE status when Celery task fails
+        Test that the dna status poll returns FAILURE status when Celery task fails
         and clears pending_dna_task_id.
         """
         user = User.objects.create_user(username="testuser6", password="password")
@@ -467,7 +467,7 @@ class ViewE2E_Tests(TransactionTestCase):
         mock_result.info = Exception("Something went wrong")
 
         with patch("core.views.upload.AsyncResult", return_value=mock_result):
-            response = self.client.get(reverse("core:api_check_dna_status"))
+            response = self.client.get(reverse("core:api_status", args=["dna"]))
 
         data = response.json()
         self.assertEqual(data["status"], "FAILURE")
@@ -946,12 +946,23 @@ class LoginUrlRedirectTests(TransactionTestCase):
     login page, not Django's default /accounts/login/ (which 404s here)."""
 
     def test_anonymous_enrichment_status_redirects_to_login(self):
-        response = self.client.get(reverse("core:api_enrichment_status"))
+        response = self.client.get(reverse("core:api_status", args=["enrichment"]))
         self.assertEqual(response.status_code, 302)
         self.assertTrue(
             response.url.startswith(reverse("core:login")),
             f"expected redirect into {reverse('core:login')}, got {response.url}",
         )
+
+    def test_anonymous_recommendations_status_redirects_to_login(self):
+        response = self.client.get(reverse("core:api_status", args=["recommendations"]))
+        self.assertEqual(response.status_code, 302)
+
+    def test_anonymous_dna_status_is_served(self):
+        response = self.client.get(reverse("core:api_status", args=["dna"]))
+        self.assertEqual(response.json(), {"status": "PENDING"})
+
+    def test_unknown_status_part_404s(self):
+        self.assertEqual(self.client.get("/api/status/nope/").status_code, 404)
 
     def test_anonymous_logout_redirects_to_login(self):
         response = self.client.get(reverse("core:logout"))
