@@ -24,7 +24,7 @@ Local development uses `docker-compose.local.yml`, which runs all 4 services (Po
 ```bash
 docker-compose -f docker-compose.local.yml up --build -d      # Build and start everything
 docker-compose -f docker-compose.local.yml exec web poetry run python manage.py migrate
-docker-compose -f docker-compose.local.yml exec web poetry run python manage.py loaddata core/fixtures/initial_data.json
+docker-compose -f docker-compose.local.yml exec web poetry run python manage.py loaddata core/fixtures/full_initial_data.json
 docker-compose -f docker-compose.local.yml exec web poetry run python manage.py createsuperuser
 # App at http://localhost:8000
 
