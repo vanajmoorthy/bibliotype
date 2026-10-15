@@ -7,11 +7,12 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from ...models import Author, UserProfile
 from ..top_books_service import MIN_REVIEW_LENGTH_FOR_SENTIMENT, compute_book_score
+from .types import ReadingDNA
 
 logger = logging.getLogger(__name__)
 
 
-def _save_dna_to_profile(profile, dna_data, dispatch_recommendations=True, task_id=None):
+def _save_dna_to_profile(profile, dna_data: ReadingDNA, dispatch_recommendations=True, task_id=None):
     """Persist DNA and kick off async recommendations.
 
     dispatch_recommendations=False (bulk seeding) skips the recommendations

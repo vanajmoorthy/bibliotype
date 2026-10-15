@@ -138,9 +138,6 @@ def upload_view(request):
                 )
                 return redirect(reverse("core:display_dna") + "?processing=true")
 
-            # Clear old session data so the view will use the updated profile data
-            request.session.pop("dna_data", None)
-
             # Store upload nonce BEFORE dispatching the task so enrichment tasks
             # from previous uploads can detect they've been superseded. Using uuid
             # rather than task ID since the task hasn't been created yet.
@@ -339,8 +336,6 @@ def task_status_view(request, task_id):
 
 
 def get_task_result_view(request, task_id):
-    from ..models import AnonymousUserSession
-
     task_id = str(task_id)  # cache keys and AsyncResult expect the canonical string
 
     # US-002 (hardened post-review): refuse task_ids that aren't bound to the
@@ -370,20 +365,8 @@ def get_task_result_view(request, task_id):
         return JsonResponse({"status": "FORBIDDEN"}, status=403)
 
     cached_result = safe_cache_get(f"dna_result_{task_id}")
+    # The DNA itself is read from AnonymousUserSession (or the profile) by get_request_dna, not copied here.
     if cached_result is not None:
-        request.session["dna_data"] = cached_result
-        # Also store book IDs and ratings from AnonymousUserSession if it exists
-        if request.session.session_key:
-            try:
-                anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
-                request.session["book_ids"] = anon_session.books_data or []
-                request.session["top_book_ids"] = anon_session.top_books_data or []
-                # Use getattr for backwards compatibility if migration hasn't run yet
-                request.session["book_ratings"] = getattr(anon_session, "book_ratings", None) or {}
-            except AnonymousUserSession.DoesNotExist:
-                pass
-        request.session.save()
-
         return JsonResponse(
             {
                 "status": "SUCCESS",
@@ -394,21 +377,6 @@ def get_task_result_view(request, task_id):
     result = AsyncResult(task_id)
 
     if result.state == "SUCCESS":
-        dna_data = result.get()
-
-        request.session["dna_data"] = dna_data
-        # Also store book IDs and ratings from AnonymousUserSession if it exists
-        if request.session.session_key:
-            try:
-                anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
-                request.session["book_ids"] = anon_session.books_data or []
-                request.session["top_book_ids"] = anon_session.top_books_data or []
-                # Use getattr for backwards compatibility if migration hasn't run yet
-                request.session["book_ratings"] = getattr(anon_session, "book_ratings", None) or {}
-            except AnonymousUserSession.DoesNotExist:
-                pass
-        request.session.save()
-
         return JsonResponse(
             {
                 "status": "SUCCESS",

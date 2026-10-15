@@ -25,6 +25,7 @@ from ..cache_utils import safe_cache_get
 from ..forms import CustomUserCreationForm
 from ..ratelimit_utils import client_ip_key, get_real_client_ip
 from ..tasks import claim_anonymous_dna_task, claim_dna
+from ._helpers import get_request_dna
 
 logger = logging.getLogger(__name__)
 
@@ -101,17 +102,16 @@ def _signup_view_throttled(request):
                     return render(request, "core/signup.html", {"form": form, "task_id_to_claim": task_id})
 
             pre_login_session_key = request.session.session_key
+            anon_dna = get_request_dna(request)  # before login(), while it still resolves the anonymous DNA
 
             user = form.save()
             login(request, user)
 
-            had_dna_in_session = "dna_data" in request.session
+            had_dna_in_session = anon_dna is not None
 
             if task_id_to_claim:
                 user.userprofile.pending_dna_task_id = task_id_to_claim
                 user.userprofile.save(update_fields=["pending_dna_task_id"])
-                # The claim task saves the DNA to the profile; drop the anonymous snapshot.
-                request.session.pop("dna_data", None)
                 claim_anonymous_dna_task.delay(user.id, task_id_to_claim, pre_login_session_key)
 
                 # anonymous_dna_claimed fires from the claim task once the DNA is actually saved
@@ -125,8 +125,8 @@ def _signup_view_throttled(request):
                 processing_url = reverse("core:display_dna") + "?processing=true"
                 return redirect(processing_url)
 
-            if "dna_data" in request.session:
-                claim_dna(user, request.session.pop("dna_data"), pre_login_session_key)
+            if anon_dna:
+                claim_dna(user, anon_dna, pre_login_session_key)
 
                 # Track signup with session DNA (could be after anonymous DNA)
                 track_user_signed_up(
@@ -193,14 +193,12 @@ def _login_view_throttled(request):
         if user is not None:
             # login() rotates the session key; AnonymousUserSession is keyed by the old one
             pre_login_session_key = request.session.session_key
+            anon_dna = get_request_dna(request)
             login(request, user)
 
-            had_dna_in_session = "dna_data" in request.session
-
-            if "dna_data" in request.session:
-                dna_to_save = request.session.pop("dna_data")
+            if anon_dna:
                 if not user.userprofile.dna_data:
-                    claim_dna(user, dna_to_save, pre_login_session_key)
+                    claim_dna(user, anon_dna, pre_login_session_key)
                 messages.success(request, "Logged in successfully!", extra_tags="ephemeral")
 
                 # Track login
@@ -233,8 +231,6 @@ def login_view(request):
 @require_POST
 @login_required
 def logout_view(request):
-    if "dna_data" in request.session:
-        request.session.pop("dna_data", None)
     logout(request)
     messages.info(request, "You have been logged out.", extra_tags="ephemeral")
     return redirect("core:home")

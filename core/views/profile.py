@@ -78,9 +78,6 @@ def update_privacy_view(request):
             return JsonResponse({"status": "success", "is_public": False})
         messages.success(request, "Your profile is now private.", extra_tags="ephemeral")
 
-    if "dna_data" in request.session:
-        request.session.pop("dna_data", None)
-
     return redirect("core:display_dna")
 
 

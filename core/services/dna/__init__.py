@@ -56,6 +56,7 @@ from .stats import (
     compute_rating_stats,
     compute_review_stats,
 )
+from .types import ReadingDNA
 from .utils import (  # noqa: F401 — re-exported for stable import paths
     _build_cover_url,
     _cover_initial,
@@ -69,7 +70,7 @@ logger = logging.getLogger(__name__)
 
 def calculate_full_dna(
     csv_file_content: str, user=None, session_key=None, progress_cb=None, bulk_enrichment=False, task_id=None
-):
+) -> ReadingDNA:
     """Run the full DNA pipeline for one CSV.
 
     bulk_enrichment=True (seeding runs, backfills) routes every enrichment
@@ -247,7 +248,7 @@ def calculate_full_dna(
         # StoryGraph mood and pace distributions (empty for Goodreads)
         mood_distribution, pace_distribution = compute_mood_pace(read_df)
 
-        dna = {
+        dna: ReadingDNA = {
             "user_stats": user_base_stats,
             "bibliotype_percentiles": percentiles,
             "global_averages": GLOBAL_AVERAGES,

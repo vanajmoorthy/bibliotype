@@ -24,6 +24,7 @@ from ._helpers import (
     _expand_book_dict,
     _get_recommendation_pool_display,
     _resolve_rec_source_names,
+    get_request_dna,
 )
 
 logger = logging.getLogger(__name__)
@@ -32,8 +33,6 @@ logger = logging.getLogger(__name__)
 def display_dna_view(request):
     is_processing = request.GET.get("processing") == "true"
 
-    # Logged-in users always read the saved profile; a session copy is only a stale anonymous snapshot.
-    dna_data = None if request.user.is_authenticated else request.session.get("dna_data")
     user_profile = None
     recommendations = []
 
@@ -45,8 +44,9 @@ def display_dna_view(request):
         if is_processing:
             return render(request, "core/dashboard.html", {"is_processing": True})
 
-        dna_data = user_profile.dna_data
+    dna_data = get_request_dna(request)
 
+    if request.user.is_authenticated:
         if user_profile.dna_data:
             try:
                 if user_profile.recommendations_data is not None:
@@ -102,8 +102,7 @@ def display_dna_view(request):
                     # Session exists, get recommendations normally
                     recommendations = get_recommendations_for_anonymous(request.session.session_key, limit=6)
                 except AnonymousUserSession.DoesNotExist:
-                    # Session record doesn't exist - try to recreate from session dna_data
-                    # This can happen if the session expired but session data still exists
+                    # Reached when the DNA came from get_request_dna's legacy session fallback; remove with it.
                     logger.warning(
                         f"AnonymousUserSession not found for session {_key_hash(request.session.session_key)}, attempting to recreate from dna_data..."
                     )
