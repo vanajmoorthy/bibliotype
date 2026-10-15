@@ -90,8 +90,11 @@ jobs:
                       # No --force-recreate: only services whose config changed are
                       # recreated (web/worker: new IMAGE_TAG each commit). Recreating
                       # redis (no volume) wiped queued tasks and in-flight uploads.
-                      # --wait fails the deploy if web never turns healthy.
-                      docker compose -f docker-compose.prod.yml up -d --wait --wait-timeout 300
+                      # --wait fails the deploy if web never turns healthy. Web goes first and
+                      # alone: in one `up`, compose stopped old web, then sat out the worker's
+                      # 180s stop_grace_period before starting either, so every deploy 502'd.
+                      docker compose -f docker-compose.prod.yml up -d --wait --wait-timeout 300 db redis web
+                      docker compose -f docker-compose.prod.yml up -d --no-deps worker
 
                       echo "Fixing static file permissions..."
                       sudo chown -R bibliotype:www-data /home/bibliotype/app/staticfiles/
