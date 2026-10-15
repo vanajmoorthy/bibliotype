@@ -67,8 +67,8 @@ See the linked docs for full detail.
   (PR #184), so the "classic nonfiction" term in Non-Fiction Ninja is now live and the top-genres
   list/donut label nonfiction classics correctly. Existing profiles pick the new labels up on next
   upload or `regenerate_dna`.
-- ✅ ~~**`classify_genres` rule 5 contradicts `count_fiction_nonfiction`'s docstring.**~~ Ambiguous-only
-  sets now return `None` (defaulted) unless a fiction shelf says otherwise. Reader types unaffected.
+- ✅ ~~**`classify_genres` rule 5 contradicts `count_fiction_nonfiction`'s docstring.**~~ Decided: ambiguous-only
+  sets stay fiction (on prod about 43 of 45 are novels); the docstring now says so.
 - ✅ ~~**`AMBIGUOUS_FICTION_GENRES` needs an audit.**~~ Kept as is (all three span both axes on prod data);
   fiction form headings moved off nonfiction genres. See `docs/GENRES.md` §8.
 - 🙅 **Possible structural fix — NOT DONE, NOT DECIDED.** Move the axis off `Genre.name` and onto an
@@ -264,7 +264,7 @@ detail. ~~Struck-through~~ items were verified done against `main` as of 2026-08
   canonicalizes reader-type genre sets), and #184 (top_genres labels and reader-type inputs are
   axis-resolved in generation, the poll recompute, and the DB reader-type recompute — the
   "classic nonfiction" scoring term is live).
-- ✅ ~~**`classify_genres` rule 5 returns fiction for an ambiguous-only set.**~~ Now `None` (defaulted).
+- ✅ ~~**`classify_genres` rule 5 returns fiction for an ambiguous-only set.**~~ Kept by decision; docstring fixed.
 - ✅ ~~**`AMBIGUOUS_FICTION_GENRES` audit.**~~ Kept as is; fiction form headings fixed.
 - 🙅 Possible structural fix (not done, not decided): an explicit through-model on `Book.genres` with a
   nullable axis + `axis_source`/`axis_confidence`, so "undetermined" has a real representation.

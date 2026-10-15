@@ -60,9 +60,9 @@ class FictionNonfictionClassificationTests(TestCase):
         """classics + history → nonfiction (e.g. 'A Brief History of Time')."""
         self.assertEqual(self._classify(["classics", "history"]), "nonfiction")
 
-    def test_ambiguous_genre_no_signal_is_undetermined(self):
-        """classics alone → None: counted as defaulted, never folded into fiction."""
-        self.assertIsNone(self._classify(["classics"]))
+    def test_ambiguous_genre_no_signal_defaults_fiction(self):
+        """classics alone → fiction (the conservative default)."""
+        self.assertEqual(self._classify(["classics"]), "fiction")
 
     def test_ambiguous_plus_nonfiction_plus_fiction_stays_fiction(self):
         """classics + history + fantasy → fiction (historical fantasy, not nonfiction)."""

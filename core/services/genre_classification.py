@@ -119,9 +119,8 @@ def classify_genres(canonical, shelf_fiction=False, shelf_nonfiction=False, shel
     3. Any nonfiction genre → nonfiction
     4. Shelf "nonfiction" → nonfiction (no API signal, trust the shelf;
        also disambiguates ambiguous-only sets like {"classic fiction"})
-    5. Shelf "fiction" → fiction
-    6. Only ambiguous genres, or an empty/unmatched set, with no shelf signal
-       → None (undetermined: an age band or "classic" alone doesn't fix the axis)
+    5. Shelf "fiction", or only ambiguous fiction genres → fiction
+    6. Empty or unmatched set, no shelf signal → None (caller decides)
     """
     combined = canonical | shelf_genres
     ambiguous_fiction = combined & AMBIGUOUS_FICTION_GENRES
@@ -136,7 +135,7 @@ def classify_genres(canonical, shelf_fiction=False, shelf_nonfiction=False, shel
         return "nonfiction"
     if shelf_nonfiction:
         return "nonfiction"
-    if shelf_fiction:
+    if shelf_fiction or ambiguous_fiction:
         return "fiction"
     return None
 
@@ -149,10 +148,10 @@ def count_fiction_nonfiction(genre_sets, shelf_signals=None):
     `parse_shelf_signals`. Callers without shelf data (e.g. the views helper)
     omit it and get pure API-genre classification.
 
-    Returns (fiction_count, nonfiction_count, defaulted_count). The three
-    counters are independent — books with no classifiable genres land in
-    defaulted_count and are NEVER added to fiction_count — and always sum to
-    the number of sets processed.
+    Returns (fiction_count, nonfiction_count, defaulted_count), which always sum
+    to the number of sets processed. Books with no classifiable genres land in
+    defaulted_count. An ambiguous-only set ("classic fiction" alone) counts as
+    fiction (classify_genres rule 5): on prod about 43 of 45 such books are novels.
     """
     if shelf_signals is None:
         shelf_signals = repeat(_NO_SHELF_SIGNALS)

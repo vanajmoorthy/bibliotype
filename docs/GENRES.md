@@ -57,8 +57,8 @@ One shared module decides — `core/services/genre_classification.py` — used b
 2. Any unambiguous fiction genre → **fiction** (historical fantasy stays fiction even with `history` present)
 3. Any nonfiction genre → **nonfiction**
 4. No API signal at all → shelf signals may decide (this is the *only* place shelves matter)
-5. Shelf "fiction" → **fiction**
-6. Ambiguous-only or nothing, no shelf signal → **None** (counted in `defaulted_count`; an age band or "classic" alone doesn't fix the axis)
+5. Shelf "fiction", or ambiguous-only with no other signal → **fiction** (on prod about 43 of 45 ambiguous-only books are novels)
+6. Nothing → **None** (counted in `defaulted_count`)
 
 `count_fiction_nonfiction` (`genre_classification.py:92`) turns per-book results into three *independent* counters: `fiction_count`, `nonfiction_count`, and `defaulted_count`. Unclassifiable books are **never** counted as fiction (pre-overhaul they were silently skipped); they're tracked and excluded from the pie chart. The three always sum to total books.
 
@@ -97,7 +97,7 @@ docker compose -f docker-compose.prod.yml exec web poetry run python manage.py e
 - `poetry` is classified as fiction (some poetry is neither, in the traditional sense).
 - The Genre DB always stores the *fiction default* for ambiguous genres ("classic fiction", never "classic nonfiction") — the nonfiction variant exists only as an analysis-time label, produced by `resolve_genre_names` / `resolve_genre_labels` via `AMBIGUOUS_TO_NONFICTION`; no write path stores it.
 - ✅ ~~**That default leaks into similarity and recommendations.**~~ Fixed (PRs #179, #180, #184): every consumer now resolves the axis per book — similarity vectors and recommendation genre-alignment (`resolve_genre_names`), top_genres labels in both generation and the poll-time recompute, reader-type genre sets in generation, the DB recompute, and `regenerate_dna`. Reading `Genre.name` raw outside `genre_classification.py` is a code smell; the two resolvers are the public API. Existing profiles pick up resolved labels on next upload or `regenerate_dna`.
-- ✅ ~~Rule 5 returned `fiction` for an ambiguous-only set.~~ It now returns `None` unless a fiction shelf says otherwise, so those books land in `defaulted_count`. On prod (Oct 2026) that is 170 of 6,237 genre-tagged books (2.7%); a random sample of 45 was about 43 novels and 2 nonfiction. Reader types are unaffected: scoring reads `resolve_genre_labels`, which only swaps names on a `nonfiction` result.
+- ✅ Rule 5 keeps ambiguous-only sets (`classic` / `young adult` / `children's` alone, no shelf) as **fiction**, by decision (Oct 2026). On prod that is 170 of 6,237 genre-tagged books (2.7%), and a random sample of 45 was about 43 novels and 2 nonfiction, so `None` would trade about 160 right calls for about 8 avoided wrong ones. The `count_fiction_nonfiction` docstring now says so.
 - ✅ `AMBIGUOUS_FICTION_GENRES` audited, kept as is: all three (`classic`, `young adult`, `children's`) genuinely span both axes on prod ("True Notebooks", a YA-tagged memoir). `poetry` stays fiction (neither axis fits; moving it would reshuffle splits for no gain).
 - ✅ Fiction form headings no longer map to nonfiction genres: `psychological fiction` (3 spellings), `fiction, political`, `feminist fiction, english`, `fiction, religious` → literary fiction; `fiction, biographical` → historical fiction. `<topic>, fiction` subdivisions (`animals`, `cats`, `dogs`, `conduct of life`, `social classes`) are excluded rather than tagged with the topic's nonfiction genre. `juvenile literature` (the LCSH children's *nonfiction* form) → young adult nonfiction.
 - StoryGraph's `Tags` column isn't parsed for shelf-style signals (format unverified); only the tag→genre map applies.
