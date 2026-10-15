@@ -14,6 +14,7 @@ from ..analytics.events import (
     track_dna_generation_failed,
     track_dna_generation_started,
 )
+from ..services.anonymization_service import _key_hash
 from ..services.dna import CSVValidationError, _save_dna_to_profile, calculate_full_dna
 
 logger = logging.getLogger(__name__)
@@ -52,16 +53,11 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str)
     soften by adding `**kwargs` to "accept" old calls — that re-opens the
     hijack window the explicit signature was created to close.
     """
-    import hashlib
-
     try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
         logger.warning(f"User with id {user_id} not found. Cannot claim task")
         return
-
-    def _hash_key(k):
-        return hashlib.sha256(k.encode()).hexdigest()[:12] if k else "none"
 
     def _clear_pending_and_return():
         """Clear the user's pending_dna_task_id so the dashboard doesn't poll forever."""
@@ -87,7 +83,7 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str)
         # DNA at `dna_result_<task_id>` shares the same TTL so it'd be moot.
         logger.warning(
             "claim rejected: task_owner cache miss",
-            extra={"user_id": user_id, "task_id": task_id, "caller_hash": _hash_key(session_key)},
+            extra={"user_id": user_id, "task_id": task_id, "caller_hash": _key_hash(session_key)},
         )
         _clear_pending_and_return()
         return
@@ -98,8 +94,8 @@ def claim_anonymous_dna_task(self, user_id: int, task_id: str, session_key: str)
             extra={
                 "user_id": user_id,
                 "task_id": task_id,
-                "owner_hash": _hash_key(owner_session_key),
-                "caller_hash": _hash_key(session_key),
+                "owner_hash": _key_hash(owner_session_key),
+                "caller_hash": _key_hash(session_key),
             },
         )
         _clear_pending_and_return()
@@ -153,7 +149,7 @@ def _create_userbooks_from_anonymous_session(user, session_key):
         ratings = {str(k): v for k, v in (anon_session.book_ratings or {}).items()}
 
         if not book_ids:
-            logger.warning(f"No book IDs found in AnonymousUserSession {session_key}")
+            logger.warning(f"No book IDs found in AnonymousUserSession {_key_hash(session_key)}")
             return
 
         books_created = 0
@@ -174,7 +170,9 @@ def _create_userbooks_from_anonymous_session(user, session_key):
             calculate_and_store_top_books(user, limit=5)
 
     except AnonymousUserSession.DoesNotExist:
-        logger.warning(f"AnonymousUserSession {session_key} not found when claiming DNA for user {user.username}")
+        logger.warning(
+            f"AnonymousUserSession {_key_hash(session_key)} not found when claiming DNA for user {user.username}"
+        )
     except Exception as e:
         logger.error(f"Error creating UserBooks from anonymous session: {e}", exc_info=True)
 

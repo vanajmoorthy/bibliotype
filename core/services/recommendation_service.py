@@ -78,7 +78,7 @@ def _get_recommendations_for_anonymous_uncached(session_key, limit=10):
     try:
         anon_session = AnonymousUserSession.objects.get(session_key=session_key)
     except AnonymousUserSession.DoesNotExist:
-        logger.warning(f"AnonymousUserSession not found for session_key: {session_key}")
+        logger.warning(f"AnonymousUserSession not found for session: {_key_hash(session_key)}")
         return []
 
     # Build anonymous context

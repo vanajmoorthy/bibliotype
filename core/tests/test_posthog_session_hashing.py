@@ -62,3 +62,27 @@ class RawSessionKeyNeverSentTests(TestCase):
         cache_key = mock_get.call_args.args[0]
         self.assertNotIn(RAW_KEY, cache_key)
         self.assertEqual(cache_key, f"anon_recommendations_{_key_hash(RAW_KEY)}")
+
+
+class RawSessionKeyNeverLoggedTests(TestCase):
+    """Server logs get the hash too: a leaked log line must not hand out a usable session."""
+
+    def test_missing_session_log_lines_use_the_hash(self):
+        from django.contrib.auth.models import User
+
+        from core.services.recommendation_service import _get_recommendations_for_anonymous_uncached
+        from core.tasks.dna import _create_userbooks_from_anonymous_session
+
+        user = User.objects.create_user(username="logcheck", email="logcheck@example.com", password="pw-123456!")
+        with self.assertLogs("core", level="WARNING") as logs:
+            _get_recommendations_for_anonymous_uncached(RAW_KEY)
+            _create_userbooks_from_anonymous_session(user, RAW_KEY)
+
+        output = "\n".join(logs.output)
+        self.assertNotIn(RAW_KEY, output)
+        self.assertIn(_key_hash(RAW_KEY), output)
+
+    def test_anonymous_session_str_hides_the_key(self):
+        from core.models import AnonymousUserSession
+
+        self.assertNotIn(RAW_KEY, str(AnonymousUserSession(pk=7, session_key=RAW_KEY)))
