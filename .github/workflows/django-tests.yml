@@ -10,6 +10,9 @@ on:
         branches: ["main"]
 
 # 2. A workflow run is made up of one or more jobs that can run sequentially or in parallel
+permissions:
+    contents: read
+
 jobs:
     build-and-test:
         # The type of runner that the job will run on
@@ -19,7 +22,7 @@ jobs:
         steps:
             # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
             - name: Check out repository code
-              uses: actions/checkout@v4
+              uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
             # Your docker-compose.local.yml likely depends on a .env file.
             # This step creates a .env file for the CI environment from a template.
