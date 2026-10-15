@@ -1,7 +1,7 @@
 # VPS Hardening Runbook — manual steps on the droplet
 
-Companion to [`../scaling-implementation-plan.md`](../scaling-implementation-plan.md).
-These are the Phase 2–3 items that **cannot ship via the repo** — they're host-level
+Companion to [`../SCALING.md`](../SCALING.md).
+These are the scaling items that **cannot ship via the repo**. They're host-level
 config on the DigitalOcean droplet. Everything repo-side (gunicorn flags, DB conn
 reuse, Celery limits, Redis/Postgres tuning, polling backoff) ships with the
 `chore: scaling hardening` PR and deploys automatically on merge.
@@ -12,7 +12,7 @@ Already covered — do NOT redo:
 - **Firewall** — DigitalOcean cloud firewall in Terraform (`infra/main.tf`); UFW on the host is redundant
 - **fail2ban, unattended-upgrades, SSH hardening** — cloud-init
 
-SSH in as `bibliotype@159.223.244.72` for everything below.
+SSH in as `bibliotype@<server-ip>` for everything below.
 
 ---
 

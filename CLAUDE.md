@@ -65,7 +65,7 @@ poetry run python manage.py test core.tests.test_views_e2e.TestClassName.test_me
 
 Key patterns:
 - `django.test.TestCase` for most tests, `TransactionTestCase` for Celery task tests
-- **Always mock external services** (Gemini, Open Library, Google Books) with `@patch`
+- **Always mock external services** (the LLM chain in `core/services/_llm.py`, Open Library, Google Books) with `@patch`
 - Celery sync in tests: `@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)`
 - In-memory cache: `@override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})`
 - Test data created directly with ORM in `setUp()` — no factory libraries
@@ -98,13 +98,15 @@ Config is in `pyproject.toml` (Black, isort) and `.prettierrc.json` (Prettier wi
 
 ```
 CSV Upload → Celery Task (async) → DNA Analysis → Book/Author DB Sync
-→ API Enrichment (Open Library, Google Books) → AI Vibe (Gemini)
+→ API Enrichment (Open Library, Google Books) → AI Vibe (LLM chain via core/services/_llm.py)
 → Results in UserProfile/AnonymousUserSession → Recommendations (async)
 ```
 
 **Key directories:**
 - `bibliotype/` — Django project config
-- `core/services/` — Business logic (9 modules). Entry point: `dna_analyser.py:calculate_full_dna()`
+- `core/services/`: business logic. DNA entry point: `calculate_full_dna()` in `core/services/dna/__init__.py`
+- `core/views/`: function-based views, split by area (auth, upload, dashboard, profile, compare, pages, seo)
+- `core/tasks/`: Celery tasks, split by area (dna, enrichment, recommendations, maintenance)
 - `core/analytics/` — PostHog event tracking
 - `core/templates/core/partials/` — Reusable template components
 - `core/dna_constants.py` — Reader types, genre mappings, global averages
@@ -173,7 +175,7 @@ docker-compose -f docker-compose.local.yml up --build -d
 docker-compose -f docker-compose.local.yml down -v          # Reset DB
 
 # Production
-docker compose -f docker-compose.prod.yml up -d --force-recreate
+docker compose -f docker-compose.prod.yml up -d   # no --force-recreate: recreating redis wipes queued tasks
 ```
 
 Local mounts source code for live reload. Production uses Gunicorn with staticfiles served by Nginx. Both share the same `.env` file.

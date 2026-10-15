@@ -2,7 +2,7 @@
 
 How much load Bibliotype can handle at each VPS tier, where it breaks first, and what to do about it.
 
-> Companion doc: [`scaling-implementation-plan.md`](./scaling-implementation-plan.md) — the concrete code/config changes to actually apply the recommendations below.
+> Host-level steps that can't ship via the repo are in [`runbooks/vps-hardening.md`](./runbooks/vps-hardening.md). The droplet itself is provisioned from [`infra/`](../infra/README.md).
 
 ---
 
@@ -11,7 +11,7 @@ How much load Bibliotype can handle at each VPS tier, where it breaks first, and
 | Tier | RAM / vCPU | Cost | Sustainable DAU | Concurrent browsers | Concurrent uploads | Daily uploads (worst case / steady state) |
 |---|---|---|---|---|---|---|
 | **$6 stock** (no changes) | 1 GB / 1 | $6/mo | 20–40 | 5–15 | 1 in-flight | 10 / 30 |
-| **$6 tuned** (all Phase 1–3 changes) | 1 GB / 1 | $6/mo | **100–200** | **30–50** | 1 in-flight, queue OK | **15 / 100–150** |
+| **$6 tuned** (repo tuning + runbook steps) | 1 GB / 1 | $6/mo | **100–200** | **30–50** | 1 in-flight, queue OK | **15 / 100–150** |
 | **$12 tuned** (2 GB / 1–2 vCPU) | 2 GB / 1–2 | $12/mo | 300–500 | 80–120 | 2 in-flight | 20 / 300 |
 | **$18 tuned** (2 GB / 2 vCPU) | 2 GB / 2 | $18/mo | 500–1,000 | 150–250 | 2–3 in-flight | 30 / 500 |
 | **$24 tuned + managed PG** | 4 GB / 2 vCPU + DB | ~$39/mo | 2,000–5,000 | 400–600 | 4 in-flight | 50 / 1,500 |
@@ -25,12 +25,12 @@ How much load Bibliotype can handle at each VPS tier, where it breaks first, and
 
 ## Where it breaks first (in order)
 
-1. **Gunicorn worker exhaustion** — default 1 sync worker, every request blocks. Fixed by Phase 1.
-2. **OOM during CSV processing** — pandas peaks at ~10x file size. Fixed by swap + memory limits + worker recycling.
-3. **DB connection churn** — no `CONN_MAX_AGE`, every request opens a new Postgres connection. Fixed by Phase 1.
-4. **Frontend polling DDoS** — 3s polling × 50 users = ~1,000 req/min just for status. Fixed by Phase 1.
+1. **Gunicorn worker exhaustion.** Now 1 gthread worker with 4 threads (`docker-compose.prod.yml`), so slow requests no longer block everything, but one process still caps concurrency.
+2. **OOM during CSV processing.** Pandas peaks at ~10x file size. Mitigated by 2 GB swap, `mem_limit`s on db and redis, and Celery worker recycling (`CELERY_WORKER_MAX_TASKS_PER_CHILD`).
+3. **DB connection churn.** Mitigated: `conn_max_age=600` with health checks in `bibliotype/settings.py`.
+4. **Frontend polling load.** Status polling runs every 10s (15s for the enrichment banner, slowing near completion), so 50 users make ~300 req/min.
 5. **Google Books 10k/day quota** — only matters at scale with cold caches. Mitigated by cache warmth, eventually requires paid key.
-6. **Postgres `max_connections=100`** — only an issue at 500+ DAU. Fixed by adding PgBouncer or moving to managed PG.
+6. **Postgres `max_connections=50`** (set in `docker-compose.prod.yml` for the 1 GB droplet). Only an issue at 500+ DAU. Fixed by adding PgBouncer or moving to managed PG.
 7. **Single Celery worker** — uploads queue serially. Fixed by adding a 2nd worker container at $12+ tier.
 
 ---
@@ -115,4 +115,4 @@ Cheapest monitoring stack for $6 tier: **Uptime Robot** (free, HTTP checks every
 
 - A runbook for incident response (see ops notes in `ARCHITECTURE.md`)
 - A guide to optimizing specific slow queries (use Django Silk locally, profile real traffic)
-- A guarantee of these numbers under your specific load — they're estimates based on code review of `bibliotype/settings.py`, `docker-compose.prod.yml`, `core/tasks.py`, and the celery/caching deep-dive rules. Real numbers come from production telemetry.
+- A guarantee of these numbers under your specific load — they're estimates based on code review of `bibliotype/settings.py`, `docker-compose.prod.yml`, the `core/tasks/` package, and the celery/caching deep-dive rules. Real numbers come from production telemetry.

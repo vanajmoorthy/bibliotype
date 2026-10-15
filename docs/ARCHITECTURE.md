@@ -68,7 +68,7 @@ def progress_cb(current: int, total: int, stage: str):
     })
 ```
 
-The frontend polls every 3 seconds. The progress bar uses a tweening algorithm that smoothly animates toward the target percentage (with a 0.2 multiplier per frame), preventing the jarring jumps that come from polling at irregular intervals. If no exact percentage is available, the frontend estimates based on the stage name: "Syncing books" maps to ~60%, "Crunching stats" to ~70%, "Finishing up" to ~90%.
+The frontend polls every 10 seconds. The progress bar uses a tweening algorithm that smoothly animates toward the target percentage (with a 0.2 multiplier per frame), preventing the jarring jumps that come from polling at irregular intervals. If no exact percentage is available, the frontend estimates based on the stage name: "Syncing books" maps to ~60%, "Crunching stats" to ~70%, "Finishing up" to ~90%.
 
 Stages cycle through four animated headings: "Sequencing Your Bibliotype...", "Analyzing Your Reading Patterns...", "Discovering Your Literary DNA...", and "Mapping Your Book Preferences..." with scale and fade transitions every 4 seconds.
 
@@ -76,7 +76,7 @@ Stages cycle through four animated headings: "Sequencing Your Bibliotype...", "A
 
 ## 2. The DNA Analysis Engine
 
-The heart of the application is `calculate_full_dna()` in `core/services/dna_analyser.py`. This function takes a CSV string and produces a large dictionary (the "DNA") containing everything the dashboard needs.
+The heart of the application is `calculate_full_dna()` in `core/services/dna/__init__.py` (with CSV parsing, reader type scoring, enrichment budget and persistence split into sibling modules in `core/services/dna/`). This function takes a CSV string and produces a large dictionary (the "DNA") containing everything the dashboard needs.
 
 ### CSV Parsing
 
@@ -108,7 +108,7 @@ Several columns are coerced to their proper types: `My Rating` and `Number of Pa
 After parsing, the function runs through these stages:
 
 1. **Book syncing** — Creates or updates Author, Book, and UserBook records in the database.
-2. **Reader type assignment** — Scores the user against 11 reader archetypes.
+2. **Reader type assignment**: scores the user against 19 reader archetypes (plus the Eclectic fallback).
 3. **Statistics calculation** — Total books, pages, average length, average publication year.
 4. **Community percentile calculation** — Where the user stands relative to all other users.
 5. **Genre and author analysis** — Top 10 genres (canonicalized) and top 10 authors.
@@ -148,32 +148,44 @@ The output is a dictionary with over 20 keys. Here's the shape:
 
 ## 3. Reader Type Classification
 
-Every user is assigned one of 11 reader types. The system uses a scoring approach: a `Counter` accumulates points for each archetype based on the user's reading patterns, and the type with the highest score wins.
+Every user is assigned one of 19 reader types, or the Eclectic Reader fallback. Scoring lives in `assign_reader_type()` in `core/services/dna/reader_type.py`; thresholds, tiebreak order and descriptions live in `core/dna_constants.py`.
 
-### The 11 Reader Types
+### How Scoring Works
 
-| Type | How You Earn Points |
+Each type gets a normalised 0-100 score from `score_ramp(value, floor, saturation)`: below the floor it scores 0, at or above saturation it scores 100, and it ramps linearly in between. The `(floor, saturation)` pair for each type is in `READER_TYPE_THRESHOLDS`.
+
+Most signals are a share of the library, not a raw count, so a 40-book library and a 400-book library are judged on the same scale. Each signal is guarded by `MIN_SIGNAL_BOOKS` (10): if fewer than 10 books carry that signal (for example, fewer than 10 books with page counts), the types that depend on it score 0.
+
+The highest score wins. If no type reaches `MIN_WINNING_SCORE` (30), the user is an **Eclectic Reader**. Exact ties are broken by `READER_TYPE_TIEBREAK_ORDER`, which puts the rarer, more specific types first.
+
+### The Reader Types
+
+| Type | Signal |
 |---|---|
-| **Rapacious Reader** | 75+ total books AND 40+ books/year average. Gets an automatic score of 100 (always wins if triggered). |
-| **Tome Tussler** | +2 points per book over 490 pages. |
-| **Novella Navigator** | +1 point per book under 200 pages. |
-| **Fantasy Fanatic** | Points from "fantasy" + "science fiction" genre counts. |
-| **Non-Fiction Ninja** | Points from "non-fiction" genre count. |
-| **Philosophical Philomath** | Points from "philosophy" genre count. |
-| **Nature Nut Case** | Points from "nature" genre count. |
-| **Social Savant** | Points from "social science" genre count. |
-| **Self Help Scholar** | Points from "self-help" genre count. |
-| **Classic Collector** | +1 per book published before 1970. |
-| **Modern Maverick** | +1 per book published after 2018. |
-| **Small Press Supporter** | +1 per book from a non-mainstream publisher. |
-| **Versatile Valedictorian** | +15 bonus if 10+ unique canonical genres. |
-| **Eclectic Reader** | Fallback type if all scores are zero. |
+| **Fantasy Fanatic** | Share of genre-enriched books tagged fantasy, science fiction, dystopian or adventure. |
+| **Mystery Maven** | Share tagged thriller, mystery or true crime. |
+| **Romance Reveller** | Share tagged romance. |
+| **History Hound** | Share tagged history, historical fiction or biography. |
+| **Literary Luminary** | Share tagged literary fiction or classic fiction. |
+| **Sonnet Slinger** | Share tagged poetry. |
+| **Non-Fiction Ninja** | Share tagged non-fiction, memoir, true crime, essays, classic nonfiction, nature or social science. |
+| **Philosophical Philomath** | Share tagged philosophy. |
+| **Self Help Scholar** | Share tagged self-help. |
+| **Author Loyalist** | Largest single-author share of unique (title, author) rows, with author names normalised. |
+| **Tome Tussler** | Share of books over 490 pages. |
+| **Novella Navigator** | Share of books under 200 pages. |
+| **Classics Collector** | Share of books published before 1970. |
+| **Modern Maverick** | Share of books published in the last six years. |
+| **Small Press Supporter** | Share of books from non-mainstream publishers. |
+| **Comfort Rereader** | Share of the library that has been reread. |
+| **Series Slayer** | Share of titles with Goodreads series notation, e.g. "(Series, #2)". Not earnable from StoryGraph uploads. |
+| **Rapacious Reader** | Average books read per year (a raw rate, not a share). |
+| **Versatile Valedictorian** | Number of "solid" genres, each covering at least 3% of genre-enriched books and at least 2 books. |
+| **Eclectic Reader** | Fallback when no type scores 30 or more. |
 
-Genre-based scoring uses the canonicalized genre counts, not raw API subjects. This means "urban fantasy", "wizards", and "magic" all count toward the Fantasy Fanatic score because they all map to the canonical "fantasy" genre.
+Genre-based scoring uses canonicalised, axis-resolved genre sets, not raw API subjects. "Urban fantasy", "wizards" and "magic" all count towards Fantasy Fanatic because they map to the canonical "fantasy" genre.
 
-The Rapacious Reader type has a special override: if a user has read 75+ books total and averages 40+ books per year (calculated from the `Date Read` column), the score is set to 100, which always beats everything else. This recognises truly voracious readers.
-
-Each user also gets explanatory text, randomly selected from 1-2 pre-written descriptions per type stored in `READER_TYPE_DESCRIPTIONS`.
+Each user also gets explanatory text, randomly selected from the pre-written descriptions per type in `READER_TYPE_DESCRIPTIONS`.
 
 ---
 
@@ -195,7 +207,7 @@ Books use `update_or_create` keyed on `(normalized_title, author)`, ensuring tha
 
 ### Threading Model
 
-Book processing uses a `ThreadPoolExecutor` with a single worker. This might seem pointless, but it's deliberate: SQLite (used in local development) doesn't handle concurrent writes well. A single-threaded executor provides the structure for future parallelism while avoiding database lock issues today.
+Book processing uses a `ThreadPoolExecutor` with 8 workers, each with its own database connection. This is safe under PostgreSQL (used in both local development and production): row-level locking and the unique constraints resolve concurrent `get_or_create` calls on Author, Book, Genre and Publisher. Inline API enrichment is capped separately by a process-wide semaphore (2 concurrent calls) so uploads can't burst Open Library or Google Books past their limits.
 
 ### Read Count Tracking
 
@@ -230,17 +242,17 @@ A `google_books_last_checked` timestamp prevents redundant API calls — once a 
 
 ### Rate Limiting
 
-Both APIs use a `slow_down` parameter. When enabled, a `time.sleep(1.2)` is inserted after each call. This is used during batch enrichment operations (management commands) to stay within API rate limits. During normal user uploads, enrichment is currently deferred to separate background tasks.
+Both APIs use a `slow_down` parameter. When enabled, a `time.sleep(1.2)` is inserted after each call. This is used during batch enrichment operations (management commands) to stay within API rate limits. During normal user uploads, new or genre-less books are enriched inline with shorter timeouts (`quick_mode`) within a 90-second budget (`INLINE_ENRICHMENT_BUDGET_SECONDS`). Books that fail inline, or arrive after the budget runs out, fall back to `enrich_book_task.delay()`, which is rate-limited.
 
 ---
 
 ## 6. Genre Canonicalization
 
-Raw genre data from APIs is messy. Open Library might tag a book with "Fiction, fantasy, epic", "Wizards", "Imaginary wars and battles", and "Middle Earth (Imaginary place)". Google Books might label it "Fiction / Fantasy / Epic". The canonicalization system maps this chaos to a clean set of 35 canonical genres.
+Raw genre data from APIs is messy. Open Library might tag a book with "Fiction, fantasy, epic", "Wizards", "Imaginary wars and battles", and "Middle Earth (Imaginary place)". Google Books might label it "Fiction / Fantasy / Epic". The canonicalization system maps this chaos to a clean set of about 40 canonical genres. See [`GENRES.md`](GENRES.md) for the full pipeline.
 
 ### The Canonical Genre Map
 
-`CANONICAL_GENRE_MAP` is built from `GENRE_ALIASES`, a dictionary mapping each canonical genre to a set of aliases. There are 300+ alias entries across 35 genres. Examples:
+`CANONICAL_GENRE_MAP` is built from `GENRE_ALIASES`, a dictionary mapping each canonical genre to a set of aliases. There are hundreds of alias entries across about 40 genres. Examples:
 
 - `"fantasy"` includes: "urban fantasy", "wizards", "dragons", "magic", "dark fantasy", "epic fantasy", "fairy tales", "mythical creatures"
 - `"science fiction"` includes: "cyberpunk", "space opera", "dystopian fiction", "robots", "time travel"
@@ -263,12 +275,7 @@ For each raw subject string:
 
 After canonicalization, books often have too many genres. A priority list determines which survive:
 
-```
-fantasy > science fiction > thriller > horror > historical fiction > romance >
-humorous fiction > young adult > short stories > biography > philosophy >
-psychology > history > social science > non-fiction > science > nature >
-art & music > travel > classics > plays & drama > children's literature
-```
+`GENRE_PRIORITY` in `core/dna_constants.py` orders every canonical genre from most specific to most generic. Fiction genres come first (fantasy, science fiction, dystopian, thriller, mystery, horror, ...), then non-fiction (biography, philosophy, psychology, history, ...), then generic and classics buckets (classic fiction, classic nonfiction, plays & drama, children's fiction, ...). Read the list in the code rather than a copy here.
 
 The system takes the top 5 genres by priority. There's one exception: if the 6th genre is a highly specific fiction genre (fantasy, sci-fi, thriller, horror, historical fiction, or romance), it keeps 6 genres. The rationale is that specific fiction genres carry more signal than generic non-fiction ones.
 
@@ -309,7 +316,7 @@ To place a publisher, the system runs a multi-step research process:
 
 1. **Wikipedia search** with three query variations: `"{name} (publisher)"`, `"{name} (imprint)"`, and just `"{name}"`. The first non-disambiguation page wins.
 
-2. **Gemini LLM analysis** of the Wikipedia summary. The prompt asks the model to determine whether the publisher is one of the Big 5 or an imprint of one, and to identify the parent company. The response is structured JSON with `is_mainstream`, `parent_company_name`, and `reasoning`.
+2. **LLM analysis** of the Wikipedia summary, through the LiteLLM provider chain in `core/services/_llm.py` (Groq first, Gemini as fallback; skipped if no provider key is configured). The prompt asks the model to determine whether the publisher is one of the Big 5 or an imprint of one, and to identify the parent company. The response is structured JSON with `is_mainstream`, `parent_company_name`, and `reasoning`.
 
 This two-step approach (structured data lookup + LLM reasoning) handles edge cases that a simple lookup can't: obscure imprints, recently acquired publishers, and regional variants.
 
@@ -317,18 +324,19 @@ This two-step approach (structured data lookup + LLM reasoning) handles edge cas
 
 ## 9. AI Vibe Generation
 
-The "reading vibe" is the most visible AI feature — four short, evocative phrases displayed at the top of the dashboard. "Dusty maps and forgotten prophecies" or "the scent of old paper" rather than "you read a lot of fantasy".
+The "reading vibe" is the most visible AI feature: a single witty one-line character sketch shown at the top of the dashboard, such as "the one who brings a 600-page paperback to the beach", rather than "you read a lot of fantasy".
 
 ### The Prompt
 
-The system sends a few-shot prompt to Gemini 2.5 Flash with structured JSON output. The prompt includes:
+`generate_vibe_with_llm()` in `core/services/llm_service.py` sends a few-shot prompt through the LiteLLM provider chain in `core/services/_llm.py`. The chain is configured by `LLM_MODELS` (default: Groq gpt-oss, then Groq qwen, then Gemini Flash Lite), and LiteLLM handles failover, retries and cooldowns. The prompt includes:
 
 - The user's primary reader type
 - Top 3 genres
 - Top 3 authors
 - A general "era" (classic if average publication year < 1980, modern otherwise)
+- Top self-reported moods, for StoryGraph uploads
 
-The instructions are specific: phrases must be 2-6 words, all lowercase, no punctuation, and they must evoke the *feeling* of the reading habits rather than describing them directly. The prompt includes both a good example and a bad example to guide the model.
+The model must return JSON with a `vibe_phrases` list holding exactly one lowercase sentence of 8-18 words in British English, with no book titles, author names or genre names. The prompt includes good and bad examples. If the model returns more than one phrase, only the first is kept.
 
 ### Caching
 
@@ -338,7 +346,7 @@ For anonymous users, there's no profile to cache against, so vibes are always ge
 
 ### Fallback
 
-If the API key isn't configured, the function returns `["vibe generation disabled", "please configure api key"]`. If the API call fails or returns malformed JSON, it returns `["error generating vibe", "api call failed"]`. The dashboard gracefully handles these placeholder values.
+If no provider key is configured, or every model in the chain fails, or the response is malformed, `generate_vibe_with_llm()` returns `None` (failures are tracked in PostHog). The dashboard handles a missing vibe gracefully.
 
 ---
 
@@ -615,10 +623,15 @@ The caching strategy is multi-layered, combining Redis, database fields, and has
 |---|---|---|
 | `dna_result_{task_id}` | 1 hour | Anonymous DNA results (bridge between task completion and session retrieval) |
 | `session_key_{task_id}` | 1 hour | Maps task IDs to session keys for the claiming flow |
-| `user_recommendations_{user_id}_{limit}` | 15 min | Computed recommendations |
-| `similar_users_{user_id}_{top_n}_{min_similarity}` | 30 min | User similarity results |
-| `anon_profiles_sample_{user_id}` | 1 hour | Sampled anonymized profiles (100 profiles) |
+| `user_recommendations_{user_id}` | 15 min | Computed recommendations |
+| `anon_recommendations_{hashed_session_key}` | 15 min | Recommendations for anonymous sessions |
+| `similar_users_{user_id}` | 30 min | User similarity results |
+| `anon_profiles_sample` | 1 hour | Sampled anonymized profiles |
 | `public_users_for_recs_sample` | 30 min | List of public, recommendation-eligible users |
+| `recommendations_pool_count` | 1 hour | Size of the eligible reader pool shown on the dashboard |
+| `community_means`, `fresh_pct_*` | 10 min | Community averages and percentiles for the dashboard |
+
+The full key registry, including the less visible sentinel keys, is in `.claude/rules/caching.md`.
 
 ### Database Cache Layer
 
@@ -695,7 +708,7 @@ Every UI element follows these rules:
 The dashboard is a vertical stack of cards, each with the standard border + shadow treatment:
 
 1. **Editable username** — Click to edit, powered by Alpine.js with AJAX submission.
-2. **Vibe display** — Four phrases in coloured pills with `·` separators. Separators that fall on line breaks are hidden via JavaScript resize detection.
+2. **Vibe display**: a single one-line character sketch generated by the LLM.
 3. **Reader type card** — Purple background, large type name, explanation text.
 4. **Top reader traits** — Leaderboard with gold/silver/bronze medal colours.
 5. **Key stats row** — Three-column grid: total books (yellow), total pages (pink), average rating (cyan).
@@ -726,7 +739,7 @@ All interactivity uses Alpine.js (loaded via CDN, no build step):
 
 - **Drag-and-drop upload**: Visual feedback on dragover, filename display, loading state.
 - **Instructions modal**: Toggle visibility, escape key to close, scroll lock on body.
-- **Progress polling**: 3-second interval, tweened progress bar, stage-based headings.
+- **Progress polling**: 10-second interval, tweened progress bar, stage-based headings.
 - **Username editing**: Click-to-edit with validation (max 15 chars), AJAX save.
 - **Message dismissal**: Auto-dismiss after 8 seconds with fade transition.
 
@@ -744,7 +757,7 @@ Running `honcho start` launches two processes from the Procfile:
 - `web`: Django development server (`python manage.py runserver`)
 - `tailwind`: CSS watcher (`pnpm run dev`) that compiles `tailwind/input.css` to `static/dist/output.css`
 
-The Tailwind source file defines the custom `@theme` block with all brand colours, shadow definitions, and the VT323 font. The compiled output is committed to the repo so deployment doesn't need Node.js in production.
+The Tailwind source file defines the custom `@theme` block with all brand colours, shadow definitions, and the VT323 font. The compiled `static/dist/output.css` is gitignored. The Dockerfile runs `pnpm run build` during the image build, so CI and production always rebuild it.
 
 ### Docker Architecture
 
@@ -756,8 +769,8 @@ The Tailwind source file defines the custom `@theme` block with all brand colour
 
 **Production** uses `docker-compose.prod.yml`:
 - PostgreSQL and Redis (internal network only, no exposed ports)
-- Web: Gunicorn (`gunicorn bibliotype.wsgi:application --bind 0.0.0.0:8000`) bound to `127.0.0.1` (Nginx sits in front)
-- Celery worker: Same image, different command
+- Web: Gunicorn with one `gthread` worker and 4 threads (`--timeout 60`, `--max-requests 1000`; see `docker-compose.prod.yml` for the full command), published on `127.0.0.1:8000` with Nginx in front
+- Celery worker: Same image, runs the worker with embedded Beat (`-B`) on the `celery` and `enrichment_bulk` queues
 - Static files: Volume mount at `./staticfiles:/app/staticfiles` shared between Django (collectstatic) and Nginx
 
 The Docker entrypoint script (`docker-entrypoint.sh`) waits for PostgreSQL, runs migrations, and in production mode runs `collectstatic --noinput` followed by ownership and permission fixes for Nginx (`chown -R 33:33`, `chmod -R 775`).
@@ -768,14 +781,16 @@ Rather than separate settings files for development and production, `bibliotype/
 
 - `DEBUG` controls Django debug mode, Silk profiling, logging levels, and security headers.
 - `DJANGO_ENV` controls PostHog environment tagging.
-- `DATABASE_URL` selects PostgreSQL or SQLite fallback via `dj-database-url`.
+- `DATABASE_URL` selects the database via `dj-database-url`. Local development and production both use PostgreSQL; the SQLite default only applies when nothing is configured.
 - Production-only settings (`SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, `SECURE_PROXY_SSL_HEADER`) are enabled when `DEBUG=False`.
 
 ### CI/CD
 
 **On pull requests and pushes to main**, GitHub Actions runs the test suite inside Docker containers. It creates a `.env` with test credentials, builds the containers, waits for PostgreSQL readiness (60-second timeout), and runs `python manage.py test` inside the web container.
 
-**On pushes to main only**, a second workflow builds the Docker image, pushes it to Docker Hub with two tags (`:latest` and `:sha_short`), then SSH deploys to a DigitalOcean VPS. The deployment pulls the new image, recreates containers with `--force-recreate`, fixes static file permissions, and prunes old images.
+**After Django CI succeeds on a push to main**, `deploy.yml` runs via `workflow_run`. It builds the Docker image for the tested commit, pushes it to Docker Hub with two tags (`:latest` and `:sha_short`), then SSH deploys to the DigitalOcean droplet. The deploy resets the checkout to that commit, pulls the image and runs plain `docker compose -f docker-compose.prod.yml up -d`, so only services whose config changed (web and worker) are recreated. It avoids `--force-recreate` because recreating Redis wiped queued tasks. It then fixes static file permissions and prunes old images. Deploys skip a commit older than the one already live.
+
+The droplet itself is provisioned with Terraform and cloud-init; see `infra/README.md`.
 
 The production stack is Nginx (with SSL via Certbot) reverse proxying to Gunicorn, with a separate Celery worker container.
 
@@ -822,9 +837,9 @@ Bibliotype is a project where the complexity hides behind a simple interface. Th
 
 - A CSV parsing pipeline processes free-text data with pandas.
 - Two external APIs enrich book metadata.
-- A 300+ entry genre canonicalization map reduces chaos to 35 clean categories.
+- A genre canonicalization map with hundreds of aliases reduces chaos to about 40 clean categories.
 - Wikipedia and Open Library determine which authors are mainstream.
-- An LLM generates poetic reading vibes with hash-based caching.
+- An LLM provider chain generates a one-line reading vibe with hash-based caching.
 - A seven-component similarity algorithm compares readers across multiple dimensions.
 - A multi-source recommendation engine with diminishing returns scoring, diversity filtering, and explanation generation suggests books.
 - A percentile engine places each user in the community distribution.

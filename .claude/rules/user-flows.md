@@ -1,7 +1,7 @@
 ---
 paths:
-  - "core/views.py"
-  - "core/tasks.py"
+  - "core/views/**"
+  - "core/tasks/**"
 ---
 
 # User Flows
