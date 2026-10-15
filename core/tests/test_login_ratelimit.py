@@ -57,3 +57,30 @@ class LoginRateLimitTests(TestCase):
             response = self.client.post(login_url, good_payload)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(int(self.client.session["_auth_user_id"]), self.user.id)
+
+
+@override_settings(
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "admin-login-ratelimit-tests",
+        }
+    },
+    RATELIMIT_ENABLE=True,
+)
+class AdminLoginRateLimitTests(TestCase):
+    """The Django admin login is capped at 10 POSTs per 10 minutes per IP."""
+
+    def setUp(self):
+        cache.clear()
+
+    def test_eleventh_admin_login_post_returns_429(self):
+        url = reverse("admin:login")
+        payload = {"username": "admin", "password": "wrongpassword"}
+        with frozen_ratelimit_window():
+            for i in range(10):
+                response = self.client.post(url, payload)
+                self.assertEqual(response.status_code, 200, f"Request {i + 1} unexpectedly throttled")
+            response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 429)
+        self.assertContains(response, "Too many login attempts", status_code=429)

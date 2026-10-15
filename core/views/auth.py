@@ -2,7 +2,7 @@
 
 import logging
 
-from django.contrib import messages
+from django.contrib import admin, messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
@@ -11,8 +11,10 @@ from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import PasswordResetView
 from django.core.exceptions import NON_FIELD_ERRORS
 from django.forms.utils import ErrorDict, ErrorList
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from django_ratelimit.exceptions import Ratelimited
 
@@ -240,11 +242,28 @@ def handler404(request, exception=None):
     return render(request, "core/404.html", {"profile_page": True} if is_profile_page else {}, status=404)
 
 
+@ratelimit(key=client_ip_key, rate="10/10m", method="POST", block=False)
+def admin_login_view(request):
+    if request.limited:
+        return HttpResponse("Too many login attempts. Please try again in a few minutes.", status=429)
+    return admin.site.login(request)
+
+
+@method_decorator(ratelimit(key=client_ip_key, rate="5/h", method="POST", block=False), name="post")
 class CustomPasswordResetView(PasswordResetView):
     template_name = "core/password_reset_form.html"
     email_template_name = "core/password_reset_email.html"
     subject_template_name = "core/password_reset_subject.txt"
     success_url = reverse_lazy("password_reset_done")
+
+    def post(self, request, *args, **kwargs):
+        if request.limited:
+            form = self.get_form()
+            form.add_error(None, "Too many reset requests. Please try again in an hour.")
+            response = self.form_invalid(form)
+            response.status_code = 429
+            return response
+        return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
         from ..turnstile import verify_turnstile_token

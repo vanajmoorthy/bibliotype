@@ -12,6 +12,7 @@ from ._helpers import (  # noqa: F401 — re-exported for stable import paths
 from .auth import (  # noqa: F401 — re-exported for stable import paths
     CustomPasswordResetView,
     _login_view_throttled,
+    admin_login_view,
     handler404,
     login_view,
     logout_view,
