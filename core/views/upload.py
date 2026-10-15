@@ -11,6 +11,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
+from django_ratelimit.decorators import ratelimit
 
 from ..analytics.events import track_file_upload_started
 from ..cache_utils import (
@@ -21,6 +22,7 @@ from ..cache_utils import (
     safe_cache_get,
     safe_cache_set,
 )
+from ..ratelimit_utils import client_ip_key
 from ..services.dna.csv_parser import CSVValidationError, validate_csv_columns
 from ..tasks import generate_reading_dna_task
 from ._helpers import _compute_enrichment_progress, _enrich_dna_for_display
@@ -43,8 +45,16 @@ def _task_error_message(task_id):
     return safe_cache_get(f"dna_task_error_{task_id}") or GENERIC_TASK_ERROR
 
 
+# Anonymous only: logged-in users are already capped by the in-flight guard below. A None rate is not counted.
 @require_POST
+@ratelimit(
+    key=client_ip_key, rate=lambda g, r: None if r.user.is_authenticated else "5/10m", method="POST", block=False
+)
 def upload_view(request):
+    if getattr(request, "limited", False):
+        messages.error(request, "Too many uploads from your connection. Please try again in a few minutes.")
+        return redirect("core:home")
+
     csv_file = request.FILES.get("csv_file")
 
     if not csv_file or not csv_file.name.lower().endswith(".csv"):
