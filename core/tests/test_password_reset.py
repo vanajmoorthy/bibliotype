@@ -2,8 +2,11 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core import mail
+from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+
+from .ratelimit_test_helpers import frozen_ratelimit_window
 
 
 @override_settings(
@@ -274,3 +277,33 @@ class DevModeTurnstileTests(TestCase):
         # Verify the password actually changed
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password("newstrongpass456!"))
+
+
+@override_settings(
+    TURNSTILE_SECRET_KEY="",
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "password-reset-ratelimit-tests",
+        }
+    },
+    RATELIMIT_ENABLE=True,
+)
+class PasswordResetRateLimitTests(TestCase):
+    """Password reset requests are capped at 5 POSTs/hour/IP."""
+
+    def setUp(self):
+        cache.clear()
+
+    def test_sixth_reset_post_returns_429_and_sends_no_email(self):
+        url = reverse("password_reset")
+        User.objects.create_user(username="resetlimit", email="limit@example.com", password="x-strong-pass-1")
+        with frozen_ratelimit_window():
+            for i in range(5):
+                response = self.client.post(url, {"email": "nobody@example.com"})
+                self.assertEqual(response.status_code, 302, f"Request {i + 1} unexpectedly throttled")
+            response = self.client.post(url, {"email": "limit@example.com"})
+        self.assertEqual(response.status_code, 429)
+        self.assertContains(response, "Too many reset requests", status_code=429)
+        self.assertEqual(len(mail.outbox), 0)

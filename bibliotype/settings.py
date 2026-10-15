@@ -191,6 +191,9 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@bibliotype.ap
 if os.environ.get("DJANGO_ENV") == "production":
     TURNSTILE_SITE_KEY = os.environ.get("TURNSTILE_SITE_KEY", "")
     TURNSTILE_SECRET_KEY = os.environ.get("TURNSTILE_SECRET_KEY", "")
+    # verify_turnstile_token() skips the CAPTCHA when the secret is empty, so refuse to boot without one.
+    if not TURNSTILE_SECRET_KEY:
+        raise ImproperlyConfigured("TURNSTILE_SECRET_KEY must be set when DJANGO_ENV=production.")
 else:
     TURNSTILE_SITE_KEY = ""
     TURNSTILE_SECRET_KEY = ""

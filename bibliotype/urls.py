@@ -18,9 +18,11 @@ from django.contrib import admin
 from django.contrib.auth.views import PasswordResetCompleteView, PasswordResetConfirmView, PasswordResetDoneView
 from django.urls import include, path
 
-from core.views import CustomPasswordResetView, handler404
+from core.views import CustomPasswordResetView, admin_login_view, handler404
 
 urlpatterns = [
+    # Shadows the admin site's own login URL so its POSTs are throttled per IP.
+    path("admin/login/", admin_login_view),
     path("admin/", admin.site.urls),
     path(
         "password-reset/",
