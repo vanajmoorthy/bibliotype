@@ -21,8 +21,8 @@ def create_vibe_prompt(dna: dict) -> str:
     top_authors = [item[0] for item in dna.get("top_authors", [])[:3]]
     avg_pub_year = dna.get("user_stats", {}).get("avg_publish_year", 2000)
 
-    # Simple logic to determine the era
-    era = "classic" if avg_pub_year < 1980 else "modern"
+    # Simple logic to determine the era (0 means no publish years were known)
+    era_line = f"\n- General Era: {'classic' if avg_pub_year < 1980 else 'modern'}" if avg_pub_year else ""
 
     # StoryGraph mood data (empty for Goodreads uploads)
     mood_line = ""
@@ -49,8 +49,7 @@ Your task is to generate 1 vivid, character-sketch-style sentence that captures 
 **User's Reading DNA:**
 - Primary Reader Type: "{reader_type}"
 - Top Genres: {', '.join(top_genres)}
-- Favorite Authors: {', '.join(top_authors)}
-- General Era: {era}{mood_line}
+- Favorite Authors: {', '.join(top_authors)}{era_line}{mood_line}
 
 **Example of GOOD output for a Fantasy/Sci-Fi reader:**
 {{

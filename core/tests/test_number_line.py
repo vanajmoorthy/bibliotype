@@ -199,6 +199,15 @@ class EnrichDnaTests(TestCase):
         result = _enrich_dna_for_display(dna)
         self.assertEqual(result["comparative_text"]["bpy_direction"], "fewer")
 
+    def test_enrich_dna_skips_comparison_for_zero_averages(self):
+        """A 0 average means no data: no comparative sentence and no pull on the number-line range."""
+        dna = _make_dna_data()
+        dna["user_stats"].update({"avg_book_length": 0, "avg_publish_year": 0, "avg_books_per_year": 0})
+        result = _enrich_dna_for_display(dna)
+        self.assertEqual(result["comparative_text"], {})
+        self.assertGreater(result["number_line_ranges"]["pages"]["min"], 0)
+        self.assertGreaterEqual(result["number_line_ranges"]["year"]["min"], 1900)
+
     def test_enrich_dna_produces_number_line_ranges(self):
         """Number line ranges are computed with dynamic min/max based on data values."""
         dna = _enrich_dna_for_display(_make_dna_data())
@@ -427,6 +436,18 @@ class NumberLineEdgeCaseTests(TestCase):
         self.assertContains(response, "Goodreads")
         # Fallback text should be shown for comparative section
         self.assertContains(response, "community rankings and percentiles")
+
+    def test_zero_averages_render_dash_not_zero(self):
+        dna = _make_dna_data()
+        dna["user_stats"].update({"avg_book_length": 0, "avg_publish_year": 0})
+        response = self._render_with_dna(dna)
+        content = response.content.decode()
+        self.assertIn('<span id="comp-length-value">–</span', content)
+        self.assertIn('<span id="comp-age-value">–</span', content)
+        self.assertNotIn("Longer than", content)
+        self.assertNotIn("Shorter than", content)
+        self.assertNotIn("Older than", content)
+        self.assertNotIn("Newer than", content)
 
     def test_controversial_books_empty(self):
         """When there are no controversial books, no number lines render for that section."""

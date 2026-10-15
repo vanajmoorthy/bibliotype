@@ -7,6 +7,14 @@ from .models import AggregateAnalytics
 
 logger = logging.getLogger(__name__)
 
+# Averages stored as 0 when a library has no page/year/date data. 0 means "missing", not a real value.
+MISSING_WHEN_ZERO = {"avg_book_length", "avg_publish_year", "avg_books_per_year"}
+
+
+def _has_value(stats, key):
+    value = stats.get(key)
+    return value is not None and not (key in MISSING_WHEN_ZERO and value <= 0)
+
 
 def get_bucket(value, bucket_size):
     """Calculates the histogram bucket for a given value."""
@@ -58,15 +66,13 @@ def update_analytics_from_stats(user_stats, previous_stats=None):
 
             # Subtract old bucket on re-upload
             if previous_stats is not None:
-                old_value = previous_stats.get(stat_key)
-                if old_value is not None:
-                    old_bucket = get_bucket(old_value, bucket_size)
+                if _has_value(previous_stats, stat_key):
+                    old_bucket = get_bucket(previous_stats[stat_key], bucket_size)
                     current_dist[old_bucket] = max(0, current_dist.get(old_bucket, 0) - 1)
 
             # Add new bucket
-            new_value = user_stats.get(stat_key)
-            if new_value is not None:
-                new_bucket = get_bucket(new_value, bucket_size)
+            if _has_value(user_stats, stat_key):
+                new_bucket = get_bucket(user_stats[stat_key], bucket_size)
                 current_dist[new_bucket] = current_dist.get(new_bucket, 0) + 1
 
             setattr(analytics, dist_field, current_dist)
@@ -150,6 +156,10 @@ def calculate_percentiles_from_aggregates(user_stats):
 
     percentile_bpy = (better_than_count_bpy / total_other_users) * 100
     percentiles["avg_books_per_year"] = min(100.0, percentile_bpy)
+
+    for key in MISSING_WHEN_ZERO:
+        if not _has_value(user_stats, key):
+            percentiles.pop(key, None)
 
     logger.debug("Calculated percentiles against global data")
     return percentiles
