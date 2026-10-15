@@ -1,15 +1,17 @@
 import logging
 
 import pandas as pd
+from django.db.models import Q
+from django.utils import timezone
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-from ...models import Author
+from ...models import Author, UserProfile
 from ..top_books_service import MIN_REVIEW_LENGTH_FOR_SENTIMENT, compute_book_score
 
 logger = logging.getLogger(__name__)
 
 
-def _save_dna_to_profile(profile, dna_data, dispatch_recommendations=True):
+def _save_dna_to_profile(profile, dna_data, dispatch_recommendations=True, task_id=None):
     """Persist DNA and kick off async recommendations.
 
     dispatch_recommendations=False (bulk seeding) skips the recommendations
@@ -17,34 +19,35 @@ def _save_dna_to_profile(profile, dna_data, dispatch_recommendations=True):
     nobody views their dashboards — and a corpus run would otherwise drop one
     heavy task per seeded user onto the interactive "celery" queue, which
     drains ahead of every enrichment queue and any real user's upload.
+
+    task_id (the task that produced this DNA) makes the write conditional: it only
+    lands while the profile's pending_dna_task_id is that task or empty, so a late
+    task can't overwrite DNA from a newer upload.
     """
-    profile.dna_data = dna_data
-    profile.reader_type = dna_data.get("reader_type")
-    profile.total_books_read = dna_data.get("user_stats", {}).get("total_books_read")
-    profile.reading_vibe = dna_data.get("reading_vibe")
-    profile.vibe_data_hash = dna_data.get("vibe_data_hash")
-
-    # Clear the pending task ID since we've completed the regeneration
-    profile.pending_dna_task_id = None
-
-    # Clear old recommendations - they'll be regenerated asynchronously
-    profile.recommendations_data = None
-    profile.recommendations_generated_at = None
+    fields = {
+        "dna_data": dna_data,
+        "reader_type": dna_data.get("reader_type"),
+        "total_books_read": dna_data.get("user_stats", {}).get("total_books_read"),
+        "reading_vibe": dna_data.get("reading_vibe"),
+        "vibe_data_hash": dna_data.get("vibe_data_hash"),
+        # Clear the pending task ID since we've completed the regeneration
+        "pending_dna_task_id": None,
+        # Clear old recommendations - they'll be regenerated asynchronously
+        "recommendations_data": None,
+        "recommendations_generated_at": None,
+    }
 
     try:
-        # Explicitly save all fields including pending_dna_task_id
-        profile.save(
-            update_fields=[
-                "dna_data",
-                "reader_type",
-                "total_books_read",
-                "reading_vibe",
-                "vibe_data_hash",
-                "pending_dna_task_id",
-                "recommendations_data",
-                "recommendations_generated_at",
-            ]
-        )
+        if task_id is None:
+            for name, value in fields.items():
+                setattr(profile, name, value)
+            profile.save(update_fields=[*fields, "last_updated"])
+        elif not UserProfile.objects.filter(
+            Q(pending_dna_task_id=task_id) | Q(pending_dna_task_id__isnull=True), pk=profile.pk
+        ).update(**fields, last_updated=timezone.now()):
+            # A newer upload owns the profile now; its own save will land, so leave its marker alone.
+            logger.warning(f"Skipped stale DNA save for user {profile.user.username} from task {task_id}")
+            return
 
         # Invalidate stale caches for this user
         from ...cache_utils import safe_cache_add, safe_cache_delete
@@ -70,9 +73,7 @@ def _save_dna_to_profile(profile, dna_data, dispatch_recommendations=True):
             generate_recommendations_task.delay(profile.user.id)
             logger.info(f"Dispatched recommendations task for user {profile.user.username}")
         else:
-            logger.info(
-                f"Skipped duplicate recommendations dispatch for user {profile.user.username} (sentinel held)"
-            )
+            logger.info(f"Skipped duplicate recommendations dispatch for user {profile.user.username} (sentinel held)")
 
     except Exception as e:
         logger.error(f"Error saving profile for user {profile.user.username}: {e}", exc_info=True)

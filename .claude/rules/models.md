@@ -22,9 +22,7 @@ Normalization is **lossy and one-way** — can cause false matches (rare) or mis
 
 ## Signals
 
-Two `post_save` receivers on User:
-1. `create_user_profile` — creates UserProfile when User is created
-2. `save_user_profile` — propagates User saves to UserProfile
+One `post_save` receiver on User: `create_user_profile` creates the UserProfile when a User is created. A User save never writes the profile: a full profile save there would write back stale `dna_data`/`pending_dna_task_id` over a DNA task's save. Save profiles with `update_fields`.
 
 **Disconnected during fixture loading** (`load_fixture_data.py`) to prevent duplicate creation errors. Reconnected in `finally` block.
 
@@ -75,6 +73,5 @@ Flow: AnonymousUserSession → (expire) → AnonymizedReadingProfile (via `anony
 
 - `Book.isbn13` is unique but nullable — multiple NULL values allowed (PostgreSQL behavior)
 - Publisher.parent allows cycles (no constraint preventing circular references)
-- `save_user_profile` signal fires on every User save — be careful of infinite loops in custom save logic
 - JSONField schemas are unvalidated — fields can be missing on older profiles (use `.get()` with defaults)
 - Author/Book normalized fields can diverge from display fields after manual edits
