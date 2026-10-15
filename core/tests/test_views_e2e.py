@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, TransactionTestCase, override_settings
+from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils.html import escape
 
@@ -462,10 +462,6 @@ class ViewE2E_Tests(PipelineTestCase):
         view uses update_or_create, so the second call refreshes the row
         in place instead of trying to insert a duplicate.
         """
-        from datetime import timedelta
-
-        from django.utils import timezone
-
         from core.models import AnonymousUserSession
 
         # Anonymous client with dna_data and a real session_key.
@@ -479,19 +475,9 @@ class ViewE2E_Tests(PipelineTestCase):
         session_key = session.session_key
         self.assertIsNotNone(session_key)
 
-        # Pre-create a row so the second call would collide on session_key
-        # under the old ``create(...)`` path. The first call's update_or_create
-        # path should then update this row in place.
-        AnonymousUserSession.objects.create(
-            session_key=session_key,
-            dna_data={"reader_type": "Stale Reader"},
-            books_data=[],
-            top_books_data=[],
-            genre_distribution={},
-            author_distribution={},
-            book_ratings={},
-            expires_at=timezone.now() + timedelta(days=7),
-        )
+        # No row yet: the legacy session DNA reaches the recreate branch, and the
+        # first call's row makes the second call collide on session_key under
+        # the old ``create(...)`` path.
 
         # Force the recreate branch on every call by making the ``.get()``
         # lookup miss, then mock out the recommendation engine so we isolate
@@ -515,8 +501,7 @@ class ViewE2E_Tests(PipelineTestCase):
         self.assertEqual(response_two.status_code, 200)
 
         # The unique-constraint contract: there is exactly one row for
-        # this session_key, and it carries the refreshed dna_data — not the
-        # pre-seeded "Stale Reader" payload.
+        # this session_key, carrying the session's dna_data.
         rows = AnonymousUserSession.objects.filter(session_key=session_key)
         self.assertEqual(rows.count(), 1)
         self.assertEqual(rows.first().dna_data["reader_type"], "Recreate Reader")
@@ -641,6 +626,75 @@ class SignupDuplicateEmailTests(TransactionTestCase):
         self.assertEqual(len(self.mail.outbox), 0)
 
 
+class GetRequestDnaTests(TestCase):
+    """get_request_dna: profile for logged-in users, else AnonymousUserSession, else legacy session copy."""
+
+    def _request(self, user=None, session_dna=None, anon_dna=None):
+        from datetime import timedelta
+
+        from django.contrib.auth.models import AnonymousUser
+        from django.contrib.sessions.backends.db import SessionStore
+        from django.test import RequestFactory
+        from django.utils import timezone
+
+        from core.models import AnonymousUserSession
+
+        request = RequestFactory().get("/")
+        request.user = user or AnonymousUser()
+        request.session = SessionStore()
+        if session_dna is not None:
+            request.session["dna_data"] = session_dna
+        request.session.save()
+        if anon_dna is not None:
+            AnonymousUserSession.objects.create(
+                session_key=request.session.session_key,
+                dna_data=anon_dna,
+                expires_at=timezone.now() + timedelta(days=7),
+            )
+        return request
+
+    def test_anonymised_session_row_is_not_served(self):
+        from core.models import AnonymousUserSession
+        from core.views._helpers import get_request_dna
+
+        request = self._request(anon_dna={"reader_type": "Anon"})
+        AnonymousUserSession.objects.filter(session_key=request.session.session_key).update(anonymized=True)
+        self.assertIsNone(get_request_dna(request))
+
+    def test_logged_in_uses_profile_and_ignores_session(self):
+        from core.views._helpers import get_request_dna
+
+        user = User.objects.create_user(username="dnauser", email="d@test.com", password="a-Strong-p4ssword!")
+        user.userprofile.dna_data = {"reader_type": "Profile"}
+        user.userprofile.save()
+        request = self._request(user, session_dna={"reader_type": "Session"}, anon_dna={"reader_type": "Anon"})
+        self.assertEqual(get_request_dna(request), {"reader_type": "Profile"})
+
+    def test_logged_in_without_profile_dna_ignores_session(self):
+        from core.views._helpers import get_request_dna
+
+        user = User.objects.create_user(username="nodna", email="n@test.com", password="a-Strong-p4ssword!")
+        self.assertIsNone(get_request_dna(self._request(user, session_dna={"reader_type": "Session"})))
+
+    def test_anonymous_uses_anonymous_session_row(self):
+        from core.views._helpers import get_request_dna
+
+        request = self._request(session_dna={"reader_type": "Session"}, anon_dna={"reader_type": "Anon"})
+        self.assertEqual(get_request_dna(request), {"reader_type": "Anon"})
+
+    def test_anonymous_falls_back_to_legacy_session_dna(self):
+        from core.views._helpers import get_request_dna
+
+        self.assertEqual(
+            get_request_dna(self._request(session_dna={"reader_type": "Session"})), {"reader_type": "Session"}
+        )
+
+    def test_nothing(self):
+        from core.views._helpers import get_request_dna
+
+        self.assertIsNone(get_request_dna(self._request()))
+
+
 @override_settings(
     CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "session-dna-claim"}},
 )
@@ -664,10 +718,7 @@ class SessionDnaClaimTests(TransactionTestCase):
         self.book_a = Book.objects.create(title="Session A", author=author)
         self.book_b = Book.objects.create(title="Session B", author=author)
 
-        session = self.client.session
-        session["dna_data"] = {"reader_type": "Session Reader", "user_stats": {}}
-        session.save()
-        self.session_key = session.session_key
+        self.session_key = self.client.session.session_key
         AnonymousUserSession.objects.create(
             session_key=self.session_key,
             dna_data={"reader_type": "Session Reader"},

@@ -6,6 +6,8 @@ from datetime import date
 
 from ..cache_utils import safe_cache_get, safe_cache_set
 from ..dna_constants import GLOBAL_AVERAGES
+from ..models import AnonymousUserSession
+from ..services.dna.types import ReadingDNA
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,25 @@ def _get_recommendation_pool_display():
     if count < RECS_POOL_MIN_DISPLAY:
         return None
     return _friendly_floor(count)
+
+
+def get_request_dna(request) -> ReadingDNA | None:
+    """The DNA to show for this request: the profile's for logged-in users, else the visitor's anonymous session's."""
+    if request.user.is_authenticated:
+        # Never fall through to session DNA: it's a stale anonymous snapshot (PR #243)
+        return request.user.userprofile.dna_data
+    session_key = request.session.session_key
+    if session_key:
+        # Anonymised rows keep dna_data until cleanup but already count in the shared pool; never serve or claim them
+        dna = (
+            AnonymousUserSession.objects.filter(session_key=session_key, anonymized=False)
+            .values_list("dna_data", flat=True)
+            .first()
+        )
+        if dna:
+            return dna
+    # shortcut: sessions from before the mirror was dropped still carry the full DNA; remove this fallback after 7 days
+    return request.session.get("dna_data")
 
 
 def _enrich_dna_for_display(dna_data):
