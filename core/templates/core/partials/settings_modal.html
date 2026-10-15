@@ -52,7 +52,7 @@
                                 if (!this.isValid) return;
                                 this.errorMessage = '';
                                 this.successMessage = '';
-                                fetch('{% url "core:api_update_username" %}', {
+                                fetch('{% url "core:update_username" %}', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
                                     body: JSON.stringify({ username: this.newName })

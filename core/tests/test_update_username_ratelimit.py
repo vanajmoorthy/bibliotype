@@ -19,7 +19,7 @@ from .ratelimit_test_helpers import frozen_ratelimit_window
     RATELIMIT_ENABLE=True,
 )
 class UpdateUsernameApiRateLimitTests(TestCase):
-    """US-020: update_username_api is rate-limited at 10 POSTs/minute/user via django-ratelimit."""
+    """US-020: update_username_view is rate-limited at 10 POSTs/minute/user via django-ratelimit."""
 
     def setUp(self):
         cache.clear()
@@ -31,7 +31,7 @@ class UpdateUsernameApiRateLimitTests(TestCase):
             password=self.password,
         )
         self.client.force_login(self.user)
-        self.url = reverse("core:api_update_username")
+        self.url = reverse("core:update_username")
 
     def tearDown(self):
         cache.clear()

@@ -83,7 +83,7 @@ def update_privacy_view(request):
 
 
 @ratelimit(key="user", rate="10/m", method="POST", block=True)
-def _update_username_api_throttled(request):
+def _update_username_throttled(request):
     try:
         data = json.loads(request.body)
         new_username = data.get("username")
@@ -101,23 +101,23 @@ def _update_username_api_throttled(request):
             return JsonResponse({"status": "error", "message": error_message}, status=400)
 
     except Exception as e:
-        logger.error(f"Error in update_username_api: {e}", exc_info=True)
+        logger.error(f"Error in update_username_view: {e}", exc_info=True)
 
         return JsonResponse({"status": "error", "message": "An unexpected server error occurred."}, status=500)
 
 
 @login_required
 @require_POST
-def update_username_api(request):
+def update_username_view(request):
     try:
-        return _update_username_api_throttled(request)
+        return _update_username_throttled(request)
     except Ratelimited:
         return JsonResponse({"status": "error", "message": "Too many attempts, try again later."}, status=429)
 
 
 @login_required
 @require_POST
-def update_recommendation_visibility(request):
+def update_recommendation_visibility_view(request):
     """Toggle visibility in recommendations"""
     is_visible = request.POST.get("visible_in_recommendations") == "true"
     profile = request.user.userprofile
