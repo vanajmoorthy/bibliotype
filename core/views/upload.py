@@ -255,7 +255,8 @@ def check_recommendations_status_view(request):
     profile = request.user.userprofile
     profile.refresh_from_db()
 
-    if profile.recommendations_data:
+    # [] is a finished run with no matches; None means not generated yet
+    if profile.recommendations_data is not None:
         return JsonResponse({"status": "ready"})
     return JsonResponse({"status": "pending"})
 
