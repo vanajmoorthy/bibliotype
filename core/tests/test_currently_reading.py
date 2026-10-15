@@ -411,3 +411,58 @@ class CurrentlyReadingCoverUpgradeTests(TransactionTestCase):
         self.assertEqual(len(cr_books), 1)
         # Should still have the ISBN-constructed URL since DB book has no cover_url
         self.assertEqual(cr_books[0]["cover_url"], "https://covers.openlibrary.org/b/isbn/9780000000099-M.jpg")
+
+
+@override_settings(
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_EAGER_PROPAGATES=True,
+    CELERY_RESULT_BACKEND="django-db",
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "shared-book-fields-tests",
+        }
+    },
+)
+class SharedBookFieldsTests(TransactionTestCase):
+    """An upload must fill blank Book fields, never overwrite another reader's or enrichment's values."""
+
+    def setUp(self):
+        try:
+            cache.clear()
+        except Exception:
+            pass
+        inline_patcher = patch("core.services.book_enrichment_service.enrich_book_from_apis")
+        inline_patcher.start()
+        self.addCleanup(inline_patcher.stop)
+
+    @patch("core.tasks.generate_recommendations_task.delay")
+    @patch("core.tasks.check_author_mainstream_status_task.apply_async")
+    @patch("core.tasks.enrich_book_task.apply_async")
+    @patch("core.services.dna.generate_vibe_with_llm")
+    def test_upload_fills_only_null_fields(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
+        mock_vibe.return_value = ["vibe1", "vibe2", "vibe3", "vibe4"]
+        author = Author.objects.create(name="Shared Author")
+        kept = Book.objects.create(title="Kept Book", author=author, page_count=300, publish_year=1999)
+        blank = Book.objects.create(title="Blank Book", author=author)
+        reading = Book.objects.create(title="Reading Book", author=author)
+        user = User.objects.create_user(username="sharedfields", password="pw")
+
+        csv = _csv(
+            'KEPT BOOK,Shared Author,read,="9780000000011",4,250,3.5,2024/01/15,2024/01/01,2020,',
+            'Blank Book,Shared Author,read,="9780000000012",4,200,4.1,2024/02/15,2024/01/01,2018,',
+            'READING BOOK,Shared Author,currently-reading,="9780000000013",0,400,4.2,,2024/06/15,2021,',
+        )
+
+        from core.tasks import generate_reading_dna_task
+
+        generate_reading_dna_task.delay(csv, user.id)
+
+        kept.refresh_from_db()
+        blank.refresh_from_db()
+        reading.refresh_from_db()
+        self.assertEqual((kept.title, kept.page_count, kept.publish_year), ("Kept Book", 300, 1999))
+        self.assertEqual(kept.average_rating, 3.5)
+        self.assertEqual((blank.page_count, blank.publish_year, blank.isbn13), (200, 2018, "9780000000012"))
+        self.assertEqual(reading.title, "Reading Book")
+        self.assertEqual(reading.isbn13, "9780000000013")
