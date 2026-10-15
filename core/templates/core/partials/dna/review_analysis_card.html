@@ -5,7 +5,7 @@
             <h2 class="text-2xl font-bold uppercase">Most Positive Review</h2>
             {% if dna.most_positive_review %}
                 <p class="font-bold">
-                    {{ dna.most_positive_review.Title }}{% if dna.most_positive_review.Author %} <span class="font-normal">— {{ dna.most_positive_review.Author }}</span>{% endif %}
+                    {{ dna.most_positive_review.Title }}{% if dna.most_positive_review.Author %} <span class="font-normal">by {{ dna.most_positive_review.Author }}</span>{% endif %}
                 </p>
                 {# Review text is sanitized at ingestion; strip_review_html also cleans legacy stored DNA - never use |safe here #}
                 <blockquote class="border-brand-text shadow-neo-sm self-start border-2 bg-brand-green p-3">
@@ -19,7 +19,7 @@
             <h2 class="text-2xl font-bold uppercase">Most Negative Review</h2>
             {% if dna.most_negative_review %}
                 <p class="font-bold">
-                    {{ dna.most_negative_review.Title }}{% if dna.most_negative_review.Author %} <span class="font-normal">— {{ dna.most_negative_review.Author }}</span>{% endif %}
+                    {{ dna.most_negative_review.Title }}{% if dna.most_negative_review.Author %} <span class="font-normal">by {{ dna.most_negative_review.Author }}</span>{% endif %}
                 </p>
                 {# Review text is sanitized at ingestion; strip_review_html also cleans legacy stored DNA - never use |safe here #}
                 <blockquote class="border-brand-text shadow-neo-sm self-start border-2 bg-brand-orange p-3">

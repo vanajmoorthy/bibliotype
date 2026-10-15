@@ -273,7 +273,7 @@ class FictionNonfictionCoverageSubtitleTests(TestCase):
         )
         self.assertIn("Based on 10 of", html)
         self.assertIn("15 books", html)
-        self.assertIn("refresh in a", html)
+        self.assertIn("Refresh in a", html)
 
     def test_subtitle_hidden_when_enrichment_finished(self):
         html = self._render(
