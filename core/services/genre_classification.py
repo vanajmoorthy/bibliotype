@@ -119,8 +119,9 @@ def classify_genres(canonical, shelf_fiction=False, shelf_nonfiction=False, shel
     3. Any nonfiction genre → nonfiction
     4. Shelf "nonfiction" → nonfiction (no API signal, trust the shelf;
        also disambiguates ambiguous-only sets like {"classic fiction"})
-    5. Shelf "fiction", or only ambiguous fiction genres → fiction
-    6. Empty or unmatched set, no shelf signal → None (caller decides)
+    5. Shelf "fiction" → fiction
+    6. Only ambiguous genres, or an empty/unmatched set, with no shelf signal
+       → None (undetermined: an age band or "classic" alone doesn't fix the axis)
     """
     combined = canonical | shelf_genres
     ambiguous_fiction = combined & AMBIGUOUS_FICTION_GENRES
@@ -135,7 +136,7 @@ def classify_genres(canonical, shelf_fiction=False, shelf_nonfiction=False, shel
         return "nonfiction"
     if shelf_nonfiction:
         return "nonfiction"
-    if shelf_fiction or ambiguous_fiction:
+    if shelf_fiction:
         return "fiction"
     return None
 
