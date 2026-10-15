@@ -47,7 +47,6 @@ services:
             - SECRET_KEY=${SECRET_KEY}
             - POSTHOG_API_KEY=${POSTHOG_API_KEY}
             - GEMINI_API_KEY=${GEMINI_API_KEY}
-            - GEMINI_MODEL=${GEMINI_MODEL:-gemini-flash-lite-latest}
             - GROQ_API_KEY=${GROQ_API_KEY:-}
             - CEREBRAS_API_KEY=${CEREBRAS_API_KEY:-}
             - LLM_MODELS=${LLM_MODELS:-}
@@ -86,7 +85,6 @@ services:
             - SECRET_KEY=${SECRET_KEY}
             - POSTHOG_API_KEY=${POSTHOG_API_KEY}
             - GEMINI_API_KEY=${GEMINI_API_KEY}
-            - GEMINI_MODEL=${GEMINI_MODEL:-gemini-flash-lite-latest}
             - GROQ_API_KEY=${GROQ_API_KEY:-}
             - CEREBRAS_API_KEY=${CEREBRAS_API_KEY:-}
             - LLM_MODELS=${LLM_MODELS:-}

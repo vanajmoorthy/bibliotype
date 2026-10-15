@@ -27,7 +27,7 @@ to Terraform Cloud (free) or a DO Spaces backend before anyone else runs this.
    (`ssh bibliotype@<droplet_ip>`, then `cloud-init status --wait`, `docker --version`,
    `swapon --show`).
 2. Copy the prod env file: `scp` `/home/bibliotype/app/.env` from the old box to the
-   same path on the new one. Review it while you're there (GEMINI_MODEL etc.).
+   same path on the new one. Review it while you're there (LLM keys, LLM_MODELS etc.).
 3. Copy the nginx site config + certs from the old box (`/etc/nginx/sites-available/`,
    then `certbot --nginx` on the new box to reissue rather than copying certs).
 4. Update the `DO_SSH_HOST` GitHub secret to the **reserved IP** (one-time — future

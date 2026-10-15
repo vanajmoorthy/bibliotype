@@ -1,11 +1,10 @@
 """Uniform LLM interface with a free multi-provider fallback chain.
 
-Replaces the single-provider `_gemini.client()` path. All LLM consumers
-(`llm_service`, `publisher_service`) route through `generate_json()`, which calls
-LiteLLM with an ordered chain of models from different free providers
-(Groq -> Gemini by default). LiteLLM handles per-model failover,
-retries, and cooldowns, so one provider being rate-limited doesn't take the
-feature down.
+All LLM consumers (`llm_service`, `publisher_service`) route through
+`complete_json()` / `generate_json()`, which call LiteLLM with an ordered chain
+of models from different free providers (Groq -> Gemini by default). LiteLLM
+handles per-model failover, retries, and cooldowns, so one provider being
+rate-limited doesn't take the feature down.
 
 The chain and per-provider keys come from Django settings so a single env edit
 retunes the whole app without a redeploy. `generate_json()` returns `None` on any
