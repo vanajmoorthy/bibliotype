@@ -10,7 +10,13 @@ from django.utils import timezone
 
 from ..analytics.events import track_external_api_call
 from ..cache_utils import safe_cache_get, safe_cache_set
-from ..dna_constants import CANONICAL_GENRE_MAP, ENRICHMENT_RETRY_AFTER, EXCLUDED_GENRES, GENRE_PRIORITY
+from ..dna_constants import (
+    CANONICAL_GENRE_MAP,
+    ENRICHMENT_MAX_INCOMPLETE_ATTEMPTS,
+    EXCLUDED_GENRES,
+    GENRE_PRIORITY,
+    enrichment_retry_window,
+)
 from ..models import Author, Book, Genre, Publisher
 from ._book_urls import cover_url_from_isbn, cover_url_from_olid
 
@@ -472,11 +478,12 @@ def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
     # Google Books: fetched for ratings + categories (its categories carry
     # higher confidence than OL subjects, so they lead the merge below). Fetched
     # once per book, then not again until the attempt is older than
-    # ENRICHMENT_RETRY_AFTER — so a book that got zero genres retries later when
+    # enrichment_retry_window(book) — so a book that got zero genres retries later when
     # the APIs may have data, but a freshly-checked book isn't re-hit every upload.
     gb_genres = set()
+    gb_exchange_completed = False
     gb_check_due = book.google_books_last_checked is None or (
-        timezone.now() - book.google_books_last_checked >= ENRICHMENT_RETRY_AFTER
+        timezone.now() - book.google_books_last_checked >= enrichment_retry_window(book)
     )
     if gb_check_due:
         gb_data, calls_made = _fetch_ratings_and_categories_from_google_books(
@@ -503,6 +510,7 @@ def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
             # Mark as checked only after a *completed* API exchange (including
             # a clean "not found") — never after a failed one.
             book.google_books_last_checked = timezone.now()
+            gb_exchange_completed = True
             is_updated = True
 
     # Merge both sources: Google Books canonical genres first (higher
@@ -542,6 +550,18 @@ def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
         logger.debug(
             f"Added {len(genres_to_add_limited)} genres (limited from {len(combined_genres)}): {genres_to_add_limited}"
         )
+
+    # Count consecutive full exchanges that still left the book incomplete, so
+    # enrichment_retry_window can stop re-querying books the APIs can't fill.
+    # Only completed exchanges count: a 5xx or quota failure says nothing about
+    # whether the data exists.
+    if gb_exchange_completed:
+        is_complete = bool(book.page_count and book.publish_year and book.genres.exists())
+        book.enrichment_incomplete_attempts = 0 if is_complete else book.enrichment_incomplete_attempts + 1
+        if book.enrichment_incomplete_attempts == ENRICHMENT_MAX_INCOMPLETE_ATTEMPTS:
+            logger.info(
+                f"'{book.title}' still incomplete after {ENRICHMENT_MAX_INCOMPLETE_ATTEMPTS} attempts; backing off"
+            )
 
     # --- Set cover_url from best available source (only if not already set) ---
     if not book.cover_url:

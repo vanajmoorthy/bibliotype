@@ -88,7 +88,7 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
     for this user. If a newer upload has started, this task exits early to avoid
     wasting API calls on stale enrichment work.
 
-    Respects the ENRICHMENT_RETRY_AFTER window: a book attempted within the
+    Respects the enrichment_retry_window: a book attempted within the
     window is skipped so the async path agrees with the inline path in
     dna_analyser. force=True bypasses the window (operator re-runs).
 
@@ -98,7 +98,7 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
     on whichever queue the task arrived on — bulk retries never jump the line.
     """
     from ..cache_utils import safe_cache_get
-    from ..dna_constants import ENRICHMENT_RETRY_AFTER
+    from ..dna_constants import enrichment_retry_window
 
     def _is_superseded():
         if not (user_id and upload_nonce):
@@ -124,11 +124,11 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
         logger.info(f"Enrich task for book {book_id} skipped before API call — superseded by newer upload")
         return
 
-    # Honour the retry window unless forced: a book attempted within
-    # ENRICHMENT_RETRY_AFTER is skipped (it already carries a timestamp, so
+    # Honour the retry window unless forced: a book attempted within its
+    # enrichment_retry_window is skipped (it already carries a timestamp, so
     # completion detection still counts it as attempted).
     if not force and book.google_books_last_checked is not None:
-        if timezone.now() - book.google_books_last_checked < ENRICHMENT_RETRY_AFTER:
+        if timezone.now() - book.google_books_last_checked < enrichment_retry_window(book):
             logger.info(f"Enrich task for book {book_id} skipped — attempted within retry window")
             return
 
