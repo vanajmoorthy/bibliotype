@@ -34,7 +34,9 @@ class ComputeEnrichmentStatsTests(TestCase):
     def _add_book(self, title, *, page_count=None, genres=None, mainstream_author=False, mainstream_publisher=False):
         author = self.author
         if mainstream_author:
-            author = Author.objects.create(name=f"Mainstream {title}", normalized_name=f"main{title}", is_mainstream=True)
+            author = Author.objects.create(
+                name=f"Mainstream {title}", normalized_name=f"main{title}", is_mainstream=True
+            )
         publisher = None
         if mainstream_publisher:
             publisher = Publisher.objects.create(name=f"Big {title}", normalized_name=f"big{title}", is_mainstream=True)
@@ -302,6 +304,22 @@ class FictionNonfictionCoverageSubtitleTests(TestCase):
         html = self._render({"fiction_count": 5, "nonfiction_count": 3}, None)
         self.assertIn('id="fiction-pct">63%', html)
         self.assertIn('id="nonfiction-pct">37%', html)
+
+
+class KeyStatsRowRatingTests(TestCase):
+    """A user with no ratings has average_rating_overall == "N/A"; the Alpine x-data must stay valid JS."""
+
+    def _render(self, rating):
+        from django.template.loader import render_to_string
+
+        dna = {"user_stats": {"total_books_read": 3, "total_pages_read": 900}, "average_rating_overall": rating}
+        return render_to_string("core/partials/dna/key_stats_row.html", {"dna": dna, "enrichment": None})
+
+    def test_no_ratings_renders_null(self):
+        self.assertIn("targetRating: null,", self._render("N/A"))
+
+    def test_rating_renders_number(self):
+        self.assertIn("targetRating: 3.57,", self._render(3.57))
 
 
 @override_settings(
