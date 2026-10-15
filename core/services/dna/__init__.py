@@ -650,8 +650,9 @@ def calculate_full_dna(
                         },
                     )
 
-        # Inline enrichment for StoryGraph uploads (DB backfill + Google Books quick lookup)
-        if csv_source == "storygraph" and book_pks_by_idx:
+        # Fill blank pages/year/rating from the shared Book table for every upload, so the
+        # stats agree with Book Extremes (which reads Book.page_count) instead of going "–".
+        if book_pks_by_idx:
             # Phase A: Backfill from DB -- single batch query
             all_book_pks = list(book_pks_by_idx.values())
             enriched_books = {

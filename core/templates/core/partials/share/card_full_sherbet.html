@@ -25,7 +25,7 @@
                 <div class="text-[10px] uppercase">Books</div>
             </div>
             <div class="border-brand-text bg-brand-yellow border-2 p-1.5 text-center">
-                <div class="text-lg font-bold">{{ dna.user_stats.total_pages_read|intcomma }}</div>
+                <div class="text-lg font-bold">{{ dna.user_stats.total_pages_read|default:"–"|intcomma }}</div>
                 <div class="text-[10px] uppercase">Pages</div>
             </div>
             <div class="border-brand-text bg-brand-yellow border-2 p-1.5 text-center">
