@@ -121,8 +121,10 @@ CSV Upload → Celery Task (async) → DNA Analysis → Book/Author DB Sync
 
 All planning documents belong under `docs/`, not in session-local directories:
 
-- Implementation plans → `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md` (e.g. `2026-03-02-feat-genre-accuracy-and-fiction-nonfiction-split-plan.md`). Note: `docs/plans/` and `docs/brainstorms/` are **gitignored** — plans are local working docs, kept out of the repo history on purpose. Don't force-add them.
-- Session handoffs → `docs/handoffs/YYYY-MM-DD-<slug>.md` — these ARE committed.
+- Implementation plans → `docs/plans/YYYY-MM-DD-<type>-<slug>-plan.md` (e.g. `2026-03-02-feat-genre-accuracy-and-fiction-nonfiction-split-plan.md`).
+- Session handoffs → `docs/handoffs/YYYY-MM-DD-<slug>.md`.
+
+`docs/plans/`, `docs/brainstorms/` and `docs/handoffs/` are all **gitignored**: they're local working docs and the repo is public, so they often hold server IPs, SSH details and other operational notes. Don't force-add them.
 
 If you draft a plan elsewhere (e.g. plan mode), copy it into `docs/plans/` so it's readable in one place. Warning: plan docs inside disposable worktrees are lost when the worktree is deleted — copy them to the main checkout's `docs/plans/`.
 

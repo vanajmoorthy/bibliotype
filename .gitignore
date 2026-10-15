@@ -74,6 +74,7 @@ csv/
 # Plans and brainstorms (local only)
 docs/plans/
 docs/brainstorms/
+docs/handoffs/
 
 # Local-only worktrees
 .claude/worktrees/
