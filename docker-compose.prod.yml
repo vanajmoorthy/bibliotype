@@ -153,6 +153,8 @@ services:
             - LLM_TIMEOUT_SECONDS=${LLM_TIMEOUT_SECONDS:-}
             - LLM_NUM_RETRIES=${LLM_NUM_RETRIES:-}
             - GOOGLE_BOOKS_API_KEY=${GOOGLE_BOOKS_API_KEY}
+            # settings.py refuses to boot in production without it, worker included
+            - TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY}
             - DEBUG=${DEBUG}
             - ALLOWED_HOSTS=${ALLOWED_HOSTS}
             - POSTGRES_DB=${POSTGRES_DB}
