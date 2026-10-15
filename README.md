@@ -193,7 +193,7 @@ See the linked docs for full detail.
 - **Share cards** (`core/templates/core/partials/share/*`) still use `text-[10px]` / `text-xs` —
   deliberately skipped in the site-wide readability bump because they're fixed-canvas 320×568 PNG
   downloads and bumping overflows the frame. A future pass must redesign the layout to enlarge the text. 🙅
-- neo-3d shadow bevel follow-ups: purple variants in `small_button.html` / `small_link_button.html` were
+- neo-3d shadow bevel follow-ups: the purple variant in `small_link_button.html` was
   skipped (they use `hover:bg-opacity-90` instead of the standard shadow-shrink chain); cards/modals/inputs
   not evaluated (would need a stateless `neo-3d-static` utility — YAGNI for now); consider `@property`
   transitions for the bevel.

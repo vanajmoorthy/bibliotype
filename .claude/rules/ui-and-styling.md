@@ -45,7 +45,7 @@ Hard 2px borders, heavy offset shadows, bright saturated colors, VT323 retro mon
 - The button only ever moves DOWN toward the page — never lifts on the z-axis
 - Pairings: `shadow-neo` (4px) → hover `translate-*-px` + `shadow-neo-md`, active `translate-*-1` + `shadow-none`; `shadow-neo-sm` (2px) → hover `translate-*-px` + `shadow-neo-xs`, active `translate-*-0.5` + `shadow-none`
 
-**Button partials** in `templates/core/partials/buttons/`: `primary_button`, `secondary_button` (multi-color/size), `nav_button`, `small_button`, `small_link_button`, `link_button`, `close_button`, `icon_button`. Include with context vars like `text`, `color`, `size`, `hover_color`.
+**Button partials** in `templates/core/partials/buttons/`: `primary_button`, `secondary_button`, `nav_button`, `small_button`, `small_link_button`, `link_button`, `close_button`, `icon_button`. Each only has the colour variants its callers use (`nav_button` takes `hover_color` or `is_signup`, `small_link_button` takes `color="purple"`); add a variant as a literal class string when a new caller needs one. Full share cards are one partial, `share/card_full.html`, themed by the `*_bg` vars passed from `share_modal.html`.
 
 **DNA card partials** in `templates/core/partials/dna/`: 16 components for dashboard display. Include via `{% include %}` with `dna`, `pronoun_pos`, `enrichment` context.
 
