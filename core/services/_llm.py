@@ -2,7 +2,7 @@
 
 All LLM consumers (`llm_service`, `publisher_service`) route through
 `complete_json()` / `generate_json()`, which call LiteLLM with an ordered chain
-of models from different free providers (Groq -> Gemini by default). LiteLLM
+of models from different free providers (Gemini -> Groq by default). LiteLLM
 handles per-model failover, retries, and cooldowns, so one provider being
 rate-limited doesn't take the feature down.
 
