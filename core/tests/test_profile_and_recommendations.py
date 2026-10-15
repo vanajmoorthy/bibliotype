@@ -46,6 +46,18 @@ class ProfilePrivacyTestCase(TestCase):
         self.assertContains(response, "public_user")
         self.assertContains(response, "Test Reader")
 
+    def test_public_profile_json_script_only_has_chart_fields(self):
+        """The dna-data script must carry chart fields only, not the whole DNA dict."""
+        self.user1.userprofile.dna_data = {
+            "reader_type": "Test Reader",
+            "top_authors": [["Chart Author Xyz", 3]],
+            "reviews_with_sentiment": [{"review": "secret-review-text-abc"}],
+        }
+        self.user1.userprofile.save()
+        response = self.client.get(reverse("core:public_profile", kwargs={"username": "public_user"}))
+        self.assertContains(response, "Chart Author Xyz")
+        self.assertNotContains(response, "secret-review-text-abc")
+
     def test_private_profile_shows_generic_404_when_logged_out(self):
         """Test that private profiles show the generic 404 page when logged out"""
         response = self.client.get(reverse("core:public_profile", kwargs={"username": "private_user"}))

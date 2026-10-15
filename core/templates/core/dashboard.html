@@ -1,5 +1,5 @@
 {% extends 'core/base.html' %}
-{% load humanize %}
+{% load humanize dna_extras %}
 
 {% block seo_title %}Bibliotype – Dashboard{% endblock %}
 
@@ -200,7 +200,7 @@
                 }"
                 class="space-y-6"
             >
-                {{ dna|json_script:"dna-data" }}
+                {{ dna|chart_fields|json_script:"dna-data" }}
                 <h1 class="mb-4 text-center text-5xl font-bold tracking-widest uppercase md:mb-8">
                     <span class="relative z-10">
                         {% if user.is_authenticated %}
