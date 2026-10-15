@@ -57,13 +57,14 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 # provider being rate-limited doesn't take vibe generation or publisher research
 # down. All routed through `core/services/_llm.py:generate_json()`. Env-tuned so a
 # delisted free model (the :free rosters rotate) is a prod .env edit, not a
-# redeploy. Default chain is all-free and was checked live on 2026-10-11: two
-# Groq models (Groq rate-limits per model, so the second still answers when the
-# first is throttled) -> Gemini flash-lite (the reliable floor). Groq's llama-3.3
-# and every Cerebras model had been retired or put behind billing by then.
+# redeploy. Default chain is all-free, picked from a side-by-side vibe comparison
+# on 2026-10-15: Gemini 3.5 flash-lite writes the best vibes, 3.1 flash-lite is a
+# separate per-model quota, and Groq qwen covers a Gemini outage. Groq gpt-oss
+# was dropped for repetitive "sipping tea" vibes; flash-lite-latest aliases 3.5
+# (same quota), so it adds nothing as a fallback.
 # `or` rather than a get() default: compose passes unset vars through as "".
 LLM_MODELS = (
-    os.environ.get("LLM_MODELS") or "groq/openai/gpt-oss-120b,groq/qwen/qwen3.8-27b,gemini/gemini-flash-lite-latest"
+    os.environ.get("LLM_MODELS") or "gemini/gemini-3.5-flash-lite,gemini/gemini-3.1-flash-lite,groq/qwen/qwen3.8-27b"
 )
 LLM_TIMEOUT_SECONDS = float(os.environ.get("LLM_TIMEOUT_SECONDS") or "20")
 LLM_NUM_RETRIES = int(os.environ.get("LLM_NUM_RETRIES") or "1")

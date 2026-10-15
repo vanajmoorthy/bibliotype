@@ -2,7 +2,7 @@
 
 Bibliotype is a web application that generates a personalised “Reading DNA” dashboard from a user's Goodreads or StoryGraph export file and provides visual insights into reading habits and preferences
 
-The app uses a Python backend with Pandas for data analysis and calls an LLM (a LiteLLM fallback chain across free tiers, Groq then Gemini) to generate a creative, AI-powered vibe for each user's unique reading taste.
+The app uses a Python backend with Pandas for data analysis and calls an LLM (a LiteLLM fallback chain across free tiers, Gemini then Groq) to generate a creative, AI-powered vibe for each user's unique reading taste.
 
 https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 
@@ -334,7 +334,7 @@ This is the recommended method for local development. It creates a consistent, i
     GEMINI_API_KEY="your-gemini-api-key"
 
     # Optional LLM chain overrides
-    # LLM_MODELS="groq/openai/gpt-oss-120b,groq/qwen/qwen3.8-27b,gemini/gemini-flash-lite-latest"
+    # LLM_MODELS="gemini/gemini-3.5-flash-lite,gemini/gemini-3.1-flash-lite,groq/qwen/qwen3.8-27b"
     # LLM_TIMEOUT_SECONDS=20
     # LLM_NUM_RETRIES=1
 

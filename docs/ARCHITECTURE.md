@@ -316,7 +316,7 @@ To place a publisher, the system runs a multi-step research process:
 
 1. **Wikipedia search** with three query variations: `"{name} (publisher)"`, `"{name} (imprint)"`, and just `"{name}"`. The first non-disambiguation page wins.
 
-2. **LLM analysis** of the Wikipedia summary, through the LiteLLM provider chain in `core/services/_llm.py` (Groq first, Gemini as fallback; skipped if no provider key is configured). The prompt asks the model to determine whether the publisher is one of the Big 5 or an imprint of one, and to identify the parent company. The response is structured JSON with `is_mainstream`, `parent_company_name`, and `reasoning`.
+2. **LLM analysis** of the Wikipedia summary, through the LiteLLM provider chain in `core/services/_llm.py` (Gemini first, Groq as fallback; skipped if no provider key is configured). The prompt asks the model to determine whether the publisher is one of the Big 5 or an imprint of one, and to identify the parent company. The response is structured JSON with `is_mainstream`, `parent_company_name`, and `reasoning`.
 
 This two-step approach (structured data lookup + LLM reasoning) handles edge cases that a simple lookup can't: obscure imprints, recently acquired publishers, and regional variants.
 
@@ -328,7 +328,7 @@ The "reading vibe" is the most visible AI feature: a single witty one-line chara
 
 ### The Prompt
 
-`generate_vibe_with_llm()` in `core/services/llm_service.py` sends a few-shot prompt through the LiteLLM provider chain in `core/services/_llm.py`. The chain is configured by `LLM_MODELS` (default: Groq gpt-oss, then Groq qwen, then Gemini Flash Lite), and LiteLLM handles failover, retries and cooldowns. The prompt includes:
+`generate_vibe_with_llm()` in `core/services/llm_service.py` sends a few-shot prompt through the LiteLLM provider chain in `core/services/_llm.py`. The chain is configured by `LLM_MODELS` (default: Gemini 3.5 Flash Lite, then Gemini 3.1 Flash Lite, then Groq qwen), and LiteLLM handles failover, retries and cooldowns. The prompt includes:
 
 - The user's primary reader type
 - Top 3 genres
