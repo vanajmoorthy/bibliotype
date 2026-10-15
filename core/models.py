@@ -14,6 +14,18 @@ class Genre(models.Model):
         return self.name
 
 
+class UnmappedSubject(models.Model):
+    """An API subject or category that matched no genre alias or exclusion. Surfaced by analyze_genres."""
+
+    name = models.CharField(max_length=255, unique=True)
+    seen_count = models.PositiveIntegerField(default=0, db_index=True)
+    example_title = models.CharField(max_length=255, blank=True)
+    last_seen = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Publisher(models.Model):
     name = models.CharField(max_length=255, unique=True)
     normalized_name = models.CharField(max_length=255, unique=True, editable=False)

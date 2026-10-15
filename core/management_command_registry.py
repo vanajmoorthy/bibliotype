@@ -53,8 +53,16 @@ ADMIN_COMMANDS = [
     },
     {
         "name": "analyze_genres",
-        "description": "Audit genre mappings: shows unmapped genres and their frequencies. Read-only.",
-        "arguments": [],
+        "description": "List the most common API subjects that matched no genre alias, to find aliases worth adding.",
+        "arguments": [
+            {"name": "--limit", "type": "int", "label": "Limit", "help": "How many subjects to list (default 50)"},
+            {
+                "name": "--prune",
+                "type": "flag",
+                "label": "Prune",
+                "help": "Delete recorded subjects that an alias or exclusion now covers",
+            },
+        ],
     },
     {
         "name": "rebuild_analytics",
