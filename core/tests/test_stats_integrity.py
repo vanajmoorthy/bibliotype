@@ -106,6 +106,12 @@ class ReuploadCountTests(TransactionTestCase):
         calculate_full_dna(f"{CSV}\n{duplicate_a}", user=user)
         self.assertEqual(self._read_counts(), [1, 1])
 
+    def test_duplicate_rows_for_one_book_count_once_in_own_stats(self, *mocks):
+        user = User.objects.create_user(username="own-duplicator", password="pw")
+        row_a = CSV.split("\n")[1]
+        dna = calculate_full_dna(f"{CSV}\n{row_a}", user=user)
+        self.assertEqual(dna["user_stats"]["total_books_read"], 2)
+
     def test_dropped_book_count_never_goes_below_zero(self, *mocks):
         user = User.objects.create_user(username="floor", password="pw")
         calculate_full_dna(CSV, user=user)

@@ -98,6 +98,15 @@ def calculate_full_dna(
         df, csv_source = _detect_and_normalize_csv(df)
         logger.info(f"CSV source detected: {csv_source}")
         read_df = df[df["Exclusive Shelf"] == "read"].copy()
+        # Re-reads first: without a "Read Count" column they show up as repeated titles.
+        reader_type_reread_count = compute_reread_count(read_df)
+        # A book listed on several rows still counts once in the reader's own stats.
+        dedupe_key = (
+            read_df["Title"].astype(str).str.strip().str.lower()
+            + "|"
+            + read_df["Author"].astype(str).str.strip().str.lower()
+        )
+        read_df = read_df[~dedupe_key.duplicated()]
 
         # --- Extract currently-reading and custom shelf data ---
         currently_reading_df = df[df["Exclusive Shelf"] == "currently-reading"].copy()
@@ -686,7 +695,6 @@ def calculate_full_dna(
             if book.title
         }
 
-        reader_type_reread_count = compute_reread_count(read_df)
         reader_type_books_per_year = compute_books_per_year(read_df)
         reader_type, reader_type_scores = assign_reader_type(
             read_df,
