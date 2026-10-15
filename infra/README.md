@@ -5,8 +5,6 @@ firewall (22/80/443 only) + cloud-init bootstrap (Docker, 2GB swap, `bibliotype`
 deploy user, nginx, certbot, SSH hardening). App deployment is NOT managed here —
 that stays with the GitHub Actions SSH deploy (`.github/workflows/deploy.yml`).
 
-Background and rationale: `docs/infra/terraform-migration-plan.md`.
-
 ## First-time setup
 
 ```bash

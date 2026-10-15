@@ -2,7 +2,7 @@
 
 Bibliotype is a web application that generates a personalised “Reading DNA” dashboard from a user's Goodreads or StoryGraph export file and provides visual insights into reading habits and preferences
 
-The app uses a Python backend with Pandas for data analysis and calls the Gemini API to generate a creative, AI-powered vibe for each user's unique reading taste.
+The app uses a Python backend with Pandas for data analysis and calls an LLM (a LiteLLM fallback chain across free tiers, Groq then Gemini) to generate a creative, AI-powered vibe for each user's unique reading taste.
 
 https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 
@@ -10,8 +10,8 @@ https://github.com/user-attachments/assets/41540178-f67a-4a48-9105-1a687f034c23
 ## TODO / Known Undone Work
 
 A living backlog of everything known to be unfinished, deferred, or in-progress — sourced from
-`docs/plans/`, `docs/handoffs/`, `docs/GENRES.md`, `docs/SCALING.md`,
-`docs/scaling-implementation-plan.md`, `docs/ARCHITECTURE.md`, code, and in-flight worktrees.
+`docs/plans/`, `docs/handoffs/`, `docs/GENRES.md`, `docs/SCALING.md`, `docs/ARCHITECTURE.md`,
+code, and in-flight worktrees.
 Legend: 🙅 not started · 🚧 partial/in-progress · ❓ needs verification · ✅ shipped (kept briefly
 for reference) · ~~struck through~~ = verified done against `main` as of 2026-08-24.
 See the linked docs for full detail.
@@ -48,11 +48,11 @@ See the linked docs for full detail.
   unverified — only the tag→genre map applies).
 - **The fiction/nonfiction axis is encoded in genre *identity*, not as a field.** The canonical set
   carries "classic fiction" and "classic nonfiction" as two separate names, and the import-time
-  `assert _classified == _all_canonical` (`core/dna_constants.py:1917`) forces every canonical genre
+  `assert _classified == _all_canonical` (`core/dna_constants.py`) forces every canonical genre
   onto exactly one side. No `Genre` row can represent "undetermined".
 - ✅ **The DNA path resolves this correctly — it is not buggy.** `classify_genres`
-  (`core/services/genre_classification.py:58`) re-decides the axis at analysis time from a book's
-  co-occurring genres plus Goodreads shelf signals, and `count_fiction_nonfiction` (`:92`) keeps a real
+  (`core/services/genre_classification.py`) re-decides the axis at analysis time from a book's
+  co-occurring genres plus Goodreads shelf signals, and `count_fiction_nonfiction` (same module) keeps a real
   third `defaulted_count` bucket that is never folded into fiction. Both counting paths
   (`calculate_full_dna`, `_compute_enrichment_stats`) go through it.
 - ✅ **~~The actual defect: similarity and recommendations bypass `classify_genres` entirely.~~**
@@ -72,7 +72,7 @@ See the linked docs for full detail.
 - ✅ ~~**`AMBIGUOUS_FICTION_GENRES` needs an audit.**~~ Kept as is (all three span both axes on prod data);
   fiction form headings moved off nonfiction genres. See `docs/GENRES.md` §8.
 - 🙅 **Possible structural fix — NOT DONE, NOT DECIDED.** Move the axis off `Genre.name` and onto an
-  explicit through-model on `Book.genres` (`core/models.py:67`) carrying a nullable `axis` plus
+  explicit through-model on `Book.genres` (`Book` in `core/models.py`) carrying a nullable `axis` plus
   `axis_source` / `axis_confidence`. That gives "undetermined" a real representation and lets every
   consumer read one resolved value instead of re-deriving or ignoring it.
 - Genre-split round-trip tests: fixtures for both Goodreads + StoryGraph asserting split counts sum
@@ -80,10 +80,8 @@ See the linked docs for full detail.
 - See `docs/plans/2026-03-02-feat-genre-accuracy-and-fiction-nonfiction-split-plan.md`, `docs/GENRES.md`.
 
 ### Reader type 🚧 (overhaul landed PR #125; several decisions deferred)
-- **Retirement decision pending a verdict to Vanaj.** Over a 200-library synthetic corpus, ~9–11 of 20
-  types never win (candidates: Nature Nut Case, Social Savant, History Hound, Comfort Rereader, Series
-  Slayer, Modern Maverick, Rapacious Reader, Tome Tussler, Novella Navigator, Eclectic Reader). Decide
-  whether to drop/clean any.
+- ✅ ~~**Retirement decision pending.**~~ Decided 2026-09-02: Nature Nut Case and Social Savant retired,
+  Author Loyalist added. See the Reader types backlog below.
 - Distribution-domination cap relaxed ≤25% → ≤30% (Fantasy Fanatic ~26.5%, structural to the test
   corpus) — can be tightened later.
 - ✅ Reread/series signals are now `MIN_SIGNAL_BOOKS`-guarded like genre/page/year signals: libraries
@@ -131,13 +129,14 @@ See the linked docs for full detail.
   comparative-analytics tile.
 - See `docs/plans/enrichment-ux-improvements.md`, `docs/plans/2026-04-06-feat-enrichment-ux-and-performance-plan.md`.
 
-### Scaling, performance & infra 🚧 (most of `docs/scaling-implementation-plan.md` unapplied; gunicorn gthread tuning landed PR #158)
-- **Phase 1 (app):** ~~Gunicorn threaded workers~~; DB `conn_max_age` + health checks; Celery task time
-  limits + worker recycling; ~~frontend polling backoff (3s→10s / 5s→15s)~~.
-- **Phase 2 (VPS):** 1 GB swap + swappiness tuning; nginx tuning (`client_max_body_size`, gzip, static
-  caching, rate limiting); Redis `maxmemory` cap; small-RAM Postgres tuning; per-container `mem_limit`s.
-- **Phase 3 (ops):** Silk `.prof` disk cleanup; Docker + Django log rotation; daily Postgres backup cron;
-  UFW firewall; Uptime Robot monitoring; resource-monitoring cron.
+### Scaling, performance & infra 🚧
+- ✅ Done: Gunicorn gthread workers, DB `conn_max_age` + health checks, Celery task time limits + worker
+  recycling, frontend polling backoff, 2 GB swap + swappiness (cloud-init), Redis `maxmemory` cap,
+  small-RAM Postgres tuning, `mem_limit`s on db and redis, and the DigitalOcean cloud firewall
+  (replaces UFW). See `docker-compose.prod.yml` and `infra/`.
+- **Still open:** nginx tuning (`client_max_body_size`, gzip, static caching, rate limiting); Silk `.prof`
+  disk cleanup; Docker + Django log rotation; daily Postgres backup cron; Uptime Robot monitoring;
+  resource-monitoring cron. ❓ Some of these may be configured on the box outside the repo.
 - **Google Books free quota ceiling (10k calls/day)** binds with many cold uploads. Mitigation ladder
   (unbuilt): lean on Open Library + cache enrichment indefinitely → paid GB tier → pre-enrich popular
   books from a curated NYT/Goodreads-top-1000 list so cold uploads hit cache.
@@ -146,7 +145,7 @@ See the linked docs for full detail.
   ~~error with no restart policy. Gate migrations to web only, or add `restart: unless-stopped` on the worker.~~
 - Deferred to higher tiers: PgBouncer / managed Postgres, WhiteNoise, Cloudflare CDN, Sentry/APM,
   splitting web + Celery onto separate droplets.
-- See `docs/SCALING.md`, `docs/scaling-implementation-plan.md`.
+- See `docs/SCALING.md`.
 
 ### Security & auth follow-ups 🚧
 - **US-017 email enumeration** not fully closed — signup redirects still differ by whether the email
@@ -166,7 +165,8 @@ See the linked docs for full detail.
   visible (a PostHog bucket can inform it).
 - ~~Verify the `uniqueness-badge` django-waffle switch is deployed (badge shows "One of a kind" /~~
   ~~"Pretty unique"), and the eligible-pool-count display ("out of over X readers", magnitude-aware~~
-  ~~flooring — `recommendations_pool_size()` + `friendly_floor()`).~~
+  ~~flooring, `get_recommendation_pool_size()` in `user_similarity_service.py` + `_friendly_floor()` in~~
+  ~~`core/views/_helpers.py`).~~
 - Backwards-compat: old `recommendations_meta` lacks `max_similarity_pct`/uniqueness fields; the template
   must degrade to count-only copy until users regenerate.
 - See `docs/plans/2026-07-10-feat-similar-readers-stat-and-uniqueness-badge-plan.md`.
@@ -300,10 +300,6 @@ detail. ~~Struck-through~~ items were verified done against `main` as of 2026-08
 - Multi-user similarity: a dedicated "how similar are you" page comparing 2+ (public) users.
 
 ### Deploy / infra
-- **Deploy propagation lag:** `docker-compose.prod.yml`'s `web` service has both `build: .` and
-  `image:`, and the deploy runs `docker compose up` without a `git pull`, so the live site can lag
-  noticeably after a push before the container swaps (looks stale right after deploy, then
-  resolves). Consider `up --no-build` / pull-only to make deploys deterministic.
 - **US-017:** signup user-enumeration is reduced but not eliminated; a full fix needs an
   email-verification flow (deferred user-facing work).
 - **Ripe legacy-compat cleanups:** the pre-US-002 in-flight `task_id` shim and the US-032
@@ -332,7 +328,15 @@ This is the recommended method for local development. It creates a consistent, i
     # .env
 
     SECRET_KEY="generate-a-new-secret-key"
-    GEMINI_API_KEY="your-real-gemini-api-key"
+
+    # At least one LLM provider key from the chain
+    GROQ_API_KEY="your-groq-api-key"
+    GEMINI_API_KEY="your-gemini-api-key"
+
+    # Optional LLM chain overrides
+    # LLM_MODELS="groq/openai/gpt-oss-120b,groq/qwen/qwen3.8-27b,gemini/gemini-flash-lite-latest"
+    # LLM_TIMEOUT_SECONDS=20
+    # LLM_NUM_RETRIES=1
 
     # Credentials for the local PostgreSQL container
     POSTGRES_DB=bibliotype_db
@@ -383,166 +387,16 @@ If you update the book list in `seed_books.py` and want to regenerate the `full_
 
 ## Deploying to Production
 
-This guide outlines the steps to deploy the application to a production environment on a fresh Ubuntu 22.04 server (e.g., a DigitalOcean VPS). The stack uses Docker Compose, Nginx as a reverse proxy, and GitHub Actions for fully automated CI/CD.
+Production runs on a single DigitalOcean droplet: Nginx (SSL via Certbot) in front of Gunicorn, with
+Django, the Celery worker, PostgreSQL and Redis in Docker Compose (`docker-compose.prod.yml`).
 
-### 1. Initial Server Setup
-
-1.  **Create an Ubuntu 22.04 Server:**
-    *   Provision a new VPS and ensure you can connect via SSH using your public key.
-
-2.  **Create a Deployment User:**
-    *   Log in as `root` and create a dedicated non-root user for the deployment.
-        ```bash
-        # Replace 'deploy' with your preferred username
-        adduser deploy
-        ```
-    *   Grant this user `sudo` privileges and add them to the `docker` group (this requires installing Docker first, see next step).
-        ```bash
-        usermod -aG sudo deploy
-        ```
-    *   Copy your SSH key to the new user so you can log in directly:
-        ```bash
-        # This command copies the keys from the root user
-        rsync --archive --chown=deploy:deploy ~/.ssh /home/deploy/
-        ```
-    *   Log out and log back in as your new `deploy` user.
-
-3.  **Install Software & Configure Firewall:**
-    *   Install Docker, Nginx, and Certbot.
-        ```bash
-        # Install Docker
-        curl -fsSL https://get.docker.com -o get-docker.sh
-        sudo sh get-docker.sh
-        sudo usermod -aG docker $USER # Add current user to docker group
-
-        # Install Nginx and Certbot
-        sudo apt update
-        sudo apt install nginx python3-certbot-nginx -y
-        ```
-    *   Configure the firewall to allow web and SSH traffic.
-        ```bash
-        sudo ufw allow OpenSSH
-        sudo ufw allow 'Nginx Full'
-        sudo ufw enable
-        ```
-    *   **Important:** Log out and log back in to apply the Docker group permissions. Verify with `docker ps`.
-
-### 2. Project Setup on the Server
-
-1.  **Clone the Repository:**
-    ```bash
-    git clone https://github.com/your-username/bibliotype.git app
-    cd app
-    ```
-
-2.  **Create the Production `.env` File:**
-    Create a new `.env` file for production secrets. **Use strong, unique credentials.**
-    ```bash
-    nano .env
-    ```
-    Paste and edit the following content:
-    ```ini
-    # .env (Production)
-
-    SECRET_KEY="..."
-    GEMINI_API_KEY="..."
-
-    POSTGRES_DB=bibliotype_prod_db
-    POSTGRES_USER=bibliotype_prod_user
-    POSTGRES_PASSWORD="..."
-
-    DEBUG=False
-    ALLOWED_HOSTS="your_domain.com,www.your_domain.com"
-    ```
-
-3.  **Create the Static Files Directory:**
-    This empty folder on the host will be mapped into the container so Nginx can access the collected static files.
-    ```bash
-    mkdir staticfiles
-    ```
-
-### 3. Nginx & SSL Configuration
-
-1.  **Create Nginx Config:**
-    Create a new configuration file for your site.
-    ```bash
-    sudo nano /etc/nginx/sites-available/bibliotype
-    ```
-    Paste the following configuration, replacing `your_domain.com` and `/home/deploy/app/` with your actual values.
-    ```nginx
-    server {
-        listen 80;
-        server_name your_domain.com www.your_domain.com;
-        return 301 https://$host$request_uri;
-    }
-
-    server {
-        listen 443 ssl http2;
-        server_name your_domain.com www.your_domain.com;
-
-        # Path for static files
-        location /static/ {
-            alias /home/deploy/app/staticfiles/;
-        }
-
-        # Proxy requests to the Django app
-        location / {
-            proxy_pass http://127.0.0.1:8000;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-
-        # SSL settings will be added by Certbot below
-    }
-    ```
-
-2.  **Enable the Site & Get SSL Certificate:**
-    *   Activate the configuration by creating a symlink.
-        ```bash
-        sudo ln -s /etc/nginx/sites-available/bibliotype /etc/nginx/sites-enabled/
-        ```
-    *   **Point your domain's DNS A records** to your server's IP address.
-    *   Run Certbot to obtain an SSL certificate and automatically update the Nginx config.
-        ```bash
-        sudo certbot --nginx -d your_domain.com -d www.your_domain.com
-        ```
-
-### 4. Setting Up GitHub Actions for CI/CD
-
-1.  **Create a Deploy-Specific SSH Key:**
-    On your **local machine**, create a new SSH key pair dedicated to this deployment. Do not use your personal key.
-    ```bash
-    ssh-keygen -t ed25519 -C "github-deploy-bibliotype" -f ~/.ssh/bibliotype_deploy_key
-    ```
-
-2.  **Add Public Key to Server:**
-    Copy the content of the **public key** (`cat ~/.ssh/bibliotype_deploy_key.pub`) and paste it as a new line in your server's `/home/deploy/.ssh/authorized_keys` file.
-
-3.  **Add Secrets to GitHub Repository:**
-    Go to `Your Repo > Settings > Secrets and variables > Actions` and add the following repository secrets:
-    *   `DO_SSH_HOST`: Your server's IP address.
-    *   `DO_SSH_USERNAME`: Your deployment username (e.g., `deploy`).
-    *   `DO_SSH_KEY`: The content of the **private key** (`cat ~/.ssh/bibliotype_deploy_key`).
-    *   `DOCKERHUB_USERNAME`: Your Docker Hub username.
-    *   `DOCKERHUB_TOKEN`: A Docker Hub access token.
-
-4.  **Configure Passwordless `sudo`:**
-    The deployment script needs to fix file permissions. Allow your deploy user to run `sudo` without a password.
-    *   Run `sudo visudo` on your server.
-    *   Add this line at the very bottom of the file (replace `deploy` if you used a different username):
-        ```
-        deploy ALL=(ALL) NOPASSWD: ALL
-        ```
-
-### 5. First Deployment
-
-Commit your final `docker-compose.prod.yml`, `.github/workflows/deploy.yml`, and `settings.py` files to your repository and push to the `main` branch.
-
-```bash
-git push origin main
-```
-
-The GitHub Action will now run and automatically build, test, and deploy your application. Subsequent pushes to `main` will automatically update the live site.
-
+- **Provisioning:** the droplet, reserved IP, cloud firewall and cloud-init bootstrap (Docker, swap, the
+  `bibliotype` deploy user, Nginx, Certbot, SSH hardening) are managed with Terraform. See
+  [`infra/README.md`](infra/README.md) for setup and the migration runbook, and
+  [`docs/runbooks/vps-hardening.md`](docs/runbooks/vps-hardening.md) for hardening steps.
+- **Secrets:** the production `.env` lives on the server and is edited there, not in the repo.
+- **CI/CD:** GitHub Actions runs the Django CI tests on pushes to `main` and on PRs. When Django CI succeeds on a push
+  to `main`, `deploy.yml` runs via `workflow_run`: it builds and pushes the Docker Hub image for the tested
+  commit, then SSHes in, resets the checkout to that commit and runs
+  `docker compose -f docker-compose.prod.yml up -d`. Only services whose config changed (web and worker)
+  are recreated; Postgres and Redis keep running. Deploys skip a commit older than the one already live.

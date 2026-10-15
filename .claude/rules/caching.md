@@ -2,7 +2,7 @@
 paths:
   - "core/cache_utils.py"
   - "core/services/**"
-  - "core/views.py"
+  - "core/views/**"
 ---
 
 # Caching Architecture
@@ -33,12 +33,12 @@ All three catch bare `Exception`, log a warning, and track via `track_redis_cach
 | `similar_users_{user_id}` | 30min | user_similarity_service | user_similarity_service |
 | `anon_profiles_sample` | 1hr | recommendation_service | recommendation_service |
 | `public_users_for_recs_sample` | 30min | recommendation_service | recommendation_service |
-| `dna_result_{task_id}` | 1hr | tasks.py (anonymous only) | tasks.py, views.py |
-| `session_key_{task_id}` | 1hr | tasks.py (anonymous only) | tasks.py |
+| `dna_result_{task_id}` | 1hr | tasks/dna.py (anonymous only) | tasks/dna.py, views/upload.py |
+| `session_key_{task_id}` | 1hr | tasks/dna.py (anonymous only) | tasks/dna.py |
 | `dna_task_error_{task_id}` | 1hr | tasks/dna.py (CSVValidationError only) | views/upload.py |
 | `recommendations_pool_count` | 1hr | user_similarity_service | views/_helpers.py |
-| `community_means` | 10min | views.py | views.py |
-| `fresh_pct_{bl}_{br}_{bpy}_{py}` | 10min | views.py | views.py |
+| `community_means` | 10min | views/_helpers.py | views/_helpers.py |
+| `fresh_pct_{bl}_{br}_{bpy}_{py}` | 10min | views/_helpers.py | views/_helpers.py |
 | `google_books_quota_cooldown` | 1hr | book_enrichment_service (on GB 429/403) | book_enrichment_service |
 | `compare_{sorted_user_ids}` | 30min | user_similarity_service (compare_readers) | compare view — payload holds user ids (not usernames); timeout-only invalidation |
 | `enrich_dispatched_{book_pk}` | 24hr | dna analyser (bulk) + enrich_books via safe_cache_add | same — sentinel suppressing duplicate bulk enrichment dispatches; `enrich_books --force` bypasses |

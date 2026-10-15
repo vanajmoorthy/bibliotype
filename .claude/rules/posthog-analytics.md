@@ -1,8 +1,8 @@
 ---
 paths:
   - "core/analytics/**"
-  - "core/views.py"
-  - "core/tasks.py"
+  - "core/views/**"
+  - "core/tasks/**"
   - "core/cache_utils.py"
 ---
 
@@ -66,10 +66,10 @@ Context processor `posthog_settings` provides `POSTHOG_API_KEY` to templates.
 ## Event Registry
 
 **DNA lifecycle:**
-- `file_upload_started` — CSV uploaded (views.py)
-- `dna_generation_started` / `completed` / `failed` — Task lifecycle (tasks.py); `completed` carries `reader_type`
-- `anonymous_dna_generated` — Anonymous success (tasks.py), carries `reader_type`
-- `dna_displayed` / `anonymous_dna_displayed` — Dashboard viewed (views.py), carry `reader_type`
+- `file_upload_started` — CSV uploaded (views/upload.py)
+- `dna_generation_started` / `completed` / `failed` — Task lifecycle (tasks/dna.py); `completed` carries `reader_type`
+- `anonymous_dna_generated` — Anonymous success (tasks/dna.py), carries `reader_type`
+- `dna_displayed` / `anonymous_dna_displayed` — Dashboard viewed (views/dashboard.py), carry `reader_type`
 
 **Authentication:**
 - `user_signed_up` — With `signup_source`: "with_task_claim", "with_session_dna", "before_dna"

@@ -1,6 +1,6 @@
 ---
 paths:
-  - "core/tasks.py"
+  - "core/tasks/**"
   - "bibliotype/celery.py"
 ---
 
@@ -62,10 +62,12 @@ generate_reading_dna_task
 ├─ Parses CSV (Goodreads/StoryGraph auto-detected)
 ├─ For each book:
 │   ├─ Create/fetch Author → if new: check_author_mainstream_status_task.delay()
-│   └─ Create/fetch Book → if new/no genres: enrich_book_task.delay() [rate-limited]
+│   └─ Create/fetch Book → if new/no genres: enrich inline (quick_mode) within the 90s
+│      INLINE_ENRICHMENT_BUDGET_SECONDS budget; on failure or once the budget runs out,
+│      fall back to enrich_book_task.delay() [rate-limited]. Bulk runs never enrich inline.
 ├─ Create UserBook records (auth only)
 ├─ Calculate stats, reader type, vibe (LLM)
-├─ Auth: _save_dna_to_profile() → generate_recommendations_task(user.id) [inline]
+├─ Auth: _save_dna_to_profile() → generate_recommendations_task.delay(user.id) [async]
 └─ Anon: cache dna_result_{task_id} + session_key_{task_id} (1hr TTL)
 ```
 
@@ -80,7 +82,7 @@ self.update_state(state="PROGRESS", meta={"current": N, "total": M, "stage": "de
 
 Progress updates are wrapped in try/except — they fail silently if the result backend is unavailable.
 
-**Frontend polling:** `get_task_result_view` returns progress JSON every 3 seconds. Percentage calculated client-side with stage-based caps (syncing: 70%, crunching: 90%, finishing: 98%).
+**Frontend polling:** the task status page polls for progress JSON every 10 seconds. Percentage calculated client-side with stage-based caps (syncing: 70%, crunching: 90%, finishing: 98%).
 
 ## Anonymous → Claim Flow
 
