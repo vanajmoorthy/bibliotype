@@ -6,14 +6,18 @@ from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
-from core.models import Author, Book, Genre, Publisher, UserBook
+from core.models import AnonymousUserSession, Author, Book, Genre, Publisher, UserBook
 from core.services.recommendation_service import (
     get_recommendations_for_user,
 )
 from core.services.top_books_service import calculate_and_store_top_books
-from core.services.user_similarity_service import calculate_user_similarity, find_similar_users
+from core.services.user_similarity_service import (
+    _bulk_build_user_contexts,
+    calculate_user_similarity,
+    find_similar_users,
+)
 
 
 class RecommendationTestCase(TestCase):
@@ -150,7 +154,9 @@ class RecommendationTestCase(TestCase):
         )
 
         # Find similar users
-        similar_users = find_similar_users(self.user2, top_n=5, min_similarity=0.1)
+        similar_users = find_similar_users(
+            _bulk_build_user_contexts([self.user2.id])[self.user2.id], self.user2.id, top_n=5, min_similarity=0.1
+        )
 
         self.assertGreater(len(similar_users), 0)
         found_user1 = False
@@ -356,7 +362,9 @@ class PrivacyTestCase(TestCase):
         UserBook.objects.create(user=opted_out, book=shared_book, user_rating=5)
 
         # Check that other_user appears in similar users
-        similar_users = find_similar_users(self.user, top_n=10, min_similarity=0.0)
+        similar_users = find_similar_users(
+            _bulk_build_user_contexts([self.user.id])[self.user.id], self.user.id, top_n=10, min_similarity=0.0
+        )
 
         # Should find similar users since they share books and have similar DNA data
         self.assertGreater(len(similar_users), 0)
@@ -681,3 +689,114 @@ class EmptyStateRecommendationsViewTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Public New Shape")
         self.assertContains(response, "Public Legacy Shape")
+
+
+@override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})
+class SimilarityContextTestCase(TestCase):
+    """One context builder for users and anonymous sessions; scores and query counts are pinned."""
+
+    def setUp(self):
+        cache.clear()
+        genres = [Genre.objects.create(name=n) for n in ("fantasy", "classics", "history", "science fiction")]
+        authors = [Author.objects.create(name=f"Ctx Author {i}") for i in range(4)]
+        self.books = []
+        for i in range(12):
+            book = Book.objects.create(
+                title=f"Ctx Book {i}", author=authors[i % 4], publish_year=1950 + i * 6, average_rating=4.2
+            )
+            book.genres.add(genres[i % 4], genres[(i + 1) % 4])
+            self.books.append(book)
+
+        # (user, [(book index, rating, is_top)])
+        libraries = {
+            "ctx_a": [(i, [5, 4, 3, 2, 5, 4, 1, None, 5][i], i < 2) for i in range(9)],
+            "ctx_b": [(i, [4, 4, 2, 3, 5, 5, 2, 3, None][i - 2], i in (2, 4)) for i in range(2, 11)],
+            "ctx_c": [(i, [3, None, 5, 4][i % 4], i == 11) for i in range(5, 12)],
+        }
+        self.users = {}
+        for username, library in libraries.items():
+            user = User.objects.create_user(username=username, password="pw")
+            user.userprofile.dna_data = {"reader_type": "x"}
+            user.userprofile.is_public = True
+            user.userprofile.visible_in_recommendations = True
+            user.userprofile.save()
+            for i, rating, is_top in library:
+                UserBook.objects.create(user=user, book=self.books[i], user_rating=rating, is_top_book=is_top)
+            self.users[username] = user
+
+    def test_logged_in_scores_unchanged(self):
+        # Pinned from the ORM-instance context builder this replaced.
+        expected = {
+            ("ctx_a", "ctx_b"): 0.47065293167303573,
+            ("ctx_a", "ctx_c"): 0.43810727912363717,
+            ("ctx_b", "ctx_c"): 0.6176959749803449,
+        }
+        for (a, b), score in expected.items():
+            data = calculate_user_similarity(self.users[a], self.users[b])
+            self.assertAlmostEqual(data["similarity_score"], score, places=12, msg=f"{a} vs {b}")
+
+    def _anon_session(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        return AnonymousUserSession.objects.create(
+            session_key="ctx_anon",
+            dna_data={"top_genres": [("fantasy", 5)]},
+            books_data=[b.id for b in self.books[:6]],
+            top_books_data=[self.books[0].id],
+            genre_distribution={"fantasy": 5},
+            author_distribution={},
+            book_ratings={str(b.id): 4 for b in self.books[:6]},
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+
+    def test_session_context_matches_a_user_with_the_same_library(self):
+        from core.services.user_similarity_service import build_session_context
+
+        user = self.users["ctx_a"]
+        session = AnonymousUserSession.objects.create(
+            session_key="ctx_mirror",
+            dna_data={},
+            books_data=list(UserBook.objects.filter(user=user).values_list("book_id", flat=True)),
+            top_books_data=list(UserBook.objects.filter(user=user, is_top_book=True).values_list("book_id", flat=True)),
+            book_ratings={
+                str(b): r
+                for b, r in UserBook.objects.filter(user=user, user_rating__isnull=False).values_list(
+                    "book_id", "user_rating"
+                )
+            },
+            expires_at=user.date_joined,
+        )
+        user_ctx = _bulk_build_user_contexts([user.id])[user.id]
+        session_ctx = build_session_context(session)
+        for key in ("book_ids", "top_book_ids", "book_ratings", "genre_weights", "author_weights", "rating_dist"):
+            self.assertEqual(session_ctx[key], user_ctx[key], key)
+        self.assertEqual(sorted(session_ctx["years_weighted"]), sorted(user_ctx["years_weighted"]))
+
+    def test_anonymous_recommendation_queries_do_not_grow_with_candidates(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        from core.services.recommendation_service import _get_recommendations_for_anonymous_uncached
+
+        self._anon_session()
+
+        def count():
+            cache.clear()
+            with CaptureQueriesContext(connection) as ctx:
+                _get_recommendations_for_anonymous_uncached("ctx_anon", limit=6)
+            return len(ctx.captured_queries)
+
+        few = count()
+        for i in range(10):
+            extra = User.objects.create_user(username=f"ctx_extra_{i}", password="pw")
+            extra.userprofile.dna_data = {"reader_type": "x"}
+            extra.userprofile.is_public = True
+            extra.userprofile.visible_in_recommendations = True
+            extra.userprofile.save()
+            UserBook.objects.create(user=extra, book=self.books[i], user_rating=5)
+        many = count()
+        print(f"anonymous recommendation queries: {few} with 3 candidates, {many} with 13")
+        self.assertLessEqual(many, few)
+        self.assertLessEqual(few, 16)

@@ -546,8 +546,8 @@ The raw similarity score (0-1) maps to human-readable labels:
 Computing similarity is expensive when comparing against hundreds of users. The system uses several optimizations:
 
 - **Pre-built contexts**: All user data (book IDs, ratings, genre weights, author weights, decade distributions) is pre-computed into a flat dictionary. No database queries during comparison.
-- **Bulk loading**: `_bulk_build_user_contexts(user_ids)` fetches all books for all candidate users in a single query with `select_related` and `prefetch_related`, then groups by user ID in Python. This reduces database round-trips from O(n) to O(1).
-- **Candidate filtering**: Only users who share at least one book are considered. The query `User.objects.filter(user_books__book_id__in=current_user_book_ids).distinct()[:500]` narrows the pool before any similarity computation.
+- **Bulk loading**: `_bulk_build_user_contexts(user_ids)` fetches every candidate's books with one `values_list` query and their genres with a second, then groups by user ID in Python. An anonymous session goes through the same builder (`build_session_context`), so both are scored by `find_similar_users(ctx, exclude_id)` with one formula. Candidates are ordered by shared-book count before the 500 cap.
+- **Candidate filtering**: Only users who share at least one book are considered. The candidate query (most shared books first, capped at 500) narrows the pool before any similarity computation.
 
 ---
 
@@ -627,7 +627,6 @@ The caching strategy is multi-layered, combining Redis, database fields, and has
 | `anon_recommendations_{hashed_session_key}` | 15 min | Recommendations for anonymous sessions |
 | `similar_users_{user_id}` | 30 min | User similarity results |
 | `anon_profiles_sample` | 1 hour | Sampled anonymized profiles |
-| `public_users_for_recs_sample` | 30 min | List of public, recommendation-eligible users |
 | `recommendations_pool_count` | 1 hour | Size of the eligible reader pool shown on the dashboard |
 | `community_means`, `fresh_pct_*` | 10 min | Community averages and percentiles for the dashboard |
 

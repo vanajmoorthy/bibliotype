@@ -54,7 +54,6 @@ def update_privacy_view(request):
     if was_public and not is_public:
         safe_cache_delete(f"user_recommendations_{request.user.id}")
         safe_cache_delete(f"similar_users_{request.user.id}")
-        safe_cache_delete("public_users_for_recs_sample")
         logger.info(
             "profile set private; cleared recs caches",
             extra={"user_id": request.user.id},
@@ -132,9 +131,7 @@ def update_recommendation_visibility_view(request):
     safe_cache_delete(f"similar_users_{request.user.id}")
 
     if was_visible and not is_visible:
-        # Opting out removes the user from the shared candidate sample AND the pool count
-        # (both filter visible_in_recommendations), so drop them immediately.
-        safe_cache_delete("public_users_for_recs_sample")
+        # Opting out removes the user from the pool count (it filters visible_in_recommendations).
         safe_cache_delete("recommendations_pool_count")
         logger.info(
             "user opted out of recs; cleared candidate pool caches",
@@ -218,8 +215,6 @@ def _delete_account_view_throttled(request):
     # Capture UID before deletion so the analytics event can still fire
     uid = user.id
     track_account_deleted(uid)
-    # Drop the recs candidate sample so the deleted user can't linger in it.
-    safe_cache_delete("public_users_for_recs_sample")
     logout(request)
     with transaction.atomic():
         # The deleted reader no longer counts towards their books' read counts.

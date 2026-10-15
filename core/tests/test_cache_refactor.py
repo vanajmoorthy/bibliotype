@@ -154,7 +154,7 @@ class SimilarUsersCacheKeyTests(TestCase):
     def test_cache_key_is_simplified(self):
         """Cache key should be similar_users_{id} without top_n and min_similarity."""
         from core.models import Author, Book, UserBook
-        from core.services.user_similarity_service import find_similar_users
+        from core.services.user_similarity_service import _bulk_build_user_contexts, find_similar_users
 
         user = User.objects.create_user(username="simuser", password="test123")
         user.userprofile.dna_data = {"top_genres": []}
@@ -172,7 +172,7 @@ class SimilarUsersCacheKeyTests(TestCase):
         UserBook.objects.create(user=user, book=book, user_rating=5)
         UserBook.objects.create(user=user2, book=book, user_rating=4)
 
-        find_similar_users(user, top_n=30, min_similarity=0.15)
+        find_similar_users(_bulk_build_user_contexts([user.id])[user.id], user.id, top_n=30, min_similarity=0.15)
 
         # Simplified key should exist (even if value is an empty list)
         cached = cache.get(f"similar_users_{user.id}")

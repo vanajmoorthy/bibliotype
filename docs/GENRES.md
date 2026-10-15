@@ -43,7 +43,7 @@ The Goodreads `Bookshelves` column (exact name — *not* "Bookshelves with posit
 
 ## 3. Canonicalization at analysis time
 
-Everything the analyzer touches goes through `canonicalize_genre_names` (`core/services/genre_classification.py`) — a plain `CANONICAL_GENRE_MAP.get(name, name)` set-map. The same lookup guards genre vocabulary in `user_similarity_service.py` (e.g. `_canonicalize_genre_counter`, `_build_user_context_for_similarity`) so profiles stored under old names still compare correctly against new ones.
+Everything the analyzer touches goes through `canonicalize_genre_names` (`core/services/genre_classification.py`) — a plain `CANONICAL_GENRE_MAP.get(name, name)` set-map. The same lookup guards genre vocabulary in `user_similarity_service.py` (e.g. `_canonicalize_genre_counter`, `_bulk_build_user_contexts`) so profiles stored under old names still compare correctly against new ones.
 
 ## 4. Fiction vs nonfiction: context-dependent classification
 
