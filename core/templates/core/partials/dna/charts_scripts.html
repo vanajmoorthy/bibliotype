@@ -1,34 +1,5 @@
 <script>
-    function updateVibeSeparators() {
-        const vibeContainer = document.getElementById("vibe-container");
-        if (!vibeContainer) return;
-
-        const items = vibeContainer.querySelectorAll(".vibe-item");
-        const separators = vibeContainer.querySelectorAll(".vibe-separator");
-
-        if (items.length < 2) return;
-
-        // 1. First, show all separators
-        separators.forEach((sep) => (sep.style.display = "inline"));
-
-        // 2. Loop through items to find line breaks
-        for (let i = 0; i < items.length - 1; i++) {
-            const currentItem = items[i];
-            const nextItem = items[i + 1];
-
-            // If the next item is on a new line, hide the separator after the current one
-            if (nextItem.offsetTop > currentItem.offsetTop) {
-                const separatorToHide = separators[i];
-                if (separatorToHide) {
-                    separatorToHide.style.display = "none";
-                }
-            }
-        }
-    }
-
     document.addEventListener("DOMContentLoaded", function () {
-        updateVibeSeparators();
-
         const dnaDataScript = document.getElementById("dna-data");
         if (!dnaDataScript) return;
 
@@ -567,8 +538,6 @@
 
         window.addEventListener("enrichment:update", (event) => applyEnrichmentUpdate(event.detail));
     });
-
-    window.addEventListener("resize", updateVibeSeparators);
 
     // --- Scroll-triggered fade-in animations ---
     document.addEventListener("DOMContentLoaded", function () {

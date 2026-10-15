@@ -110,7 +110,6 @@ claim_anonymous_dna_task(user_id, task_id)
 @override_settings(
     CELERY_TASK_ALWAYS_EAGER=True,          # Tasks run synchronously
     CELERY_TASK_EAGER_PROPAGATES=True,      # Exceptions propagate
-    CELERY_RESULT_BACKEND="django-db",
 )
 class MyTaskTest(TransactionTestCase):      # Must use TransactionTestCase
 ```

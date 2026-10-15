@@ -54,5 +54,4 @@ urlpatterns = [
 if settings.ENABLE_SILK:
     urlpatterns.insert(0, path("silk/", include("silk.urls")))
 
-# Custom 404 handler - must be a callable in root URLconf (string format only works in settings.py)
-# This takes precedence over settings.py handler404 if both are set
+# The handler404 import above is what registers the custom 404 page: Django reads it from the root URLconf.
