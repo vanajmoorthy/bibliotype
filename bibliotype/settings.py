@@ -48,12 +48,8 @@ ENABLE_SILK = _env_bool("ENABLE_SILK", False)
 # "Settings invariants".
 ENABLE_PARALLEL_ENRICHMENT = _env_bool("ENABLE_PARALLEL_ENRICHMENT", False)
 
-# US-037: single source of truth for the Gemini API key and model id.
-# Consumers must import these from settings via `core/services/_gemini.py`,
-# never read `os.environ` directly. Override `GEMINI_MODEL` to swap model
-# versions across the whole app (vibe generation + publisher research).
+# Gemini is one provider in the LLM chain below; LiteLLM reads the key from the env.
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 
 # --- Multi-provider LLM chain (LiteLLM) --------------------------------------
 # Ordered, comma-separated LiteLLM model chain: first entry is the primary, the
