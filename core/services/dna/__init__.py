@@ -25,6 +25,7 @@ from core.services.llm_service import VIBE_COLORS, generate_vibe_with_llm
 
 from ...dna_constants import (
     ENRICHMENT_BULK_QUEUE,
+    ENRICHMENT_QUEUE,
     ENRICHMENT_RETRY_AFTER,
     GLOBAL_AVERAGES,
     NICHE_THRESHOLD,
@@ -86,9 +87,10 @@ def calculate_full_dna(csv_file_content: str, user=None, session_key=None, progr
     so all external API traffic from bulk runs flows through the rate-limited
     Celery task instead of hammering Open Library/Google Books in-process.
     """
-    # Routing for the three async enrichment dispatch sites below. Empty opts
-    # = Celery default queue ("celery"), which sorts before the bulk queue.
-    dispatch_opts = {"queue": ENRICHMENT_BULK_QUEUE} if bulk_enrichment else {}
+    # Routing for the three async enrichment dispatch sites below. Interactive
+    # enrichment gets its own queue so a big upload's per-book fan-out can't sit
+    # FIFO ahead of other users' DNA tasks on "celery".
+    dispatch_opts = {"queue": ENRICHMENT_BULK_QUEUE if bulk_enrichment else ENRICHMENT_QUEUE}
     try:
         df = pd.read_csv(StringIO(csv_file_content))
         df, csv_source = _detect_and_normalize_csv(df)

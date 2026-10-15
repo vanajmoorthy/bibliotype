@@ -95,7 +95,7 @@ def enrich_book_task(self, book_id: int, user_id: int = None, upload_nonce: str 
     window is skipped so the async path agrees with the inline path in
     dna_analyser. force=True bypasses the window (operator re-runs).
 
-    Queue routing: interactive uploads dispatch to the default queue; bulk runs
+    Queue routing: interactive uploads dispatch to ENRICHMENT_QUEUE; bulk runs
     (seed_from_exports, enrich_books) dispatch to ENRICHMENT_BULK_QUEUE.
     self.retry() re-publishes with the original delivery info, so retries stay
     on whichever queue the task arrived on — bulk retries never jump the line.

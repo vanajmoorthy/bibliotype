@@ -1,8 +1,8 @@
 """Tests for the bulk vs interactive enrichment queue split.
 
 Bulk work (seeding runs, enrich_books backfills) routes to ENRICHMENT_BULK_QUEUE;
-interactive uploads stay on the default "celery" queue, which drains first under
-queue_order_strategy="sorted".
+interactive uploads route to ENRICHMENT_QUEUE. Under queue_order_strategy="sorted"
+"celery" drains first, then ENRICHMENT_QUEUE, then ENRICHMENT_BULK_QUEUE.
 """
 
 import tempfile
@@ -15,7 +15,7 @@ from django.core.cache import cache
 from django.core.management import call_command
 from django.test import SimpleTestCase, TestCase, TransactionTestCase, override_settings
 
-from core.dna_constants import ENRICHMENT_BULK_QUEUE
+from core.dna_constants import ENRICHMENT_BULK_QUEUE, ENRICHMENT_QUEUE
 from core.models import Author, Book
 
 LOCMEM_CACHE = {
@@ -39,7 +39,8 @@ class QueueConfigTests(SimpleTestCase):
         # Under "sorted", drain priority IS alphabetical order of queue names.
         # Renaming the bulk queue to anything sorting before "celery" would
         # invert priority for every deploy — this must never pass silently.
-        self.assertLess("celery", ENRICHMENT_BULK_QUEUE)
+        self.assertLess("celery", ENRICHMENT_QUEUE)
+        self.assertLess(ENRICHMENT_QUEUE, ENRICHMENT_BULK_QUEUE)
 
     def test_prefetch_multiplier_is_one(self):
         # Keeps at most ~1 already-reserved bulk task ahead of a newly arrived
@@ -62,12 +63,12 @@ class QueueConfigTests(SimpleTestCase):
         self.assertIn("stop_grace_period:", content)
 
     def test_compose_worker_commands_consume_bulk_queue(self):
-        # Guards compose/constant drift. A worker whose -Q omits the bulk queue
+        # Guards compose/constant drift. A worker whose -Q omits an enrichment queue
         # strands its messages in Redis (the celeryd_after_setup guard turns
         # that into a startup crash, but catch it here first).
         for compose in ("docker-compose.local.yml", "docker-compose.prod.yml"):
             content = (Path(settings.BASE_DIR) / compose).read_text()
-            self.assertIn(f"-Q celery,{ENRICHMENT_BULK_QUEUE}", content, f"{compose} worker command")
+            self.assertIn(f"-Q celery,{ENRICHMENT_QUEUE},{ENRICHMENT_BULK_QUEUE}", content, f"{compose} worker command")
 
     def test_enrichment_tasks_rate_limit_and_ignore_result(self):
         from core.tasks import check_author_mainstream_status_task, enrich_book_task
@@ -258,7 +259,7 @@ class CalculateFullDnaRoutingTests(TransactionTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    def test_interactive_default_stays_on_default_queue(
+    def test_interactive_routes_to_enrichment_queue(
         self, mock_enrich, mock_author, mock_recs, mock_vibe, mock_inline, mock_budget
     ):
         user = User.objects.create_user(username="interactive_user", password="pw")
@@ -277,10 +278,10 @@ class CalculateFullDnaRoutingTests(TransactionTestCase):
         for call in mock_author.call_args_list:
             self.assertEqual(call.kwargs["kwargs"], {"user_id": user.id, "upload_nonce": "nonce-int"})
 
-        # ...and nothing carried a queue override: interactive work stays on
-        # the default "celery" queue.
+        # ...and every dispatch went to the interactive enrichment queue, not
+        # FIFO with other users' DNA tasks on "celery".
         for call in [mock_enrich.call_args] + mock_author.call_args_list:
-            self.assertNotIn("queue", call.kwargs)
+            self.assertEqual(call.kwargs["queue"], ENRICHMENT_QUEUE)
 
         # Interactive saves DO dispatch recommendations (bulk is the exception).
         mock_recs.assert_called_once()

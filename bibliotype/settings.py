@@ -299,8 +299,8 @@ CELERY_BROKER_CONNECTION_TIMEOUT = 5
 # "sorted" (NOT "priority" — celery/celery#8673: with the Redis transport,
 # "priority" derives queue order from a set comprehension, so it's hash-
 # randomized per worker start and can silently invert). Sorted = deterministic
-# alphabetical order, and "celery" < "enrichment_bulk", so interactive tasks
-# drain before bulk work on every fetch.
+# alphabetical order, and "celery" < "enrichment" < "enrichment_bulk", so DNA and
+# recommendations drain before interactive enrichment, which drains before bulk.
 CELERY_BROKER_TRANSPORT_OPTIONS = {"queue_order_strategy": "sorted"}
 # A runaway task (e.g. a huge CSV stuck in an API timeout loop) must not hold
 # the single worker forever. Soft limit raises SoftTimeLimitExceeded in-task;

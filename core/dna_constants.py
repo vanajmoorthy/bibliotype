@@ -31,12 +31,15 @@ def enrichment_retry_window(book):
     return ENRICHMENT_RETRY_AFTER
 
 
-# Queue for bulk enrichment work (seeding runs, enrich_books backfills) so it
-# drains behind interactive users' tasks on the default "celery" queue. With
-# queue_order_strategy="sorted", priority is alphabetical by queue NAME — this
-# name must sort after "celery" (test-enforced in test_enrichment_queue_routing).
-# Lives here rather than core.tasks because core.services.dna needs it too and
-# core.tasks imports from core.services (circular otherwise).
+# Enrichment queues. With queue_order_strategy="sorted", priority is
+# alphabetical by queue NAME: "celery" (DNA, claims, recommendations) drains
+# first, then ENRICHMENT_QUEUE (interactive uploads' per-book and author tasks,
+# so one big upload can't stall the next user's DNA), then ENRICHMENT_BULK_QUEUE
+# (seeding runs, enrich_books backfills). The order is test-enforced in
+# test_enrichment_queue_routing. Lives here rather than core.tasks because
+# core.services.dna needs it too and core.tasks imports from core.services
+# (circular otherwise).
+ENRICHMENT_QUEUE = "enrichment"
 ENRICHMENT_BULK_QUEUE = "enrichment_bulk"
 
 READER_TYPE_DESCRIPTIONS = {
