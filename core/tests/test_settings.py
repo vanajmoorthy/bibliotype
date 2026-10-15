@@ -79,10 +79,12 @@ class ChangePasswordViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/login/", response["Location"])
 
-    @patch("core.views.profile.track_settings_updated")
+    @patch("core.views.profile.capture_event")
     def test_analytics_called_on_success(self, mock_track):
         self._post(self.password, "NewP@ssword9", "NewP@ssword9")
-        mock_track.assert_called_once_with(self.user.id, setting_type="password")
+        mock_track.assert_called_once_with(
+            str(self.user.id), "settings_updated", {"user_id": self.user.id, "setting_type": "password"}
+        )
 
 
 @override_settings(
@@ -105,7 +107,7 @@ class DeleteAccountViewTests(TestCase):
         headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"} if ajax else {}
         return self.client.post(self.url, {"confirmation": confirmation, "password": password}, **headers)
 
-    @patch("core.views.profile.track_account_deleted")
+    @patch("core.views.profile.capture_event")
     def test_delete_removes_the_reader_from_their_books_read_counts(self, _mock_track):
         from core.models import Author, Book, UserBook
 
@@ -122,7 +124,7 @@ class DeleteAccountViewTests(TestCase):
         self.assertEqual(read.global_read_count, 2)
         self.assertEqual(never_counted.global_read_count, 0)
 
-    @patch("core.views.profile.track_account_deleted")
+    @patch("core.views.profile.capture_event")
     def test_correct_confirmation_and_password_deletes_account(self, mock_track):
         uid = self.user.id
         response = self._post("DELETE", self.password)
@@ -133,9 +135,9 @@ class DeleteAccountViewTests(TestCase):
         # User and profile must be gone
         self.assertFalse(User.objects.filter(pk=uid).exists())
         # Analytics must have been called before deletion
-        mock_track.assert_called_once_with(uid)
+        mock_track.assert_called_once_with(str(uid), "account_deleted", {"user_id": uid})
 
-    @patch("core.views.profile.track_account_deleted")
+    @patch("core.views.profile.capture_event")
     def test_wrong_confirmation_does_not_delete(self, mock_track):
         uid = self.user.id
         response = self._post("delete", self.password)  # lowercase = wrong
@@ -145,7 +147,7 @@ class DeleteAccountViewTests(TestCase):
         self.assertTrue(User.objects.filter(pk=uid).exists())
         mock_track.assert_not_called()
 
-    @patch("core.views.profile.track_account_deleted")
+    @patch("core.views.profile.capture_event")
     def test_wrong_password_does_not_delete(self, mock_track):
         uid = self.user.id
         response = self._post("DELETE", "WrongPassword!")
@@ -155,7 +157,7 @@ class DeleteAccountViewTests(TestCase):
         self.assertTrue(User.objects.filter(pk=uid).exists())
         mock_track.assert_not_called()
 
-    @patch("core.views.profile.track_account_deleted")
+    @patch("core.views.profile.capture_event")
     def test_missing_confirmation_does_not_delete(self, mock_track):
         uid = self.user.id
         response = self._post("", self.password)
@@ -169,7 +171,7 @@ class DeleteAccountViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/login/", response["Location"])
 
-    @patch("core.views.profile.track_account_deleted")
+    @patch("core.views.profile.capture_event")
     def test_form_post_redirects_to_home(self, mock_track):
         """Non-AJAX delete must redirect to home."""
         uid = self.user.id

@@ -25,7 +25,7 @@ class FlashMessageEscapingTests(TestCase):
         self.assertNotIn("<script>alert(1)</script>", html)
         self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", html)
 
-    @patch("core.views.profile.track_profile_made_public")
+    @patch("core.views.profile.capture_event")
     def test_public_profile_link_message_still_renders_as_link(self, _track):
         user = User.objects.create_user(username="linkuser", email="link@example.com", password="pw-123456!")
         client = Client()

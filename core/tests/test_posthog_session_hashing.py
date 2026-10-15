@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 from django.test import TestCase
 
@@ -50,7 +50,18 @@ class RawSessionKeyNeverSentTests(TestCase):
         anon_ids = {c.kwargs["distinct_id"] for c in calls if c.kwargs["distinct_id"] != "7"}
         self.assertEqual(anon_ids, {_key_hash(RAW_KEY)})
         claimed = next(c for c in calls if c.kwargs.get("event") == "anonymous_dna_claimed")
-        self.assertEqual(claimed.kwargs["properties"]["session_key_hash"], _key_hash(RAW_KEY))
+        # Dashboards depend on the exact event shape.
+        self.assertEqual(claimed.kwargs["distinct_id"], "7")
+        self.assertEqual(
+            claimed.kwargs["properties"],
+            {
+                "user_id": 7,
+                "task_id": "t-1",
+                "session_key_hash": _key_hash(RAW_KEY),
+                "environment": ANY,
+                "server_hostname": ANY,
+            },
+        )
 
     def test_anonymous_recommendation_cache_key_is_hashed(self, mock_posthog, _init):
         # Cache keys are sent to PostHog in redis_cache_error events.

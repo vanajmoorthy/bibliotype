@@ -19,7 +19,8 @@ from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 from django_ratelimit.exceptions import Ratelimited
 
-from ..analytics.events import track_user_logged_in, track_user_signed_up
+from ..analytics.events import track_user_signed_up
+from ..analytics.posthog_client import capture_event
 from ..cache_utils import safe_cache_get
 from ..forms import CustomUserCreationForm
 from ..ratelimit_utils import client_ip_key, get_real_client_ip
@@ -203,11 +204,11 @@ def _login_view_throttled(request):
                 messages.success(request, "Logged in successfully!", extra_tags="ephemeral")
 
                 # Track login
-                track_user_logged_in(user.id, had_dna_in_session=True)
+                capture_event(str(user.id), "user_logged_in", {"user_id": user.id, "had_dna_in_session": True})
                 return redirect("core:display_dna")
 
             # Track login
-            track_user_logged_in(user.id, had_dna_in_session=False)
+            capture_event(str(user.id), "user_logged_in", {"user_id": user.id, "had_dna_in_session": False})
             return redirect("core:home")
 
         messages.error(request, "Invalid email or password. Please try again.")
