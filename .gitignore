@@ -69,7 +69,7 @@ scraped_html/
 api_cache.json
 
 # Local CSV exports / generator artifacts (canonical fixtures live in core/tests/fixtures/csv/)
-csv/
+/csv/
 
 # Plans and brainstorms (local only)
 docs/plans/
@@ -80,3 +80,9 @@ docs/brainstorms/
 
 # Local screenshot/scratch artifacts from testing sessions
 .testing-screenshots/
+
+# Finder/iCloud conflict copies ("foo 2.py")
+* 2.*
+*([0-9]).*
+.env.*
+!.env.example
