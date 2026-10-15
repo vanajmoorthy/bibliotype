@@ -3,11 +3,12 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import connection
-from django.test import TestCase, TransactionTestCase, override_settings
+from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 
 from core.tasks import claim_anonymous_dna_task, generate_reading_dna_task
 from core.tasks.dna import CLAIM_RETRY_COUNTDOWN
+from core.tests.base import PipelineTestCase
 
 
 # This setting makes Celery tasks run synchronously in the test
@@ -22,25 +23,23 @@ from core.tasks.dna import CLAIM_RETRY_COUNTDOWN
         }
     },
 )
-class TaskIntegrationTests(TransactionTestCase):
+class TaskIntegrationTests(PipelineTestCase):
 
     def setUp(self):
+        super().setUp()
         try:
             cache.clear()
         except Exception:
             pass
-        # Inline enrichment must never hit real APIs from tests — a no-op mock
-        # keeps books genre-less here, matching the old async-only behaviour.
-        inline_patcher = patch("core.services.book_enrichment_service.enrich_book_from_apis")
-        self.mock_inline_enrich = inline_patcher.start()
-        self.addCleanup(inline_patcher.stop)
 
     # Mock the slow, external network calls
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
     @patch("core.services.dna.generate_vibe_with_llm")
-    def test_generate_dna_for_authenticated_user(self, mock_generate_vibe, mock_enrich_delay, mock_author_check, mock_rec_task):
+    def test_generate_dna_for_authenticated_user(
+        self, mock_generate_vibe, mock_enrich_delay, mock_author_check, mock_rec_task
+    ):
         """
         Tests the full DNA generation task for a logged-in user.
         """
@@ -194,9 +193,7 @@ class TaskIntegrationTests(TransactionTestCase):
 
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.dna.AsyncResult")
-    def test_claim_anonymous_dna_task_fails_closed_on_missing_session_key(
-        self, mock_async_result, mock_rec_task
-    ):
+    def test_claim_anonymous_dna_task_fails_closed_on_missing_session_key(self, mock_async_result, mock_rec_task):
         """
         Post-review hardening: empty/missing session_key (e.g. direct broker
         publish) MUST refuse the claim. The previous default `session_key=None`

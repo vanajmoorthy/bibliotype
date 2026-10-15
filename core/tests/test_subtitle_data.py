@@ -12,6 +12,7 @@ from django.test import TestCase, TransactionTestCase, override_settings
 from core.dna_constants import compute_contrariness
 from core.models import Author, Book
 from core.tasks import generate_reading_dna_task
+from core.tests.base import PipelineTestCase
 
 # ──────────────────────────────────────────────
 # Helper: build a Goodreads-style CSV string
@@ -44,19 +45,15 @@ def _csv(*rows):
         }
     },
 )
-class SubtitleFieldsIntegrationTests(TransactionTestCase):
+class SubtitleFieldsIntegrationTests(PipelineTestCase):
     """Verify calculate_full_dna populates every new subtitle field."""
 
     def setUp(self):
+        super().setUp()
         try:
             cache.clear()
         except Exception:
             pass
-        # Inline enrichment must never hit real APIs from tests — a no-op mock
-        # keeps books genre-less here, matching the old async-only behaviour.
-        inline_patcher = patch("core.services.book_enrichment_service.enrich_book_from_apis")
-        self.mock_inline_enrich = inline_patcher.start()
-        self.addCleanup(inline_patcher.stop)
 
     # --- authenticated user with multiple books ---
 
@@ -278,18 +275,15 @@ class ContrarinessScaleTests(TestCase):
         }
     },
 )
-class SubtitleEdgeCaseTests(TransactionTestCase):
+class SubtitleEdgeCaseTests(PipelineTestCase):
     """Edge cases: no reviews, no ratings, single book, empty-ish CSV."""
 
     def setUp(self):
+        super().setUp()
         try:
             cache.clear()
         except Exception:
             pass
-        # Inline enrichment must never hit real APIs from tests (see above).
-        inline_patcher = patch("core.services.book_enrichment_service.enrich_book_from_apis")
-        self.mock_inline_enrich = inline_patcher.start()
-        self.addCleanup(inline_patcher.stop)
 
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")

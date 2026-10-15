@@ -2,10 +2,11 @@ from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.test import TestCase, TransactionTestCase, override_settings
+from django.test import TestCase, override_settings
 
 from core.models import Author, Book, Genre
 from core.services.dna import _build_cover_url
+from core.tests.base import PipelineTestCase
 
 
 class BuildCoverUrlTests(TestCase):
@@ -56,19 +57,15 @@ def _csv(*rows):
         }
     },
 )
-class CurrentlyReadingExtractionTests(TransactionTestCase):
+class CurrentlyReadingExtractionTests(PipelineTestCase):
     """Tests for currently-reading extraction in calculate_full_dna()."""
 
     def setUp(self):
+        super().setUp()
         try:
             cache.clear()
         except Exception:
             pass
-        # Inline enrichment must never hit real APIs from tests — a no-op mock
-        # keeps books genre-less here, matching the old async-only behaviour.
-        inline_patcher = patch("core.services.book_enrichment_service.enrich_book_from_apis")
-        self.mock_inline_enrich = inline_patcher.start()
-        self.addCleanup(inline_patcher.stop)
 
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
@@ -335,18 +332,15 @@ class CoverUrlPriorityTests(TestCase):
         }
     },
 )
-class CurrentlyReadingCoverUpgradeTests(TransactionTestCase):
+class CurrentlyReadingCoverUpgradeTests(PipelineTestCase):
     """Tests for currently-reading cover_url upgrade from DB."""
 
     def setUp(self):
+        super().setUp()
         try:
             cache.clear()
         except Exception:
             pass
-        # Inline enrichment must never hit real APIs from tests (see above).
-        inline_patcher = patch("core.services.book_enrichment_service.enrich_book_from_apis")
-        self.mock_inline_enrich = inline_patcher.start()
-        self.addCleanup(inline_patcher.stop)
 
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
@@ -424,17 +418,15 @@ class CurrentlyReadingCoverUpgradeTests(TransactionTestCase):
         }
     },
 )
-class SharedBookFieldsTests(TransactionTestCase):
+class SharedBookFieldsTests(PipelineTestCase):
     """An upload must fill blank Book fields, never overwrite another reader's or enrichment's values."""
 
     def setUp(self):
+        super().setUp()
         try:
             cache.clear()
         except Exception:
             pass
-        inline_patcher = patch("core.services.book_enrichment_service.enrich_book_from_apis")
-        inline_patcher.start()
-        self.addCleanup(inline_patcher.stop)
 
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")

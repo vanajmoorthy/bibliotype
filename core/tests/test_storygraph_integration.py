@@ -16,7 +16,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from core.models import Book, UserBook
-
+from core.tests.base import PipelineTestCase
 
 SG_HEADER = (
     "Title,Authors,Contributors,ISBN/UID,Format,Read Status,"
@@ -55,14 +55,13 @@ def _sg_row(
         }
     },
 )
-class StoryGraphUploadFlowTests(TransactionTestCase):
+class StoryGraphUploadFlowTests(PipelineTestCase):
     """Verify full StoryGraph upload pipeline produces correct DNA output."""
 
     def setUp(self):
+        super().setUp()
         self.client = Client()
-        self.user = User.objects.create_user(
-            username="sg_user", email="sg@test.com", password="testpass123"
-        )
+        self.user = User.objects.create_user(username="sg_user", email="sg@test.com", password="testpass123")
         self.client.force_login(self.user)
 
     def tearDown(self):
@@ -80,14 +79,14 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         csv_file = SimpleUploadedFile("storygraph.csv", csv_content, content_type="text/csv")
         return self.client.post(reverse("core:upload"), {"csv_file": csv_file})
 
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_storygraph_csv_creates_dna_with_csv_source(self, mock_enrich, mock_vibe):
+    def test_storygraph_csv_creates_dna_with_csv_source(self):
         """Uploading a StoryGraph CSV produces DNA with csv_source='storygraph'."""
-        self._upload([
-            _sg_row("Book A", "Author A", isbn="9780000000001", tags="sci-fi"),
-            _sg_row("Book B", "Author B", isbn="9780000000002", tags="fantasy"),
-        ])
+        self._upload(
+            [
+                _sg_row("Book A", "Author A", isbn="9780000000001", tags="sci-fi"),
+                _sg_row("Book B", "Author B", isbn="9780000000002", tags="fantasy"),
+            ]
+        )
 
         self.user.refresh_from_db()
         dna = self.user.userprofile.dna_data
@@ -95,15 +94,15 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         self.assertEqual(dna["csv_source"], "storygraph")
         self.assertEqual(dna["user_stats"]["total_books_read"], 2)
 
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_storygraph_tags_apply_canonical_genres_pre_enrichment(self, mock_enrich, mock_vibe):
+    def test_storygraph_tags_apply_canonical_genres_pre_enrichment(self):
         """Tags like 'sci-fi' produce canonical genres on Books before enrichment runs."""
-        self._upload([
-            _sg_row("SciFi Book", "A1", isbn="9780000001001", tags="sci-fi"),
-            _sg_row("Fantasy Book", "A2", isbn="9780000001002", tags="fantasy"),
-            _sg_row("Dystopian Book", "A3", isbn="9780000001003", tags="dystopian"),
-        ])
+        self._upload(
+            [
+                _sg_row("SciFi Book", "A1", isbn="9780000001001", tags="sci-fi"),
+                _sg_row("Fantasy Book", "A2", isbn="9780000001002", tags="fantasy"),
+                _sg_row("Dystopian Book", "A3", isbn="9780000001003", tags="dystopian"),
+            ]
+        )
 
         # Verify books got genres from tags (without API enrichment)
         scifi = Book.objects.get(title="SciFi Book")
@@ -114,15 +113,15 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         self.assertIn("fantasy", set(fantasy.genres.values_list("name", flat=True)))
         self.assertIn("dystopian", set(dystopian.genres.values_list("name", flat=True)))
 
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_storygraph_mood_distribution_in_dna(self, mock_enrich, mock_vibe):
+    def test_storygraph_mood_distribution_in_dna(self):
         """Mood column populates dna['mood_distribution'] with correct counts."""
-        self._upload([
-            _sg_row("A", "A1", isbn="9780000002001", moods="dark, reflective"),
-            _sg_row("B", "A2", isbn="9780000002002", moods="dark, adventurous"),
-            _sg_row("C", "A3", isbn="9780000002003", moods="lighthearted"),
-        ])
+        self._upload(
+            [
+                _sg_row("A", "A1", isbn="9780000002001", moods="dark, reflective"),
+                _sg_row("B", "A2", isbn="9780000002002", moods="dark, adventurous"),
+                _sg_row("C", "A3", isbn="9780000002003", moods="lighthearted"),
+            ]
+        )
 
         self.user.refresh_from_db()
         moods = dict(self.user.userprofile.dna_data.get("mood_distribution", []))
@@ -131,16 +130,16 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         self.assertEqual(moods["adventurous"], 1)
         self.assertEqual(moods["lighthearted"], 1)
 
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_storygraph_pace_distribution_in_dna(self, mock_enrich, mock_vibe):
+    def test_storygraph_pace_distribution_in_dna(self):
         """Pace column populates dna['pace_distribution'] with correct counts."""
-        self._upload([
-            _sg_row("A", "A1", isbn="9780000003001", pace="slow"),
-            _sg_row("B", "A2", isbn="9780000003002", pace="fast"),
-            _sg_row("C", "A3", isbn="9780000003003", pace="slow"),
-            _sg_row("D", "A4", isbn="9780000003004", pace="medium"),
-        ])
+        self._upload(
+            [
+                _sg_row("A", "A1", isbn="9780000003001", pace="slow"),
+                _sg_row("B", "A2", isbn="9780000003002", pace="fast"),
+                _sg_row("C", "A3", isbn="9780000003003", pace="slow"),
+                _sg_row("D", "A4", isbn="9780000003004", pace="medium"),
+            ]
+        )
 
         self.user.refresh_from_db()
         pace = dict(self.user.userprofile.dna_data.get("pace_distribution", []))
@@ -148,17 +147,20 @@ class StoryGraphUploadFlowTests(TransactionTestCase):
         self.assertEqual(pace["fast"], 1)
         self.assertEqual(pace["medium"], 1)
 
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_storygraph_read_count_drives_comfort_rereader(self, mock_enrich, mock_vibe):
+    def test_storygraph_read_count_drives_comfort_rereader(self):
         """Read Count > 1 contributes 3 points per reread to Comfort Rereader."""
-        self._upload([
-            _sg_row("A", "A1", isbn="9780000004001", read_count="3", tags="sci-fi"),
-            _sg_row("B", "A2", isbn="9780000004002", read_count="2", tags="fantasy"),
-            _sg_row("C", "A3", isbn="9780000004003", read_count="1", tags="thriller"),
-            # Padding to MIN_SIGNAL_BOOKS: the reread signal is ignored on smaller libraries
-            *[_sg_row(f"F{i}", f"F{i}", isbn=f"978000000401{i}", read_count="1", tags="thriller") for i in range(7)],
-        ])
+        self._upload(
+            [
+                _sg_row("A", "A1", isbn="9780000004001", read_count="3", tags="sci-fi"),
+                _sg_row("B", "A2", isbn="9780000004002", read_count="2", tags="fantasy"),
+                _sg_row("C", "A3", isbn="9780000004003", read_count="1", tags="thriller"),
+                # Padding to MIN_SIGNAL_BOOKS: the reread signal is ignored on smaller libraries
+                *[
+                    _sg_row(f"F{i}", f"F{i}", isbn=f"978000000401{i}", read_count="1", tags="thriller")
+                    for i in range(7)
+                ],
+            ]
+        )
 
         self.user.refresh_from_db()
         scores = self.user.userprofile.dna_data.get("reader_type_scores", {})
@@ -182,9 +184,7 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
 
     def setUp(self):
         self.client = Client()
-        self.user = User.objects.create_user(
-            username="ec_user", email="ec@test.com", password="testpass123"
-        )
+        self.user = User.objects.create_user(username="ec_user", email="ec@test.com", password="testpass123")
         self.client.force_login(self.user)
         self.profile = self.user.userprofile
         self.profile.dna_data = {"user_stats": {"total_pages_read": 100, "avg_book_length": 100}}
@@ -365,17 +365,16 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
         }
     },
 )
-class UploadNonceTests(TransactionTestCase):
+class UploadNonceTests(PipelineTestCase):
     """Verify upload nonce is set in cache before task dispatch (prevents race condition)."""
 
     def setUp(self):
+        super().setUp()
         from django.core.cache import cache
 
         cache.clear()  # isolate the reject-while-pending in-flight marker between tests
         self.client = Client()
-        self.user = User.objects.create_user(
-            username="nonce_user", email="nonce@test.com", password="testpass123"
-        )
+        self.user = User.objects.create_user(username="nonce_user", email="nonce@test.com", password="testpass123")
         self.client.force_login(self.user)
 
     def tearDown(self):
@@ -387,16 +386,11 @@ class UploadNonceTests(TransactionTestCase):
         connections.close_all()
         super().tearDown()
 
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_upload_sets_nonce_in_cache(self, mock_enrich, mock_vibe):
+    def test_upload_sets_nonce_in_cache(self):
         """Upload writes upload_nonce_{user_id} to cache."""
         from core.cache_utils import safe_cache_get
 
-        csv_content = (
-            "Title,Author,Exclusive Shelf,My Rating\n"
-            "Test Book,Test Author,read,4\n"
-        ).encode("utf-8")
+        csv_content = ("Title,Author,Exclusive Shelf,My Rating\n" "Test Book,Test Author,read,4\n").encode("utf-8")
         csv_file = SimpleUploadedFile("goodreads.csv", csv_content, content_type="text/csv")
 
         self.client.post(reverse("core:upload"), {"csv_file": csv_file})
@@ -406,17 +400,12 @@ class UploadNonceTests(TransactionTestCase):
         # nonce must be a uuid4 string
         self.assertEqual(len(nonce), 36)  # uuid4 hex is 36 chars including dashes
 
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_reupload_replaces_nonce(self, mock_enrich, mock_vibe):
+    def test_reupload_replaces_nonce(self):
         """Re-uploading replaces the cached nonce so old enrichment tasks exit early."""
         from core.cache_utils import safe_cache_get
 
         def upload():
-            csv_content = (
-                "Title,Author,Exclusive Shelf,My Rating\n"
-                "Test Book,Test Author,read,4\n"
-            ).encode("utf-8")
+            csv_content = ("Title,Author,Exclusive Shelf,My Rating\n" "Test Book,Test Author,read,4\n").encode("utf-8")
             csv_file = SimpleUploadedFile("g.csv", csv_content, content_type="text/csv")
             self.client.post(reverse("core:upload"), {"csv_file": csv_file})
 
@@ -440,7 +429,7 @@ class UploadNonceTests(TransactionTestCase):
         }
     },
 )
-class ConcurrentUploadRejectTests(TransactionTestCase):
+class ConcurrentUploadRejectTests(PipelineTestCase):
     """Re-uploading while a prior DNA task is genuinely in flight is rejected.
 
     Rather than revoking the prior task mid-flight (a SIGTERM that can leave it
@@ -450,13 +439,12 @@ class ConcurrentUploadRejectTests(TransactionTestCase):
     """
 
     def setUp(self):
+        super().setUp()
         from django.core.cache import cache
 
         cache.clear()  # locmem persists across tests in a class; isolate the in-flight marker
         self.client = Client()
-        self.user = User.objects.create_user(
-            username="revoke_user", email="revoke@test.com", password="testpass123"
-        )
+        self.user = User.objects.create_user(username="revoke_user", email="revoke@test.com", password="testpass123")
         self.client.force_login(self.user)
 
     def tearDown(self):
@@ -469,10 +457,7 @@ class ConcurrentUploadRejectTests(TransactionTestCase):
         super().tearDown()
 
     def _upload(self):
-        csv_content = (
-            "Title,Author,Exclusive Shelf,My Rating\n"
-            "Test Book,Test Author,read,4\n"
-        ).encode("utf-8")
+        csv_content = ("Title,Author,Exclusive Shelf,My Rating\n" "Test Book,Test Author,read,4\n").encode("utf-8")
         csv_file = SimpleUploadedFile("g.csv", csv_content, content_type="text/csv")
         return self.client.post(reverse("core:upload"), {"csv_file": csv_file})
 
@@ -482,9 +467,7 @@ class ConcurrentUploadRejectTests(TransactionTestCase):
         safe_cache_set(f"dna_task_inflight_{self.user.id}", "1", timeout=900)
 
     @patch("core.views.upload.generate_reading_dna_task.delay")
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_upload_rejected_while_prior_task_in_flight(self, mock_enrich, mock_vibe, mock_delay):
+    def test_upload_rejected_while_prior_task_in_flight(self, mock_delay):
         """A live in-flight marker blocks the new upload — no second task dispatched."""
         self._mark_inflight()
 
@@ -494,9 +477,7 @@ class ConcurrentUploadRejectTests(TransactionTestCase):
         self.assertIn("processing=true", response.url)
         mock_delay.assert_not_called()
 
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_upload_allowed_when_no_marker(self, mock_enrich, mock_vibe):
+    def test_upload_allowed_when_no_marker(self):
         """With no in-flight marker, a new upload proceeds and runs the DNA task."""
         response = self._upload()
 
@@ -505,17 +486,12 @@ class ConcurrentUploadRejectTests(TransactionTestCase):
         self.user.userprofile.refresh_from_db()
         self.assertIsNotNone(self.user.userprofile.pending_dna_task_id)
 
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_reupload_clears_stale_userbooks(self, mock_enrich, mock_vibe):
+    def test_reupload_clears_stale_userbooks(self):
         """Books from a prior upload that aren't in the new CSV are removed (handhles
         orphans from a revoked task — calculate_full_dna deletes UserBooks not in the
         current upload)."""
         # First upload: one book
-        first_csv = (
-            "Title,Author,Exclusive Shelf,My Rating\n"
-            "Old Book,Old Author,read,5\n"
-        ).encode("utf-8")
+        first_csv = ("Title,Author,Exclusive Shelf,My Rating\n" "Old Book,Old Author,read,5\n").encode("utf-8")
         self.client.post(
             reverse("core:upload"),
             {"csv_file": SimpleUploadedFile("a.csv", first_csv, content_type="text/csv")},
@@ -523,10 +499,7 @@ class ConcurrentUploadRejectTests(TransactionTestCase):
         self.assertTrue(UserBook.objects.filter(user=self.user, book__title="Old Book").exists())
 
         # Second upload: different book
-        second_csv = (
-            "Title,Author,Exclusive Shelf,My Rating\n"
-            "New Book,New Author,read,4\n"
-        ).encode("utf-8")
+        second_csv = ("Title,Author,Exclusive Shelf,My Rating\n" "New Book,New Author,read,4\n").encode("utf-8")
         self.client.post(
             reverse("core:upload"),
             {"csv_file": SimpleUploadedFile("b.csv", second_csv, content_type="text/csv")},

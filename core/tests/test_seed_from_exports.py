@@ -8,7 +8,9 @@ from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
-from django.test import TransactionTestCase, override_settings
+from django.test import override_settings
+
+from core.tests.base import PipelineTestCase
 
 GOODREADS_HEADER = (
     "Book Id,Title,Author,Author l-f,Additional Authors,ISBN,ISBN13,My Rating,"
@@ -46,10 +48,9 @@ def _export_csv(prefix, n_books=6):
         }
     },
 )
-@patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-@patch("core.services.book_enrichment_service.enrich_book_from_apis")
-class SeedFromExportsTests(TransactionTestCase):
+class SeedFromExportsTests(PipelineTestCase):
     def setUp(self):
+        super().setUp()
         self.tmp = tempfile.TemporaryDirectory()
         self.csv_dir = Path(self.tmp.name)
         (self.csv_dir / "001__alice_repo.csv").write_text(_export_csv("a1"), encoding="utf-8")
@@ -67,7 +68,7 @@ class SeedFromExportsTests(TransactionTestCase):
         call_command("seed_from_exports", "--dir", str(self.csv_dir), *args, stdout=out)
         return out.getvalue()
 
-    def test_creates_users_with_dna(self, mock_enrich, mock_vibe):
+    def test_creates_users_with_dna(self):
         output = self._run()
 
         self.assertIn("Processed: 2, skipped: 0, failed: 0", output)
@@ -80,7 +81,7 @@ class SeedFromExportsTests(TransactionTestCase):
         self.assertIsNotNone(alice.userprofile.dna_data)
         self.assertEqual(alice.userprofile.dna_data["user_stats"]["total_books_read"], 6)
 
-    def test_rerun_is_idempotent_and_force_reprocesses(self, mock_enrich, mock_vibe):
+    def test_rerun_is_idempotent_and_force_reprocesses(self):
         self._run()
         output = self._run()
         self.assertIn("Processed: 0, skipped: 2, failed: 0", output)
@@ -89,13 +90,13 @@ class SeedFromExportsTests(TransactionTestCase):
         output = self._run("--force")
         self.assertIn("Processed: 2, skipped: 0, failed: 0", output)
 
-    def test_rerun_keeps_existing_handles(self, mock_enrich, mock_vibe):
+    def test_rerun_keeps_existing_handles(self):
         self._run()
         before = set(User.objects.values_list("username", flat=True))
         self._run("--force")
         self.assertEqual(set(User.objects.values_list("username", flat=True)), before)
 
-    def test_bad_csv_is_skipped_without_aborting(self, mock_enrich, mock_vibe):
+    def test_bad_csv_is_skipped_without_aborting(self):
         (self.csv_dir / "000__broken.csv").write_text("not,a,goodreads\nexport,at,all\n", encoding="utf-8")
 
         output = self._run()
@@ -104,12 +105,12 @@ class SeedFromExportsTests(TransactionTestCase):
         # The shell user for the unprocessable CSV must not linger.
         self.assertFalse(User.objects.filter(email="seed_000__broken@seed.bibliotype.invalid").exists())
 
-    def test_limit(self, mock_enrich, mock_vibe):
+    def test_limit(self):
         output = self._run("--limit", "1")
         self.assertIn("Processed: 1", output)
         self.assertEqual(User.objects.filter(email__endswith="@seed.bibliotype.invalid").count(), 1)
 
-    def test_purge_deletes_only_seeded_users(self, mock_enrich, mock_vibe):
+    def test_purge_deletes_only_seeded_users(self):
         self._run()
         organic = User.objects.create_user(username="seed_lookalike", email="real@person.com", password="x")
 
@@ -120,7 +121,7 @@ class SeedFromExportsTests(TransactionTestCase):
         self.assertEqual(User.objects.filter(email__endswith="@seed.bibliotype.invalid").count(), 0)
         self.assertTrue(User.objects.filter(pk=organic.pk).exists())
 
-    def test_download_fetches_missing_files_and_tolerates_failures(self, mock_enrich, mock_vibe):
+    def test_download_fetches_missing_files_and_tolerates_failures(self):
         download_dir = self.csv_dir / "downloaded"
         good_csv = _export_csv("c3").encode("utf-8")
         import hashlib

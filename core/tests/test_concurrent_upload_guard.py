@@ -18,6 +18,7 @@ from django.test import Client, TransactionTestCase, override_settings
 from django.urls import reverse
 
 from core.cache_utils import safe_cache_get, safe_cache_set
+from core.tests.base import PipelineTestCase
 
 
 def _csv_file():
@@ -33,8 +34,9 @@ def _csv_file():
     CELERY_TASK_ALWAYS_EAGER=True,
     CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
 )
-class ConcurrentUploadGuardTests(TransactionTestCase):
+class ConcurrentUploadGuardTests(PipelineTestCase):
     def setUp(self):
+        super().setUp()
         from django.core.cache import cache
 
         cache.clear()  # locmem persists across tests in a class; isolate the marker
@@ -95,12 +97,9 @@ class ConcurrentUploadGuardTests(TransactionTestCase):
         self.assertEqual(response.status_code, 302)
         mock_delay.assert_called_once()
 
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_completed_upload_clears_marker(self, mock_enrich, mock_vibe):
+    def test_completed_upload_clears_marker(self):
         """A real (eager) upload clears the marker on completion, so a follow-up
         upload is allowed."""
-        mock_enrich.return_value = (None, 0, 0)
 
         self.client.post(reverse("core:upload"), {"csv_file": _csv_file()})
 
@@ -213,8 +212,9 @@ class DnaStatusTimeoutTests(TransactionTestCase):
     CELERY_TASK_ALWAYS_EAGER=True,
     CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
 )
-class BadRowUploadTests(TransactionTestCase):
+class BadRowUploadTests(PipelineTestCase):
     def setUp(self):
+        super().setUp()
         from django.core.cache import cache
 
         cache.clear()
@@ -227,12 +227,9 @@ class BadRowUploadTests(TransactionTestCase):
 
         connections.close_all()
 
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["a vibe"])
-    @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    def test_blank_author_and_overlong_title_do_not_fail_upload(self, mock_enrich, mock_vibe):
+    def test_blank_author_and_overlong_title_do_not_fail_upload(self):
         from core.models import Book
 
-        mock_enrich.return_value = (None, 0, 0)
         long_title = "L" * 300
         csv = (
             "Title,Author,Exclusive Shelf,My Rating,Number of Pages,Date Read\n"

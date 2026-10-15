@@ -1,4 +1,5 @@
 import json
+import re
 from unittest.mock import MagicMock, patch
 
 import requests
@@ -657,9 +658,7 @@ class CheckAuthorMainstreamStatusTaskTests(TestCase):
 
         safe_cache_set("upload_nonce_42", "new-upload-id", timeout=3600)
 
-        check_author_mainstream_status_task.delay(
-            self.author.id, user_id=42, upload_nonce="old-upload-id"
-        )
+        check_author_mainstream_status_task.delay(self.author.id, user_id=42, upload_nonce="old-upload-id")
 
         mock_check.assert_not_called()
 
@@ -672,9 +671,7 @@ class CheckAuthorMainstreamStatusTaskTests(TestCase):
         safe_cache_set("upload_nonce_42", "current-upload-id", timeout=3600)
         mock_check.return_value = {"error": None, "is_mainstream": True, "reason": "test"}
 
-        check_author_mainstream_status_task.delay(
-            self.author.id, user_id=42, upload_nonce="current-upload-id"
-        )
+        check_author_mainstream_status_task.delay(self.author.id, user_id=42, upload_nonce="current-upload-id")
 
         mock_check.assert_called_once()
 
@@ -1296,7 +1293,7 @@ class GenreAliasPrecompileTests(TestCase):
 
         self.assertGreater(len(_COMPILED_ALIAS_PATTERNS), 0)
         pattern, canonical_name = _COMPILED_ALIAS_PATTERNS[0]
-        self.assertTrue(hasattr(pattern, "search"))
+        self.assertIsInstance(pattern, re.Pattern)
         self.assertIsInstance(canonical_name, str)
 
 
