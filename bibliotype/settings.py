@@ -95,7 +95,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "core",
-    "django_celery_results",
     "waffle",
 ]
 
@@ -388,9 +387,6 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(hour=4, minute=0, day_of_week="sunday"),  # Weekly on Sundays at 4 AM
     },
 }
-
-# Custom 404 handler
-handler404 = "core.views.handler404"
 
 # Django Silk configuration - opt-in via ENABLE_SILK=True (local development only)
 if ENABLE_SILK:

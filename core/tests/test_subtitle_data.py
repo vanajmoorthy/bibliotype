@@ -37,7 +37,6 @@ def _csv(*rows):
 @override_settings(
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_TASK_EAGER_PROPAGATES=True,
-    CELERY_RESULT_BACKEND="django-db",
     CACHES={
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
@@ -267,7 +266,6 @@ class ContrarinessScaleTests(TestCase):
 @override_settings(
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_TASK_EAGER_PROPAGATES=True,
-    CELERY_RESULT_BACKEND="django-db",
     CACHES={
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
