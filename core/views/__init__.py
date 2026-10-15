@@ -40,10 +40,8 @@ from .upload import (  # noqa: F401 — re-exported for stable import paths
     MAX_UPLOAD_COLUMNS,
     MAX_UPLOAD_ROWS,
     MAX_UPLOAD_SIZE_BYTES,
-    check_dna_status_view,
-    check_recommendations_status_view,
-    enrichment_status_view,
     get_task_result_view,
+    status_view,
     task_status_view,
     upload_view,
 )

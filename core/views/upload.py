@@ -7,7 +7,7 @@ import pandas as pd
 from celery.result import AsyncResult
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -156,7 +156,7 @@ def upload_view(request):
                 raise
 
             # Remember which pending task is an upload (vs a signup claim, which
-            # sets no in-flight marker) so check_dna_status_view can time it out
+            # sets no in-flight marker) so the dna status poll can time it out
             # once the marker is gone.
             safe_cache_set(f"dna_upload_task_{request.user.id}", result.id, timeout=DNA_CACHE_TTL)
 
@@ -200,7 +200,7 @@ def upload_view(request):
         return redirect("core:home")
 
 
-def check_dna_status_view(request):
+def _dna_status(request):
     # For anonymous users, they don't have pending task tracking
     if not request.user.is_authenticated:
         return JsonResponse({"status": "PENDING"})
@@ -260,8 +260,7 @@ def check_dna_status_view(request):
 
 
 @login_required
-def check_recommendations_status_view(request):
-    """AJAX endpoint to check if recommendations have been generated."""
+def _recommendations_status(request):
     profile = request.user.userprofile
     profile.refresh_from_db()
 
@@ -272,8 +271,8 @@ def check_recommendations_status_view(request):
 
 
 @login_required
-def enrichment_status_view(request):
-    """AJAX endpoint for polling enrichment progress. Returns updated stats for live dashboard updates."""
+def _enrichment_status(request):
+    """Updated stats for live dashboard updates during enrichment."""
     profile = request.user.userprofile
     dna_data = profile.dna_data
     if not dna_data:
@@ -321,6 +320,16 @@ def enrichment_status_view(request):
         updated_stats["reader_type_color"] = READER_TYPE_COLORS.get(reader_type, "purple")
         updated_stats["reader_type_scores_version"] = dna_data.get("reader_type_scores_version", 0)
     return JsonResponse({**progress, "updated_stats": updated_stats})
+
+
+STATUS_PARTS = {"dna": _dna_status, "recommendations": _recommendations_status, "enrichment": _enrichment_status}
+
+
+def status_view(request, part):
+    """AJAX polling endpoint. Each part keeps its own auth (dna serves anonymous users) and payload."""
+    if part not in STATUS_PARTS:
+        raise Http404
+    return STATUS_PARTS[part](request)
 
 
 def task_status_view(request, task_id):

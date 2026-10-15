@@ -130,7 +130,7 @@
                 }
 
                 function checkStatus() {
-                    fetch("{% url 'core:api_check_dna_status' %}")
+                    fetch("{% url 'core:api_status' 'dna' %}")
                         .then((response) => {
                             if (!response.ok) {
                                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -261,7 +261,7 @@
                             poll() {
                                 const interval = setInterval(async () => {
                                     try {
-                                        const res = await fetch('{% url "core:api_check_recommendations_status" %}');
+                                        const res = await fetch('{% url "core:api_status" "recommendations" %}');
                                         const data = await res.json();
                                         if (data.status === 'ready') {
                                             clearInterval(interval);
@@ -376,23 +376,11 @@
                             init() {
                                 this.interval = setInterval(() => this.poll(), this.intervalMs);
                             },
-                            // Slow polling once enrichment is nearly done — most of the
-                            // remaining work is the long tail of stragglers. Monotonic:
-                            // once we've slowed, we never speed back up, so a non-monotonic
-                            // percent (rounding, denominator shifts) can't thrash the timer.
-                            adjustInterval(percent) {
-                                if (this.intervalMs >= 12000) return;
-                                if (percent > 90) {
-                                    this.intervalMs = 12000;
-                                    clearInterval(this.interval);
-                                    this.interval = setInterval(() => this.poll(), this.intervalMs);
-                                }
-                            },
                             async poll() {
                                 if (this.inFlight) return;
                                 this.inFlight = true;
                                 try {
-                                    const res = await fetch('{% url "core:api_enrichment_status" %}');
+                                    const res = await fetch('{% url "core:api_status" "enrichment" %}');
                                     const data = await res.json();
                                     if (!data.pending) {
                                         this.pending = false;
@@ -405,7 +393,6 @@
                                         setTimeout(() => window.location.reload(), 500);
                                         return;
                                     }
-                                    this.adjustInterval(data.percent);
                                     this.bannerText = `Enriching your library — ${data.percent}% complete. ~${data.remaining_minutes} min remaining.`;
                                     Alpine.store('enrichment', {
                                         pending: true,

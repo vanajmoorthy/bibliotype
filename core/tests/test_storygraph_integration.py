@@ -221,7 +221,7 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
         self._create_book("Book A", "9789000000001", attempted=True)
         self._create_book("Book B", "9789000000002", attempted=False)
 
-        response = self.client.get(reverse("core:api_enrichment_status"))
+        response = self.client.get(reverse("core:api_status", args=["enrichment"]))
         data = response.json()
         self.assertTrue(data["pending"])
         # 1 of 2 attempted = 50%
@@ -232,20 +232,20 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
         self._create_book("Book A", "9789000000003", attempted=True)
         self._create_book("Book B", "9789000000004", attempted=True)
 
-        response = self.client.get(reverse("core:api_enrichment_status"))
+        response = self.client.get(reverse("core:api_status", args=["enrichment"]))
         data = response.json()
         self.assertFalse(data["pending"])
 
     def test_pending_false_when_no_books(self):
         """Endpoint returns pending=false when user has no books."""
-        response = self.client.get(reverse("core:api_enrichment_status"))
+        response = self.client.get(reverse("core:api_status", args=["enrichment"]))
         data = response.json()
         self.assertFalse(data["pending"])
 
     def test_anonymous_user_redirected(self):
         """Endpoint requires login (returns 302 to login)."""
         self.client.logout()
-        response = self.client.get(reverse("core:api_enrichment_status"))
+        response = self.client.get(reverse("core:api_status", args=["enrichment"]))
         self.assertEqual(response.status_code, 302)
 
     def test_percent_calculation_uses_attempted_count(self):
@@ -255,7 +255,7 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
         self._create_book("C", "9789000000012", attempted=True)
         self._create_book("D", "9789000000013", attempted=False)
 
-        response = self.client.get(reverse("core:api_enrichment_status"))
+        response = self.client.get(reverse("core:api_status", args=["enrichment"]))
         data = response.json()
         self.assertEqual(data["percent"], 75)
         self.assertEqual(data["total"], 4)
@@ -265,7 +265,7 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
         self._create_book("A", "9789000000020", attempted=False, page_count=300, publish_year=2020)
         self._create_book("B", "9789000000021", attempted=False, page_count=200, publish_year=2021)
 
-        response = self.client.get(reverse("core:api_enrichment_status"))
+        response = self.client.get(reverse("core:api_status", args=["enrichment"]))
         data = response.json()
         self.assertTrue(data["pending"])  # global enrichment still running
         self.assertFalse(data["pages_any_missing"])  # but page data is complete
@@ -275,7 +275,7 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
         self._create_book("A", "9789000000022", attempted=False, page_count=300)
         self._create_book("B", "9789000000023", attempted=False, page_count=None)
 
-        response = self.client.get(reverse("core:api_enrichment_status"))
+        response = self.client.get(reverse("core:api_status", args=["enrichment"]))
         data = response.json()
         self.assertTrue(data["pages_any_missing"])
 
@@ -284,7 +284,7 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
         self._create_book("A", "9789000000024", attempted=False, page_count=300, publish_year=1999)
         self._create_book("B", "9789000000025", attempted=False, page_count=200, publish_year=2010)
 
-        response = self.client.get(reverse("core:api_enrichment_status"))
+        response = self.client.get(reverse("core:api_status", args=["enrichment"]))
         data = response.json()
         self.assertTrue(data["pending"])
         self.assertFalse(data["year_any_missing"])
@@ -294,7 +294,7 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
         self._create_book("A", "9789000000026", attempted=False, publish_year=2020)
         self._create_book("B", "9789000000027", attempted=False, publish_year=None)
 
-        response = self.client.get(reverse("core:api_enrichment_status"))
+        response = self.client.get(reverse("core:api_status", args=["enrichment"]))
         data = response.json()
         self.assertTrue(data["year_any_missing"])
 
@@ -313,7 +313,7 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
         b = self._create_book("B", "9789000000031", attempted=False, page_count=200)
         self._add_genres(b, ["history"])  # non-fiction
 
-        response = self.client.get(reverse("core:api_enrichment_status"))
+        response = self.client.get(reverse("core:api_status", args=["enrichment"]))
         data = response.json()
         self.assertTrue(data["pending"])
 
@@ -331,7 +331,7 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
         self._create_book("Long One", "9789000000032", attempted=True, page_count=500)
         self._create_book("Short One", "9789000000033", attempted=False, page_count=120)
 
-        response = self.client.get(reverse("core:api_enrichment_status"))
+        response = self.client.get(reverse("core:api_status", args=["enrichment"]))
         stats = response.json()["updated_stats"]
 
         self.assertIsNotNone(stats["longest_book"])
@@ -347,7 +347,7 @@ class EnrichmentCompletionDetectionTests(TransactionTestCase):
         self._create_book("Only Paged", "9789000000034", attempted=True, page_count=300)
         self._create_book("No Pages", "9789000000035", attempted=False, page_count=None)
 
-        response = self.client.get(reverse("core:api_enrichment_status"))
+        response = self.client.get(reverse("core:api_status", args=["enrichment"]))
         stats = response.json()["updated_stats"]
 
         self.assertIsNone(stats["longest_book"])

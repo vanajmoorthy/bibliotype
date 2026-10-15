@@ -3,8 +3,8 @@
 Covers:
 - Unit: recompute_reader_type_from_db with fixture book sets
 - Override kwargs in assign_reader_type (Comfort Rereader, Rapacious Reader)
-- Integration: enrichment_status_view carries reader_type fields when csv_context present
-- Integration: enrichment_status_view omits reader_type fields when csv_context absent
+- Integration: the enrichment status poll carries reader_type fields when csv_context present
+- Integration: the enrichment status poll omits reader_type fields when csv_context absent
 - Finalize: profile.reader_type column is persisted on enrichment completion
 """
 
@@ -270,14 +270,14 @@ class RecomputeReaderTypeFromDbTests(TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Integration: enrichment_status_view payload
+# Integration: the enrichment status poll payload
 # ---------------------------------------------------------------------------
 
 @override_settings(
     CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
 )
 class EnrichmentStatusReaderTypePayloadTests(TestCase):
-    """enrichment_status_view carries / omits reader_type fields based on csv_context."""
+    """The enrichment status poll carries / omits reader_type fields based on csv_context."""
 
     def setUp(self):
         self.user = _make_user("status_rt_user")
@@ -313,7 +313,7 @@ class EnrichmentStatusReaderTypePayloadTests(TestCase):
         }
         self.profile.save()
 
-        response = self.client.get("/api/enrichment-status/")
+        response = self.client.get("/api/status/enrichment/")
         self.assertEqual(response.status_code, 200)
         data = response.json()
 
@@ -338,7 +338,7 @@ class EnrichmentStatusReaderTypePayloadTests(TestCase):
         }
         self.profile.save()
 
-        response = self.client.get("/api/enrichment-status/")
+        response = self.client.get("/api/status/enrichment/")
         self.assertEqual(response.status_code, 200)
         data = response.json()
 
@@ -361,7 +361,7 @@ class EnrichmentStatusReaderTypePayloadTests(TestCase):
         }
         self.profile.save()
 
-        response = self.client.get("/api/enrichment-status/")
+        response = self.client.get("/api/status/enrichment/")
         data = response.json()
         color = data["updated_stats"].get("reader_type_color")
         self.assertIn(color, valid_colors)
@@ -383,7 +383,7 @@ class EnrichmentStatusReaderTypePayloadTests(TestCase):
         }
         self.profile.save()
 
-        response = self.client.get("/api/enrichment-status/")
+        response = self.client.get("/api/status/enrichment/")
         self.assertEqual(response.status_code, 200)
         data = response.json()
 

@@ -220,7 +220,7 @@ def _recalculate_enrichment_stats(user, dna_data, fresh=False):
 def _compute_enrichment_progress(user, profile, dna_data):
     """Compute enrichment progress + apply DB-derived stats to dna_data.
 
-    Single chokepoint shared by display_dna_view and enrichment_status_view.
+    Single chokepoint shared by display_dna_view and the enrichment status poll.
     Returns:
         - None if user has no books
         - {"pending": False, "total": N} when enrichment has finished

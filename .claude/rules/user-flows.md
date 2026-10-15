@@ -32,7 +32,7 @@ upload_view: POST CSV → same validation
 
 ## Status Polling (Two Different Endpoints)
 
-**Authenticated:** `check_dna_status_view`
+**Authenticated:** `status_view` (`/api/status/dna/`)
 - Checks `profile.pending_dna_task_id` → `AsyncResult` state
 - Returns `{"status": "PENDING"|"SUCCESS"|"FAILURE", "progress": {...}}`
 

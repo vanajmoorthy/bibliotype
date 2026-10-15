@@ -161,7 +161,7 @@ class ConcurrentUploadGuardTests(TransactionTestCase):
     CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
 )
 class DnaStatusTimeoutTests(TransactionTestCase):
-    """check_dna_status_view stops polling an upload task whose worker died."""
+    """The dna status poll stops polling an upload task whose worker died."""
 
     def setUp(self):
         from django.core.cache import cache
@@ -181,7 +181,7 @@ class DnaStatusTimeoutTests(TransactionTestCase):
     def _poll(self):
         pending = MagicMock(state="PENDING", info=None)
         with patch("core.views.upload.AsyncResult", return_value=pending):
-            return self.client.get(reverse("core:api_check_dna_status")).json()
+            return self.client.get(reverse("core:api_status", args=["dna"])).json()
 
     def test_upload_task_without_marker_times_out(self):
         safe_cache_set(f"dna_upload_task_{self.user.id}", "dead-task-id")  # marker absent: worker died
