@@ -113,6 +113,8 @@ class ViewE2E_Tests(TransactionTestCase):
         new_user.userprofile.refresh_from_db()
         self.assertIsNotNone(new_user.userprofile.dna_data)
         self.assertIn("an e2e vibe", new_user.userprofile.reading_vibe)
+        # The anonymous snapshot must not outlive the claim
+        self.assertNotIn("dna_data", self.client.session)
 
     def test_task_status_rejects_non_uuid_task_id(self):
         """A task_id that breaks out of the poller's inline JS string must not reach the template."""
@@ -538,6 +540,21 @@ class ViewE2E_Tests(TransactionTestCase):
         rows = AnonymousUserSession.objects.filter(session_key=session_key)
         self.assertEqual(rows.count(), 1)
         self.assertEqual(rows.first().dna_data["reader_type"], "Recreate Reader")
+
+    @patch("core.tasks.generate_recommendations_task")
+    def test_logged_in_dashboard_ignores_stale_session_dna(self, mock_recs):
+        user = User.objects.create_user(username="profilereader", email="p@test.com", password="a-Strong-p4ssword!")
+        user.userprofile.dna_data = {"reader_type": "Profile Reader"}
+        user.userprofile.save()
+        self.client.force_login(user)
+        session = self.client.session
+        session["dna_data"] = {"reader_type": "Stale Session Reader"}
+        session.save()
+
+        response = self.client.get(reverse("core:display_dna"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["dna"]["reader_type"], "Profile Reader")
 
 
 @override_settings(

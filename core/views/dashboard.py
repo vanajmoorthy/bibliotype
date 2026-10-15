@@ -32,7 +32,8 @@ logger = logging.getLogger(__name__)
 def display_dna_view(request):
     is_processing = request.GET.get("processing") == "true"
 
-    dna_data = request.session.get("dna_data")
+    # Logged-in users always read the saved profile; a session copy is only a stale anonymous snapshot.
+    dna_data = None if request.user.is_authenticated else request.session.get("dna_data")
     user_profile = None
     recommendations = []
 
@@ -44,8 +45,7 @@ def display_dna_view(request):
         if is_processing:
             return render(request, "core/dashboard.html", {"is_processing": True})
 
-        if dna_data is None and user_profile.dna_data:
-            dna_data = user_profile.dna_data
+        dna_data = user_profile.dna_data
 
         if user_profile.dna_data:
             try:

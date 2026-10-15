@@ -105,7 +105,9 @@ def _signup_view_throttled(request):
 
             if task_id_to_claim:
                 user.userprofile.pending_dna_task_id = task_id_to_claim
-                user.userprofile.save()
+                user.userprofile.save(update_fields=["pending_dna_task_id"])
+                # The claim task saves the DNA to the profile; drop the anonymous snapshot.
+                request.session.pop("dna_data", None)
                 claim_anonymous_dna_task.delay(user.id, task_id_to_claim, pre_login_session_key)
 
                 # anonymous_dna_claimed fires from the claim task once the DNA is actually saved
