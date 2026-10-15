@@ -58,7 +58,7 @@ class AnonymousSessionCleanupTests(TestCase):
 @patch("core.tasks.generate_recommendations_task.delay")
 @patch("core.tasks.check_author_mainstream_status_task.apply_async")
 @patch("core.tasks.enrich_book_task.apply_async")
-@patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+@patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["vibe"])
 @patch("core.services.book_enrichment_service.enrich_book_from_apis")
 class ReuploadCountTests(TransactionTestCase):
     def setUp(self):

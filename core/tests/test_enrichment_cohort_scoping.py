@@ -15,7 +15,7 @@ from django.utils import timezone
 
 from core.cache_utils import safe_cache_delete
 from core.models import Author, Book, Genre, UserBook
-from core.views._helpers import _compute_enrichment_progress
+from core.views._enrichment_stats import _compute_enrichment_progress
 
 
 def _make_user(username):
@@ -97,8 +97,7 @@ class CohortScopingTests(TestCase):
         """Once every cohort book is attempted, enrichment finalizes (not pending)."""
         for i in range(10):
             _add_book(self.user, f"Old {i}", genres=["fantasy"], google_books_checked=True)
-        new_books = [_add_book(self.user, f"New {i}", genres=["mystery"], google_books_checked=True)
-                     for i in range(3)]
+        new_books = [_add_book(self.user, f"New {i}", genres=["mystery"], google_books_checked=True) for i in range(3)]
 
         dna = self._base_dna(cohort_ids=[b.id for b in new_books])
         self.profile.dna_data = dna

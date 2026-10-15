@@ -12,7 +12,7 @@ tiebreakers only — they never override clear API genre signals, so a user who
 shelves "Sapiens" as "fiction" can't flip a book with real nonfiction genres.
 
 Used by core/services/dna/__init__.py (calculate_full_dna) and
-core/views/_helpers.py (_compute_enrichment_stats) so both counting paths share
+core/views/_enrichment_stats.py (_compute_enrichment_stats) so both counting paths share
 one vocabulary and one resolution policy. The views helper has no CSV context
 and passes no shelf data — the defaults keep its behaviour unchanged.
 """
@@ -64,7 +64,7 @@ def resolve_genre_labels(genre_names, shelf_fiction=False, shelf_nonfiction=Fals
     """Multiplicity-preserving variant of resolve_genre_names, with shelf signals.
 
     Used by the two top_genres builders (calculate_full_dna and the poll-time
-    recompute in core/views/_helpers.py), which count every raw occurrence and
+    recompute in core/views/_enrichment_stats.py), which count every raw occurrence and
     have shelf context available. Both MUST resolve identically or the
     top-genres labels flip between generation and live-enrichment polls.
     """

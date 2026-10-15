@@ -25,7 +25,8 @@ from ..cache_utils import (
 from ..ratelimit_utils import client_ip_key
 from ..services.dna.csv_parser import CSVValidationError, validate_csv_columns
 from ..tasks import generate_reading_dna_task
-from ._helpers import _compute_enrichment_progress, _enrich_dna_for_display
+from ._enrichment_stats import _compute_enrichment_progress
+from ._helpers import _enrich_dna_for_display
 
 logger = logging.getLogger(__name__)
 

@@ -180,7 +180,7 @@ class CalculateFullDnaRoutingTests(TransactionTestCase):
         return calculate_full_dna(ROUTING_CSV, user=user, **kwargs)
 
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
@@ -223,7 +223,7 @@ class CalculateFullDnaRoutingTests(TransactionTestCase):
         mock_recs.assert_not_called()
 
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
@@ -255,7 +255,7 @@ class CalculateFullDnaRoutingTests(TransactionTestCase):
 
     @patch("core.services.dna.enrichment_budget._EnrichmentBudget.has_remaining", return_value=False)
     @patch("core.services.book_enrichment_service.enrich_book_from_apis")
-    @patch("core.services.dna.generate_vibe_with_llm", return_value=["vibe"])
+    @patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["vibe"])
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")

@@ -1,14 +1,13 @@
 """Views package: per-domain modules re-exported here for stable `core.views.*` import paths."""
 
-from ._helpers import (  # noqa: F401 — re-exported for stable import paths
-    BADGE_COLOR_MAP,
+from ..services.user_similarity_service import BADGE_COLOR_MAP  # noqa: F401 — re-exported for stable import paths
+from ._enrichment_stats import (  # noqa: F401 — re-exported for stable import paths
     ENRICHMENT_STATS_CACHE_TTL,
     _compute_enrichment_progress,
     _compute_enrichment_stats,
-    _enrich_dna_for_display,
-    _expand_book_dict,
     _recalculate_enrichment_stats,
 )
+from ._helpers import _enrich_dna_for_display, _expand_book_dict  # noqa: F401 — re-exported for stable import paths
 from .auth import (  # noqa: F401 — re-exported for stable import paths
     CustomPasswordResetView,
     _login_view_throttled,

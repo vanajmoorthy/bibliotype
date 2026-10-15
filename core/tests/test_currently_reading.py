@@ -69,7 +69,7 @@ class CurrentlyReadingExtractionTests(PipelineTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm")
+    @patch("core.services.dna.vibe.generate_vibe_with_llm")
     def test_currently_reading_books_extracted(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """Currently-reading books should be extracted with correct fields."""
         mock_vibe.return_value = ["vibe1", "vibe2", "vibe3", "vibe4"]
@@ -107,7 +107,7 @@ class CurrentlyReadingExtractionTests(PipelineTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm")
+    @patch("core.services.dna.vibe.generate_vibe_with_llm")
     def test_custom_shelf_count(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """Custom shelf count should exclude standard shelves (read, currently-reading, to-read)."""
         mock_vibe.return_value = ["vibe1", "vibe2", "vibe3", "vibe4"]
@@ -133,7 +133,7 @@ class CurrentlyReadingExtractionTests(PipelineTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm")
+    @patch("core.services.dna.vibe.generate_vibe_with_llm")
     def test_no_currently_reading_books(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """When no currently-reading books exist, fields should be empty/zero."""
         mock_vibe.return_value = ["vibe1", "vibe2", "vibe3", "vibe4"]
@@ -157,7 +157,7 @@ class CurrentlyReadingExtractionTests(PipelineTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm")
+    @patch("core.services.dna.vibe.generate_vibe_with_llm")
     def test_niche_book_has_cover_url(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """The most_niche_book dict should include a cover_url field."""
         mock_vibe.return_value = ["vibe1", "vibe2", "vibe3", "vibe4"]
@@ -343,7 +343,7 @@ class CurrentlyReadingCoverUpgradeTests(PipelineTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm")
+    @patch("core.services.dna.vibe.generate_vibe_with_llm")
     def test_currently_reading_cover_upgraded_from_db(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         """Currently-reading book in DB with cover_url → gets the DB cover URL."""
         mock_vibe.return_value = ["vibe1", "vibe2", "vibe3", "vibe4"]
@@ -379,7 +379,7 @@ class CurrentlyReadingCoverUpgradeTests(PipelineTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm")
+    @patch("core.services.dna.vibe.generate_vibe_with_llm")
     def test_currently_reading_cover_keeps_csv_isbn_when_no_db_cover(
         self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task
     ):
@@ -428,7 +428,7 @@ class SharedBookFieldsTests(PipelineTestCase):
     @patch("core.tasks.generate_recommendations_task.delay")
     @patch("core.tasks.check_author_mainstream_status_task.apply_async")
     @patch("core.tasks.enrich_book_task.apply_async")
-    @patch("core.services.dna.generate_vibe_with_llm")
+    @patch("core.services.dna.vibe.generate_vibe_with_llm")
     def test_upload_fills_only_null_fields(self, mock_vibe, mock_enrich, mock_author_check, mock_rec_task):
         mock_vibe.return_value = ["vibe1", "vibe2", "vibe3", "vibe4"]
         author = Author.objects.create(name="Shared Author")

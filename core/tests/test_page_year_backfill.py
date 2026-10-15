@@ -17,7 +17,7 @@ HEADER = (
 def _run(csv_text, username):
     user = User.objects.create_user(username=username, password="x")
     with (
-        patch("core.services.dna.generate_vibe_with_llm", return_value=["a", "b"]),
+        patch("core.services.dna.vibe.generate_vibe_with_llm", return_value=["a", "b"]),
         patch("core.tasks.enrich_book_task.apply_async"),
         patch("core.services.book_enrichment_service.enrich_book_from_apis"),
     ):
