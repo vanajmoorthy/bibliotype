@@ -1,3 +1,11 @@
+# Cap container logs (the droplet has filled its disk before). web/worker only:
+# changing db/redis config recreates them, and recreating redis loses queued tasks.
+x-app-logging: &app-logging
+    driver: json-file
+    options:
+        max-size: "10m"
+        max-file: "3"
+
 services:
     db:
         image: postgres:15
@@ -115,6 +123,15 @@ services:
             - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
             - TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY}
             - TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY}
+        # Socket connect rather than an HTTP request, so ALLOWED_HOSTS can't fail it.
+        # start_period covers the entrypoint's migrate + collectstatic.
+        healthcheck:
+            test: ["CMD", "python", "-c", "import socket;socket.create_connection(('127.0.0.1',8000),2)"]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 180s
+        logging: *app-logging
         depends_on:
             db:
                 condition: service_healthy
@@ -138,6 +155,7 @@ services:
         # and finishes running ones (warm shutdown) within stop_grace_period.
         command: sh -c "exec poetry run celery -A bibliotype worker -B -s /tmp/celerybeat-schedule -l info -Q celery,enrichment,enrichment_bulk"
         stop_grace_period: 180s
+        logging: *app-logging
         environment:
             - DJANGO_ENV=production
             - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
