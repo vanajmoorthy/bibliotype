@@ -1,7 +1,7 @@
 """Rate-limit coverage for the settings-modal write endpoints.
 
 change_password / delete_account are password oracles, so each is throttled to
-5 POSTs/minute/user via django-ratelimit (mirrors update_username_api). The 6th
+5 POSTs/minute/user via django-ratelimit (mirrors update_username_view). The 6th
 POST inside a minute must return 429.
 """
 

@@ -28,12 +28,12 @@ from .pages import (  # noqa: F401 — re-exported for stable import paths
     terms_view,
 )
 from .profile import (  # noqa: F401 — re-exported for stable import paths
-    _update_username_api_throttled,
+    _update_username_throttled,
     change_password_view,
     delete_account_view,
     update_privacy_view,
-    update_recommendation_visibility,
-    update_username_api,
+    update_recommendation_visibility_view,
+    update_username_view,
 )
 from .seo import robots_txt_view, sitemap_xml_view  # noqa: F401 — re-exported for stable import paths
 from .upload import (  # noqa: F401 — re-exported for stable import paths
