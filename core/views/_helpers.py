@@ -540,7 +540,13 @@ def _resolve_rec_source_names(recommendations, recommendations_meta=None, owner_
     if closest:
         ids.add(closest["user_id"])
     public_names = (
-        dict(User.objects.filter(id__in=ids, userprofile__is_public=True).values_list("id", "username")) if ids else {}
+        dict(
+            User.objects.filter(
+                id__in=ids, userprofile__is_public=True, userprofile__visible_in_recommendations=True
+            ).values_list("id", "username")
+        )
+        if ids
+        else {}
     )
 
     for source in primaries:

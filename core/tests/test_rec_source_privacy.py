@@ -81,3 +81,12 @@ class RecSourcePrivacyTests(TestCase):
             meta = _resolve_rec_source_names(recs, self.bob.userprofile.recommendations_meta, owner_name="bobzq")
         self.assertEqual([r["primary_source_user"]["username"] for r in recs], [None, "carolzq"])
         self.assertIsNone(meta["closest_match_username"])
+
+    def test_hides_public_source_who_opted_out_of_recommendations(self):
+        from core.views._helpers import _resolve_rec_source_names
+
+        self.carol.userprofile.visible_in_recommendations = False
+        self.carol.userprofile.save()
+        recs = self.bob.userprofile.recommendations_data
+        _resolve_rec_source_names(recs, self.bob.userprofile.recommendations_meta, owner_name="bobzq")
+        self.assertEqual([r["primary_source_user"]["username"] for r in recs], [None, None])
