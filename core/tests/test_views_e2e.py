@@ -954,6 +954,13 @@ class LoginUrlRedirectTests(TransactionTestCase):
         )
 
     def test_anonymous_logout_redirects_to_login(self):
-        response = self.client.get(reverse("core:logout"))
+        response = self.client.post(reverse("core:logout"))
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.url.startswith(reverse("core:login")))
+
+    def test_logout_rejects_get(self):
+        user = User.objects.create_user(username="logout_get", email="logout_get@test.com", password="pw-12345678")
+        self.client.force_login(user)
+        response = self.client.get(reverse("core:logout"))
+        self.assertEqual(response.status_code, 405)
+        self.assertIn("_auth_user_id", self.client.session)

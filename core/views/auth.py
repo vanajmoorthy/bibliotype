@@ -15,6 +15,7 @@ from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 from django_ratelimit.exceptions import Ratelimited
 
@@ -228,6 +229,7 @@ def login_view(request):
         return render(request, "core/login.html", {"form": form}, status=429)
 
 
+@require_POST
 @login_required
 def logout_view(request):
     if "dna_data" in request.session:

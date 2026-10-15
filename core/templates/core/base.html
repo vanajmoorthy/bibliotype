@@ -209,7 +209,16 @@
                             {% include 'core/partials/buttons/nav_button.html' with href=display_dna_url text="Dashboard" hover_color="pink" %}
                         {% endif %}
                         {% if logout_url %}
-                            {% include 'core/partials/buttons/nav_button.html' with href=logout_url text="Logout" hover_color="cyan" %}
+                            {# POST-only so other sites can't log users out with a plain link or image #}
+                            <form method="post" action="{{ logout_url }}">
+                                {% csrf_token %}
+                                <button
+                                    type="submit"
+                                    class="hover:bg-brand-cyan border-brand-text shadow-neo-sm border-2 bg-white px-2 font-bold whitespace-nowrap uppercase transition-all duration-150 ease-in-out active:translate-x-0.5 active:translate-y-0.5 cursor-pointer hover:translate-x-px hover:translate-y-px neo-3d-sm hover:shadow-neo-xs active:shadow-none"
+                                >
+                                    Logout
+                                </button>
+                            </form>
                         {% endif %}
                     {% else %}
                         {% url 'core:login' as login_url %}
