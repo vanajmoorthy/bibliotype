@@ -44,3 +44,7 @@ tasks/
 progress.txt
 AGENTS.md
 .claude/
+
+# Secrets: never bake env files into the image (the Dockerfile does not need .env.example).
+.env
+.env.*
