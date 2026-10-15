@@ -131,9 +131,13 @@ def claim_dna(user, dna_data, session_key, task_id=None):
     UserBooks go first: saving the DNA clears pending_dna_task_id and dispatches
     recommendations, and both should see the claimed library.
     """
-    if session_key:
-        _create_userbooks_from_anonymous_session(user, session_key)
+    claimed = bool(session_key) and _create_userbooks_from_anonymous_session(user, session_key)
     _save_dna_to_profile(user.userprofile, dna_data)
+    if claimed:
+        from ..models import AnonymousUserSession
+
+        # Left behind, the nightly anonymize job would turn it into a permanent shared profile
+        AnonymousUserSession.objects.filter(session_key=session_key).delete()
     track_anonymous_dna_claimed(user_id=user.id, task_id=task_id, session_key=session_key)
 
 
@@ -150,7 +154,7 @@ def _create_userbooks_from_anonymous_session(user, session_key):
 
         if not book_ids:
             logger.warning(f"No book IDs found in AnonymousUserSession {_key_hash(session_key)}")
-            return
+            return False
 
         books_created = 0
         for book_id in book_ids:
@@ -168,13 +172,16 @@ def _create_userbooks_from_anonymous_session(user, session_key):
 
         if books_created > 0:
             calculate_and_store_top_books(user, limit=5)
+        return True
 
     except AnonymousUserSession.DoesNotExist:
         logger.warning(
             f"AnonymousUserSession {_key_hash(session_key)} not found when claiming DNA for user {user.username}"
         )
+        return False
     except Exception as e:
         logger.error(f"Error creating UserBooks from anonymous session: {e}", exc_info=True)
+        return False
 
 
 # name pinned: wire name must survive the package split (queued msgs + beat)
