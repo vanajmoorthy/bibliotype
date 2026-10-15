@@ -38,9 +38,7 @@ class EnrichBookFromApisGateTests(TestCase):
     """The GB fetch inside enrich_book_from_apis respects the retry window."""
 
     def setUp(self):
-        self.ol_patcher = patch(
-            "core.services.book_enrichment_service._fetch_from_open_library", return_value=({}, 0)
-        )
+        self.ol_patcher = patch("core.services.book_enrichment_service._fetch_from_open_library", return_value=({}, 0))
         self.gb_patcher = patch(
             "core.services.book_enrichment_service._fetch_ratings_and_categories_from_google_books",
             return_value=({}, 1),
@@ -227,3 +225,41 @@ class IncompleteBookBackoffTests(TestCase):
         book.save()
         self._run(book)
         self.mock_gb.assert_not_called()
+
+
+class EnrichmentKeepsDataTests(TestCase):
+    """A failed save or failed GB fetch must not discard data the book already has."""
+
+    def _run(self, book, ol_data, gb_data):
+        from core.services.book_enrichment_service import enrich_book_from_apis
+
+        with (
+            patch("core.services.book_enrichment_service._fetch_from_open_library", return_value=(ol_data, 1)),
+            patch(
+                "core.services.book_enrichment_service._fetch_ratings_and_categories_from_google_books",
+                return_value=(gb_data, 1),
+            ),
+        ):
+            enrich_book_from_apis(book, session=object())
+        book.refresh_from_db()
+
+    def test_isbn_conflict_keeps_other_fetched_fields(self):
+        Book.objects.create(title="Owner", normalized_title="owner", author=_make_author(), isbn13="9780000000001")
+        book = _make_book()
+        ol = {"isbn_13": "9780000000001", "page_count": 321, "publish_year": 1999, "genres": ["fantasy"]}
+        self._run(book, ol, {})
+        self.assertIsNone(book.isbn13)
+        self.assertEqual(book.page_count, 321)
+        self.assertEqual(book.publish_year, 1999)
+        self.assertIsNotNone(book.google_books_last_checked)
+        self.assertEqual(book.enrichment_incomplete_attempts, 0)
+        self.assertEqual(list(book.genres.values_list("name", flat=True)), ["fantasy"])
+
+    def test_gb_failure_keeps_existing_genres(self):
+        from core.models import Genre
+
+        book = _make_book()
+        book.genres.add(Genre.objects.get_or_create(name="romance")[0])
+        self._run(book, {"genres": ["fantasy"]}, None)
+        self.assertEqual(list(book.genres.values_list("name", flat=True)), ["romance"])
+        self.assertEqual(book.enrichment_incomplete_attempts, 0)

@@ -5,7 +5,7 @@ import time
 
 import requests
 from django.conf import settings
-from django.db import DatabaseError, IntegrityError
+from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models import F
 from django.utils import timezone
 
@@ -476,6 +476,7 @@ def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
     gb_api_calls = 0
     gb_data = {}  # May not be populated if GB enrichment already ran
     is_updated = False
+    original_isbn13 = book.isbn13
 
     # Always refresh genres from Open Library even if other data exists
     ol_data, calls_made = _fetch_from_open_library(book, session, slow_down, quick_mode=quick_mode)
@@ -547,7 +548,9 @@ def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
     # Merge both sources: Google Books canonical genres first (higher
     # confidence), Open Library supplements. The combined set is priority-sorted
     # so the most specific genres survive the cap regardless of source.
-    if combined_genres := gb_genres | ol_genres:
+    # A failed GB fetch would leave only OL genres; don't let that wipe a book's existing genres.
+    gb_failed = gb_check_due and not gb_exchange_completed
+    if (combined_genres := gb_genres | ol_genres) and not (gb_failed and book.genres.exists()):
         logger.debug(f"Merged genres for '{book.title}': GB={sorted(gb_genres)}, OL={sorted(ol_genres)}")
 
         # Sort genres by priority (most specific first)
@@ -615,12 +618,14 @@ def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
 
     if is_updated:
         try:
-            book.save()
+            with transaction.atomic():
+                book.save()
             logger.info(f"Successfully enriched and saved '{book.title}'")
         except IntegrityError as e:
-            logger.warning(
-                f"Could not save '{book.title}'. An integrity error occurred (e.g., duplicate ISBN). Error: {e}"
-            )
+            # Another Book owns the fetched isbn13; drop it and keep everything else.
+            logger.warning(f"ISBN conflict saving '{book.title}', keeping original isbn13. Error: {e}")
+            book.isbn13 = original_isbn13
+            book.save()
     else:
         logger.debug(f"No new data found to update for '{book.title}'")
 
