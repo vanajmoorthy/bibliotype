@@ -17,7 +17,7 @@ from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 from django_ratelimit.exceptions import Ratelimited
 
-from ..analytics.events import track_account_deleted, track_profile_made_public, track_settings_updated
+from ..analytics.posthog_client import capture_event
 from ..cache_utils import safe_cache_delete
 from ..forms import ChangePasswordForm, UpdateDisplayNameForm
 from ..models import Book, UserBook
@@ -60,7 +60,7 @@ def update_privacy_view(request):
         )
 
     if is_public:
-        track_profile_made_public(request.user.id)
+        capture_event(str(request.user.id), "profile_made_public", {"user_id": request.user.id})
 
         public_url = request.build_absolute_uri(
             reverse("core:public_profile", kwargs={"username": request.user.username})
@@ -138,7 +138,11 @@ def update_recommendation_visibility_view(request):
             extra={"user_id": request.user.id},
         )
 
-    track_settings_updated(request.user.id, setting_type="recommendation_visibility")
+    capture_event(
+        str(request.user.id),
+        "settings_updated",
+        {"user_id": request.user.id, "setting_type": "recommendation_visibility"},
+    )
 
     if _wants_json(request):
         msg = (
@@ -167,7 +171,7 @@ def _change_password_view_throttled(request):
         user.set_password(form.cleaned_data["new_password1"])
         user.save()
         update_session_auth_hash(request, user)
-        track_settings_updated(user.id, setting_type="password")
+        capture_event(str(user.id), "settings_updated", {"user_id": user.id, "setting_type": "password"})
 
         if _wants_json(request):
             return JsonResponse({"status": "success", "message": "Password changed successfully."})
@@ -214,7 +218,7 @@ def _delete_account_view_throttled(request):
 
     # Capture UID before deletion so the analytics event can still fire
     uid = user.id
-    track_account_deleted(uid)
+    capture_event(str(uid), "account_deleted", {"user_id": uid})
     logout(request)
     with transaction.atomic():
         # The deleted reader no longer counts towards their books' read counts.

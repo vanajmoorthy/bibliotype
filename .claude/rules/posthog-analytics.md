@@ -10,18 +10,14 @@ paths:
 
 ## Adding a New Event
 
-1. Add a `track_*` function in `core/analytics/events.py`:
+If the event is a fixed set of properties, call `capture_event` directly:
 ```python
-def track_my_event(user_id, custom_prop):
-    capture_event(
-        distinct_id=str(user_id) if user_id else "anonymous",
-        event_name="my_event",
-        properties={"user_id": user_id, "custom_prop": custom_prop},
-    )
+from core.analytics.posthog_client import capture_event
+
+capture_event(str(user_id), "my_event", {"user_id": user_id, "custom_prop": custom_prop})
 ```
 
-2. Export in `core/analytics/__init__.py`
-3. Call from your view/task: `from core.analytics import track_my_event`
+Add a `track_*` helper in `core/analytics/events.py` only when it does real work: optional properties, truncation, production-only gating, or anonymous distinct_id/session-key hashing. Import it from `core.analytics.events` (the package `__init__` has no re-exports).
 
 ## Conventions
 
@@ -73,13 +69,14 @@ Context processor `posthog_settings` provides `POSTHOG_API_KEY` to templates.
 
 **Authentication:**
 - `user_signed_up` — With `signup_source`: "with_task_claim", "with_session_dna", "before_dna"
-- `user_logged_in` — With `had_dna_in_session` flag
+- `user_logged_in` — With `had_dna_in_session` flag (direct `capture_event` in views/auth.py)
 - `anonymous_dna_claimed` — Anonymous DNA transferred to account. Carries `session_key_hash` (truncated SHA-256), never the raw session key
 
 **Profile & settings:**
-- `profile_made_public` — Privacy toggle
+- `profile_made_public` — Privacy toggle (direct `capture_event` in views/profile.py)
 - `public_profile_viewed` — distinct_id is always the VIEWER (user id, hashed session key, or "anonymous" — never the owner). Properties: `profile_username`, `profile_user_id`, `viewer_type` ("owner"/"authenticated"/"anonymous"), `profile_reader_type`, `profile_books_count`
-- `settings_updated` — With `setting_type`: "display_name" or "recommendation_visibility"
+- `settings_updated` — With `setting_type`: "recommendation_visibility" or "password" (direct `capture_event` in views/profile.py)
+- `account_deleted` — `user_id` only (direct `capture_event` in views/profile.py)
 - `recommendations_generated` — Fires when recs are actually generated (Celery task for auth users with `source="task"` + `reader_type`, `similar_users_count`, `max_similarity_pct`, `uniqueness_label`; inline for anonymous with `source="anonymous_dashboard_view"`)
 - `recommendations_displayed` — Fires per dashboard render with stored recs (count + `reader_type`)
 

@@ -216,35 +216,6 @@ def track_anonymous_dna_claimed(user_id, task_id, session_key=None):
     )
 
 
-def track_user_logged_in(user_id, had_dna_in_session=False):
-    """Track when user successfully logs in."""
-    environment = get_environment()
-
-    capture_event(
-        distinct_id=str(user_id),
-        event_name="user_logged_in",
-        properties={
-            "user_id": user_id,
-            "had_dna_in_session": had_dna_in_session,
-        },
-        environment=environment,
-    )
-
-
-def track_profile_made_public(user_id):
-    """Track when user makes their profile public."""
-    environment = get_environment()
-
-    capture_event(
-        distinct_id=str(user_id),
-        event_name="profile_made_public",
-        properties={
-            "user_id": user_id,
-        },
-        environment=environment,
-    )
-
-
 def track_public_profile_viewed(
     profile_username,
     profile_user_id,
@@ -355,27 +326,6 @@ def track_recommendations_displayed(
     )
 
 
-def track_settings_updated(user_id, setting_type):
-    """
-    Track when user updates settings.
-
-    Args:
-        user_id: User ID
-        setting_type: "display_name" or "recommendation_visibility"
-    """
-    environment = get_environment()
-
-    capture_event(
-        distinct_id=str(user_id),
-        event_name="settings_updated",
-        properties={
-            "user_id": user_id,
-            "setting_type": setting_type,
-        },
-        environment=environment,
-    )
-
-
 def track_recommendation_error(profile_user_id, error_type, error_message, context="public_profile_view"):
     """Track when recommendation generation fails."""
     environment = get_environment()
@@ -416,20 +366,6 @@ def track_external_api_call(api_name, book_id, book_title, status, status_code=N
         distinct_id="system",
         event_name="external_api_call",
         properties=properties,
-        environment=environment,
-    )
-
-
-def track_account_deleted(user_id):
-    """Track when a user deletes their account."""
-    environment = get_environment()
-
-    capture_event(
-        distinct_id=str(user_id),
-        event_name="account_deleted",
-        properties={
-            "user_id": user_id,
-        },
         environment=environment,
     )
 
