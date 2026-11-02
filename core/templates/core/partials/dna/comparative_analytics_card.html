@@ -15,18 +15,10 @@
         >
             <!-- Poster: book length -->
             <div
-                class="bg-brand-pink border-brand-text shadow-neo-sm min-w-[80%] snap-center border-2 p-4 md:min-w-0"
+                class="bg-brand-pink border-brand-text shadow-neo-sm relative min-w-[80%] snap-center border-2 p-4 pt-6 md:min-w-0"
                 x-data
             >
-                {% if enrichment.pages_any_missing %}
-                    <template x-if="$store.enrichment?.pages_any_missing">
-                        <p
-                            class="bg-brand-yellow/40 -mx-4 -mt-4 mb-3 animate-[enrichPulse_2s_ease-in-out_infinite] py-0.5 text-center text-sm"
-                        >
-                            Still enriching
-                        </p>
-                    </template>
-                {% endif %}
+                {% include 'core/partials/dna/enrichment_banner.html' with condition=enrichment.pages_any_missing store_key='pages_any_missing' %}
                 <div
                     class="{% if enrichment.pages_any_missing %}opacity-60{% endif %} transition-opacity duration-500"
                     :class="{ 'opacity-60': $store.enrichment?.pages_any_missing }"
@@ -48,18 +40,10 @@
 
             <!-- Poster: book age -->
             <div
-                class="bg-brand-cyan border-brand-text shadow-neo-sm min-w-[80%] snap-center border-2 p-4 md:min-w-0"
+                class="bg-brand-cyan border-brand-text shadow-neo-sm relative min-w-[80%] snap-center border-2 p-4 pt-6 md:min-w-0"
                 x-data
             >
-                {% if enrichment.year_any_missing %}
-                    <template x-if="$store.enrichment?.year_any_missing">
-                        <p
-                            class="bg-brand-yellow/40 -mx-4 -mt-4 mb-3 animate-[enrichPulse_2s_ease-in-out_infinite] py-0.5 text-center text-sm"
-                        >
-                            Still enriching
-                        </p>
-                    </template>
-                {% endif %}
+                {% include 'core/partials/dna/enrichment_banner.html' with condition=enrichment.year_any_missing store_key='year_any_missing' %}
                 <div
                     class="{% if enrichment.year_any_missing %}opacity-60{% endif %} transition-opacity duration-500"
                     :class="{ 'opacity-60': $store.enrichment?.year_any_missing }"
@@ -80,7 +64,7 @@
             </div>
 
             <!-- Poster: reading pace -->
-            <div class="bg-brand-green border-brand-text shadow-neo-sm min-w-[80%] snap-center border-2 p-4 md:min-w-0">
+            <div class="bg-brand-green border-brand-text shadow-neo-sm relative min-w-[80%] snap-center border-2 p-4 pt-6 md:min-w-0">
                 <p class="text-base font-bold">Reading pace</p>
                 <p class="mt-1 text-6xl leading-none font-bold">
                     {% if dna.user_stats.avg_books_per_year > 0 %}{{ dna.user_stats.avg_books_per_year }}{% else %}–{% endif %}<span class="ml-1 text-2xl">/year</span>
