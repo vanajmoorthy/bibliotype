@@ -238,10 +238,10 @@
                         {% elif enrichment.pending %}
                             {% include 'core/partials/dna/fiction_nonfiction_skeleton.html' %}
                         {% endif %}
-                        {% if dna.longest_book %}
-                            {% include 'core/partials/dna/book_extremes_card.html' %}
-                        {% elif enrichment.pending %}
+                        {% if not dna.longest_book and enrichment.pending %}
                             {% include 'core/partials/dna/book_extremes_skeleton.html' %}
+                        {% else %}
+                            {% include 'core/partials/dna/book_extremes_card.html' %}
                         {% endif %}
                     </div>
                 {% endif %}

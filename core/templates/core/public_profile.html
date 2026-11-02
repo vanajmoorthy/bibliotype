@@ -116,9 +116,7 @@
                         {% if dna.fiction_nonfiction_split %}
                             {% include 'core/partials/dna/fiction_nonfiction_card.html' with pronoun_pos="their" %}
                         {% endif %}
-                        {% if dna.longest_book %}
-                            {% include 'core/partials/dna/book_extremes_card.html' with pronoun_pos="their" %}
-                        {% endif %}
+                        {% include 'core/partials/dna/book_extremes_card.html' with pronoun_pos="their" %}
                     </div>
                 {% endif %}
                 {% include 'core/partials/dna/controversial_ratings_card.html' with controversial_title='Most Controversial Ratings' pronoun_pos="their" pronoun_sub="them" %}
