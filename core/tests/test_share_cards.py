@@ -94,3 +94,13 @@ class TimelineBarsTests(SimpleTestCase):
         self.assertIn("height: 16px", html)
         self.assertIn("height: 8px", html)
         self.assertNotIn("max-height: 16px", html)
+
+
+class ShareModalScrollLockTests(SimpleTestCase):
+    def test_modal_pins_the_body_instead_of_toggling_overflow_hidden(self):
+        # overflow-hidden on body snaps the page to the top; the settings modal's
+        # position:fixed lock keeps the reader where they were.
+        html = render_to_string("core/partials/share/share_modal.html", {"dna": DNA, "share_url": "bibliotype.app"})
+        self.assertNotIn("classList.toggle('overflow-hidden'", html)
+        self.assertIn("document.body.style.position = 'fixed'", html)
+        self.assertIn("window.scrollTo(0, y)", html)
