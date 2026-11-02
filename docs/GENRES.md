@@ -86,6 +86,15 @@ docker compose -f docker-compose.prod.yml exec web poetry run python manage.py e
 
 `--process-all` also resets `google_books_last_checked` so Google Books data is re-fetched and merged (otherwise the GB fetch is skipped for previously-checked books).
 
+### LLM backfill for books the APIs can't classify
+
+Some books come back from enrichment with no genres at all: Google Books gives only "Fiction" (excluded as too generic) or nothing, and Open Library has no usable subjects. `llm_backfill_genres` (`core/management/commands/llm_backfill_genres.py`) sends those books, 25 at a time, through the free LLM chain in `core/services/_llm.py`. The model picks 1-3 genres from `GENRE_PRIORITY` minus `EXCLUDED_GENRES`, or answers "unknown" for books it doesn't recognise. Every genre is validated in code, and anything off the list is dropped.
+
+- It's a dry run by default, printing a summary and a sample of suggestions for review. `--apply` writes only to books that still have no genres at write time.
+- LLM-sourced genres set `Book.genres_from_llm`, so they can be audited (Book admin filter) or undone. Enrichment clears the flag when it replaces the genres with API data.
+- `--limit` and `--after-id` split the run into chunks. The summary prints the id to continue from. From the admin Command Runner, keep each run to about 500 books.
+- Run `regenerate_dna` after applying so profiles pick the new genres up.
+
 ## 7. Tests to know about
 
 - `core/tests/test_genre_canonicalization.py` — alias mapping, exclusion regression guards, the classification matrix, shelf-tiebreaker matrix, counter independence, backward-compat aliases.

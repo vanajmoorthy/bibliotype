@@ -93,6 +93,10 @@ class Book(models.Model):
     # publish year missing. Reset to 0 once the book is complete. Widens the
     # retry window (see dna_constants.enrichment_retry_window).
     enrichment_incomplete_attempts = models.PositiveSmallIntegerField(default=0)
+    # True while the book's genres came from llm_backfill_genres rather than an
+    # API or StoryGraph tags, so they can be audited or undone. Enrichment clears
+    # it whenever it replaces the genres with Google Books or Open Library data.
+    genres_from_llm = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         unique_together = ("normalized_title", "author")
