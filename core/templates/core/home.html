@@ -200,7 +200,7 @@
                                 aria-controls="instructions-panel-goodreads"
                                 :aria-selected="instructionsTab === 'goodreads'"
                                 @click="instructionsTab = 'goodreads'"
-                                :class="instructionsTab === 'goodreads' ? 'bg-brand-pink translate-x-0.5 translate-y-0.5 shadow-none' : 'bg-white shadow-neo-sm hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs'"
+                                :class="instructionsTab === 'goodreads' ? 'bg-brand-green translate-x-0.5 translate-y-0.5 shadow-none' : 'bg-white shadow-neo-sm hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs'"
                                 class="border-brand-text cursor-pointer border-2 px-4 py-1 text-lg sm:text-xl font-bold uppercase transition-all duration-150 ease-in-out">
                             Goodreads
                         </button>
@@ -210,7 +210,7 @@
                                 aria-controls="instructions-panel-storygraph"
                                 :aria-selected="instructionsTab === 'storygraph'"
                                 @click="instructionsTab = 'storygraph'"
-                                :class="instructionsTab === 'storygraph' ? 'bg-brand-pink translate-x-0.5 translate-y-0.5 shadow-none' : 'bg-white shadow-neo-sm hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs'"
+                                :class="instructionsTab === 'storygraph' ? 'bg-brand-cyan translate-x-0.5 translate-y-0.5 shadow-none' : 'bg-white shadow-neo-sm hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs'"
                                 class="border-brand-text cursor-pointer border-2 px-4 py-1 text-lg sm:text-xl font-bold uppercase transition-all duration-150 ease-in-out">
                             StoryGraph
                         </button>
@@ -287,18 +287,16 @@
                                         <a href="https://app.thestorygraph.com/manage-account"
                                            target="_blank"
                                            rel="noopener noreferrer"
-                                           class="hover:bg-brand-yellow underline break-all">https://app.thestorygraph.com/manage-account</a>
-                                        and log in if you're not already.
+                                           class="hover:bg-brand-yellow underline break-words">https://app.thestorygraph.com/manage-account</a>.
                                     </li>
                                     <li>
-                                        Scroll down to the <span class="font-bold">"Manage Your Data"</span> section and click
+                                        Under <span class="font-bold">"Manage Your Data"</span>, click
                                         <span class="font-bold">"Export StoryGraph Library"</span>.
                                     </li>
                                     <li>
-                                        Click <span class="font-bold">"Generate export"</span>. StoryGraph builds the file in the
-                                        background and emails you when it's ready (usually a few minutes, longer for big libraries).
+                                        Click <span class="font-bold">"Generate export"</span> and wait for the email saying it's ready.
                                     </li>
-                                    <li>Once you get the email, come back to the export page, refresh it, and download the CSV file.</li>
+                                    <li>Refresh the page and download the CSV file.</li>
                                     <li>Drop the file in the upload box.</li>
                                 </ol>
                             </div>
@@ -307,20 +305,16 @@
                                 <h3 class="bg-brand-cyan inline-block px-2 text-xl font-bold tracking-wider uppercase">Mobile</h3>
                                 <ol class="mt-2 list-outside list-decimal space-y-1 pl-6">
                                     <li>
-                                        The export lives on the StoryGraph website, so use your phone's browser (Safari, Chrome, etc.)
-                                        rather than the StoryGraph app.
-                                    </li>
-                                    <li>
                                         Go to
                                         <a href="https://app.thestorygraph.com/manage-account"
                                            target="_blank"
                                            rel="noopener noreferrer"
-                                           class="hover:bg-brand-yellow underline break-all">https://app.thestorygraph.com/manage-account</a>.
-                                        If it opens in the StoryGraph app, long-press the link and choose to open it in your browser instead.
+                                           class="hover:bg-brand-yellow underline break-words">https://app.thestorygraph.com/manage-account</a>
+                                        in your browser, not the StoryGraph app.
                                     </li>
                                     <li>Log in to StoryGraph if you're not already.</li>
-                                    <li>Follow steps 2&ndash;4 of the desktop instructions above to generate and download the CSV.</li>
-                                    <li>Come back to Bibliotype, tap the upload box, and pick the file from your Downloads / Files.</li>
+                                    <li>Follow steps 2&ndash;4 above.</li>
+                                    <li>Come back to Bibliotype and upload the file here.</li>
                                 </ol>
                             </div>
                         </div>
