@@ -53,6 +53,8 @@ Genres: {", ".join(CANONICAL_GENRES)}
 
 For each book below, give 1 to {MAX_GENRES_PER_BOOK} genres from the list, most specific first. Some titles are translated editions (for example a Turkish or Spanish title of an English novel): classify the original work.
 
+"romance" means genre romance: the love story is the main plot and it ends happily. Do not use "romance" for literary or classic novels that merely include a love story (for example Anna Karenina or Madame Bovary); use "literary fiction" or "classic fiction" for those.
+
 Only classify a book you actually recognise. If you do not recognise this specific book, answer "{UNKNOWN}". Never guess from words in the title, and never use a genre that is not in the list.
 
 Books (one JSON object per line):
