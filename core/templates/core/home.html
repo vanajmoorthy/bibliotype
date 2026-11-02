@@ -104,7 +104,7 @@
 {% endblock %}
 
 {% block content %}
-    <div x-data="{ isUploading: false, instructionsOpen: false }"
+    <div x-data="{ isUploading: false, instructionsOpen: false, instructionsTab: 'goodreads' }"
          @keydown.escape.window="instructionsOpen = false"
          class="flex h-full flex-col justify-center">
         {% include 'core/partials/ambient_books.html' %}
@@ -193,7 +193,34 @@
                      class="shadow-neo border-brand-text relative w-full max-w-2xl my-auto max-h-[calc(100vh-2rem)] border-2 bg-white p-4 sm:p-6 text-left flex flex-col">
                     {% include 'core/partials/buttons/icon_button.html' with color="pink" extra_classes="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 cursor-pointer z-10" extra_attrs='@click="instructionsOpen = false"' icon_svg='<svg class="text-brand-text h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>' %}
                     <h2 class="mb-4 text-xl sm:text-2xl font-bold uppercase flex-shrink-0">How to Get Your File</h2>
-                    <div class="space-y-6 text-base sm:text-lg overflow-y-auto flex-1 min-h-0 pr-2">
+                    <div class="mb-4 flex flex-shrink-0 gap-3" role="tablist" aria-label="Export source">
+                        <button type="button"
+                                id="instructions-tab-goodreads"
+                                role="tab"
+                                aria-controls="instructions-panel-goodreads"
+                                :aria-selected="instructionsTab === 'goodreads'"
+                                @click="instructionsTab = 'goodreads'"
+                                :class="instructionsTab === 'goodreads' ? 'bg-brand-pink translate-x-0.5 translate-y-0.5 shadow-none' : 'bg-white shadow-neo-sm hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs'"
+                                class="border-brand-text cursor-pointer border-2 px-4 py-1 text-lg sm:text-xl font-bold uppercase transition-all duration-150 ease-in-out">
+                            Goodreads
+                        </button>
+                        <button type="button"
+                                id="instructions-tab-storygraph"
+                                role="tab"
+                                aria-controls="instructions-panel-storygraph"
+                                :aria-selected="instructionsTab === 'storygraph'"
+                                @click="instructionsTab = 'storygraph'"
+                                :class="instructionsTab === 'storygraph' ? 'bg-brand-pink translate-x-0.5 translate-y-0.5 shadow-none' : 'bg-white shadow-neo-sm hover:translate-x-px hover:translate-y-px hover:shadow-neo-xs'"
+                                class="border-brand-text cursor-pointer border-2 px-4 py-1 text-lg sm:text-xl font-bold uppercase transition-all duration-150 ease-in-out">
+                            StoryGraph
+                        </button>
+                    </div>
+                    <div class="text-base sm:text-lg overflow-y-auto flex-1 min-h-0 pr-2">
+                        <div id="instructions-panel-goodreads"
+                             role="tabpanel"
+                             aria-labelledby="instructions-tab-goodreads"
+                             x-show="instructionsTab === 'goodreads'"
+                             class="space-y-6">
                         <div>
                             <h3 class="bg-brand-yellow inline-block px-2 text-xl font-bold tracking-wider uppercase">Desktop</h3>
                             <ol class="mt-2 list-outside list-decimal space-y-1 pl-6">
@@ -239,12 +266,63 @@
                                     <span class="inline-flex items-center gap-2 ml-1">
                                         <img src="{% static 'icons8-ios-share-30.png' %}" alt="iOS share button" class="h-4 w-4 inline" />
                                     </span>) in the bottom right
-                                    </span>
                                 </li>
                                 <li>Click copy, then go to your browser and paste in the link.</li>
                                 <li>You will need to log in to Goodreads again if you're not already.</li>
                                 <li>This will download the <span class="font-bold break-all">goodreads_library_export.csv</span> file, come back to Bibliotype and upload the file here.</li>
                             </ol>
+                        </div>
+                        </div>
+                        <div id="instructions-panel-storygraph"
+                             role="tabpanel"
+                             aria-labelledby="instructions-tab-storygraph"
+                             x-show="instructionsTab === 'storygraph'"
+                             x-cloak
+                             class="space-y-6">
+                            <div>
+                                <h3 class="bg-brand-yellow inline-block px-2 text-xl font-bold tracking-wider uppercase">Desktop</h3>
+                                <ol class="mt-2 list-outside list-decimal space-y-1 pl-6">
+                                    <li>
+                                        Go to
+                                        <a href="https://app.thestorygraph.com/manage-account"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       class="hover:bg-brand-yellow underline break-all">https://app.thestorygraph.com/manage-account</a>
+                                        and log in if you're not already.
+                                    </li>
+                                    <li>
+                                        Scroll down to the <span class="font-bold">"Manage Your Data"</span> section and click
+                                        <span class="font-bold">"Export StoryGraph Library"</span>.
+                                    </li>
+                                    <li>
+                                        Click <span class="font-bold">"Generate export"</span>. StoryGraph builds the file in the
+                                        background and emails you when it's ready (usually a few minutes, longer for big libraries).
+                                    </li>
+                                    <li>Once you get the email, come back to the export page, refresh it, and download the CSV file.</li>
+                                    <li>Drop the file in the upload box.</li>
+                                </ol>
+                            </div>
+                            <div class="border-brand-text my-4 border-t"></div>
+                            <div>
+                                <h3 class="bg-brand-cyan inline-block px-2 text-xl font-bold tracking-wider uppercase">Mobile</h3>
+                                <ol class="mt-2 list-outside list-decimal space-y-1 pl-6">
+                                    <li>
+                                        The export lives on the StoryGraph website, so use your phone's browser (Safari, Chrome, etc.)
+                                        rather than the StoryGraph app.
+                                    </li>
+                                    <li>
+                                        Go to
+                                        <a href="https://app.thestorygraph.com/manage-account"
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       class="hover:bg-brand-yellow underline break-all">https://app.thestorygraph.com/manage-account</a>.
+                                        If it opens in the StoryGraph app, long-press the link and choose to open it in your browser instead.
+                                    </li>
+                                    <li>Log in to StoryGraph if you're not already.</li>
+                                    <li>Follow steps 2&ndash;4 of the desktop instructions above to generate and download the CSV.</li>
+                                    <li>Come back to Bibliotype, tap the upload box, and pick the file from your Downloads / Files.</li>
+                                </ol>
+                            </div>
                         </div>
                     </div>
                 </div>
