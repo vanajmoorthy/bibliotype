@@ -30,8 +30,12 @@ class ViewE2E_Tests(PipelineTestCase):
         super().setUp()
         self.client = Client()
         csv_header = "Title,Author,Exclusive Shelf,My Rating,Number of Pages,Original Publication Year,Date Read,Average Rating,My Review,ISBN13"
-        csv_row = "E2E Book,E2E Author,read,5,150,2021,2023/01/15,4.2,A test review.,9780000000003"
-        csv_content = f"{csv_header}\n{csv_row}".encode("utf-8")
+        csv_rows = [
+            "E2E Book,E2E Author,read,5,150,2021,2023/01/15,4.2,A test review.,9780000000003",
+            "E2E Second Book,E2E Author,read,4,220,2019,2023/02/15,3.9,,9780000000004",
+            "E2E Third Book,E2E Other Author,read,3,310,2015,2023/03/15,4.0,,9780000000005",
+        ]
+        csv_content = "\n".join([csv_header, *csv_rows]).encode("utf-8")
         self.csv_file = SimpleUploadedFile(
             "goodreads.csv",
             csv_content,
@@ -406,6 +410,21 @@ class ViewE2E_Tests(PipelineTestCase):
         """A CSV with no books on the read shelf fails in the task with a message the user can act on."""
         error = self._poll_failed_anonymous_task(b"Title,Author,Exclusive Shelf\nSome Book,Someone,to-read\n")
         self.assertIn('any books on your "read" shelf', error)
+
+    @patch("core.services.dna.sync_read_books")
+    def test_too_few_books_is_rejected_before_syncing(self, mock_sync):
+        """Two distinct read books (a re-read row counts once) is below MIN_BOOKS_FOR_DNA: say so, write nothing."""
+        csv = (
+            b"Title,Author,Exclusive Shelf\n"
+            b"Book One,Someone,read\n"
+            b"Book Two,Someone,read\n"
+            b"book one,someone,read\n"
+            b"Book Three,Someone,to-read\n"
+        )
+        error = self._poll_failed_anonymous_task(csv)
+        self.assertIn('We found only 2 books on your "read" shelf', error)
+        self.assertIn("at least 3", error)
+        mock_sync.assert_not_called()
 
     @patch("core.tasks.dna.calculate_full_dna", side_effect=RuntimeError("secret internals"))
     def test_task_unexpected_error_stays_generic(self, _mock_calc):

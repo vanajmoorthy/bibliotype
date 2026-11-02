@@ -153,6 +153,8 @@ READER_TYPE_DESCRIPTIONS = {
 # Normalized 0-100 scoring constants for assign_reader_type v2
 MIN_WINNING_SCORE = 30
 MIN_SIGNAL_BOOKS = 10
+# Uploads with fewer distinct read books are rejected by the DNA task (calculate_full_dna min_books).
+MIN_BOOKS_FOR_DNA = 3
 
 
 def score_ramp(value: float, floor: float, saturation: float) -> int:

@@ -22,6 +22,7 @@ from core.tests.base import PipelineTestCase
         }
     },
 )
+@patch("core.tasks.dna.MIN_BOOKS_FOR_DNA", 1)  # small fixtures; the minimum is tested in test_views_e2e
 class TaskIntegrationTests(PipelineTestCase):
 
     def setUp(self):
