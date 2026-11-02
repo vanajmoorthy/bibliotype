@@ -40,6 +40,14 @@ GRAPH_NODE_FILLS = ["#f9a8d4", "#67e8f9", "#fde047", "#c4b5fd", "#86efac", "#ffa
 GRAPH_VIEWBOX = (640, 560)
 GRAPH_CENTER = (320, 272)
 GRAPH_RADIUS = 196
+# Edge-label positions tried in order, as a fraction of the way along the
+# line: the midpoint first, then stepping outward toward either end.
+CHIP_POSITIONS = (0.5,) + tuple(round(0.5 + sign * step / 50, 2) for step in range(1, 18) for sign in (-1, 1))
+CHIP_GAP = 2
+
+
+def _boxes_overlap(a, b):
+    return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
 
 
 def _chip_fill(pct):
@@ -96,7 +104,10 @@ def _build_graph(usernames, pairs_view):
         angle = -math.pi / 2 + 2 * math.pi * i / n
         x = round(cx + GRAPH_RADIUS * math.cos(angle), 1)
         y = round(cy + GRAPH_RADIUS * math.sin(angle), 1)
-        w = max(78, 30 + 13 * len(name))
+        # Glyphs render at most about half the font size wide. Long names shrink the
+        # font so a box never tops ~160px, which keeps n=6 from crowding.
+        char_px = min(13, 130 / max(len(name), 1))
+        w = round(max(78, 30 + char_px * len(name)))
         # Django templates can't do arithmetic on floats, so every SVG
         # coordinate (box, offset shadow, label baseline) is precomputed here.
         nodes.append(
@@ -105,27 +116,49 @@ def _build_graph(usernames, pairs_view):
                 "x": x,
                 "y": y,
                 "w": w,
+                "font_size": round(char_px * 2, 1),
                 "fill": GRAPH_NODE_FILLS[i % len(GRAPH_NODE_FILLS)],
                 "rect_x": round(x - w / 2, 1),
                 "rect_y": round(y - 23, 1),
                 "shadow_x": round(x - w / 2 + 4, 1),
                 "shadow_y": round(y - 19, 1),
-                "text_y": round(y + 9, 1),
+                "text_y": round(y + char_px * 0.7, 1),
             }
         )
 
+    # Chip and node footprints include the 4px offset shadow.
+    node_boxes = [(nd["rect_x"], nd["rect_y"], nd["rect_x"] + nd["w"] + 4, nd["rect_y"] + 50) for nd in nodes]
+    placed_chips = []
+
+    def chip_box(lx, ly):
+        return (lx - 26 - CHIP_GAP, ly - 15 - CHIP_GAP, lx + 30 + CHIP_GAP, ly + 19 + CHIP_GAP)
+
+    def collides(box):
+        return any(_boxes_overlap(box, other) for other in node_boxes + placed_chips)
+
+    # Place labels greedily, longest chords first: each chip slides along its
+    # line to the first spot that clears every node and earlier chip. At n=5+
+    # several chords cross near the centre, so a fixed t would stack chips.
+    def span_of(pair):
+        a, b = index_of[pair["names"][0]], index_of[pair["names"][1]]
+        return min(abs(a - b), n - abs(a - b))
+
     edges = []
-    for pair in pairs_view:
+    for pair in sorted(pairs_view, key=lambda p: (-span_of(p), p["index"])):
         a = index_of[pair["names"][0]]
         b = index_of[pair["names"][1]]
         x1, y1 = nodes[a]["x"], nodes[a]["y"]
         x2, y2 = nodes[b]["x"], nodes[b]["y"]
-        # Chords get their label pulled toward the lower-indexed node so the
-        # labels of center-crossing diagonals don't pile up in the middle.
-        span = abs(a - b)
-        t = 0.5 if span == 1 or span == n - 1 else 0.36
-        lx = round(x1 + (x2 - x1) * t, 1)
-        ly = round(y1 + (y2 - y1) * t, 1)
+
+        def at(t):
+            return round(x1 + (x2 - x1) * t, 1), round(y1 + (y2 - y1) * t, 1)
+
+        lx, ly = at(0.5)
+        for t in CHIP_POSITIONS:
+            if not collides(chip_box(*at(t))):
+                lx, ly = at(t)
+                break
+        placed_chips.append(chip_box(lx, ly))
         edges.append(
             {
                 "index": pair["index"],

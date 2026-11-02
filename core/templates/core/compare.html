@@ -42,7 +42,7 @@
     >
         <div class="mb-6 flex flex-col gap-6 md:flex-row md:items-stretch">
             <div class="border-brand-text shadow-neo flex-1 border-2 bg-white p-6">
-                <h1 class="text-4xl font-bold uppercase tracking-wider">How Similar Are You?</h1>
+                <h1 class="text-4xl font-bold tracking-wider uppercase">How Similar Are You?</h1>
                 <p class="mt-2 text-lg text-gray-500">
                     {% for item in name_items %}
                         <a href="{% url 'core:public_profile' username=item.name %}" class="text-brand-text underline"
@@ -59,7 +59,7 @@
             <div
                 class="border-brand-text shadow-neo bg-brand-yellow flex flex-col items-center justify-center border-2 p-6 text-center md:w-60"
             >
-                <div class="text-sm font-bold uppercase tracking-wider">
+                <div class="text-sm font-bold tracking-wider uppercase">
                     {% if n == 2 %}Similarity{% else %}Group Score{% endif %}
                 </div>
                 <div class="text-7xl leading-none">{{ group_pct }}%</div>
@@ -141,7 +141,7 @@
                                     x="{{ node.x }}"
                                     y="{{ node.text_y }}"
                                     text-anchor="middle"
-                                    font-size="26"
+                                    font-size="{{ node.font_size }}"
                                     fill="#1f2937"
                                 >
                                     {{ node.name }}
@@ -194,7 +194,7 @@
         <button
             type="button"
             @click="shareCompare()"
-            class="bg-brand-pink border-brand-text shadow-neo neo-3d hover:shadow-neo-md flex w-full cursor-pointer items-center justify-center gap-3 border-2 px-6 py-4 text-xl font-bold uppercase tracking-wider transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-1 active:translate-y-1 active:shadow-none"
+            class="bg-brand-pink border-brand-text shadow-neo neo-3d hover:shadow-neo-md flex w-full cursor-pointer items-center justify-center gap-3 border-2 px-6 py-4 text-xl font-bold tracking-wider uppercase transition-all duration-150 ease-in-out hover:translate-x-px hover:translate-y-px active:translate-x-1 active:translate-y-1 active:shadow-none"
         >
             <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -221,7 +221,7 @@
                     x-model="newReader"
                     @keydown.enter="addReader()"
                     placeholder="Add another reader by username…"
-                    class="border-brand-text shadow-neo-sm focus:ring-brand-purple flex-1 border-2 bg-white px-3 py-2 focus:outline-none focus:ring-2"
+                    class="border-brand-text shadow-neo-sm focus:ring-brand-purple flex-1 border-2 bg-white px-3 py-2 focus:ring-2 focus:outline-none"
                 />
                 <button
                     type="button"
