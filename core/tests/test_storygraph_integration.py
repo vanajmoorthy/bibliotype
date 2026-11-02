@@ -55,6 +55,7 @@ def _sg_row(
         }
     },
 )
+@patch("core.tasks.dna.MIN_BOOKS_FOR_DNA", 1)  # small fixtures; the minimum is tested in test_views_e2e
 class StoryGraphUploadFlowTests(PipelineTestCase):
     """Verify full StoryGraph upload pipeline produces correct DNA output."""
 
@@ -429,6 +430,7 @@ class UploadNonceTests(PipelineTestCase):
         }
     },
 )
+@patch("core.tasks.dna.MIN_BOOKS_FOR_DNA", 1)  # small fixtures; the minimum is tested in test_views_e2e
 class ConcurrentUploadRejectTests(PipelineTestCase):
     """Re-uploading while a prior DNA task is genuinely in flight is rejected.
 

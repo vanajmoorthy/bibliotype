@@ -69,9 +69,18 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_full_dna(
-    csv_file_content: str, user=None, session_key=None, progress_cb=None, bulk_enrichment=False, task_id=None
+    csv_file_content: str,
+    user=None,
+    session_key=None,
+    progress_cb=None,
+    bulk_enrichment=False,
+    task_id=None,
+    min_books=1,
 ) -> ReadingDNA:
     """Run the full DNA pipeline for one CSV.
+
+    min_books: reject (CSVValidationError) a library with fewer distinct read
+    books, before anything is synced. The upload task passes MIN_BOOKS_FOR_DNA.
 
     bulk_enrichment=True (seeding runs, backfills) routes every enrichment
     dispatch to ENRICHMENT_BULK_QUEUE *and* skips inline enrichment entirely,
@@ -107,6 +116,12 @@ def calculate_full_dna(
         if read_df.empty:
             raise CSVValidationError(
                 'We couldn\'t find any books on your "read" shelf. Mark some books as read and export again.'
+            )
+        if total_books < min_books:
+            raise CSVValidationError(
+                f'We found only {total_books} book{"" if total_books == 1 else "s"} on your "read" shelf. '
+                f"Bibliotype needs at least {min_books} to work out your Reading DNA. "
+                "Mark a few more as read and export again."
             )
 
         book_fingerprint_list = sorted([f"{row['Title']}{row['Author']}" for _, row in read_df.iterrows()])

@@ -56,6 +56,7 @@ def _csv(*rows):
         }
     },
 )
+@patch("core.tasks.dna.MIN_BOOKS_FOR_DNA", 1)  # small fixtures; the minimum is tested in test_views_e2e
 class CurrentlyReadingExtractionTests(PipelineTestCase):
     """Tests for currently-reading extraction in calculate_full_dna()."""
 
@@ -330,6 +331,7 @@ class CoverUrlPriorityTests(TestCase):
         }
     },
 )
+@patch("core.tasks.dna.MIN_BOOKS_FOR_DNA", 1)  # small fixtures; the minimum is tested in test_views_e2e
 class CurrentlyReadingCoverUpgradeTests(PipelineTestCase):
     """Tests for currently-reading cover_url upgrade from DB."""
 
@@ -415,6 +417,7 @@ class CurrentlyReadingCoverUpgradeTests(PipelineTestCase):
         }
     },
 )
+@patch("core.tasks.dna.MIN_BOOKS_FOR_DNA", 1)  # small fixtures; the minimum is tested in test_views_e2e
 class SharedBookFieldsTests(PipelineTestCase):
     """An upload must fill blank Book fields, never overwrite another reader's or enrichment's values."""
 

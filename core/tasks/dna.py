@@ -14,6 +14,7 @@ from ..analytics.events import (
     track_dna_generation_failed,
     track_dna_generation_started,
 )
+from ..dna_constants import MIN_BOOKS_FOR_DNA
 from ..models import UserProfile
 from ..services.anonymization_service import _key_hash
 from ..services.dna import CSVValidationError, _save_dna_to_profile, calculate_full_dna
@@ -247,7 +248,9 @@ def generate_reading_dna_task(self, csv_file_content: str, user_id: int | None, 
                 # If result backend is unavailable, ignore progress updates gracefully
                 pass
 
-        result_data = calculate_full_dna(csv_file_content, user, session_key, progress_cb=progress_cb, task_id=task_id)
+        result_data = calculate_full_dna(
+            csv_file_content, user, session_key, progress_cb=progress_cb, task_id=task_id, min_books=MIN_BOOKS_FOR_DNA
+        )
 
         # Calculate processing time
         processing_time = time.time() - start_time

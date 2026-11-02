@@ -44,6 +44,7 @@ def _csv(*rows):
         }
     },
 )
+@patch("core.tasks.dna.MIN_BOOKS_FOR_DNA", 1)  # small fixtures; the minimum is tested in test_views_e2e
 class SubtitleFieldsIntegrationTests(PipelineTestCase):
     """Verify calculate_full_dna populates every new subtitle field."""
 
@@ -273,6 +274,7 @@ class ContrarinessScaleTests(TestCase):
         }
     },
 )
+@patch("core.tasks.dna.MIN_BOOKS_FOR_DNA", 1)  # small fixtures; the minimum is tested in test_views_e2e
 class SubtitleEdgeCaseTests(PipelineTestCase):
     """Edge cases: no reviews, no ratings, single book, empty-ish CSV."""
 
