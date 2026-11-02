@@ -38,18 +38,18 @@ class ComparativeEnrichingBannerTests(SimpleTestCase):
         return [classes.split() for classes in posters]
 
     def test_all_posters_get_banner_room_while_any_banner_shows(self):
-        # Only the age poster is enriching, but all three get pt-6 so labels stay level.
+        # Only the age poster is enriching, but all three get pt-5 so labels stay level.
         html = render({"pages_any_missing": False, "year_any_missing": True})
         for classes in self._poster_classes(html):
             self.assertIn("relative", classes)
-            self.assertIn("pt-6", classes)
+            self.assertIn("pt-5", classes)
         self.assertEqual(html.count("$store.enrichment?.pages_any_missing || $store.enrichment?.year_any_missing"), 3)
 
     def test_no_extra_top_padding_when_nothing_is_enriching(self):
         html = render({"pages_any_missing": False, "year_any_missing": False})
         for classes in self._poster_classes(html):
             self.assertIn("p-4", classes)
-            self.assertNotIn("pt-6", classes)
+            self.assertNotIn("pt-5", classes)
 
     def test_no_banner_when_nothing_is_missing(self):
         html = render({"pages_any_missing": False, "year_any_missing": False})
