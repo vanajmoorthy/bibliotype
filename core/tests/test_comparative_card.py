@@ -32,13 +32,24 @@ class ComparativeEnrichingBannerTests(SimpleTestCase):
         self.assertIn('x-show="$store.enrichment?.pages_any_missing"', html)
         self.assertIn('x-show="$store.enrichment?.year_any_missing"', html)
 
-    def test_posters_are_positioned_and_share_the_same_top_padding(self):
-        html = render({"pages_any_missing": False, "year_any_missing": True})
+    def _poster_classes(self, html):
         posters = re.findall(r'class="(bg-brand-(?:pink|cyan|green) [^"]*)"', html)
         self.assertEqual(len(posters), 3)
-        for classes in posters:
-            self.assertIn("relative", classes.split())
-            self.assertIn("pt-6", classes.split())
+        return [classes.split() for classes in posters]
+
+    def test_all_posters_get_banner_room_while_any_banner_shows(self):
+        # Only the age poster is enriching, but all three get pt-6 so labels stay level.
+        html = render({"pages_any_missing": False, "year_any_missing": True})
+        for classes in self._poster_classes(html):
+            self.assertIn("relative", classes)
+            self.assertIn("pt-6", classes)
+        self.assertEqual(html.count("$store.enrichment?.pages_any_missing || $store.enrichment?.year_any_missing"), 3)
+
+    def test_no_extra_top_padding_when_nothing_is_enriching(self):
+        html = render({"pages_any_missing": False, "year_any_missing": False})
+        for classes in self._poster_classes(html):
+            self.assertIn("p-4", classes)
+            self.assertNotIn("pt-6", classes)
 
     def test_no_banner_when_nothing_is_missing(self):
         html = render({"pages_any_missing": False, "year_any_missing": False})

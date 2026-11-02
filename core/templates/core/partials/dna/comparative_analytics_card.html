@@ -13,10 +13,12 @@
         <div
             class="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:px-0 md:pb-0"
         >
+            {# Every poster gets pt-6 while any banner shows, so the overlay has room and the labels stay level. #}
             <!-- Poster: book length -->
             <div
-                class="bg-brand-pink border-brand-text shadow-neo-sm relative min-w-[80%] snap-center border-2 p-4 pt-6 md:min-w-0"
+                class="bg-brand-pink border-brand-text shadow-neo-sm relative min-w-[80%] snap-center border-2 p-4 {% if enrichment.pages_any_missing or enrichment.year_any_missing %}pt-6{% endif %} md:min-w-0"
                 x-data
+                :class="{ 'pt-6': $store.enrichment?.pages_any_missing || $store.enrichment?.year_any_missing }"
             >
                 {% include 'core/partials/dna/enrichment_banner.html' with condition=enrichment.pages_any_missing store_key='pages_any_missing' %}
                 <div
@@ -40,8 +42,9 @@
 
             <!-- Poster: book age -->
             <div
-                class="bg-brand-cyan border-brand-text shadow-neo-sm relative min-w-[80%] snap-center border-2 p-4 pt-6 md:min-w-0"
+                class="bg-brand-cyan border-brand-text shadow-neo-sm relative min-w-[80%] snap-center border-2 p-4 {% if enrichment.pages_any_missing or enrichment.year_any_missing %}pt-6{% endif %} md:min-w-0"
                 x-data
+                :class="{ 'pt-6': $store.enrichment?.pages_any_missing || $store.enrichment?.year_any_missing }"
             >
                 {% include 'core/partials/dna/enrichment_banner.html' with condition=enrichment.year_any_missing store_key='year_any_missing' %}
                 <div
@@ -64,7 +67,11 @@
             </div>
 
             <!-- Poster: reading pace -->
-            <div class="bg-brand-green border-brand-text shadow-neo-sm relative min-w-[80%] snap-center border-2 p-4 pt-6 md:min-w-0">
+            <div
+                class="bg-brand-green border-brand-text shadow-neo-sm relative min-w-[80%] snap-center border-2 p-4 {% if enrichment.pages_any_missing or enrichment.year_any_missing %}pt-6{% endif %} md:min-w-0"
+                x-data
+                :class="{ 'pt-6': $store.enrichment?.pages_any_missing || $store.enrichment?.year_any_missing }"
+            >
                 <p class="text-base font-bold">Reading pace</p>
                 <p class="mt-1 text-6xl leading-none font-bold">
                     {% if dna.user_stats.avg_books_per_year > 0 %}{{ dna.user_stats.avg_books_per_year }}{% else %}–{% endif %}<span class="ml-1 text-2xl">/year</span>
