@@ -1,6 +1,7 @@
+{% load dna_extras %}
 <div class="flex h-[568px] w-[320px] flex-col justify-between border-2 border-brand-text bg-brand-green p-6">
     <div>
-        <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
+        <p class="text-center text-base font-bold">Bibliotype</p>
         <p class="mt-1 text-center text-lg font-bold uppercase">Top Authors & Genres</p>
         {% if dna.top_genres %}
             <div class="mt-3">
@@ -30,12 +31,20 @@
                 </div>
             </div>
         {% endif %}
-        {% if dna.most_niche_book %}
-            <div class="mt-3 border-2 border-brand-text bg-white p-2">
-                <p class="text-[10px] font-bold uppercase">Most Niche Read</p>
-                <p class="mt-0.5 text-xs font-bold">{{ dna.most_niche_book.title|truncatewords:8 }}</p>
-                <p class="text-[10px] opacity-70">by {{ dna.most_niche_book.author }}</p>
-            </div>
+        {% if dna.fiction_nonfiction_split %}
+            {% with pcts=dna.fiction_nonfiction_split|split_pcts %}
+                <div class="mt-3">
+                    <p class="text-xs font-bold uppercase">Fiction vs Nonfiction</p>
+                    <div class="border-brand-text mt-1.5 flex h-5 w-full border-2 bg-white">
+                        <div class="h-full" style="width: {{ pcts.0 }}%; background-color: #ffb4dd"></div>
+                        <div class="h-full" style="width: {{ pcts.1 }}%; background-color: #8bbfff"></div>
+                    </div>
+                    <div class="mt-0.5 flex justify-between text-xs font-bold">
+                        <span>Fiction {{ pcts.0 }}%</span>
+                        <span>Nonfiction {{ pcts.1 }}%</span>
+                    </div>
+                </div>
+            {% endwith %}
         {% endif %}
         {% if dna.unique_genres_count or dna.unique_authors_count %}
             <div class="mt-3 border-t-2 border-brand-text pt-2 text-center text-xs">
@@ -49,5 +58,5 @@
             </div>
         {% endif %}
     </div>
-    <p data-share-url class="text-center text-xs font-bold tracking-wider uppercase opacity-60">{{ share_url|default:"bibliotype.app" }}</p>
+    <p data-share-url class="text-center text-xs font-bold opacity-60">{{ share_url|default:"bibliotype.app" }}</p>
 </div>

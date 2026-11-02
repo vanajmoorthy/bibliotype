@@ -31,7 +31,7 @@
                     class="{% if enrichment.pages_any_missing %}opacity-60{% endif %} transition-opacity duration-500"
                     :class="{ 'opacity-60': $store.enrichment?.pages_any_missing }"
                 >
-                    <p class="text-sm font-bold tracking-widest uppercase">Avg book length</p>
+                    <p class="text-base font-bold">Avg book length</p>
                     <p class="mt-1 text-6xl leading-none font-bold">
                         <span id="comp-length-value">{% if dna.user_stats.avg_book_length > 0 %}{{ dna.user_stats.avg_book_length }}{% else %}–{% endif %}</span
                         ><span class="ml-1 text-2xl">pages</span>
@@ -64,7 +64,7 @@
                     class="{% if enrichment.year_any_missing %}opacity-60{% endif %} transition-opacity duration-500"
                     :class="{ 'opacity-60': $store.enrichment?.year_any_missing }"
                 >
-                    <p class="text-sm font-bold tracking-widest uppercase">Avg book age</p>
+                    <p class="text-base font-bold">Avg book age</p>
                     <p class="mt-1 text-6xl leading-none font-bold">
                         <span id="comp-age-value">{% if dna.user_stats.avg_publish_year > 0 %}{{ dna.user_stats.avg_publish_year|floatformat:0 }}{% else %}–{% endif %}</span
                         ><span class="ml-1 text-2xl">CE</span>
@@ -81,7 +81,7 @@
 
             <!-- Poster: reading pace -->
             <div class="bg-brand-green border-brand-text shadow-neo-sm min-w-[80%] snap-center border-2 p-4 md:min-w-0">
-                <p class="text-sm font-bold tracking-widest uppercase">Reading pace</p>
+                <p class="text-base font-bold">Reading pace</p>
                 <p class="mt-1 text-6xl leading-none font-bold">
                     {% if dna.user_stats.avg_books_per_year > 0 %}{{ dna.user_stats.avg_books_per_year }}{% else %}–{% endif %}<span class="ml-1 text-2xl">/year</span>
                 </p>

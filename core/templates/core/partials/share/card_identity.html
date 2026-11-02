@@ -1,8 +1,8 @@
 <div class="flex h-[568px] w-[320px] flex-col justify-between border-2 border-brand-text bg-brand-purple p-6">
     <div>
-        <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
+        <p class="text-center text-base font-bold">Bibliotype</p>
         <div class="mt-4 text-center">
-            <p class="text-base uppercase">My Reader Type is...</p>
+            <p class="text-base">My reader type is...</p>
             <p class="mt-1 text-3xl font-bold tracking-wider uppercase">{{ dna.reader_type }}</p>
         </div>
         {% if dna.reading_vibe %}
@@ -22,7 +22,7 @@
                     <div class="flex items-center gap-2 text-sm">
                         <span class="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-brand-text font-bold {% if forloop.first %}bg-yellow-300{% elif forloop.counter == 2 %}bg-gray-300{% else %}bg-amber-500{% endif %}">{{ forloop.counter }}</span>
                         <span class="font-bold">{{ item.type }}</span>
-                        <span class="ml-auto text-xs opacity-70">{{ item.score }}</span>
+                        <span class="ml-auto text-xs opacity-70">{{ item.score }}{% if dna.reader_type_scores_version %}%{% endif %}</span>
                     </div>
                 {% endfor %}
             </div>
@@ -31,5 +31,5 @@
             <p class="mt-4 text-xs leading-snug opacity-80">{{ dna.reader_type_explanation|truncatewords:40 }}</p>
         {% endif %}
     </div>
-    <p data-share-url class="text-center text-xs font-bold tracking-wider uppercase opacity-60">{{ share_url|default:"bibliotype.app" }}</p>
+    <p data-share-url class="text-center text-xs font-bold opacity-60">{{ share_url|default:"bibliotype.app" }}</p>
 </div>
