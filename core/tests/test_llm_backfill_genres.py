@@ -50,6 +50,7 @@ class LlmBackfillGenresTests(TestCase):
         self.assertIn("Cownomics", prompt)
         self.assertNotIn("Already Done", prompt)
         self.assertEqual(gen.call_args.kwargs["temperature"], 0)
+        self.assertIn('"romance" means genre romance', prompt)
 
     def test_dry_run_writes_nothing_and_reports(self, _configured, _sleep):
         with patch(f"{CMD}._llm.generate_json", return_value=self._response()):
