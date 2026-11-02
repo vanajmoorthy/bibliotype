@@ -221,57 +221,57 @@
                              aria-labelledby="instructions-tab-goodreads"
                              x-show="instructionsTab === 'goodreads'"
                              class="space-y-6">
-                        <div>
-                            <h3 class="bg-brand-yellow inline-block px-2 text-xl font-bold tracking-wider uppercase">Desktop</h3>
-                            <ol class="mt-2 list-outside list-decimal space-y-1 pl-6">
-                                <li>
-                                    Go to
-                                    <a href="https://www.goodreads.com/review/import?intent=web"
-                                       target="_blank"
-                                       rel="noopener noreferrer"
-                                       onclick="event.preventDefault(); window.open(this.href, '_blank', 'noopener,noreferrer');"
-                                       class="hover:bg-brand-yellow underline">https://www.goodreads.com/review/import</a>.
-                                </li>
-                                <li>
-                                    Click the <span class="font-bold">"Export Library"</span> button and wait for the file
-                                    to generate.
-                                </li>
-                                <li>Click the link to download the <span class="font-bold break-all">goodreads_library_export.csv</span> file.</li>
-                                <li>Drop the file in the upload box.</li>
-                            </ol>
-                        </div>
-                        <div class="border-brand-text my-4 border-t"></div>
-                        <div>
-                            <h3 class="bg-brand-cyan inline-block px-2 text-xl font-bold tracking-wider uppercase">Mobile</h3>
-                            <ol class="mt-2 list-outside list-decimal space-y-1 pl-6">
-                                <li>
-                                    Go to
-                                    <a href="https://www.goodreads.com/review/import?intent=web"
-                                       target="_blank"
-                                       rel="noopener noreferrer"
-                                       onclick="event.preventDefault(); window.open(this.href, '_blank', 'noopener,noreferrer');"
-                                       class="hover:bg-brand-yellow underline">https://www.goodreads.com/review/import</a>.
-                                </li>
-                                <li>
-                                    If it opens on web and you're already logged in, follow the instructions above.
-                                </li>
-                                <li>
-                                    If it opens in the app, click the <span class="font-bold">"Export Library"</span> button and wait for the file to generate.
-                                </li>
-                                <li>
-                                    Click the link, then click the share button (Android             
-                                    <span class="inline-flex items-center gap-2 ml-1">
-                                        <img src="{% static 'icons8-share-24.png' %}" alt="Android share button" class="h-4 w-4 inline" />
-                                    </span>, iOS 
-                                    <span class="inline-flex items-center gap-2 ml-1">
-                                        <img src="{% static 'icons8-ios-share-30.png' %}" alt="iOS share button" class="h-4 w-4 inline" />
-                                    </span>) in the bottom right
-                                </li>
-                                <li>Click copy, then go to your browser and paste in the link.</li>
-                                <li>You will need to log in to Goodreads again if you're not already.</li>
-                                <li>This will download the <span class="font-bold break-all">goodreads_library_export.csv</span> file, come back to Bibliotype and upload the file here.</li>
-                            </ol>
-                        </div>
+                            <div>
+                                <h3 class="bg-brand-yellow inline-block px-2 text-xl font-bold tracking-wider uppercase">Desktop</h3>
+                                <ol class="mt-2 list-outside list-decimal space-y-1 pl-6">
+                                    <li>
+                                        Go to
+                                        <a href="https://www.goodreads.com/review/import?intent=web"
+                                           target="_blank"
+                                           rel="noopener noreferrer"
+                                           onclick="event.preventDefault(); window.open(this.href, '_blank', 'noopener,noreferrer');"
+                                           class="hover:bg-brand-yellow underline">https://www.goodreads.com/review/import</a>.
+                                    </li>
+                                    <li>
+                                        Click the <span class="font-bold">"Export Library"</span> button and wait for the file
+                                        to generate.
+                                    </li>
+                                    <li>Click the link to download the <span class="font-bold break-all">goodreads_library_export.csv</span> file.</li>
+                                    <li>Drop the file in the upload box.</li>
+                                </ol>
+                            </div>
+                            <div class="border-brand-text my-4 border-t"></div>
+                            <div>
+                                <h3 class="bg-brand-cyan inline-block px-2 text-xl font-bold tracking-wider uppercase">Mobile</h3>
+                                <ol class="mt-2 list-outside list-decimal space-y-1 pl-6">
+                                    <li>
+                                        Go to
+                                        <a href="https://www.goodreads.com/review/import?intent=web"
+                                           target="_blank"
+                                           rel="noopener noreferrer"
+                                           onclick="event.preventDefault(); window.open(this.href, '_blank', 'noopener,noreferrer');"
+                                           class="hover:bg-brand-yellow underline">https://www.goodreads.com/review/import</a>.
+                                    </li>
+                                    <li>
+                                        If it opens on web and you're already logged in, follow the instructions above.
+                                    </li>
+                                    <li>
+                                        If it opens in the app, click the <span class="font-bold">"Export Library"</span> button and wait for the file to generate.
+                                    </li>
+                                    <li>
+                                        Click the link, then click the share button (Android             
+                                        <span class="inline-flex items-center gap-2 ml-1">
+                                            <img src="{% static 'icons8-share-24.png' %}" alt="Android share button" class="h-4 w-4 inline" />
+                                        </span>, iOS 
+                                        <span class="inline-flex items-center gap-2 ml-1">
+                                            <img src="{% static 'icons8-ios-share-30.png' %}" alt="iOS share button" class="h-4 w-4 inline" />
+                                        </span>) in the bottom right
+                                    </li>
+                                    <li>Click copy, then go to your browser and paste in the link.</li>
+                                    <li>You will need to log in to Goodreads again if you're not already.</li>
+                                    <li>This will download the <span class="font-bold break-all">goodreads_library_export.csv</span> file, come back to Bibliotype and upload the file here.</li>
+                                </ol>
+                            </div>
                         </div>
                         <div id="instructions-panel-storygraph"
                              role="tabpanel"
@@ -285,9 +285,9 @@
                                     <li>
                                         Go to
                                         <a href="https://app.thestorygraph.com/manage-account"
-                                       target="_blank"
-                                       rel="noopener noreferrer"
-                                       class="hover:bg-brand-yellow underline break-all">https://app.thestorygraph.com/manage-account</a>
+                                           target="_blank"
+                                           rel="noopener noreferrer"
+                                           class="hover:bg-brand-yellow underline break-all">https://app.thestorygraph.com/manage-account</a>
                                         and log in if you're not already.
                                     </li>
                                     <li>
@@ -313,9 +313,9 @@
                                     <li>
                                         Go to
                                         <a href="https://app.thestorygraph.com/manage-account"
-                                       target="_blank"
-                                       rel="noopener noreferrer"
-                                       class="hover:bg-brand-yellow underline break-all">https://app.thestorygraph.com/manage-account</a>.
+                                           target="_blank"
+                                           rel="noopener noreferrer"
+                                           class="hover:bg-brand-yellow underline break-all">https://app.thestorygraph.com/manage-account</a>.
                                         If it opens in the StoryGraph app, long-press the link and choose to open it in your browser instead.
                                     </li>
                                     <li>Log in to StoryGraph if you're not already.</li>
