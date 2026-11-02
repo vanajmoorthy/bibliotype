@@ -41,6 +41,11 @@ See the linked docs for full detail.
 - **~35% of books get zero genres** on some Goodreads libraries — Open Library / Google Books subjects
   don't match the canonical map (case-insensitivity, "fiction" / "literary fiction" aliases). StoryGraph
   is higher (~80%+ via tag extraction). Confirm how much the #120/#121 overhaul actually closed this. ❓
+- **Genre alias suggestions need a human review.** Unmatched subjects are recorded in `UnmappedSubject`
+  (PR #235), and a weekly task asks the LLM to suggest a canonical genre for the top 50 (PR #236). The
+  suggestions are never applied automatically. As of 2 Nov 2026 there are 150 waiting, mostly "ignore",
+  with a few real mappings such as "histoire" → history. Run `manage.py analyze_genres` to list them,
+  then add the good ones to `GENRE_ALIASES` in `core/genre_data.py` by hand.
 - `STORYGRAPH_TAG_TO_GENRE` mappings are lossy (e.g. memoir→biography, mystery→thriller) — may need
   refinement.
 - Known classification simplifications (`docs/GENRES.md` §8): `poetry` is unconditionally a member of
