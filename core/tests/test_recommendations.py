@@ -556,6 +556,7 @@ class EmptyStateRecommendationsViewTestCase(TestCase):
                 "sources": [{"type": "similar_user", "username": "other", "similarity_score": 0.8}],
                 "explanation_components": {"rating": "Highly rated (4.5)"},
                 "primary_source_user": {"username": "other", "match_quality": "Strong"},
+                "book": {"id": 1, "title": "Test Book", "author": {"name": "Test Author"}, "average_rating": 4.5},
             }
         ]
         self.user.userprofile.save()
@@ -618,77 +619,33 @@ class EmptyStateRecommendationsViewTestCase(TestCase):
         self.assertEqual(stored["book"]["title"], "New Shape Book")
         self.assertEqual(stored["primary_source_user"]["badge_class"], "bg-badge-5")
 
-    @patch("core.tasks.generate_recommendations_task")
-    def test_dashboard_expands_legacy_shape_recommendation(self, mock_rec_task):
-        """US-032: recs without rec['book'] (legacy DB rows) trigger the fallback."""
-        mock_rec_task.delay = MagicMock()
+    def test_migration_clears_only_legacy_shape_recommendations(self):
+        """0035 nulls lists holding a flat pre-US-032 rec so the dashboard regenerates them."""
+        import importlib
 
-        legacy_shape_rec = {
-            "book_id": 2,
-            "book_title": "Legacy Shape Book",
-            "book_author": "Legacy Shape Author",
-            "book_average_rating": 4.2,
-            "confidence": 0.7,
-            "confidence_pct": 70,
-            "score": 0.9,
-            "recommender_count": 1,
-            "genre_alignment": 0.4,
-            "sources": [],
-            "explanation_components": {},
-            "primary_source_user": {"username": "other", "match_quality": "Kindred reader"},
-        }
-        self.user.userprofile.recommendations_data = [legacy_shape_rec]
+        from django.apps import apps
+
+        migration = importlib.import_module("core.migrations.0035_clear_legacy_shape_recommendations")
+        new_rec = {"book_id": 1, "book": {"id": 1, "title": "New", "author": {"name": "A"}}}
+        legacy_rec = {"book_id": 2, "book_title": "Legacy", "book_author": "B"}
+
+        self.user.userprofile.recommendations_data = [new_rec, legacy_rec]
         self.user.userprofile.save()
-        self.client.login(username="emptyrecuser", password="test123")
+        current = User.objects.create_user(username="currentshape", password="pw")
+        current.userprofile.recommendations_data = [new_rec]
+        current.userprofile.save()
+        empty = User.objects.create_user(username="emptyrecs", password="pw")
+        empty.userprofile.recommendations_data = []
+        empty.userprofile.save()
 
-        response = self.client.get("/dashboard/")
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Legacy Shape Book")
-        self.assertContains(response, "Legacy Shape Author")
+        migration.clear_legacy_shape_recommendations(apps, None)
 
-    def test_public_profile_renders_new_and_legacy_shapes(self):
-        """US-032: dual-shape compat holds for /u/<username>/ too."""
-        self.user.userprofile.is_public = True
-        self.user.userprofile.recommendations_data = [
-            {
-                "book_id": 3,
-                "book_title": "Public New Shape",
-                "book_author": "Author A",
-                "book_average_rating": 4.7,
-                "confidence": 0.9,
-                "confidence_pct": 90,
-                "score": 1.1,
-                "recommender_count": 3,
-                "genre_alignment": 0.6,
-                "sources": [],
-                "explanation_components": {},
-                "book": {
-                    "id": 3,
-                    "title": "Public New Shape",
-                    "author": {"name": "Author A"},
-                    "average_rating": 4.7,
-                },
-            },
-            {
-                "book_id": 4,
-                "book_title": "Public Legacy Shape",
-                "book_author": "Author B",
-                "book_average_rating": 4.1,
-                "confidence": 0.6,
-                "confidence_pct": 60,
-                "score": 0.8,
-                "recommender_count": 1,
-                "genre_alignment": 0.3,
-                "sources": [],
-                "explanation_components": {},
-            },
-        ]
-        self.user.userprofile.save()
-
-        response = self.client.get(f"/u/{self.user.username}/")
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Public New Shape")
-        self.assertContains(response, "Public Legacy Shape")
+        self.user.userprofile.refresh_from_db()
+        current.userprofile.refresh_from_db()
+        empty.userprofile.refresh_from_db()
+        self.assertIsNone(self.user.userprofile.recommendations_data)
+        self.assertEqual(current.userprofile.recommendations_data, [new_rec])
+        self.assertEqual(empty.userprofile.recommendations_data, [])
 
 
 @override_settings(CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}})

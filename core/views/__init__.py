@@ -7,7 +7,7 @@ from ._enrichment_stats import (  # noqa: F401 — re-exported for stable import
     _compute_enrichment_stats,
     _recalculate_enrichment_stats,
 )
-from ._helpers import _enrich_dna_for_display, _expand_book_dict  # noqa: F401 — re-exported for stable import paths
+from ._helpers import _enrich_dna_for_display  # noqa: F401 — re-exported for stable import paths
 from .auth import (  # noqa: F401 — re-exported for stable import paths
     CustomPasswordResetView,
     _login_view_throttled,

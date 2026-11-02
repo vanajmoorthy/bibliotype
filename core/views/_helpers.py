@@ -48,10 +48,8 @@ def get_request_dna(request) -> ReadingDNA | None:
             .values_list("dna_data", flat=True)
             .first()
         )
-        if dna:
-            return dna
-    # shortcut: sessions from before the mirror was dropped still carry the full DNA; remove this fallback after 7 days
-    return request.session.get("dna_data")
+        return dna or None
+    return None
 
 
 def _enrich_dna_for_display(dna_data):
@@ -204,22 +202,6 @@ def _enrich_dna_for_display(dna_data):
     }
 
     return dna_data
-
-
-def _expand_book_dict(rec, badge_color_map):
-    # Legacy fallback: stored recs predating US-032 only have flat
-    # `book_*` keys. Reconstruct the nested template shape and bake
-    # the `primary_source_user.badge_class` here so both views can
-    # collapse the old 18-line for-loop to a single guard.
-    if rec.get("primary_source_user"):
-        match_quality = rec["primary_source_user"].get("match_quality", "")
-        rec["primary_source_user"]["badge_class"] = badge_color_map.get(match_quality, "bg-brand-purple")
-    return {
-        "id": rec.get("book_id"),
-        "title": rec.get("book_title", "Unknown Title"),
-        "author": {"name": rec.get("book_author", "Unknown Author")},
-        "average_rating": rec.get("book_average_rating"),
-    }
 
 
 def _resolve_rec_source_names(recommendations, recommendations_meta=None, owner_name=None):
