@@ -16,12 +16,9 @@ from ..analytics.events import (
     track_recommendations_generated,
 )
 from ..cache_utils import safe_cache_add
-from ..services.anonymization_service import _key_hash
-from ..services.user_similarity_service import BADGE_COLOR_MAP
 from ._enrichment_stats import _compute_enrichment_progress
 from ._helpers import (
     _enrich_dna_for_display,
-    _expand_book_dict,
     _get_recommendation_pool_display,
     _resolve_rec_source_names,
     get_request_dna,
@@ -50,13 +47,7 @@ def display_dna_view(request):
         if user_profile.dna_data:
             try:
                 if user_profile.recommendations_data is not None:
-                    stored_recs = user_profile.recommendations_data
-
-                    for rec in stored_recs:
-                        if "book" not in rec:
-                            rec["book"] = _expand_book_dict(rec, BADGE_COLOR_MAP)
-
-                    recommendations = stored_recs
+                    recommendations = user_profile.recommendations_data
                     logger.info(f"Loaded {len(recommendations)} stored recommendations for user {request.user.id}")
                 else:
                     # No stored recommendations yet - they're being generated asynchronously.
@@ -90,64 +81,10 @@ def display_dna_view(request):
         # Anonymous user recommendations
         if dna_data and request.session.session_key:
             try:
-                from datetime import timedelta
-
-                from django.utils import timezone
-
-                from ..models import AnonymousUserSession, Author
                 from ..services.recommendation_service import get_recommendations_for_anonymous
 
-                try:
-                    anon_session = AnonymousUserSession.objects.get(session_key=request.session.session_key)
-                    # Session exists, get recommendations normally
-                    recommendations = get_recommendations_for_anonymous(request.session.session_key, limit=6)
-                except AnonymousUserSession.DoesNotExist:
-                    # Reached when the DNA came from get_request_dna's legacy session fallback; remove with it.
-                    logger.warning(
-                        f"AnonymousUserSession not found for session {_key_hash(request.session.session_key)}, attempting to recreate from dna_data..."
-                    )
-                    try:
-
-                        # Extract distributions from dna_data
-                        genre_dist = {}
-                        for genre, count in dna_data.get("top_genres", []):
-                            genre_dist[genre] = count
-
-                        author_dist = {}
-                        for author, count in dna_data.get("top_authors", [])[:20]:
-                            normalized = Author._normalize(author)
-                            author_dist[normalized] = count
-
-                        # Try to get book IDs from session if stored, otherwise use empty list
-                        books_data = request.session.get("book_ids", [])
-                        top_books_data = request.session.get("top_book_ids", [])
-                        book_ratings = request.session.get("book_ratings", {})
-
-                        # Recreate (or refresh) the AnonymousUserSession from dna_data.
-                        # Use update_or_create so a concurrent dashboard request that
-                        # already created the row doesn't blow up the second caller
-                        # with a unique-constraint IntegrityError.
-                        anon_session, _ = AnonymousUserSession.objects.update_or_create(
-                            session_key=request.session.session_key,
-                            defaults={
-                                "dna_data": dna_data,
-                                "books_data": books_data,
-                                "top_books_data": top_books_data,
-                                "genre_distribution": genre_dist,
-                                "author_distribution": author_dist,
-                                "book_ratings": book_ratings,
-                                "expires_at": timezone.now() + timedelta(days=7),
-                            },
-                        )
-
-                        # Now try to get recommendations
-                        recommendations = get_recommendations_for_anonymous(request.session.session_key, limit=6)
-                        logger.info(
-                            f"Recreated AnonymousUserSession and generated {len(recommendations)} recommendations"
-                        )
-                    except Exception as recreate_error:
-                        logger.error(f"Error recreating anonymous session: {recreate_error}", exc_info=True)
-                        recommendations = []
+                # dna_data came from this visitor's AnonymousUserSession (get_request_dna), so the row exists.
+                recommendations = get_recommendations_for_anonymous(request.session.session_key, limit=6)
 
                 if recommendations:
                     for rec in recommendations:
@@ -290,13 +227,7 @@ def public_profile_view(request, username):
         if profile.dna_data:
             try:
                 if profile.recommendations_data:
-                    stored_recs = profile.recommendations_data
-
-                    for rec in stored_recs:
-                        if "book" not in rec:
-                            rec["book"] = _expand_book_dict(rec, BADGE_COLOR_MAP)
-
-                    recommendations = stored_recs
+                    recommendations = profile.recommendations_data
                     logger.info(
                         f"Loaded {len(recommendations)} stored recommendations for public profile {profile_user.username}"
                     )

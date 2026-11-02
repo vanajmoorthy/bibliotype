@@ -453,59 +453,6 @@ class ViewE2E_Tests(PipelineTestCase):
         user.userprofile.refresh_from_db()
         self.assertIsNone(user.userprofile.pending_dna_task_id)
 
-    def test_anonymous_session_recreation_is_idempotent(self):
-        """
-        US-024b: when ``display_dna_view`` reaches the AnonymousUserSession
-        recreation branch repeatedly for the same session_key (e.g. a race
-        where two dashboard requests fire before either commits), it MUST
-        not raise IntegrityError on the unique session_key constraint. The
-        view uses update_or_create, so the second call refreshes the row
-        in place instead of trying to insert a duplicate.
-        """
-        from core.models import AnonymousUserSession
-
-        # Anonymous client with dna_data and a real session_key.
-        session = self.client.session
-        session["dna_data"] = {
-            "reader_type": "Recreate Reader",
-            "top_genres": [["Fiction", 3]],
-            "top_authors": [["Some Author", 2]],
-        }
-        session.save()
-        session_key = session.session_key
-        self.assertIsNotNone(session_key)
-
-        # No row yet: the legacy session DNA reaches the recreate branch, and the
-        # first call's row makes the second call collide on session_key under
-        # the old ``create(...)`` path.
-
-        # Force the recreate branch on every call by making the ``.get()``
-        # lookup miss, then mock out the recommendation engine so we isolate
-        # the unique-constraint behavior under test.
-        with (
-            patch.object(
-                AnonymousUserSession.objects,
-                "get",
-                side_effect=AnonymousUserSession.DoesNotExist,
-            ),
-            patch(
-                "core.services.recommendation_service.get_recommendations_for_anonymous",
-                return_value=[],
-            ),
-        ):
-            with self.assertNoLogs("core.views", level="ERROR"):
-                response_one = self.client.get(reverse("core:display_dna"))
-                response_two = self.client.get(reverse("core:display_dna"))
-
-        self.assertEqual(response_one.status_code, 200)
-        self.assertEqual(response_two.status_code, 200)
-
-        # The unique-constraint contract: there is exactly one row for
-        # this session_key, carrying the session's dna_data.
-        rows = AnonymousUserSession.objects.filter(session_key=session_key)
-        self.assertEqual(rows.count(), 1)
-        self.assertEqual(rows.first().dna_data["reader_type"], "Recreate Reader")
-
     @patch("core.tasks.generate_recommendations_task")
     def test_logged_in_dashboard_ignores_stale_session_dna(self, mock_recs):
         user = User.objects.create_user(username="profilereader", email="p@test.com", password="a-Strong-p4ssword!")
@@ -627,7 +574,7 @@ class SignupDuplicateEmailTests(TransactionTestCase):
 
 
 class GetRequestDnaTests(TestCase):
-    """get_request_dna: profile for logged-in users, else AnonymousUserSession, else legacy session copy."""
+    """get_request_dna: profile for logged-in users, else the AnonymousUserSession row; never the session copy."""
 
     def _request(self, user=None, session_dna=None, anon_dna=None):
         from datetime import timedelta
@@ -682,12 +629,10 @@ class GetRequestDnaTests(TestCase):
         request = self._request(session_dna={"reader_type": "Session"}, anon_dna={"reader_type": "Anon"})
         self.assertEqual(get_request_dna(request), {"reader_type": "Anon"})
 
-    def test_anonymous_falls_back_to_legacy_session_dna(self):
+    def test_anonymous_ignores_session_dna_without_a_row(self):
         from core.views._helpers import get_request_dna
 
-        self.assertEqual(
-            get_request_dna(self._request(session_dna={"reader_type": "Session"})), {"reader_type": "Session"}
-        )
+        self.assertIsNone(get_request_dna(self._request(session_dna={"reader_type": "Session"})))
 
     def test_nothing(self):
         from core.views._helpers import get_request_dna
