@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0034_unmappedsubject_suggestions"),
+        ("core", "0035_clear_legacy_shape_recommendations"),
     ]
 
     operations = [

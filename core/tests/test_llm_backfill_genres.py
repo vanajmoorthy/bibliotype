@@ -132,6 +132,14 @@ class LlmBackfillGenresTests(TestCase):
             with patch(f"{CMD}._llm.generate_json", return_value=bad):
                 _run("--limit", "1")
 
+    def test_id_keyed_mapping_is_accepted(self, _configured, _sleep):
+        response = {str(self.fifth.id): ["fantasy"], str(self.flies.id): ["unknown", "unknown"]}
+        with patch(f"{CMD}._llm.generate_json", return_value=response):
+            out = _run("--apply", "--limit", "2")
+        self.assertEqual(self._genres(self.fifth), ["fantasy"])
+        self.assertEqual(self._genres(self.flies), [])
+        self.assertIn("Unknown:                  1", out)
+
     def test_after_id_and_limit_select_the_next_books(self, _configured, _sleep):
         with patch(f"{CMD}._llm.generate_json", return_value={"results": []}) as gen:
             out = _run("--after-id", str(self.fifth.id), "--limit", "1")

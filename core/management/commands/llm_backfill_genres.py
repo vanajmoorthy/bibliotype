@@ -76,12 +76,16 @@ def _coerce_id(value):
 def parse_response(data, batch_ids):
     """Turn raw model output into {book_id: answer}, never trusting its shape.
 
-    An answer is UNKNOWN, or a list of (valid_genres, invalid_count). Ids not in
+    An answer is UNKNOWN, or a (valid_genres, invalid_count) tuple. Ids not in
     the batch and malformed entries are ignored; books the model skipped are
-    simply absent from the result.
+    simply absent from the result. Besides the requested {"results": [...]},
+    a bare list of entries or an {"<id>": genres} mapping is accepted, since
+    weaker free models drift into those shapes.
     """
-    if isinstance(data, dict):
-        entries = data.get("results")
+    if isinstance(data, dict) and "results" in data:
+        entries = data["results"]
+    elif isinstance(data, dict):
+        entries = [{"id": key, "genres": value} for key, value in data.items()]
     else:
         entries = data
     if not isinstance(entries, list):
@@ -102,7 +106,7 @@ def parse_response(data, batch_ids):
             continue
 
         names = [g.strip().lower() for g in raw if isinstance(g, str) and g.strip()]
-        if not names or names == [UNKNOWN]:
+        if all(name == UNKNOWN for name in names):
             answers[book_id] = UNKNOWN
             continue
 
