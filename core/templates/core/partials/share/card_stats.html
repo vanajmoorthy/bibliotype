@@ -1,7 +1,7 @@
-{% load humanize %}
+{% load humanize dna_extras %}
 <div class="flex h-[568px] w-[320px] flex-col justify-between border-2 border-brand-text bg-brand-yellow p-6">
     <div>
-        <p class="text-center text-sm font-bold tracking-[0.3em] uppercase">Bibliotype</p>
+        <p class="text-center text-base font-bold">Bibliotype</p>
         <p class="mt-1 text-center text-lg font-bold uppercase">By The Numbers</p>
         <div class="mt-4 space-y-2">
             <div class="border-2 border-brand-text bg-brand-pink p-3 text-center">
@@ -14,7 +14,7 @@
                     <div class="text-xs uppercase">Pages</div>
                 </div>
                 <div class="border-2 border-brand-text bg-brand-cyan p-2 text-center">
-                    <div class="text-2xl font-bold">{{ dna.average_rating_overall }}</div>
+                    <div class="text-2xl font-bold">{{ dna.average_rating_overall|default:"N/A" }}</div>
                     <div class="text-xs uppercase">Avg Rating</div>
                 </div>
             </div>
@@ -51,13 +51,13 @@
                         <span class="font-bold">{% with last_year=dna.stats_by_year|last %}{{ last_year.year }}{% endwith %}</span>
                     </div>
                     <div class="flex h-4 items-end gap-px">
-                        {% for year_data in dna.stats_by_year %}
-                            <div class="flex-1 bg-brand-text" style="height: {{ year_data.count }}px; min-height: 2px; max-height: 16px;"></div>
+                        {% for bar in dna.stats_by_year|timeline_bars %}
+                            <div class="bg-brand-text flex-1" style="height: {{ bar.height }}px"></div>
                         {% endfor %}
                     </div>
                 </div>
             {% endif %}
         </div>
     </div>
-    <p data-share-url class="text-center text-xs font-bold tracking-wider uppercase opacity-60">{{ share_url|default:"bibliotype.app" }}</p>
+    <p data-share-url class="text-center text-xs font-bold opacity-60">{{ share_url|default:"bibliotype.app" }}</p>
 </div>

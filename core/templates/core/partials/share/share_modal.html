@@ -21,8 +21,8 @@
                 {% include 'core/partials/buttons/icon_button.html' with color="pink" extra_classes="cursor-pointer" extra_attrs='@click="shareModalOpen = false"' icon_svg='<svg class="text-brand-text h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>' %}
             </div>
 
-            <div class="flex w-full shrink-0 gap-4 overflow-x-auto pb-3 snap-x snap-mandatory px-[calc(50%-160px)]" style="-webkit-overflow-scrolling: touch; scroll-padding-inline: calc(50% - 160px);">
-                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+            <div class="flex w-full shrink-0 snap-x snap-mandatory gap-4 overflow-x-auto px-[calc(50%-160px)] pb-3 [scroll-padding-inline:calc(50%-160px)] md:px-2 md:[scroll-padding-inline:0.5rem]" style="-webkit-overflow-scrolling: touch;">
+                <div class="snap-center md:snap-start shrink-0 flex flex-col items-center share-card-wrapper">
                     <div x-ref="cardIdentity">
                         {% include 'core/partials/share/card_identity.html' %}
                     </div>
@@ -35,7 +35,7 @@
                     </button>
                 </div>
 
-                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                <div class="snap-center md:snap-start shrink-0 flex flex-col items-center share-card-wrapper">
                     <div x-ref="cardStats">
                         {% include 'core/partials/share/card_stats.html' %}
                     </div>
@@ -48,7 +48,7 @@
                     </button>
                 </div>
 
-                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                <div class="snap-center md:snap-start shrink-0 flex flex-col items-center share-card-wrapper">
                     <div x-ref="cardTaste">
                         {% include 'core/partials/share/card_taste.html' %}
                     </div>
@@ -61,7 +61,7 @@
                     </button>
                 </div>
 
-                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                <div class="snap-center md:snap-start shrink-0 flex flex-col items-center share-card-wrapper">
                     <div x-ref="cardMainstream">
                         {% include 'core/partials/share/card_mainstream.html' %}
                     </div>
@@ -74,7 +74,7 @@
                     </button>
                 </div>
 
-                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                <div class="snap-center md:snap-start shrink-0 flex flex-col items-center share-card-wrapper">
                     <div x-ref="cardFullSherbet">
                         {% include 'core/partials/share/card_full.html' with header_bg="bg-brand-pink" vibe_bg_1="bg-brand-cyan" vibe_bg_2="bg-brand-green" stat_bg="bg-brand-yellow" genre_bg="bg-brand-green" author_bg="bg-brand-orange" mainstream_bg="bg-brand-cyan" type_bg_1="bg-brand-pink" type_bg_2="bg-brand-green" type_bg_3="bg-brand-yellow" %}
                     </div>
@@ -87,7 +87,7 @@
                     </button>
                 </div>
 
-                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                <div class="snap-center md:snap-start shrink-0 flex flex-col items-center share-card-wrapper">
                     <div x-ref="cardFullNeonPicnic">
                         {% include 'core/partials/share/card_full.html' with header_bg="bg-brand-green" vibe_bg_1="bg-brand-yellow" vibe_bg_2="bg-brand-cyan" stat_bg="bg-brand-cyan" genre_bg="bg-brand-orange" author_bg="bg-brand-yellow" mainstream_bg="bg-brand-pink" type_bg_1="bg-brand-green" type_bg_2="bg-brand-cyan" type_bg_3="bg-brand-orange" %}
                     </div>
@@ -100,7 +100,7 @@
                     </button>
                 </div>
 
-                <div class="snap-center shrink-0 flex flex-col items-center share-card-wrapper">
+                <div class="snap-center md:snap-start shrink-0 flex flex-col items-center share-card-wrapper">
                     <div x-ref="cardFullMiami">
                         {% include 'core/partials/share/card_full.html' with header_bg="bg-brand-cyan" vibe_bg_1="bg-brand-pink" vibe_bg_2="bg-brand-orange" stat_bg="bg-brand-pink" genre_bg="bg-brand-cyan" author_bg="bg-brand-orange" mainstream_bg="bg-brand-orange" type_bg_1="bg-brand-pink" type_bg_2="bg-brand-cyan" type_bg_3="bg-brand-orange" %}
                     </div>
@@ -114,7 +114,9 @@
                 </div>
             </div>
 
-            <p class="mt-1 shrink-0 text-center text-sm text-white/60">Swipe to see all cards</p>
+            <p class="mt-1 shrink-0 text-center text-sm text-white/60">
+                <span class="md:hidden">Swipe to see all cards</span><span class="hidden md:inline">Scroll sideways to see all cards</span>
+            </p>
         </div>
     </div>
 </template>

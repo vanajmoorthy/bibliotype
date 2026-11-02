@@ -67,3 +67,20 @@ def split_pcts(split):
 def chart_fields(dna):
     """Only the DNA keys charts_scripts.html reads, so json_script doesn't publish the whole dict."""
     return {key: dna.get(key) for key in ("top_genres", "top_authors", "fiction_nonfiction_split")}
+
+
+@register.filter
+def timeline_bars(stats_by_year, max_height=16):
+    """Bar heights (px) for the share card's reading timeline, scaled to the busiest year.
+
+    A fixed px-per-book scale flattened every year with 16+ books into the same
+    full-height bar, so most readers saw a solid block.
+    """
+    counts = [year.get("count") or 0 for year in stats_by_year or []]
+    peak = max(counts, default=0)
+    if not peak:
+        return []
+    return [
+        {"year": year.get("year"), "height": max(2, round(count / peak * max_height))}
+        for year, count in zip(stats_by_year, counts)
+    ]
