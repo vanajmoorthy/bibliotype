@@ -2,12 +2,16 @@
 Tests for the compare page: pairwise similarity between public readers.
 """
 
+import itertools
+import re
+
 from django.contrib.auth.models import User
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from core.models import Author, Book, UserBook
 from core.services.user_similarity_service import calculate_user_similarity, compare_readers
+from core.views.compare import GRAPH_VIEWBOX, _build_graph
 
 
 @override_settings(
@@ -151,9 +155,47 @@ class CompareViewTests(CompareBaseTestCase):
         response = self._get("alice,alice")
         self.assertEqual(response.status_code, 404)
 
-    def test_three_usernames_404_until_nway_phase(self):
+    def test_three_users_render_graph_and_callouts(self):
         response = self._get("alice,bob,carol")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "The Web of Taste")
+        self.assertContains(response, "Closest Pair")
+        self.assertContains(response, "alice + bob")  # tightest fixture pair
+        self.assertContains(response, "Odd One Out")
+        self.assertContains(response, "carol")  # reads her own books
+        self.assertContains(response, "Similarity graph of 3 readers")
+        self.assertContains(response, "Group Score")
+
+    def test_six_users_is_the_cap(self):
+        # Cap is enforced before any lookups, so the usernames need not exist.
+        response = self._get("a,b,c,d,e,f,g")
         self.assertEqual(response.status_code, 404)
+
+    def test_two_users_have_no_graph(self):
+        response = self._get("alice,bob")
+        self.assertNotContains(response, "The Web of Taste")
+        self.assertNotContains(response, "Odd One Out")
+
+    def _visible_text(self, response):
+        text = re.sub(r"<[^>]+>", "", response.content.decode())
+        return re.sub(r"\s+", " ", text)
+
+    def test_name_separators_have_no_stray_spaces(self):
+        two = self._visible_text(self._get("alice,bob"))
+        self.assertIn("alice vs bob:", two)
+        three = self._visible_text(self._get("alice,bob,carol"))
+        self.assertIn("alice, bob vs carol:", three)
+        for text in (two, three):
+            self.assertNotIn(" ,", text)
+            self.assertNotIn(" :", text)
+
+    def test_every_rejection_is_the_same_generic_404(self):
+        unknown = self._get("alice,ghost")
+        for usernames in ("alice,dave", "alice,alice", "alice", "a,b,c,d,e,f,g", "alice,nodna", "alice,emptylib"):
+            with self.subTest(usernames=usernames):
+                response = self._get(usernames)
+                self.assertEqual(response.status_code, 404)
+                self.assertEqual(response.content, unknown.content)
 
     def test_unsorted_url_redirects_to_canonical(self):
         response = self._get("bob,alice")
@@ -164,3 +206,33 @@ class CompareViewTests(CompareBaseTestCase):
         response = self._get("Alice,bob")
         self.assertEqual(response.status_code, 301)
         self.assertEqual(response.url, reverse("core:compare", kwargs={"usernames": "alice,bob"}))
+
+
+class CompareGraphGeometryTests(TestCase):
+    """Node boxes and % chips must stay inside the viewBox and never overlap."""
+
+    @staticmethod
+    def _overlap(a, b):
+        return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
+
+    def test_layout_is_clear_for_three_to_six_readers(self):
+        width, height = GRAPH_VIEWBOX
+        for n in range(3, 7):
+            for name_len in (1, 8, 15):  # 15 is the signup form's max
+                with self.subTest(n=n, name_len=name_len):
+                    names = [chr(ord("a") + i) * name_len for i in range(n)]
+                    pairs = [
+                        {"index": k, "names": list(pair), "pct": 50}
+                        for k, pair in enumerate(itertools.combinations(names, 2))
+                    ]
+                    graph = _build_graph(names, pairs)
+                    self.assertEqual(len(graph["edges"]), n * (n - 1) // 2)
+                    # Footprints include the 4px offset shadow.
+                    nodes = [
+                        (d["rect_x"], d["rect_y"], d["rect_x"] + d["w"] + 4, d["rect_y"] + 50) for d in graph["nodes"]
+                    ]
+                    chips = [(e["chip_x"], e["chip_y"], e["chip_x"] + 56, e["chip_y"] + 34) for e in graph["edges"]]
+                    for box in nodes + chips:
+                        self.assertTrue(0 <= box[0] and 0 <= box[1] and box[2] <= width and box[3] <= height, box)
+                    for a, b in itertools.combinations(nodes + chips, 2):
+                        self.assertFalse(self._overlap(a, b), (a, b))
