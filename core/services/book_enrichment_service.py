@@ -580,6 +580,8 @@ def enrich_book_from_apis(book, session, slow_down=False, quick_mode=False):
         book.genres.clear()
         genre_objs = [Genre.objects.get_or_create(name=g_name)[0] for g_name in genres_to_add_limited]
         book.genres.add(*genre_objs)
+        # API genres replace any LLM-backfilled ones, so the book is no longer LLM-sourced.
+        book.genres_from_llm = False
         is_updated = True
         logger.debug(
             f"Added {len(genres_to_add_limited)} genres (limited from {len(combined_genres)}): {genres_to_add_limited}"

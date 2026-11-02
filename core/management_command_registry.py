@@ -65,6 +65,29 @@ ADMIN_COMMANDS = [
         ],
     },
     {
+        "name": "llm_backfill_genres",
+        "description": (
+            "Suggest 1-3 genres via the free LLM chain for books with none. Dry run by default; tick Apply to write."
+            " From here, use a limit of about 500 (the runner stops waiting after a few minutes) and continue with"
+            " the printed after-id. Run regenerate_dna after applying."
+        ),
+        "arguments": [
+            {
+                "name": "--apply",
+                "type": "flag",
+                "label": "Apply",
+                "help": "Write genres to books that still have none (default is a dry run)",
+            },
+            {"name": "--limit", "type": "int", "label": "Limit", "help": "Max books to send"},
+            {
+                "name": "--after-id",
+                "type": "int",
+                "label": "After id",
+                "help": "Only books with an id above this (continue from the last id printed)",
+            },
+        ],
+    },
+    {
         "name": "rebuild_analytics",
         "description": "Rebuild the aggregate analytics singleton with current community data.",
         "arguments": [],

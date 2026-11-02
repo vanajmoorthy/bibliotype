@@ -97,12 +97,12 @@ class BookAdmin(admin.ModelAdmin):
         "global_read_count",
         "isbn13",
     )
-    list_filter = ("publish_year", "genres")
+    list_filter = ("publish_year", "genres_from_llm", "genres")
     search_fields = ("title", "author__name", "isbn13")
     readonly_fields = ("google_books_average_rating", "google_books_ratings_count", "google_books_last_checked")
     fieldsets = (
         (None, {"fields": ("title", "author", "isbn13", "cover_url")}),
-        ("Publication Info", {"fields": ("page_count", "publish_year", "publisher", "genres")}),
+        ("Publication Info", {"fields": ("page_count", "publish_year", "publisher", "genres", "genres_from_llm")}),
         ("App Metrics", {"fields": ("global_read_count",)}),
         (
             "Google Books Data",
