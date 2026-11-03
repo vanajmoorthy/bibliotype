@@ -53,6 +53,53 @@
             return { labels: [], values: [] };
         }
 
+        // --- Helper: HTML tooltip for the donut charts ---
+        // Chart.js draws its built-in tooltip inside the canvas, and these donuts are
+        // as small as 112px, so long genre/author names were clipped at the canvas
+        // edge. This renders one shared DOM tooltip instead, kept inside the viewport.
+        function htmlTooltip({ chart, tooltip }) {
+            let el = document.getElementById("chart-tooltip");
+            if (!el) {
+                el = document.createElement("div");
+                el.id = "chart-tooltip";
+                el.className =
+                    "border-brand-text shadow-neo-sm pointer-events-none fixed z-50 max-w-xs border-2 bg-white px-2 py-1 text-base leading-tight";
+                el.style.opacity = "0";
+                document.body.appendChild(el);
+                window.addEventListener("scroll", () => (el.style.opacity = "0"), { passive: true });
+            }
+            if (tooltip.opacity === 0) {
+                el.style.opacity = "0";
+                return;
+            }
+
+            // textContent only: genre and author names come from user CSVs.
+            const title = document.createElement("div");
+            title.className = "font-bold";
+            title.textContent = (tooltip.title || []).join(" ");
+            const body = document.createElement("div");
+            body.className = "flex items-center gap-1.5";
+            const swatch = document.createElement("span");
+            swatch.className = "border-brand-text inline-block h-3 w-3 shrink-0 border";
+            swatch.style.backgroundColor = tooltip.labelColors?.[0]?.backgroundColor || "transparent";
+            const value = document.createElement("span");
+            value.textContent = tooltip.body.flatMap((b) => b.lines).join(" ");
+            body.append(swatch, value);
+            el.replaceChildren(title, body);
+
+            const rect = chart.canvas.getBoundingClientRect();
+            const x = rect.left + tooltip.caretX;
+            const y = rect.top + tooltip.caretY;
+            el.style.opacity = "1";
+            const { width, height } = el.getBoundingClientRect();
+            const margin = 8;
+            const left = Math.min(Math.max(x - width / 2, margin), window.innerWidth - width - margin);
+            let top = y - height - 12;
+            if (top < margin) top = y + 12;
+            el.style.left = `${left}px`;
+            el.style.top = `${top}px`;
+        }
+
         // --- Helper: create chart on scroll into view ---
         function createChartOnScroll(canvasId, createFn) {
             const canvas = document.getElementById(canvasId);
@@ -101,13 +148,11 @@
                         plugins: {
                             legend: { display: false },
                             tooltip: {
+                                enabled: false,
+                                external: htmlTooltip,
                                 callbacks: {
-                                    label: function (context) {
-                                        let label = context.label || "";
-                                        if (label) label += ": ";
-                                        if (context.parsed !== null) label += context.parsed;
-                                        return label;
-                                    },
+                                    // The name is the tooltip title, so the body is just the count.
+                                    label: (context) => `${context.parsed} book${context.parsed === 1 ? "" : "s"}`,
                                 },
                             },
                         },
@@ -146,13 +191,11 @@
                         plugins: {
                             legend: { display: false },
                             tooltip: {
+                                enabled: false,
+                                external: htmlTooltip,
                                 callbacks: {
-                                    label: function (context) {
-                                        let label = context.label || "";
-                                        if (label) label += ": ";
-                                        if (context.parsed !== null) label += context.parsed;
-                                        return label;
-                                    },
+                                    // The name is the tooltip title, so the body is just the count.
+                                    label: (context) => `${context.parsed} book${context.parsed === 1 ? "" : "s"}`,
                                 },
                             },
                         },
@@ -216,6 +259,8 @@
                         plugins: {
                             legend: { display: false },
                             tooltip: {
+                                enabled: false,
+                                external: htmlTooltip,
                                 callbacks: {
                                     label: function (context) {
                                         // Read from the live dataset (not the closure) so
@@ -223,7 +268,7 @@
                                         const data = context.dataset.data;
                                         const total = data.reduce((a, b) => a + b, 0);
                                         const pct = total ? Math.round((context.parsed / total) * 100) : 0;
-                                        return context.label + ": " + pct + "%";
+                                        return pct + "%";
                                     },
                                 },
                             },
