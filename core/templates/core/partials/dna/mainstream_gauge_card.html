@@ -1,11 +1,12 @@
-<div class="border-brand-text shadow-neo relative border-2 bg-white p-6">
+{# Flex column so the card fills its grid row like Most Niche Read: gauge centred, caption at the bottom. #}
+<div class="border-brand-text shadow-neo relative flex flex-col border-2 bg-white p-6">
     {% include 'core/partials/dna/enrichment_banner.html' with condition=enrichment.pending %}
     <h2 class="mb-1 text-center text-2xl font-bold uppercase">Mainstream Meter</h2>
     <p class="mb-4 text-center text-base italic text-gray-500">How mainstream the books in {{ pronoun_pos|default:"your" }} library are{% if enrichment.pending %} (so far){% endif %}</p>
-    <div class="{% if enrichment.pending %}opacity-60 transition-opacity duration-500{% endif %}">
+    <div class="flex flex-1 flex-col {% if enrichment.pending %}opacity-60 transition-opacity duration-500{% endif %}">
     <!-- Alpine.js component for the gauge logic -->
     {# djlint:off #}
-    <div x-data="{
+    <div class="flex flex-1 flex-col" x-data="{
         // --- STATE ---
         score: {{ dna.mainstream_score_percent }},
         animatedScore: 0,
@@ -53,7 +54,7 @@
             observer.observe(this.$el);
         }
     }">
-        <div class="scroll-fade-up relative mx-auto h-32 w-64" style="filter: drop-shadow(4px 4px 0px #1f2937)">
+        <div class="scroll-fade-up relative mx-auto my-auto h-32 w-64 shrink-0" style="filter: drop-shadow(4px 4px 0px #1f2937)">
 
             <!-- Layer 1: The Semicircle Container (with the necessary clipping) -->
             <div class="absolute top-0 left-0 h-full w-full overflow-hidden">
