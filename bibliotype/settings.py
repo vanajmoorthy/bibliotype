@@ -294,7 +294,9 @@ CELERY_TIMEZONE = "UTC"
 # Prevent Celery from connecting to broker during Django startup
 # This avoids hanging when Redis is temporarily unavailable
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = False
-CELERY_BROKER_CONNECTION_RETRY = False
+# The worker reconnects after a Redis restart instead of exiting (this only affects the consumer;
+# web-side publishing fails fast via the timeout below).
+CELERY_BROKER_CONNECTION_RETRY = True
 CELERY_BROKER_CONNECTION_TIMEOUT = 5
 # "sorted" (NOT "priority" — celery/celery#8673: with the Redis transport,
 # "priority" derives queue order from a set comprehension, so it's hash-
