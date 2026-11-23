@@ -47,6 +47,12 @@ resource "digitalocean_droplet" "bibliotype" {
     personal_ssh_public_key = var.personal_ssh_public_key
     repo_url                = var.repo_url
   })
+
+  # cloud-init only runs on first boot, so a changed template or rotated key must not
+  # force a droplet replacement (that would wipe prod). Rebuild deliberately with -replace.
+  lifecycle {
+    ignore_changes = [user_data]
+  }
 }
 
 # The public IP survives droplet replacement/rebuilds, so DNS records and the
